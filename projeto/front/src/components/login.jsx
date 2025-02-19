@@ -1,6 +1,7 @@
 import React from 'react';
 import {MDBContainer, MDBCol, MDBRow, MDBBtn, MDBIcon, MDBInput, MDBCheckbox } from 'mdb-react-ui-kit';
-<style scoped src='../css/login'></style>
+import '../css/login.css';
+
 
 function Login() {
 
