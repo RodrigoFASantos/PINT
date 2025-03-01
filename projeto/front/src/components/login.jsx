@@ -12,29 +12,31 @@ function Login() {
     e.preventDefault(); // Evita recarregar a página
 
     try {
-      const response = await fetch("http://localhost:4000/login", {
-        method: "POST",
+      const response = await fetch("http://localhost:4000/api/login", {
+        method: "POST", // Tem que ser POST
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
-     });
-     
+      });
 
-      const data = await response.json();
+      const text = await response.text(); // Captura a resposta como texto
+      console.log("Resposta do servidor:", text);
+
+      const data = JSON.parse(text); // Converte para JSON
 
       if (!response.ok) {
         throw new Error(data.message || "Erro desconhecido");
       }
 
       setMessage(`Login bem-sucedido! Bem-vindo, ${data.nome}`);
-      localStorage.setItem("user", JSON.stringify(data)); // Guarda sessão
+      localStorage.setItem("user", JSON.stringify(data));
 
-      // Redirecionar para outra página após login bem-sucedido
       setTimeout(() => navigate("/dashboard"), 2000);
-      
     } catch (error) {
       setMessage(`Erro: ${error.message}`);
     }
   };
+
+
 
   return (
     <div class="body">
