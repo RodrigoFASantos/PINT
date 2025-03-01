@@ -11,16 +11,38 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+
+
+
+
 const createUser = async (req, res) => {
   try {
     const { id_cargo, nome, idade, email, telefone, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10); // Encriptação da senha
-    const user = await User.create({ id_cargo, nome, idade, email, telefone, password: hashedPassword });
-    res.status(201).json({ message: "Utilizador criado com sucesso!", user });
+
+    if (!id_cargo || !nome || !idade || !email || !telefone || !password) {
+      return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+    }
+
+    //Insere o utilizador SEM definir manualmente id_utilizador (autoIncrement)
+    const newUser = await User.create({
+      id_cargo,
+      nome,
+      idade,
+      email,
+      telefone,
+      password,
+    });
+
+    res.status(201).json({ message: "Utilizador criado com sucesso!", user: newUser });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao criar utilizador", error });
+    console.error("Erro ao criar utilizador:", error);
+    res.status(500).json({ message: "Erro no servidor ao criar utilizador." });
   }
 };
+
+
+
+
 
 const loginUser = async (req, res) => {
   try {

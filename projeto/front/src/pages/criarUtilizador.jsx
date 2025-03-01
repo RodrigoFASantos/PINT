@@ -23,18 +23,26 @@ function CriarUser() {
     const userData = { nome, email, password };
 
     try {
-      const response = await fetch("http://localhost:4000/api/user/register", {
+      const response = await fetch("http://localhost:4000/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
 
-      const data = await response.json();
+      // Verifica se a resposta do servidor é um JSON válido
+      const text = await response.text();
+      console.log("Resposta do servidor:", text);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        throw new Error("A resposta do servidor não é um JSON válido.");
+      }
 
-      if (data.success) {
+      if (response.ok) {
         setMessage("Utilizador criado com sucesso!");
       } else {
-        setMessage(data.message);
+        setMessage(data.message || "Erro desconhecido.");
       }
     } catch (error) {
       console.error("Erro ao registar:", error);
@@ -43,8 +51,8 @@ function CriarUser() {
   };
 
   return (
-    <div class="body">
-      <div class="container">
+    <div className="body">
+      <div className="container">
         <h2>Registar Utilizador</h2>
         <form onSubmit={handleRegister}>
           <input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />

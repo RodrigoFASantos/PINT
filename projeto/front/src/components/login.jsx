@@ -13,15 +13,15 @@ function Login() {
 
     try {
       const response = await fetch("http://localhost:4000/api/login", {
-        method: "POST", // Tem que ser POST
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
 
-      const text = await response.text(); // Captura a resposta como texto
+      const text = await response.text();
       console.log("Resposta do servidor:", text);
 
-      const data = JSON.parse(text); // Converte para JSON
+      const data = JSON.parse(text);
 
       if (!response.ok) {
         throw new Error(data.message || "Erro desconhecido");
@@ -36,13 +36,11 @@ function Login() {
     }
   };
 
-
-
   return (
-    <div class="body">
+    <div className="body">
       <div className="container">
         <h2>Login</h2>
-        {message && <p className="message">{message}</p>} {/* Mensagem de erro/sucesso */}
+        {message && <p className="message">{message}</p>}
 
         <form onSubmit={handleLogin}>
           <input
