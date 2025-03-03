@@ -14,9 +14,6 @@ const getAllUsers = async (req, res) => {
 
 
 
-//a
-
-
 const createUser = async (req, res) => {
   try {
     const { id_cargo, nome, idade, email, telefone, password } = req.body;
@@ -25,14 +22,17 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
     }
 
-    //Insere o utilizador SEM definir manualmente id_utilizador (autoIncrement)
+    // Encriptar a password antes de guardar
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newUser = await User.create({
       id_cargo,
       nome,
       idade,
       email,
       telefone,
-      password,
+      password: hashedPassword, // Guarda a password encriptada
     });
 
     res.status(201).json({ message: "Utilizador criado com sucesso!", user: newUser });
@@ -41,6 +41,7 @@ const createUser = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar utilizador." });
   }
 };
+
 
 
 
