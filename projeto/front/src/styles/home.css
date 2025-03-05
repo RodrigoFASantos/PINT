@@ -1,12 +1,10 @@
 .home{
-    margin-left: 25%;
-    
-    gap: 100000px;
+    margin-left: 45%;
 }
 
 .searchbar{
-    margin-right: 25%;
-    margin-left: 20px;  
+    margin-right: 2%;
+    margin-left: 2%;
 }
 
 .perfil{
@@ -23,6 +21,13 @@
 
 .backg{
   background-color: #252558;
+}
+.back2{
+  background-color: #5688C7;
+}
+.back3{
+  background-color: #B1DDF1;
+  
 }
 
 .popup {
@@ -229,7 +234,7 @@
 /* styling of whole input container */
 .form {
   --timing: 0.3s;
-  --width-of-input: 200px;
+  --width-of-input: 350px;
   --height-of-input: 40px;
   --border-height: 2px;
   --input-bg: #fff;
@@ -255,12 +260,14 @@
   padding-inline: 0.5em;
   padding-block: 0.7em;
   border: none;
+  margin-left: -140px;
+  
 }
 /* styling of animated border */
 .form:before {
   content: "";
   position: absolute;
-  background: var(--border-color);
+  background: #7a5cfa;
   transform: scaleX(0);
   transform-origin: center;
   width: 100%;
@@ -289,6 +296,7 @@ input:focus {
   background: none;
   opacity: 0;
   visibility: hidden;
+  width: 100px;
 }
 /* close button shown when typing */
 input:not(:placeholder-shown) ~ .reset {
@@ -296,7 +304,14 @@ input:not(:placeholder-shown) ~ .reset {
   visibility: visible;
 }
 /* sizing svg icons */
-.form svg {
-  width: 17px;
-  margin-top: 3px;
+.formsvg {
+  margin-left: -150px;
+  
 }
+.formsvg2{
+  margin-right: -40px;
+}
+.form svg {
+  width: 20px;
+}
+
