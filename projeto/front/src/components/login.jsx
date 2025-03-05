@@ -59,7 +59,7 @@ function Login() {
             required
           />
 
-          <button type="submit" className="btn">Login</button>
+          <button type="submit" className="button">Login</button>
         </form>
       </div>
     </div>
