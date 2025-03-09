@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Para redirecionamento
+import { useNavigate } from "react-router-dom"; 
+import Cookies from "js-cookie"; // Importar a biblioteca para manipular cookies
 import "../styles/login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
-  const navigate = useNavigate(); // Hook para redirecionar
+  const [lembrar, setLembrar] = useState(false); // Checkbox para lembrar sessão
+  const navigate = useNavigate(); 
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // Evita recarregar a página
+    e.preventDefault(); 
 
     try {
       const response = await fetch("http://localhost:4000/api/login", {
@@ -18,17 +20,23 @@ function Login() {
         body: JSON.stringify({ email, password })
       });
 
-      const text = await response.text();
-      console.log("Resposta do servidor:", text);
-
-      const data = JSON.parse(text);
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || "Erro desconhecido");
       }
 
       setMessage(`Login bem-sucedido! Bem-vindo, ${data.nome}`);
-      localStorage.setItem("user", JSON.stringify(data));
+
+      // Guardar token nos cookies (se lembrar for ativado)
+      if (lembrar) {
+        Cookies.set("token", data.token, { expires: 7, secure: true }); // Expira em 7 dias
+      } else {
+        Cookies.set("token", data.token, { secure: true }); // Expira ao fechar o navegador
+      }
+
+      // Guardar outras informações no sessionStorage
+      sessionStorage.setItem("user", JSON.stringify(data));
 
       setTimeout(() => navigate("/dashboard"), 2000);
     } catch (error) {
@@ -58,6 +66,16 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+
+          {/* Checkbox para "Lembrar sessão" */}
+          <label>
+            <input
+              type="checkbox"
+              checked={lembrar}
+              onChange={() => setLembrar(!lembrar)}
+            />
+            Lembrar sessão
+          </label>
 
           <button type="submit" className="btn">Login</button>
         </form>
