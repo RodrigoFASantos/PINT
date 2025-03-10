@@ -1,7 +1,7 @@
 # PINT
-Executar o back:
-venv\Scripts\activate
-node src/server.js
+Sincronizar base de dados (Estar dentro de backend)
+npx nodemon src/config/sync.js
+
 
 Executar o front:
 npm start
