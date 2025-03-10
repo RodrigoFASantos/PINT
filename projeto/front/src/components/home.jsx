@@ -113,8 +113,12 @@ function HomeFormando() {
                 </nav>
             </div>
 
-            <div class="text-center pt-5 back2">
-                <h1>Bem-vindo</h1>
+            <div class="pt-5 back2">
+                <h1 class="text-center">Bem-vindo</h1>
+            </div>
+
+            <div>
+                <h1 class="text-center">Cursos</h1>
             </div>
         </body>
 
