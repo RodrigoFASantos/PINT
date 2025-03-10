@@ -1,7 +1,8 @@
 # PINT
-Sincronizar base de dados (Estar dentro de backend)
-npx nodemon src/config/sync.js
 
+Dentro de backend:
+Criar as tabelas e Sincronizar base de dados: 
+npx nodemon src/config/sync.js
 
 Executar o front:
 npm start
