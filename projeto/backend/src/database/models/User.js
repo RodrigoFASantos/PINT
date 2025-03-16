@@ -32,6 +32,11 @@ const User = sequelize.define("utilizadores", {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
+  primeiro_login: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1, // Começa sempre como 1, para forçar a troca da password no 1º login
+  }
 }, {
   tableName: "utilizadores",
   timestamps: false, //Evita criar colunas createdAt e updatedAt

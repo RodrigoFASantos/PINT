@@ -11,9 +11,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
-
-
 const createUser = async (req, res) => {
   try {
     const { id_cargo, nome, idade, email, telefone, password } = req.body;
@@ -22,7 +19,6 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
     }
 
-    // Encriptar a password antes de guardar
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -32,7 +28,8 @@ const createUser = async (req, res) => {
       idade,
       email,
       telefone,
-      password: hashedPassword, // Guarda a password encriptada
+      password: hashedPassword,
+      primeiro_login: 1,
     });
 
     res.status(201).json({ message: "Utilizador criado com sucesso!", user: newUser });
@@ -41,11 +38,6 @@ const createUser = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar utilizador." });
   }
 };
-
-
-
-
-
 
 const loginUser = async (req, res) => {
   try {
@@ -58,10 +50,40 @@ const loginUser = async (req, res) => {
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
     const token = jwt.sign({ id: user.id_utilizador, nome: user.nome }, "segredo", { expiresIn: "1h" });
-    res.json({ token, id_utilizador: user.id_utilizador, nome: user.nome });
+
+    res.json({
+      token,
+      id_utilizador: user.id_utilizador,
+      nome: user.nome,
+      primeiro_login: user.primeiro_login
+    });
   } catch (error) {
     res.status(500).json({ message: "Erro no login", error });
   }
 };
 
-module.exports = { getAllUsers, createUser, loginUser };
+// Alterar password e definir primeiro_login para 0
+const changePassword = async (req, res) => {
+  try {
+    const { id_utilizador, nova_password } = req.body;
+
+    if (!id_utilizador || !nova_password) {
+      return res.status(400).json({ message: "ID do utilizador e nova password são obrigatórios!" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(nova_password, salt);
+
+    await User.update(
+      { password: hashedPassword, primeiro_login: 0 },
+      { where: { id_utilizador } }
+    );
+
+    res.json({ message: "Password alterada com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao alterar password:", error);
+    res.status(500).json({ message: "Erro no servidor ao alterar password." });
+  }
+};
+
+module.exports = { getAllUsers, createUser, loginUser, changePassword };
