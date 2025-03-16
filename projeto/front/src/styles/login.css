@@ -58,3 +58,32 @@
   .footer a:hover {
     text-decoration: underline;
   }
+
+  .checkbox{
+    margin-left: 80px;
+  }
+
+  .lembrar{
+    width: 260px;
+    height: 50px;
+    color: white;
+    display: flex;
+    align-items: left;
+    font-size: 16px;
+  }
+
+  .checkbox{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 0px;
+  }
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+  p{
+    padding-top: 15px;
+}

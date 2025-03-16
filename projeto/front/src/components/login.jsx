@@ -68,16 +68,18 @@ function Login() {
           />
 
           {/* Checkbox para "Lembrar sessão" */}
-          <label>
-            <input
+          <label class="lembrar">
+            <div class="checkbox">
+              <input 
               type="checkbox"
               checked={lembrar}
               onChange={() => setLembrar(!lembrar)}
-            />
-            Lembrar sessão
+              />
+              <p>Manter login</p>
+            </div>
           </label>
 
-          <button type="submit" className="btn">Login</button>
+          <button type="submit" className="button">Login</button>
         </form>
       </div>
     </div>
