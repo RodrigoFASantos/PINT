@@ -1,23 +1,30 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; 
-import Cookies from "js-cookie"; // Importar a biblioteca para manipular cookies
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 import "../styles/login.css";
+import logo from "../images/Logo_Login.png";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [lembrar, setLembrar] = useState(false); // Checkbox para lembrar sessão
-  const navigate = useNavigate(); 
+  const [lembrar, setLembrar] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = Cookies.get("token");
+    if (token) {
+      navigate("/home");
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
 
     try {
       const response = await fetch("http://localhost:4000/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -26,29 +33,25 @@ function Login() {
         throw new Error(data.message || "Erro desconhecido");
       }
 
-      setMessage(`Login bem-sucedido! Bem-vindo, ${data.nome}`);
-
-      // Guardar token nos cookies (se lembrar for ativado)
       if (lembrar) {
-        Cookies.set("token", data.token, { expires: 7, secure: true }); // Expira em 7 dias
+        Cookies.set("token", data.token, { expires: 7, secure: true });
       } else {
-        Cookies.set("token", data.token, { secure: true }); // Expira ao fechar o navegador
+        Cookies.set("token", data.token, { secure: true });
       }
 
-      // Guardar outras informações no sessionStorage
       sessionStorage.setItem("user", JSON.stringify(data));
-
-      setTimeout(() => navigate("/dashboard"), 2000);
+      navigate("/home");
     } catch (error) {
-      setMessage(`Erro: ${error.message}`);
+      console.error(`Erro: ${error.message}`);
     }
   };
 
   return (
     <div className="body">
       <div className="container">
-        <h2>Login</h2>
-        {message && <p className="message">{message}</p>}
+        <div className="logo">
+          <img src={logo} alt="Logo" />
+        </div>
 
         <form onSubmit={handleLogin}>
           <input
@@ -61,24 +64,27 @@ function Login() {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          {/* Checkbox para "Lembrar sessão" */}
-          <label>
+          <div className="checkbox-container">
             <input
               type="checkbox"
+              id="lembrar"
               checked={lembrar}
               onChange={() => setLembrar(!lembrar)}
             />
-            Lembrar sessão
-          </label>
+            <label htmlFor="lembrar">Lembrar</label>
+          </div>
 
-          <button type="submit" className="btn">Login</button>
+          <button type="submit">Entrar</button>
         </form>
+
+        <a href="/register">Criar conta</a>
+        <a href="/recover">Esqueci a senha!</a>
       </div>
     </div>
   );
