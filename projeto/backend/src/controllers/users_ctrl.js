@@ -11,6 +11,33 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const getFormadores = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 2 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar formadores" });
+  }
+};
+
+const getFormandos = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 3 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar formandos" });
+  }
+};
+
+const getGestores = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 1 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar gestores" });
+  }
+};
+
 const createUser = async (req, res) => {
   try {
     const { id_cargo, nome, idade, email, telefone, password } = req.body;
@@ -62,7 +89,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Alterar password e definir primeiro_login para 0
 const changePassword = async (req, res) => {
   try {
     const { id_utilizador, nova_password } = req.body;
@@ -86,4 +112,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, createUser, loginUser, changePassword };
+module.exports = { getAllUsers, getFormadores, getFormandos, getGestores, createUser, loginUser, changePassword };

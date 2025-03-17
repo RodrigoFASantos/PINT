@@ -21,7 +21,7 @@ const Curso = sequelize.define("cursos", {
   },
   vagas: {
     type: DataTypes.INTEGER,
-    allowNull: true, // Só obrigatório para cursos síncronos
+    allowNull: true,
   },
   data_inicio: {
     type: DataTypes.DATE,
@@ -56,6 +56,10 @@ const Curso = sequelize.define("cursos", {
       model: "areas",
       key: "id_area",
     },
+  },
+  imagem_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
   },
 }, {
   tableName: "cursos",

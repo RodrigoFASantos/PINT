@@ -55,6 +55,7 @@ function Login() {
 
         <form onSubmit={handleLogin}>
           <input
+            className="input"
             type="email"
             placeholder="Email"
             value={email}
@@ -63,6 +64,7 @@ function Login() {
           />
 
           <input
+            className="input"
             type="password"
             placeholder="Senha"
             value={password}
@@ -72,6 +74,7 @@ function Login() {
 
           <div className="checkbox-container">
             <input
+              className="input"
               type="checkbox"
               id="lembrar"
               checked={lembrar}
@@ -80,11 +83,11 @@ function Login() {
             <label htmlFor="lembrar">Lembrar</label>
           </div>
 
-          <button type="submit">Entrar</button>
+          <button className="button" type="submit">Entrar</button>
         </form>
 
-        <a href="/register">Criar conta</a>
-        <a href="/recover">Esqueci a senha!</a>
+        <a className="a" href="/register">Criar conta</a>
+        <a className="a" href="/recover">Esqueci a senha!</a>
       </div>
     </div>
   );

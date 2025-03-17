@@ -48,6 +48,13 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Secção de Tópicos */}
+      <section className="topicos">
+        <h2>Tópicos</h2>
+        <div className="topicos-grid">
+        </div>
+      </section>
+
     </div>
   );
 }
