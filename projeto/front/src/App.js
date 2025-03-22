@@ -12,12 +12,13 @@ function App() {
       <Routes>
         {/* Rota pública */}
         <Route path="/" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+          <Route path="/criarUtilizador" element={<CriarUser />} />
+          <Route path="/criarCurso" element={<CriarCurso />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/criarUtilizador" element={<CriarUser />} />
-          <Route path="/criarCurso" element={<CriarCurso />} />
+          
         </Route>
 
       </Routes>

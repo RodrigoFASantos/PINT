@@ -45,32 +45,9 @@
   width: 100%;
 }
 
-.folder {
-  margin: 0 auto 10px auto;
-  animation: float 2.5s infinite ease-in-out;
-  transition: transform 0.3s ease;
-}
-
-.folder:hover {
-  transform: scale(1.05);
-}
-
-.folder .top {
-  background: linear-gradient(135deg, #ff9a56, #ff6f56);
-  width: 80px;
-  height: 20px;
-  border-radius: 12px 12px 0 0;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.folder .bottom {
-  background: linear-gradient(135deg, #ffe563, #ffc663);
-  width: 120px;
-  height: 80px;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-  border-radius: 0 10px 10px 10px;
-  position: relative;
-  top: -10px;
+.image{
+  width: 200px;
+  height: 200px;
 }
 
 .custom-file-upload {
