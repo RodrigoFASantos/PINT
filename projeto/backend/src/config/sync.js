@@ -13,13 +13,26 @@ const Comentario_Topico = require("../database/models/Comentario_Topico");
 const Trabalho_Entregue = require("../database/models/Trabalho_Entregue");
 const Avaliacao = require("../database/models/Avaliacao");
 
+// Dados Teste
+const fs = require('fs');
+const path = require('path');
+const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');
+const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
+
 (async () => {
   try {
-    await sequelize.sync({ alter: true }); // Atualiza a estrutura sem perder dados
+    // Sincroniza e depois insere os dados
+    await sequelize.sync({ alter: true });
     console.log("Base de dados sincronizada!");
+
+    // Executa os dados de teste
+    await sequelize.query(dadosSQL);
+    console.log("Dados de teste inseridos!");
+
     process.exit();
   } catch (error) {
-    console.error("Erro ao sincronizar base de dados:", error);
+    console.error("Erro ao sincronizar ou carregar os dados de teste:", error.message);
+    console.error("Detalhes do erro:", error);
     process.exit(1);
   }
 })();
