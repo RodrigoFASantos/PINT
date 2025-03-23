@@ -5,6 +5,7 @@ import Login from "./pages/login";
 import Home from "./pages/home";
 import CriarCurso from './pages/criarCurso';
 import ProtectedRoute from "./components/ProtectedRoute";
+import Cursos from './pages/cursos';
 
 function App() {
   return (
@@ -12,13 +13,13 @@ function App() {
       <Routes>
         {/* Rota pública */}
         <Route path="/" element={<Login />} />
-        <Route path="/home" element={<Home />} />
-          <Route path="/criarUtilizador" element={<CriarUser />} />
-          <Route path="/criarCurso" element={<CriarCurso />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
-          
+          <Route path="/home" element={<Home />} />
+          <Route path="/Cursos" element={<Cursos />} />
+          <Route path="/criarUtilizador" element={<CriarUser />} />
+          <Route path="/criarCurso" element={<CriarCurso />} />
         </Route>
 
       </Routes>

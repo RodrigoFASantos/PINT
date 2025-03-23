@@ -10,7 +10,11 @@ const Categoria = sequelize.define("categorias", {
   nome: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    unique: true, // Nome da categoria deve ser único
+    unique: true,
+  },
+  imagem: {
+    type: DataTypes.STRING(255),
+    allowNull: true, // Permite categorias sem imagem inicialmente
   },
 }, {
   tableName: "categorias",

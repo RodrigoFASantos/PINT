@@ -1,24 +1,25 @@
 -- Tabela de cargos
-INSERT INTO cargos (id_cargo, descricao)
+INSERT INTO cargos (descricao)
 VALUES
-  (1, 'Administrador'),
-  (2, 'Formador'),
-  (3, 'Formando')
-ON CONFLICT (id_cargo) DO NOTHING;
+  ('Administrador'),
+  ('Formador'),
+  ('Formando')
+ON CONFLICT (descricao) DO NOTHING;
 
 -- Tabela de utilizadores
 INSERT INTO utilizadores (id_cargo, nome, idade, email, telefone, password, primeiro_login)
 VALUES
-  (1, 'Administrador', 35, 'admin@exemplo.com', '123456789', '123', 0),
-  (2, 'Formador', 40, 'a@exemplo.com', '123456789', '123', 0),
-  (3, 'Formando', 25, 'b@exemplo.com', '123456789', '123', 0)
-ON CONFLICT (id_utilizador) DO NOTHING;
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador'), 'Administrador', 35, 'admin@exemplo.com', '123456789', '123', 0),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador'), 'Formador', 40, 'a@exemplo.com', '123456789', '123', 0),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando'), 'Formando', 25, 'b@exemplo.com', '123456789', '123', 0)
+ON CONFLICT (email) DO NOTHING;
+
 
 
 -- Tabela de categorias
-INSERT INTO categorias (id_categoria, nome)
+INSERT INTO categorias (nome)
 VALUES
-  (1, 'Tecnologia'),
-  (2, 'Soft Skills'),
-  (3, 'Gestão')
-ON CONFLICT (id_categoria) DO NOTHING;
+  ('Tecnologia'),
+  ('Soft Skills'),
+  ('Gestão')
+ON CONFLICT (nome) DO NOTHING;

@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles//formadorModal.css'; 
+import '../components/css/formadorModal.css';
 
 const FormadorModal = ({ isOpen, onClose, setFormador, users }) => {
   if (!isOpen) return null;

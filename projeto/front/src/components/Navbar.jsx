@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles/Navbar.css';
+import '../components/css/Navbar.css';
 
 export default function Navbar({ toggleSidebar }) {
   return (
