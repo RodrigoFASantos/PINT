@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import API_BASE from "../api";
 import "../styles/login.css";
 import logo from "../images/Logo_Login.png";
 
@@ -21,7 +22,7 @@ function Login() {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:4000/api/login", {
+      const response = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

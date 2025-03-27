@@ -11,6 +11,15 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+router.get('/utilizadores/perfil', autenticarJWT, async (req, res) => {
+  const userId = req.user.id;
+  const user = await Utilizador.findByPk(userId, {
+    include: Cargo, // para puxar o nome do cargo
+  });
+  res.json(user);
+});
+
+
 const getFormadores = async (req, res) => {
   try {
     const users = await User.findAll({ where: { id_cargo: 2 } });
@@ -112,4 +121,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, getFormadores, getFormandos, getGestores, createUser, loginUser, changePassword };
+module.exports = { getAllUsers, getFormadores, getFormandos, getGestores, createUser, loginUser, perfilUser, changePassword };

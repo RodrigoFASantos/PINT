@@ -1,5 +1,6 @@
 import React from 'react';
 import '../components/css/Sidebar.css';
+import '../pages/cursos';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
   return (
