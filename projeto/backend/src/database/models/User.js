@@ -32,6 +32,14 @@ const User = sequelize.define("utilizadores", {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
+  foto_perfil: {
+    type: DataTypes.STRING,
+    defaultValue: 'default_avatar.jpg'
+  },
+  foto_capa: {
+    type: DataTypes.STRING,
+    defaultValue: 'default_capa.jpg'
+  },  
   primeiro_login: {
     type: DataTypes.INTEGER,
     allowNull: false,

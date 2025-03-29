@@ -6,6 +6,7 @@ import Home from "./pages/home";
 import CriarCurso from './pages/criarCurso';
 import ProtectedRoute from "./components/ProtectedRoute";
 import Cursos from './pages/cursos';
+import PerfilUser from "./pages/perfilUser";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/Cursos" element={<Cursos />} />
           <Route path="/criarUtilizador" element={<CriarUser />} />
           <Route path="/criarCurso" element={<CriarCurso />} />
+          <Route path="/perfilUser" element={<PerfilUser />} />
         </Route>
 
       </Routes>

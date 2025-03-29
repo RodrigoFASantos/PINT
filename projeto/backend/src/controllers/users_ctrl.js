@@ -11,13 +11,26 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-router.get('/utilizadores/perfil', autenticarJWT, async (req, res) => {
-  const userId = req.user.id;
-  const user = await Utilizador.findByPk(userId, {
-    include: Cargo, // para puxar o nome do cargo
-  });
-  res.json(user);
-});
+
+
+
+const perfilUser = async (req, res) => {
+  try {
+    const userId = req.user.id_utilizador; // Obtém o ID do utilizador do token JWT
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
+  }
+};
+
+
+
 
 
 const getFormadores = async (req, res) => {

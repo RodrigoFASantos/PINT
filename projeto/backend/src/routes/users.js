@@ -8,7 +8,7 @@ router.get("/formandos", getFormandos);
 router.get("/gestores", getGestores);
 router.post("/users/register", createUser);
 router.post("/login", loginUser);
-router.post("/perfil", perfilUser);
+router.get("/perfil", perfilUser);
 router.put("/users/change-password", changePassword);
 
 module.exports = router;
