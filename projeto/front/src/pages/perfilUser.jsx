@@ -14,8 +14,6 @@ export default function Perfil() {
     telefone: '',
     idade: '',
   });
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadType, setUploadType] = useState('perfil');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
@@ -24,12 +22,15 @@ export default function Perfil() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    console.log("Token enviado:", token); // DEBUG
+    
     fetch(`${API_BASE}/users/perfil`, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
       }
     })
+  
       .then(res => res.json())
       .then(data => {
         setUser(data);
@@ -69,16 +70,13 @@ export default function Perfil() {
       .catch(err => console.error('Erro ao atualizar perfil:', err));
   };
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
-
-  const handleUpload = () => {
-    if (!selectedFile || !uploadType) return;
+  const handleFileChange = (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
     const formData = new FormData();
-    formData.append("imagem", selectedFile);
-    formData.append("type", uploadType);
+    formData.append("imagem", file);
+    formData.append("type", type);
 
     const token = localStorage.getItem("token");
 
@@ -91,8 +89,6 @@ export default function Perfil() {
     })
       .then(res => res.json())
       .then(() => {
-        setSelectedFile(null);
-        setUploadType('perfil');
         window.location.reload();
       })
       .catch(err => console.error("Erro ao fazer upload:", err));
@@ -108,30 +104,36 @@ export default function Perfil() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <main className="perfil-main">
+        {/* Capa */}
         <div className="perfil-capa-wrapper">
           <img
-            src={`${baseURL}/uploads/${user.foto_capa}`}
-            alt="Capa"
+            src={`${baseURL}/uploads/${user.foto_capa || 'CAPA.png'}`} alt="Capa"
             className="perfil-capa"
+            onClick={() => document.getElementById('input-capa').click()}
+          />
+          <input
+            type="file"
+            id="input-capa"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChange(e, 'capa')}
           />
         </div>
 
+        {/* Avatar */}
         <div className="perfil-info-top">
           <img
-            src={`${baseURL}/uploads/${user.foto_perfil}`}
+            src={`${baseURL}/uploads/${user.foto_perfil || 'AVATAR.png'}`}
             alt="Avatar"
             className="perfil-avatar"
+            onClick={() => document.getElementById('input-avatar').click()}
+          />
+          <input
+            type="file"
+            id="input-avatar"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChange(e, 'perfil')}
           />
           <h2>{user.nome}</h2>
-        </div>
-
-        <div className="perfil-upload">
-          <input type="file" onChange={handleFileChange} />
-          <select value={uploadType} onChange={(e) => setUploadType(e.target.value)}>
-            <option value="perfil">Foto de Perfil</option>
-            <option value="capa">Foto de Capa</option>
-          </select>
-          <button onClick={handleUpload}>Fazer Upload</button>
         </div>
 
         {successMsg && <div className="perfil-toast">{successMsg}</div>}

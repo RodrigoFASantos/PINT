@@ -2,16 +2,15 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const User = require('../database/models/User');
 
-// Configuração do multer
+// Configuração do multer para guardar imagens
 const storage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const tipo = req.body.type;
-    const userId = req.body.id_utilizador; // vem no formData
-    cb(null, `${tipo}_${userId}${ext}`);
+    const tipo = req.body.type.toUpperCase(); // AVATAR ou CAPA
+    cb(null, `${tipo}.png`);
   }
 });
 
@@ -20,16 +19,15 @@ const upload = multer({ storage });
 // Upload
 router.post('/upload-foto', upload.single('imagem'), async (req, res) => {
   try {
-    const userId = req.body.id_utilizador;
-    const tipo = req.body.type;
-    const campo = tipo === 'capa' ? 'foto_capa' : 'foto_perfil';
+    const tipo = req.body.type.toUpperCase(); // 'AVATAR' ou 'CAPA'
+    const ficheiroDestino = path.join(__dirname, `../../uploads/${tipo}.png`);
 
-    await User.update(
-      { [campo]: req.file.filename },
-      { where: { id_utilizador: userId } }
-    );
+    // Apagar as imagens anteriores antes de fazer o upload
+    if (fs.existsSync(ficheiroDestino)) {
+      fs.unlinkSync(ficheiroDestino);
+    }
 
-    res.json({ message: 'Imagem atualizada com sucesso!', file: req.file.filename });
+    res.json({ message: 'Imagem atualizada com sucesso!', file: `${tipo}.png` });
   } catch (error) {
     console.error("Erro no upload:", error);
     res.status(500).json({ message: 'Erro ao atualizar a imagem' });

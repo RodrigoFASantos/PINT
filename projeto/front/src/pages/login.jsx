@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Cookies from "js-cookie";
 import API_BASE from "../api";
 import "../styles/login.css";
 import logo from "../images/Logo_Login.png";
@@ -12,7 +11,7 @@ function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = Cookies.get("token");
+    const token = localStorage.getItem("token");
     if (token) {
       navigate("/home");
     }
@@ -22,7 +21,7 @@ function Login() {
     e.preventDefault();
 
     try {
-      const response = await fetch(`${API_BASE}/login`, {
+      const response = await fetch(`${API_BASE}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -34,13 +33,10 @@ function Login() {
         throw new Error(data.message || "Erro desconhecido");
       }
 
-      if (lembrar) {
-        Cookies.set("token", data.token, { expires: 7, secure: true });
-      } else {
-        Cookies.set("token", data.token, { secure: true });
-      }
-
+      // Guardar o token no localStorage
+      localStorage.setItem("token", data.token);
       sessionStorage.setItem("user", JSON.stringify(data));
+
       navigate("/home");
     } catch (error) {
       console.error(`Erro: ${error.message}`);
