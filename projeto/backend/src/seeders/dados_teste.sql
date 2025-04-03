@@ -67,3 +67,4 @@ VALUES
   ((SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1), 'Como começar com React?', 'Discussão sobre primeiros passos com React.', (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), NOW()),
   ((SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1), 'Empatia no ambiente de trabalho', 'Reflexões e estratégias para cultivar empatia.', (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), NOW())
 ON CONFLICT DO NOTHING;
+
