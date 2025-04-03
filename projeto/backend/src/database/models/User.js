@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
+// Criação do modelo de utilizador
 const User = sequelize.define("utilizadores", {
   id_utilizador: {
     type: DataTypes.INTEGER,
@@ -48,6 +49,13 @@ const User = sequelize.define("utilizadores", {
 }, {
   tableName: "utilizadores",
   timestamps: false, //Evita criar colunas createdAt e updatedAt
+});
+
+// Associações
+const Cargo = require("./Cargo");
+User.belongsTo(Cargo, {
+  foreignKey: "id_cargo",
+  as: "cargo"
 });
 
 module.exports = User;

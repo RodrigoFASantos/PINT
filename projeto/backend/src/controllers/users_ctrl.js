@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../database/models/User.js");
+const Cargo = require("../database/models/Cargo");
 
 
 const createUser = async (req, res) => {
@@ -103,18 +104,23 @@ const changePassword = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });
+
+    const user = await User.findOne({
+      where: { email },
+      include: [{ model: Cargo, as: "cargo" }]
+    });
 
     if (!user) return res.status(404).json({ message: "Utilizador não encontrado!" });
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
-
     const token = jwt.sign(
       {
-        id: user.id_utilizador,
-        nome: user.nome
+        id_utilizador: user.id_utilizador,
+        nome: user.nome,
+        id_cargo: user.cargo?.id_cargo,
+        cargo: user.cargo?.descricao || null
       },
       "segredo",
       { expiresIn: "1h" }
@@ -124,6 +130,8 @@ const loginUser = async (req, res) => {
       token,
       id_utilizador: user.id_utilizador,
       nome: user.nome,
+      id_cargo: user.cargo?.id_cargo,
+      cargo: user.cargo?.descricao || null,
       primeiro_login: user.primeiro_login
     });
   } catch (error) {
@@ -131,6 +139,7 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao fazer login." });
   }
 };
+
 
 
 const perfilUser = async (req, res) => {

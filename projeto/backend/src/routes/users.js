@@ -9,8 +9,9 @@ router.get("/formandos", getFormandos);
 router.get("/gestores", getGestores);
 router.post("/users/register", createUser);
 router.post("/login", loginUser);
-router.put("/perfil", verificarToken, perfilUser);
-router.put("/perfil", verificarToken, updatePerfilUser);
+router.get("/perfil", verificarToken, perfilUser);
+/*router.put("/perfil", verificarToken, updatePerfilUser);*/
 router.put("/users/change-password", changePassword);
+
 
 module.exports = router;

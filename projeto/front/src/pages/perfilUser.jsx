@@ -25,7 +25,7 @@ export default function Perfil() {
     console.log("Token enviado:", token); // DEBUG
     
     fetch(`${API_BASE}/users/perfil`, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`
       }
