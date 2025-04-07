@@ -14,6 +14,14 @@ const Topico_Categoria = require("../database/models/Topico_Categoria");
 const Comentario_Topico = require("../database/models/Comentario_Topico");
 const Trabalho_Entregue = require("../database/models/Trabalho_Entregue");
 const Avaliacao = require("../database/models/Avaliacao");
+const OcorrenciaCurso = require("../database/models/OcorrenciaCurso");
+const PushSubscription = require("../database/models/PushSubscription");
+const Quiz = require("../database/models/Quiz");
+const QuizOpcao = require("../database/models/QuizOpcao");
+const QuizPergunta = require("../database/models/QuizPergunta");
+const QuizResposta = require("../database/models/QuizResposta");
+const QuizRespostaDetalhe = require("../database/models/QuizRespostaDetalhe");
+const TipoConteudo = require("../database/models/TipoConteudo");
 
 // Dados Teste
 const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');
