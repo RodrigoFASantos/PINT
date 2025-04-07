@@ -125,7 +125,7 @@ const loginUser = async (req, res) => {
         id_cargo: user.cargo?.id_cargo,
         cargo: user.cargo?.descricao || null
       },
-      "segredo",
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
@@ -145,29 +145,53 @@ const loginUser = async (req, res) => {
 
 
 
+
+
+
+
 const perfilUser = async (req, res) => {
   try {
+    console.log('🔍 Iniciando busca de perfil de usuário');
+    console.log('Usuário autenticado:', req.user);
+    
     const userId = req.user.id_utilizador;
+    console.log('ID do usuário:', userId);
 
-    // Incluir o modelo de Cargo para a relação
     const user = await User.findByPk(userId, {
       include: [{ model: Cargo, as: 'cargo' }]
     });
 
+    console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+
     if (!user) {
+      console.log('❌ Usuário não encontrado');
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
     // Adicionar imagem default se não existir
-    if (!user.foto_perfil) user.foto_perfil = "default_avatar.png";
-    if (!user.foto_capa) user.foto_capa = "default_capa.png";
+    if (!user.foto_perfil) {
+      console.log('Definindo foto de perfil padrão');
+      user.foto_perfil = "default_avatar.png";
+    }
+    if (!user.foto_capa) {
+      console.log('Definindo foto de capa padrão');
+      user.foto_capa = "default_capa.png";
+    }
 
+    console.log('✅ Perfil recuperado com sucesso');
     res.json(user);
   } catch (error) {
-    console.error("Erro ao obter o perfil:", error);
+    console.error("❌ Erro ao obter o perfil:", error);
     res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
   }
 };
+
+
+
+
+
+
+
 
 
 const updatePerfilUser = async (req, res) => {

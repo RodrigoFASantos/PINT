@@ -23,102 +23,69 @@ export default function Perfil() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("Token enviado:", token); // DEBUG
-    console.log("API_BASE:", API_BASE); // Ver qual é o URL base
-    console.log("URL completo:", `${API_BASE}/users/perfil`); // Ver URL completa
     
     if (!token) {
       console.error("Token não encontrado!");
-      setError("Token não encontrado. Por favor, faça login novamente.");
+      navigate('/login');
       return;
     }
 
-    // Verificar se o servidor está a responder
-    fetch(`${API_BASE}/`, {
-      method: 'GET'
-    })
-    .then(res => {
-      console.log("Servidor responde:", res.status);
-    })
-    .catch(err => {
-      console.error("Servidor não responde:", err);
-      setError("Não foi possível conectar ao servidor. Verifique se o servidor está em execução.");
-    });
+    const fetchPerfil = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/users/perfil`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+    
+        // ... resto do código permanece igual
+      } catch (err) {
+        console.error("Erro ao carregar o perfil:", err);
+        setError(`Erro ao carregar o perfil: ${err.message}`);
+      }
+    };
 
-    // Tentativa de obter perfil
-    fetch(`${API_BASE}/users/perfil`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
-    })
-    .then(res => {
-      console.log("Status da resposta:", res.status);
-      console.log("Headers da resposta:", [...res.headers.entries()]);
-      if (!res.ok) {
-        throw new Error(`Status: ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log("Dados recebidos:", data);
-      setUser(data);
-      setFormData({
-        nome: data.nome || '',
-        email: data.email || '',
-        telefone: data.telefone || '',
-        idade: data.idade || ''
-      });
-    })
-    .catch(err => {
-      console.error("Erro ao carregar o perfil:", err);
-      setError(`Erro ao carregar o perfil: ${err.message}`);
-    });
-  }, []);
+    fetchPerfil();
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    console.log("Enviando atualização:", formData);
 
-    fetch(`${API_BASE}/perfil`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(formData),
-    })
-      .then(res => {
-        console.log("Status da atualização:", res.status);
-        if (!res.ok) {
-          throw new Error(`Status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        console.log("Resposta de atualização:", data);
-        setUser(data);
-        setEditing(false);
-        setSuccessMsg("Perfil atualizado com sucesso!");
-        setTimeout(() => setSuccessMsg(""), 3000);
-      })
-      .catch(err => {
-        console.error('Erro ao atualizar perfil:', err);
-        setError(`Erro ao atualizar perfil: ${err.message}`);
+    try {
+      const response = await fetch(`${API_BASE}/perfil`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setUser(data);
+      setEditing(false);
+      setSuccessMsg("Perfil atualizado com sucesso!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error('Erro ao atualizar perfil:', err);
+      setError(`Erro ao atualizar perfil: ${err.message}`);
+    }
   };
 
-  const handleFileChange = (e, type) => {
+  const handleFileChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    console.log(`Enviando imagem de ${type}:`, file.name);
 
     const formData = new FormData();
     formData.append("imagem", file);
@@ -126,28 +93,64 @@ export default function Perfil() {
 
     const token = localStorage.getItem("token");
 
-    fetch(`${API_BASE}/users/img/upload-foto`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    })
-      .then((res) => {
-        console.log("Status do upload:", res.status);
-        if (!res.ok) {
-          throw new Error(`Status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Resposta do upload:", data);
-        window.location.reload();
-      })
-      .catch((err) => {
-        console.error("Erro ao fazer upload:", err);
-        setError(`Erro ao fazer upload: ${err.message}`);
+    try {
+      const response = await fetch(`${API_BASE}/users/img/upload-foto`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Resposta do upload:", data);
+      
+      // Recarregar os dados do usuário
+      const userResponse = await fetch(`${API_BASE}/users/perfil`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!userResponse.ok) {
+        throw new Error(`Erro HTTP: ${userResponse.status}`);
+      }
+
+      const userData = await userResponse.json();
+      setUser(userData);
+    } catch (err) {
+      console.error("Erro ao fazer upload:", err);
+      setError(`Erro ao fazer upload: ${err.message}`);
+    }
+  };
+
+  const renderImage = (imageSource, altText, type) => {
+    const baseURL = API_BASE.replace("/api", "");
+    const defaultImage = type === 'capa' ? 'CAPA.png' : 'AVATAR.png';
+    const fallbackImage = type === 'capa' ? '/fallback-capa.jpg' : '/fallback-avatar.jpg';
+
+    return (
+      <img 
+        src={`${baseURL}/uploads/${imageSource || defaultImage}`} 
+        alt={altText} 
+        className={`perfil-${type}`} 
+        onError={(e) => {
+          console.log(`Erro ao carregar imagem de ${type}`);
+          if (e.target.src !== fallbackImage) {
+            e.target.src = fallbackImage;
+          } else {
+            e.target.style.display = 'none';
+          }
+        }}
+        onClick={() => document.getElementById(`input-${type}`).click()} 
+      />
+    );
   };
 
   if (error) return (
@@ -162,9 +165,6 @@ export default function Perfil() {
 
   if (!user) return <p>A carregar perfil...</p>;
 
-  const baseURL = API_BASE.replace("/api", "");
-  console.log("URL Base para imagens:", baseURL);
-
   return (
     <div className="perfil-wrapper">
       <Navbar toggleSidebar={toggleSidebar} />
@@ -173,44 +173,30 @@ export default function Perfil() {
       <main className="perfil-main">
         {successMsg && <div className="success-message">{successMsg}</div>}
 
-        {/* Capa com lápis */}
         <div className="perfil-capa-wrapper">
-          <img 
-            src={`${baseURL}/uploads/${user.foto_capa || 'CAPA.png'}`} 
-            alt="Capa" 
-            className="perfil-capa" 
-            onClick={() => document.getElementById('input-capa').click()} 
-            onError={(e) => {
-              console.log("Erro ao carregar imagem de capa");
-              e.target.src = "/fallback-capa.jpg";
-            }}
+          {renderImage(user.foto_capa, "Capa", 'capa')}
+          <input 
+            type="file" 
+            id="input-capa" 
+            style={{ display: 'none' }} 
+            onChange={(e) => handleFileChange(e, 'capa')} 
           />
-          <div className="perfil-capa-edit-icon"></div>
-          <input type="file" id="input-capa" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'capa')} />
 
-          {/* Avatar */}
           <div className="perfil-avatar-wrapper">
-            <img 
-              src={`${baseURL}/uploads/${user.foto_perfil || 'AVATAR.png'}`} 
-              alt="Avatar" 
-              className="perfil-avatar" 
-              onClick={() => document.getElementById('input-avatar').click()} 
-              onError={(e) => {
-                console.log("Erro ao carregar imagem de perfil");
-                e.target.src = "/fallback-avatar.jpg";
-              }}
+            {renderImage(user.foto_perfil, "Avatar", 'avatar')}
+            <input 
+              type="file" 
+              id="input-avatar" 
+              style={{ display: 'none' }} 
+              onChange={(e) => handleFileChange(e, 'perfil')} 
             />
-            <div className="perfil-avatar-edit-icon" onClick={() => document.getElementById('input-avatar').click()}> </div>
-            <input type="file" id="input-avatar" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'perfil')} />
           </div>
         </div>
 
-        {/* Nome ao lado do avatar */}
         <div className="perfil-titulo">
           <h2>{user.nome}</h2>
         </div>
 
-        {/* Dados em lista */}
         <div className="perfil-card">
           {!editing ? (
             <>

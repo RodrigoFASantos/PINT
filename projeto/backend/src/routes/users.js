@@ -18,7 +18,7 @@ router.post("/users/register", createUser);
 
 router.post("/login", loginUser);
 
-router.get("/users/perfil", verificarToken, perfilUser);
+router.get("/perfil", verificarToken, perfilUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
 router.put("/users/change-password", changePassword);
 
