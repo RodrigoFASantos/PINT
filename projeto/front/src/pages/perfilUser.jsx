@@ -80,18 +80,25 @@ export default function Perfil() {
 
     const token = localStorage.getItem("token");
 
-    fetch(`${API_BASE}/users/upload-foto`, {
+    fetch(`${API_BASE}/users/img/upload-foto`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
     })
-      .then(res => res.json())
-      .then(() => {
+      .then((res) => {
+        console.log("Resposta do servidor:", res); // DEBUG
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Data JSON recebida:", data); // DEBUG
         window.location.reload();
       })
-      .catch(err => console.error("Erro ao fazer upload:", err));
+      .catch((err) => {
+        console.error("Erro ao fazer upload:", err); // DEBUG
+      });
+    
   };
 
   if (!user) return <p>A carregar perfil...</p>;
