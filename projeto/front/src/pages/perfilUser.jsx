@@ -17,36 +17,59 @@ export default function Perfil() {
   const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Estados para controlar erros de imagem e evitar loops
+  const [capaError, setCapaError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    console.log("🔍 Token recebido:", token);
+    console.log("🌐 API_BASE:", API_BASE);
     
     if (!token) {
-      console.error("Token não encontrado!");
+      console.error("❌ Token não encontrado!");
       navigate('/login');
       return;
     }
-
+  
     const fetchPerfil = async () => {
       try {
+        console.log("🚀 Iniciando busca de perfil");
         const response = await fetch(`${API_BASE}/users/perfil`, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
           }
         });
-    
-        // ... resto do código permanece igual
+  
+        console.log("📡 Status da resposta:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Erro na resposta:", errorText);
+          throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
+        }
+  
+        const data = await response.json();
+        console.log("✅ Dados recebidos:", data);
+        
+        setUser(data);
+        setFormData({
+          nome: data.nome || '',
+          email: data.email || '',
+          telefone: data.telefone || '',
+          idade: data.idade || ''
+        });
       } catch (err) {
-        console.error("Erro ao carregar o perfil:", err);
+        console.error("❌ Erro detalhado ao carregar o perfil:", err);
         setError(`Erro ao carregar o perfil: ${err.message}`);
       }
     };
-
+  
     fetchPerfil();
   }, [navigate]);
 
@@ -124,33 +147,29 @@ export default function Perfil() {
 
       const userData = await userResponse.json();
       setUser(userData);
+      
+      // Resetar os estados de erro quando um novo upload for feito
+      if (type === 'capa') setCapaError(false);
+      if (type === 'perfil') setAvatarError(false);
+      
     } catch (err) {
       console.error("Erro ao fazer upload:", err);
       setError(`Erro ao fazer upload: ${err.message}`);
     }
   };
 
-  const renderImage = (imageSource, altText, type) => {
+  // Função para construir o URL da imagem
+  const getImageUrl = (filename, type) => {
+    if (!filename) return `/default-${type}.jpg`;
+    
+    // Estado já indica erro? Use a imagem padrão
+    if ((type === 'capa' && capaError) || (type === 'avatar' && avatarError)) {
+      return `/default-${type}.jpg`;
+    }
+    
+    // Tente a URL completa
     const baseURL = API_BASE.replace("/api", "");
-    const defaultImage = type === 'capa' ? 'CAPA.png' : 'AVATAR.png';
-    const fallbackImage = type === 'capa' ? '/fallback-capa.jpg' : '/fallback-avatar.jpg';
-
-    return (
-      <img 
-        src={`${baseURL}/uploads/${imageSource || defaultImage}`} 
-        alt={altText} 
-        className={`perfil-${type}`} 
-        onError={(e) => {
-          console.log(`Erro ao carregar imagem de ${type}`);
-          if (e.target.src !== fallbackImage) {
-            e.target.src = fallbackImage;
-          } else {
-            e.target.style.display = 'none';
-          }
-        }}
-        onClick={() => document.getElementById(`input-${type}`).click()} 
-      />
-    );
+    return `${baseURL}/uploads/${filename}`;
   };
 
   if (error) return (
@@ -163,7 +182,12 @@ export default function Perfil() {
     </div>
   );
 
-  if (!user) return <p>A carregar perfil...</p>;
+  if (!user) {
+    console.log("⏳ A carregar perfil...");
+    return <p>A carregar perfil...</p>;
+  }
+  
+  console.log("🖼️ Renderizando perfil do usuário:", user);
 
   return (
     <div className="perfil-wrapper">
@@ -174,7 +198,25 @@ export default function Perfil() {
         {successMsg && <div className="success-message">{successMsg}</div>}
 
         <div className="perfil-capa-wrapper">
-          {renderImage(user.foto_capa, "Capa", 'capa')}
+          <img 
+            src={getImageUrl(user.foto_capa, 'capa')} 
+            alt="Capa" 
+            className="perfil-capa" 
+            onError={(e) => {
+              console.log("Erro ao carregar imagem de capa");
+              // Apenas tenta carregar a imagem padrão se ainda não tentou
+              if (!capaError) {
+                setCapaError(true);
+                e.target.src = "/default-capa.jpg";
+              } else {
+                // Se mesmo a imagem padrão falhar, apenas oculte a imagem
+                e.target.style.display = 'none';
+                // Limpe o handler para impedir mais chamadas
+                e.target.onError = null;
+              }
+            }}
+            onClick={() => document.getElementById("input-capa").click()} 
+          />
           <input 
             type="file" 
             id="input-capa" 
@@ -183,7 +225,25 @@ export default function Perfil() {
           />
 
           <div className="perfil-avatar-wrapper">
-            {renderImage(user.foto_perfil, "Avatar", 'avatar')}
+            <img 
+              src={getImageUrl(user.foto_perfil, 'avatar')} 
+              alt="Avatar" 
+              className="perfil-avatar" 
+              onError={(e) => {
+                console.log("Erro ao carregar imagem de avatar");
+                // Apenas tenta carregar a imagem padrão se ainda não tentou
+                if (!avatarError) {
+                  setAvatarError(true);
+                  e.target.src = "/default-avatar.jpg";
+                } else {
+                  // Se mesmo a imagem padrão falhar, apenas oculte a imagem
+                  e.target.style.display = 'none';
+                  // Limpe o handler para impedir mais chamadas
+                  e.target.onError = null;
+                }
+              }}
+              onClick={() => document.getElementById("input-avatar").click()} 
+            />
             <input 
               type="file" 
               id="input-avatar" 
