@@ -1,3 +1,4 @@
+import './css/CategoriaCard.css';
 export default function CategoriaCard({ nome, imagem }) {
   return (
     <div

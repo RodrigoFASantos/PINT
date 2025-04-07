@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles//formadorModal.css'; 
+import './css/categoriaModal.css'; 
 
 const CategoriaModal = ({ isOpen, onClose, setCategoria, nome }) => {
   if (!isOpen) return null;

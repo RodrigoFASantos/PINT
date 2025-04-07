@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../styles/criarUtilizador.css";
+import "./css/criarUtilizador.css";
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import axios from 'axios';

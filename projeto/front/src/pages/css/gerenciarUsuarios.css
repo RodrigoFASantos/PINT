@@ -1,0 +1,282 @@
+.gerenciar-usuarios-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  .main-content {
+    display: flex;
+    flex: 1;
+  }
+  
+  .usuarios-content {
+    flex: 1;
+    padding: 1.5rem;
+  }
+  
+  .usuarios-content h1 {
+    font-size: 1.8rem;
+    color: #212529;
+    margin-bottom: 1.5rem;
+  }
+  
+  .filtros-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+  
+  .filtro {
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .filtro label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #212529;
+    font-size: 0.875rem;
+  }
+  
+  .filtro select, 
+  .filtro input {
+    width: 100%;
+    padding: 0.625rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+  
+  .filtro-acoes {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .filtrar-btn {
+    padding: 0.625rem 1rem;
+    background-color: #0062cc;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  
+  .filtrar-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .limpar-btn {
+    padding: 0.625rem 1rem;
+    background-color: #e9ecef;
+    color: #495057;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  
+  .limpar-btn:hover {
+    background-color: #dee2e6;
+  }
+  
+  .usuarios-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .usuarios-header h2 {
+    font-size: 1.5rem;
+    color: #212529;
+  }
+  
+  .criar-usuario-btn {
+    padding: 0.625rem 1rem;
+    background-color: #0062cc;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .criar-usuario-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .usuarios-table-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  
+  .usuarios-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .usuarios-table th,
+  .usuarios-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .usuarios-table th {
+    background-color: #f8f9fa;
+    font-weight: 500;
+    color: #495057;
+  }
+  
+  .usuarios-table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .usuarios-table tr.inativo {
+    background-color: #f8f9fa;
+    color: #6c757d;
+  }
+  
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .badge.formando {
+    background-color: #cce5ff;
+    color: #004085;
+  }
+  
+  .badge.formador {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  .badge.gestor {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  .status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .status.ativo {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  .status.inativo {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  .acoes {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .editar-btn,
+  .ativar-btn,
+  .desativar-btn,
+  .percurso-btn {
+    padding: 0.375rem 0.625rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  
+  .editar-btn {
+    background-color: #e9ecef;
+    color: #495057;
+  }
+  
+  .editar-btn:hover {
+    background-color: #dee2e6;
+  }
+  
+  .ativar-btn {
+    background-color: #28a745;
+    color: #ffffff;
+  }
+  
+  .ativar-btn:hover {
+    background-color: #218838;
+  }
+  
+  .desativar-btn {
+    background-color: #dc3545;
+    color: #ffffff;
+  }
+  
+  .desativar-btn:hover {
+    background-color: #c82333;
+  }
+  
+  .percurso-btn {
+    background-color: #0062cc;
+    color: #ffffff;
+  }
+  
+  .percurso-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .no-usuarios {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+    font-style: italic;
+  }
+  
+  @media (max-width: 992px) {
+    .acoes {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .main-content {
+      flex-direction: column;
+    }
+    
+    .filtros-container {
+      flex-direction: column;
+    }
+    
+    .usuarios-table {
+      display: block;
+      overflow-x: auto;
+    }
+    
+    .usuarios-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  }

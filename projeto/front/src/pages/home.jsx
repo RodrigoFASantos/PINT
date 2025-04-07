@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import banner from '../images/banner.jpg';
-import '../styles/home.css';
+import './css/home.css';
 /* import cursoImg from '../images/curso.jpg'; */
 
 

@@ -46,3 +46,22 @@
   background: rgba(0, 0, 0, 0.2);
   z-index: 50;
 }
+
+/* Adicionar ao seu arquivo Sidebar.css */
+.sidebar-section {
+  margin-bottom: 1rem;
+}
+
+.sidebar-section h3 {
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  margin: 0.5rem 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-content ul li.active a {
+  color: var(--primary-color);
+  font-weight: bold;
+  background-color: rgba(0, 98, 204, 0.1);
+}

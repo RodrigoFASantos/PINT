@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from "../api";
-import "../pages/css/perfilUser.css";
+import "./css/perfilUser.css";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
