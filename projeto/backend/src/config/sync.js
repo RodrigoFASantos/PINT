@@ -1,4 +1,12 @@
 const sequelize = require("../config/db");
+await sequelize.testConnection(); // Use a função que criou no db.js
+
+// Verificar se o sequelize está disponível e é um objeto Sequelize válido
+if (!sequelize || !sequelize.define) {
+  console.error("ERRO: O objeto sequelize importado não é válido ou não possui o método define!");
+  console.log("Objeto sequelize:", sequelize);
+  process.exit(1);
+}
 
 // Models
 const User = require("../database/models/User");

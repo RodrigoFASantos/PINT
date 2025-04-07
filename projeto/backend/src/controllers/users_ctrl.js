@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../database/models/User.js");
 const Cargo = require("../database/models/Cargo");
-
+const { sendRegistrationEmail } = require("../utils/emailService"); //email
 
 const createUser = async (req, res) => {
   try {
@@ -24,6 +24,9 @@ const createUser = async (req, res) => {
       password: hashedPassword,
       primeiro_login: 1,
     });
+
+    // Enviar email de confirmação
+    await sendRegistrationEmail(newUser);
 
     res.status(201).json({ message: "Utilizador criado com sucesso!", user: newUser });
   } catch (error) {

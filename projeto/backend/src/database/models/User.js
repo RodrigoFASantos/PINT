@@ -58,4 +58,10 @@ User.belongsTo(Cargo, {
   as: "cargo"
 });
 
+const PushSubscription = require("./PushSubscription");
+User.hasMany(PushSubscription, {
+  foreignKey: "id_utilizador",
+  as: "subscriptions"
+});
+
 module.exports = User;

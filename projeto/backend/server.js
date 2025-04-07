@@ -1,40 +1,161 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 
+require("dotenv").config();
 const app = express();
 
-// Importar todas as rotas
-const usersRoutes = require("./src/routes/users");
-const userImageRoutes = require('./src/routes/users_imagens');
-const areasRoutes = require("./src/routes/areas");
-const avaliacoesRoutes = require("./src/routes/avaliacoes");
-const categoriasRoutes = require("./src/routes/categorias");
-const comentariosRoutes = require("./src/routes/comentarios");
-const conteudosRoutes = require("./src/routes/conteudos");
-const cursosRoutes = require("./src/routes/cursos");
-const inscricoesRoutes = require("./src/routes/inscricoes");
-const topicosRoutes = require("./src/routes/topicos");
-const trabalhosRoutes = require("./src/routes/trabalhos");
+// Middleware para logging de requests
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
 
+// Configuração CORS
+app.use(cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-
-app.use(cors());
 app.use(express.json());
 
-// Definir todas as rotas com prefixo /api
-app.use("/api/users", usersRoutes);
-app.use('/api/users/img', userImageRoutes);
-app.use('/uploads', express.static('uploads'));
-app.use("/api/areas", areasRoutes);
-app.use("/api/avaliacoes", avaliacoesRoutes);
-app.use("/api/categorias", categoriasRoutes);
-app.use("/api/comentarios", comentariosRoutes);
-app.use("/api/conteudos", conteudosRoutes);
-app.use("/api/cursos", cursosRoutes);
-app.use("/api/inscricoes", inscricoesRoutes);
-app.use("/api/topicos", topicosRoutes);
-app.use("/api/trabalhos", trabalhosRoutes);
+// Função para carregar rotas com tratamento de erro
+function carregarRota(caminho, prefixo) {
+    try {
+        const rota = require(caminho);
+        app.use(prefixo, rota);
+        console.log(`✅ Rota carregada: ${prefixo}`);
+        return true;
+    } catch (error) {
+        console.warn(`⚠️    Não foi possível carregar a rota ${prefixo}:`, error.message);
+        // Para rotas essenciais, podemos criar uma rota simples que retorna erro 503
+        app.use(prefixo, (req, res) => {
+            res.status(503).json({
+                message: "Serviço temporariamente indisponível",
+                details: `Não foi possível carregar o módulo: ${error.message}`
+            });
+        });
+        return false;
+    }
+}
 
+// Verificar e criar diretórios essenciais
+const diretoriosEssenciais = [
+    "./uploads",
+    "./public",
+    "./public/fonts",
+    "./config"
+];
+
+diretoriosEssenciais.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        console.log(`Criar diretório: ${dir}`);
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Verificar se o arquivo de configuração do banco de dados existe
+if (!fs.existsSync("./config/db.js")) {
+    console.log("Criar arquivo de configuração do banco de dados...");
+    const configDbConteudo = `const { Sequelize } = require("sequelize");
+  require("dotenv").config();
+  
+  const sequelize = new Sequelize(
+    process.env.DB_DATABASE, 
+    process.env.DB_USER, 
+    process.env.DB_PASSWORD, 
+    {
+      host: process.env.DB_HOST,
+      dialect: "postgres", 
+      port: process.env.DB_PORT || 5432,
+      logging: false,
+    }
+  );
+  
+  // Função para testar a conexão com o banco de dados
+  const testConnection = async () => {
+    try {
+      await sequelize.authenticate();
+      console.log('Conexão com o banco de dados estabelecida com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Erro ao conectar ao banco de dados:', error);
+      return false;
+    }
+  };
+  
+  // Mantém a compatibilidade com código existente
+  // Exportamos o sequelize diretamente como o módulo padrão
+  module.exports = sequelize;
+  
+  // E também exportamos as funções auxiliares como propriedades
+  module.exports.testConnection = testConnection;
+  module.exports.sequelize = sequelize;`;
+  
+    fs.writeFileSync("./config/db.js", configDbConteudo);
+  }
+
+// Rota raiz para verificar se o servidor está respondendo
+app.get("/api", (req, res) => {
+    res.json({ message: "API está funcionando!" });
+});
+
+// Carregar todas as rotas essenciais
+carregarRota("./src/routes/users", "/api/users");
+carregarRota("./src/routes/users_imagens", "/api/users/img");
+
+// Servir arquivos estáticos
+app.use('/uploads', express.static('uploads'));
+
+// Carregar outras rotas não essenciais
+const rotas = [
+    { caminho: "./src/routes/areas", prefixo: "/api/areas" },
+    { caminho: "./src/routes/avaliacoes", prefixo: "/api/avaliacoes" },
+    { caminho: "./src/routes/categorias", prefixo: "/api/categorias" },
+    { caminho: "./src/routes/comentarios", prefixo: "/api/comentarios" },
+    { caminho: "./src/routes/conteudos", prefixo: "/api/conteudos" },
+    { caminho: "./src/routes/cursos", prefixo: "/api/cursos" },
+    { caminho: "./src/routes/inscricoes", prefixo: "/api/inscricoes" },
+    { caminho: "./src/routes/topicos", prefixo: "/api/topicos" },
+    { caminho: "./src/routes/trabalhos", prefixo: "/api/trabalhos" },
+    { caminho: "./src/routes/certificados", prefixo: "/api/certificados" },
+    { caminho: "./src/routes/notificacoes", prefixo: "/api/notificacoes" },
+    { caminho: "./src/routes/quiz", prefixo: "/api/quiz" },
+    { caminho: "./src/routes/mailing", prefixo: "/api/mailing" },
+    { caminho: "./src/routes/ocorrencias", prefixo: "/api/ocorrencias" },
+    { caminho: "./src/routes/tipos_conteudo", prefixo: "/api/tipos-conteudo" }
+];
+
+rotas.forEach(rota => {
+    carregarRota(rota.caminho, rota.prefixo);
+});
+
+// Tentar iniciar agendamentos, se disponível
+try {
+    const { iniciarAgendamentos } = require("./src/utils/schedulers");
+    iniciarAgendamentos();
+    console.log("✅ Agendamentos iniciados com sucesso!");
+} catch (error) {
+    console.warn("⚠️ Não foi possível iniciar agendamentos:", error.message);
+}
+
+// Middleware para tratar erros
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: "Erro interno do servidor", error: err.message });
+});
+
+// Iniciar o servidor
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Servidor aberto na porta ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`
+  ===========================================
+  🚀 Servidor iniciado com sucesso!
+  📡 Porta: ${PORT}
+  🌐 URL: http://localhost:${PORT}/api
+  ===========================================
+  `);
+});

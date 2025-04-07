@@ -1,4 +1,7 @@
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
+const User = require("../database/models/User");
+const Curso = require("../database/models/Curso");
+const { sendEnrollmentEmail } = require("../utils/emailService");
 
 // Obter todas as inscrições
 const getAllInscricoes = async (req, res) => {
@@ -10,7 +13,6 @@ const getAllInscricoes = async (req, res) => {
   }
 };
 
-// Criar uma nova inscrição
 const createInscricao = async (req, res) => {
   try {
     const { id_utilizador, id_curso } = req.body;
@@ -23,6 +25,15 @@ const createInscricao = async (req, res) => {
       id_utilizador,
       id_curso,
     });
+
+    // Buscar informações do usuário e curso para o email
+    const user = await User.findByPk(id_utilizador);
+    const curso = await Curso.findByPk(id_curso);
+
+    // Enviar email de confirmação de inscrição
+    if (user && curso) {
+      await sendEnrollmentEmail(user, curso);
+    }
 
     res.status(201).json({ message: "Inscrição criada com sucesso!", inscricao: novaInscricao });
   } catch (error) {

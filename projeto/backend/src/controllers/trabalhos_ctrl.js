@@ -13,10 +13,11 @@ const getAllTrabalhos = async (req, res) => {
 // Criar novo trabalho entregue
 const createTrabalho = async (req, res) => {
   try {
-    const { id_inscricao, ficheiro_path } = req.body;
+    const { id_inscricao } = req.body;
+    const ficheiro_path = req.file ? req.file.path : null;
 
     if (!id_inscricao || !ficheiro_path) {
-      return res.status(400).json({ message: "Campos obrigatórios em falta!" });
+      return res.status(400).json({ message: "ID de inscrição e ficheiro são obrigatórios!" });
     }
 
     const novoTrabalho = await Trabalho_Entregue.create({

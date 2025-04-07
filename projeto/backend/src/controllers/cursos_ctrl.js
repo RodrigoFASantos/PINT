@@ -1,4 +1,9 @@
 const Curso = require("../database/models/Curso");
+const Area = require("../database/models/Area");
+const Categoria = require("../database/models/Categoria");
+const User = require("../database/models/User");
+const Conteudo = require("../database/models/Conteudo");
+const Inscricao_Curso = require("../database/models/Inscricao_Curso");
 
 // Obter todos os cursos
 const getAllCursos = async (req, res) => {
@@ -39,4 +44,112 @@ const createCurso = async (req, res) => {
   }
 };
 
-module.exports = { getAllCursos, createCurso };
+// Buscar curso por ID com detalhes
+const getCursoById = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const curso = await Curso.findByPk(id, {
+      include: [
+        {
+          model: Area,
+          as: "area",
+          include: { model: Categoria, as: "categoria" }
+        },
+        { model: Conteudo, as: "conteudos" },
+        {
+          model: User,
+          as: "formador",
+          attributes: ['id_utilizador', 'nome', 'email']
+        }
+      ]
+    });
+
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado!" });
+    }
+
+    res.json(curso);
+  } catch (error) {
+    console.error("Erro ao buscar curso:", error);
+    res.status(500).json({ message: "Erro ao buscar curso" });
+  }
+};
+
+// Listar inscrições de um curso
+const getInscricoesCurso = async (req, res) => {
+  try {
+    const id_curso = req.params.id;
+
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: { id_curso },
+      include: [
+        {
+          model: User,
+          as: "utilizador",
+          attributes: ['id_utilizador', 'nome', 'email', 'telefone']
+        }
+      ]
+    });
+
+    res.json(inscricoes);
+  } catch (error) {
+    console.error("Erro ao buscar inscrições do curso:", error);
+    res.status(500).json({ message: "Erro ao buscar inscrições" });
+  }
+};
+
+// Atualizar curso existente
+const updateCurso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area } = req.body;
+
+    const curso = await Curso.findByPk(id);
+
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado!" });
+    }
+
+    // Atualizar campos
+    if (nome) curso.nome = nome;
+    if (descricao !== undefined) curso.descricao = descricao;
+    if (tipo) curso.tipo = tipo;
+    if (vagas !== undefined) curso.vagas = vagas;
+    if (data_inicio) curso.data_inicio = data_inicio;
+    if (data_fim) curso.data_fim = data_fim;
+    if (estado) curso.estado = estado;
+    if (ativo !== undefined) curso.ativo = ativo;
+    if (id_formador) curso.id_formador = id_formador;
+    if (id_area) curso.id_area = id_area;
+
+    await curso.save();
+
+    res.json({ message: "Curso atualizado com sucesso!", curso });
+  } catch (error) {
+    console.error("Erro ao atualizar curso:", error);
+    res.status(500).json({ message: "Erro no servidor ao atualizar curso." });
+  }
+};
+
+// Excluir curso
+const deleteCurso = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const curso = await Curso.findByPk(id);
+
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado!" });
+    }
+
+    await curso.destroy();
+
+    res.json({ message: "Curso excluído com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao excluir curso:", error);
+    res.status(500).json({ message: "Erro no servidor ao excluir curso." });
+  }
+};
+
+module.exports = { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso };

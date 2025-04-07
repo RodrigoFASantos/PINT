@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { getAllCursos, createCurso } = require("../controllers/cursos_ctrl");
+
+const verificarToken = require('../middleware/auth');
+const autorizar = require('../middleware/autorizar');
+
+const { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso } = require("../controllers/cursos_ctrl");
 const multer = require("multer");
 const path = require("path");
 
@@ -15,7 +19,18 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-router.get("/cursos", getAllCursos);
-router.post("/cursos", upload.single("imagem"), createCurso);
+// Rota GET para listar todos os cursos
+router.get("/", getAllCursos);
+
+// Rota POST para criar curso (com upload de imagem)
+router.post("/", verificarToken, autorizar([1, 2]), upload.single("imagem"), createCurso);
+
+// Rotas para operações específicas em um curso
+router.get("/:id", getCursoById);
+router.put("/:id", verificarToken, autorizar([1, 2]), updateCurso);
+router.delete("/:id", verificarToken, autorizar([1]), deleteCurso);
+
+// Rota para listar inscrições de um curso
+router.get("/:id/inscricoes", verificarToken, getInscricoesCurso);
 
 module.exports = router;

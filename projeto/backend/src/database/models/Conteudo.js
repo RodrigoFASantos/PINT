@@ -16,7 +16,7 @@ const Conteudo = sequelize.define("conteudos", {
     },
   },
   tipo: {
-    type: DataTypes.ENUM("link", "ficheiro", "video", "outro"),
+    type: DataTypes.STRING(50),
     allowNull: false,
   },
   descricao: {

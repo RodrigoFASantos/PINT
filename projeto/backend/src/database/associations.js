@@ -1,7 +1,14 @@
-// models/associations.js
 const User = require("./User");
 const Curso = require("./Curso");
 const InscricaoCurso = require("./InscricaoCurso");
+const Quiz = require("./Quiz");
+const QuizPergunta = require("./QuizPergunta");
+const QuizOpcao = require("./QuizOpcao");
+const QuizResposta = require("./QuizResposta");
+const QuizRespostaDetalhe = require("./QuizRespostaDetalhe");
+const OcorrenciaCurso = require("./OcorrenciaCurso");
+
+
 
 // Relação muitos-para-muitos
 User.belongsToMany(Curso, {
@@ -18,4 +25,93 @@ Curso.belongsToMany(User, {
   as: "utilizadores"
 });
 
-module.exports = { User, Curso, InscricaoCurso };
+
+
+// Quiz pertence a um Curso
+Quiz.belongsTo(Curso, {
+  foreignKey: "id_curso",
+  as: "curso"
+});
+
+Curso.hasMany(Quiz, {
+  foreignKey: "id_curso",
+  as: "quizzes"
+});
+
+// Quiz tem muitas Perguntas
+Quiz.hasMany(QuizPergunta, {
+  foreignKey: "id_quiz",
+  as: "perguntas"
+});
+
+QuizPergunta.belongsTo(Quiz, {
+  foreignKey: "id_quiz",
+  as: "quiz"
+});
+
+// Pergunta tem muitas Opções
+QuizPergunta.hasMany(QuizOpcao, {
+  foreignKey: "id_pergunta",
+  as: "opcoes"
+});
+
+QuizOpcao.belongsTo(QuizPergunta, {
+  foreignKey: "id_pergunta",
+  as: "pergunta"
+});
+
+// Respostas
+Quiz.hasMany(QuizResposta, {
+  foreignKey: "id_quiz",
+  as: "respostas"
+});
+
+QuizResposta.belongsTo(Quiz, {
+  foreignKey: "id_quiz",
+  as: "quiz"
+});
+
+QuizResposta.belongsTo(Inscricao_Curso, {
+  foreignKey: "id_inscricao",
+  as: "inscricao"
+});
+
+// Detalhes das respostas
+QuizResposta.hasMany(QuizRespostaDetalhe, {
+  foreignKey: "id_resposta",
+  as: "detalhes"
+});
+
+QuizRespostaDetalhe.belongsTo(QuizResposta, {
+  foreignKey: "id_resposta",
+  as: "resposta"
+});
+
+QuizRespostaDetalhe.belongsTo(QuizPergunta, {
+  foreignKey: "id_pergunta",
+  as: "pergunta"
+});
+
+QuizRespostaDetalhe.belongsTo(QuizOpcao, {
+  foreignKey: "id_opcao",
+  as: "opcao"
+});
+
+// Curso original tem várias ocorrências
+Curso.hasMany(OcorrenciaCurso, {
+  foreignKey: "id_curso_original",
+  as: "ocorrencias"
+});
+
+// Nova ocorrência está relacionada ao curso original
+OcorrenciaCurso.belongsTo(Curso, {
+  foreignKey: "id_curso_original",
+  as: "curso_original"
+});
+
+OcorrenciaCurso.belongsTo(Curso, {
+  foreignKey: "id_curso_nova_ocorrencia",
+  as: "curso_nova_ocorrencia"
+});
+
+module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso };

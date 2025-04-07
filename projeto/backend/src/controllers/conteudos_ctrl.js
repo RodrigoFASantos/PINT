@@ -10,7 +10,6 @@ const getAllConteudos = async (req, res) => {
   }
 };
 
-// Criar um novo conteúdo
 const createConteudo = async (req, res) => {
   try {
     const { id_curso, tipo, descricao, url_ou_ficheiro } = req.body;
@@ -18,6 +17,12 @@ const createConteudo = async (req, res) => {
     if (!id_curso || !tipo || !url_ou_ficheiro) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
+
+    // Verificar se o tipo existe
+    // const tipoExiste = await TipoConteudo.findOne({ where: { nome: tipo, ativo: true } });
+    // if (!tipoExiste) {
+    //   return res.status(400).json({ message: "Tipo de conteúdo inválido ou inativo" });
+    // }
 
     const novoConteudo = await Conteudo.create({
       id_curso,
@@ -32,5 +37,4 @@ const createConteudo = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar conteúdo." });
   }
 };
-
 module.exports = { getAllConteudos, createConteudo };

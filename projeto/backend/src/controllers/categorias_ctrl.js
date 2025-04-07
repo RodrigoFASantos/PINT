@@ -35,7 +35,6 @@ const updateCategoria = async (req, res) => {
     const { nome, imagem } = req.body;
 
     const categoria = await Categoria.findByPk(id);
-
     if (!categoria) {
       return res.status(404).json({ message: "Categoria não encontrada!" });
     }
