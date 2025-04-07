@@ -23,14 +23,14 @@ export default function Perfil() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("Token enviado:", token); // DEBUG
-    
+
     fetch(`${API_BASE}/users/perfil`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`
       }
     })
-  
+
       .then(res => res.json())
       .then(data => {
         setUser(data);
@@ -104,40 +104,29 @@ export default function Perfil() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <main className="perfil-main">
-        {/* Capa */}
+
+        {/* Capa com lápis */}
         <div className="perfil-capa-wrapper">
-          <img
-            src={`${baseURL}/uploads/${user.foto_capa || 'CAPA.png'}`} alt="Capa"
-            className="perfil-capa"
-            onClick={() => document.getElementById('input-capa').click()}
-          />
-          <input
-            type="file"
-            id="input-capa"
-            style={{ display: 'none' }}
-            onChange={(e) => handleFileChange(e, 'capa')}
-          />
+          
+          <img src={`${baseURL}/uploads/${user.foto_capa || 'CAPA.png'}`} alt="Capa" className="perfil-capa" onClick={() => document.getElementById('input-capa').click()} />
+          <div className="perfil-capa-edit-icon"></div>
+          <input type="file" id="input-capa" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'capa')} />
+
+          {/* Avatar */}
+          <div className="perfil-avatar-wrapper">
+            <img src={`${baseURL}/uploads/${user.foto_perfil || 'AVATAR.png'}`} alt="Avatar" className="perfil-avatar" onClick={() => document.getElementById('input-avatar').click()} />
+            <div className="perfil-avatar-edit-icon" onClick={() => document.getElementById('input-avatar').click()}> </div>
+            <input type="file" id="input-avatar" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'perfil')} />
+          </div>
+
         </div>
 
-        {/* Avatar */}
-        <div className="perfil-info-top">
-          <img
-            src={`${baseURL}/uploads/${user.foto_perfil || 'AVATAR.png'}`}
-            alt="Avatar"
-            className="perfil-avatar"
-            onClick={() => document.getElementById('input-avatar').click()}
-          />
-          <input
-            type="file"
-            id="input-avatar"
-            style={{ display: 'none' }}
-            onChange={(e) => handleFileChange(e, 'perfil')}
-          />
+        {/* Nome ao lado do avatar */}
+        <div className="perfil-titulo">
           <h2>{user.nome}</h2>
         </div>
 
-        {successMsg && <div className="perfil-toast">{successMsg}</div>}
-
+        {/* Dados em lista */}
         <div className="perfil-card">
           {!editing ? (
             <>
@@ -158,6 +147,13 @@ export default function Perfil() {
             </form>
           )}
         </div>
+
+
+
+
+
+
+
       </main>
     </div>
   );

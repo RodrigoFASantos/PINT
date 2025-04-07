@@ -1,4 +1,7 @@
-/* Reset básico */
+/* ====================== */
+/* RESET BÁSICO DA PÁGINA */
+/* ====================== */
+
 .perfil-wrapper {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f4f4;
@@ -11,17 +14,55 @@
 }
 
 
-.perfil-capa-wrapper {
-  width: 100%;
-  height: 250px;
-  overflow: hidden;
-  background-color: #000;
-  position: relative;
-  cursor: pointer;
+/* ===================== */
+/* TÍTULO DO PERFIL      */
+/* ===================== */
+
+.perfil-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  padding: 20px 30px 10px;
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 40px;
 }
 
-.perfil-capa-wrapper:hover::after {
-  content: '\270E';
+
+/* ===================== */
+/* CAPA DO PERFIL        */
+/* ===================== */
+
+.perfil-capa-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  background-color: #000;
+  overflow: visible;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.perfil-capa {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter 0.3s ease;
+}
+
+/* A imagem escurece só quando o rato está diretamente sobre ela */
+.perfil-capa:hover {
+  filter: brightness(60%);
+}
+
+/* Mostra o lápis apenas quando se passa o rato sobre a imagem */
+.perfil-capa:hover + .perfil-capa-edit-icon {
+  display: flex;
+}
+
+.perfil-capa-edit-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -31,58 +72,78 @@
   background-color: rgba(0, 0, 0, 0.4);
   width: 100%;
   height: 100%;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
-.perfil-capa-wrapper:hover img {
-  filter: brightness(70%);
+.perfil-capa-edit-icon::before {
+  content: '\270E';
 }
 
-.perfil-capa {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+/* ===================== */
+/* AVATAR DO PERFIL      */
+/* ===================== */
 
-.perfil-info-top {
-  position: relative;
-  text-align: center;
-  margin-top: 0;
-  padding-bottom: 80px;
-  z-index: 2;
+.perfil-avatar-wrapper {
+  position: absolute;
+  bottom: -50px;
+  left: 30px;
+  width: 100px;
+  height: 100px;
+  z-index: 10;
+  cursor: pointer;
 }
 
 .perfil-avatar {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   border: 4px solid white;
   object-fit: cover;
-  background-color: #fff;
+  background-color: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  position: absolute;
-  bottom: -50px;
-  left: 50%;
-  transform: translateX(-50%);
-  cursor: pointer;
   transition: filter 0.3s ease;
-  z-index: 3;
 }
 
-.perfil-avatar:hover {
-  filter: brightness(70%);
+/* Escurece o avatar ao passar o rato */
+.perfil-avatar-wrapper:hover .perfil-avatar {
+  filter: brightness(60%);
 }
 
-.perfil-avatar:hover::after {
+/* Mostra o ícone de edição do avatar */
+.perfil-avatar-wrapper:hover::after {
   content: '\270E';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 30px;
+  font-size: 28px;
   color: white;
+  background-color: rgba(0, 0, 0, 0.4);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.perfil-avatar-wrapper:hover .perfil-avatar-edit-icon {
+  display: flex;
+}
+
+/* ============================= */
+/* SECÇÃO COM INFORMAÇÃO PESSOAL */
+/* ============================= */
+
+.perfil-info-top {
+  position: relative;
+  margin-top: -50px;
+  padding-left: 130px; /* Deixa espaço para o avatar */
+  padding-top: 20px;
 }
 
 .perfil-info-top h2 {
@@ -91,9 +152,10 @@
   font-weight: bold;
 }
 
-.perfil-upload {
-  display: none;
-}
+
+/* ============================= */
+/* CARTÃO DE INFORMAÇÃO / FORM   */
+/* ============================= */
 
 .perfil-card {
   background-color: white;
@@ -101,8 +163,7 @@
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   max-width: 700px;
-  margin: 0 auto;
-  margin-bottom: 40px;
+  margin: 0 auto 40px;
   position: relative;
   transition: filter 0.3s ease;
   z-index: 1;
@@ -122,6 +183,11 @@
   color: #007bff;
 }
 
+
+/* ===================== */
+/* FORMULÁRIO DE PERFIL  */
+/* ===================== */
+
 .perfil-form {
   display: flex;
   flex-direction: column;
@@ -135,14 +201,23 @@
   font-size: 16px;
 }
 
-.perfil-button {
+
+/* ===================== */
+/* BOTÕES DE AÇÃO        */
+/* ===================== */
+
+.perfil-button,
+.perfil-cancel {
   padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+}
+
+.perfil-button {
+  background-color: #007bff;
+  color: white;
   transition: background-color 0.3s ease;
 }
 
@@ -151,14 +226,14 @@
 }
 
 .perfil-cancel {
-  padding: 10px 20px;
   background-color: #ccc;
   color: #000;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
 }
+
+
+/* ===================== */
+/* TOAST DE CONFIRMAÇÃO  */
+/* ===================== */
 
 .perfil-toast {
   background-color: #d1e7dd;
@@ -172,7 +247,18 @@
   animation: fadeIn 0.4s ease-in-out;
 }
 
+
+/* ===================== */
+/* ANIMAÇÃO DE ENTRADA   */
+/* ===================== */
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

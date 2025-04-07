@@ -58,13 +58,4 @@ User.belongsTo(Cargo, {
   as: "cargo"
 });
 
-const Curso = require("./Curso");
-const InscricaoCurso = require("./InscricaoCurso");
-User.belongsToMany(Curso, {
-  through: InscricaoCurso,
-  foreignKey: "id_utilizador",
-  otherKey: "id_curso",
-  as: "cursos"
-});
-
 module.exports = User;
