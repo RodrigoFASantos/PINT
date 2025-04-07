@@ -1,12 +1,6 @@
 const sequelize = require("../config/db");
-await sequelize.testConnection(); // Use a função que criou no db.js
-
-// Verificar se o sequelize está disponível e é um objeto Sequelize válido
-if (!sequelize || !sequelize.define) {
-  console.error("ERRO: O objeto sequelize importado não é válido ou não possui o método define!");
-  console.log("Objeto sequelize:", sequelize);
-  process.exit(1);
-}
+const fs = require('fs');
+const path = require('path');
 
 // Models
 const User = require("../database/models/User");
@@ -22,13 +16,21 @@ const Trabalho_Entregue = require("../database/models/Trabalho_Entregue");
 const Avaliacao = require("../database/models/Avaliacao");
 
 // Dados Teste
-const fs = require('fs');
-const path = require('path');
 const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');
 const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
 
 (async () => {
   try {
+    // Teste de conexão movido para dentro da função assíncrona
+    await sequelize.testConnection(); // Use a função que criou no db.js
+
+    // Verificar se o sequelize está disponível e é um objeto Sequelize válido
+    if (!sequelize || !sequelize.define) {
+      console.error("ERRO: O objeto sequelize importado não é válido ou não possui o método define!");
+      console.log("Objeto sequelize:", sequelize);
+      process.exit(1);
+    }
+
     // Sincroniza e depois insere os dados
     await sequelize.sync({ alter: true });
     console.log("Base de dados sincronizada!");
