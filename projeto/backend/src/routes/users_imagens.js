@@ -11,22 +11,36 @@ const storage = multer.diskStorage({
   destination: 'uploads/',
 
   filename: (req, file, cb) => {
-    const tipo = req.body.type.toUpperCase();
+    // Não podemos acessar req.body.type aqui porque o body ainda não foi processado
+    // Vamos determinar o tipo depois que o multer processar a requisição
     const extension = path.extname(file.originalname);
-    cb(null, `${tipo}-${uuidv4()}${extension}`);
+    const uniqueFilename = `FILE-${uuidv4()}${extension}`;
+    cb(null, uniqueFilename);
   }
-
 });
-/*A partir de filename acima, gera algo como AVATAR-<uuid>.png, ou CAPA-<uuid>.jpg. Portanto, nunca há sobrescrita por nome repetido — cada ficheiro terá um nome único*/
-
 
 const upload = multer({ storage });
 const verificarToken = require('../middleware/auth');
 
 router.post('/upload-foto', verificarToken, upload.single('imagem'), async (req, res) => {
   try {
+    // Agora podemos acessar req.body.type porque o multer já processou o body
+    if (!req.body.type) {
+      return res.status(400).json({ message: 'Tipo de imagem não especificado (AVATAR ou CAPA)' });
+    }
+    
     const tipo = req.body.type.toUpperCase(); // 'AVATAR' ou 'CAPA'
-    const newFileName = req.file.filename;
+    
+    if (tipo !== 'AVATAR' && tipo !== 'CAPA') {
+      return res.status(400).json({ message: 'Tipo de imagem deve ser AVATAR ou CAPA' });
+    }
+    
+    // Renomear o arquivo para incluir o tipo
+    const oldPath = req.file.path;
+    const newFileName = `${tipo}-${uuidv4()}${path.extname(req.file.originalname)}`;
+    const newPath = path.join('uploads', newFileName);
+    
+    fs.renameSync(oldPath, newPath);
     
     // Aqui a autenticação implementada contém o id do utilizador.
     const userId = req.user.id_utilizador; 

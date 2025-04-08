@@ -94,17 +94,37 @@ export default function Perfil() {
     }
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
   const handleFileChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Adicionar log para depuração
+    console.log(`Tentando fazer upload de ${type}, arquivo:`, file.name);
+
     const formDataEnv = new FormData();
     formDataEnv.append("imagem", file);
-    formDataEnv.append("type", type);
+    formDataEnv.append("type", type.toUpperCase()); // Normaliza para maiúsculo
     const token = localStorage.getItem("token");
 
+    // Log da URL de requisição
+    const uploadUrl = `${API_BASE}/users/img/upload-foto`;
+    console.log("URL de upload:", uploadUrl);
+
     try {
-      const response = await fetch(`${API_BASE}/users/img/upload-foto`, {
+      const response = await fetch(uploadUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -113,7 +133,9 @@ export default function Perfil() {
       });
 
       if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Resposta de erro:", errorText);
+        throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       console.log("Resposta do upload:", data);
@@ -131,13 +153,25 @@ export default function Perfil() {
       }
       const userData = await userResponse.json();
       setUser(userData);
-      if (type === 'CAPA') setCapaError(false);
-      if (type === 'AVATAR') setAvatarError(false);
+      if (type.toUpperCase() === 'CAPA') setCapaError(false);
+      if (type.toUpperCase() === 'AVATAR') setAvatarError(false);
     } catch (err) {
-      console.error("Erro ao fazer upload:", err);
+      console.error("Erro detalhado ao fazer upload:", err);
       setError(`Erro ao fazer upload: ${err.message}`);
     }
   };
+
+
+
+
+
+
+
+
+
+
+
+
 
   const getImageUrl = (filename, type) => {
     let baseURL = API_BASE;
@@ -178,8 +212,14 @@ export default function Perfil() {
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
+
+
       <main className="perfil-main">
         {successMsg && <div className="success-message">{successMsg}</div>}
+
+
+
+
 
         {/* Capa */}
         <div className="perfil-capa-wrapper">
@@ -198,6 +238,7 @@ export default function Perfil() {
             }}
             onClick={() => document.getElementById("input-capa").click()}
           />
+
           {/* Ícone de editar capa */}
           <div className="edit-icon-overlay capa-edit-icon">
             <span>&#9998;</span>
@@ -206,13 +247,20 @@ export default function Perfil() {
             type="file"
             id="input-capa"
             style={{ display: 'none' }}
-            onChange={(e) => handleFileChange(e, 'capa')}
+            onChange={(e) => handleFileChange(e, 'CAPA')}
           />
         </div>
+
+
+
+
+
+
 
         {/* Header: Avatar sobreposto e Nome */}
         <div className="perfil-header">
           <div className="perfil-avatar-wrapper">
+
             <img
               src={getImageUrl(user.foto_perfil, 'avatar')}
               alt="Avatar"
@@ -228,6 +276,7 @@ export default function Perfil() {
               }}
               onClick={() => document.getElementById("input-avatar").click()}
             />
+
             {/* Ícone de editar avatar */}
             <div className="edit-icon-overlay avatar-edit-icon">
               <span>&#9998;</span>
@@ -236,11 +285,20 @@ export default function Perfil() {
               type="file"
               id="input-avatar"
               style={{ display: 'none' }}
-              onChange={(e) => handleFileChange(e, 'perfil')}
+              onChange={(e) => handleFileChange(e, 'AVATAR')}
             />
           </div>
           <h2 className="perfil-nome">{user.nome}</h2>
         </div>
+
+
+
+
+
+
+
+
+
 
         {/* Cartão de informações do perfil */}
         <div className="perfil-card">
@@ -264,6 +322,11 @@ export default function Perfil() {
           )}
         </div>
       </main>
+
+
+
+
+
     </div>
   );
 }
