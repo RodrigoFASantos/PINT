@@ -197,7 +197,7 @@ const perfilUser = async (req, res) => {
 
 const updatePerfilUser = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id_utilizador;
     const { nome, email, telefone, idade } = req.body;
 
     const user = await User.findByPk(userId);

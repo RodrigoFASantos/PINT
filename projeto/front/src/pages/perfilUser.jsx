@@ -72,7 +72,8 @@ export default function Perfil() {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_BASE}/perfil`, {
+      // Alteração aqui: de ${API_BASE}/perfil para ${API_BASE}/users/perfil
+      const response = await fetch(`${API_BASE}/users/perfil`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
