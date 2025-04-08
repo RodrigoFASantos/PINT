@@ -12,10 +12,7 @@ const Categoria = sequelize.define("categorias", {
     allowNull: false,
     unique: true,
   },
-  imagem: {
-    type: DataTypes.STRING(255),
-    allowNull: true, // Permite categorias sem imagem inicialmente
-  },
+  // Campo imagem foi removido conforme solicitado
 }, {
   tableName: "categorias",
   timestamps: false,

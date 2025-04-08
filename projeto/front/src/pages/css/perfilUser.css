@@ -121,15 +121,47 @@
   margin-top: 3%;
 }
 
+
+
+
+
+
+
+
+
+
+/* ============================= */
+/*          DUAS COLUNAS         */
+/* ============================= */
+.perfil-content {
+  display: flex;              /* Ativa o layout em linha */
+  align-items: flex-start;    /* Alinhar ao topo */
+  gap: 2rem;                  /* Espaço entre colunas */
+  margin: 20px auto;
+  max-width: 90%;          /* Largura máxima para alinhar no centro */
+}
+
+/* Coluna da esquerda com o perfil-card */
+.perfil-left-col {
+  flex: 1;
+  max-width: 30%;
+}
+
+/* Coluna da direita (listagem de cursos) */
+.perfil-right-col {
+  flex: 2;                    /* Ocupa mais espaço que a esquerda */
+}
+
+
+
 /* ============================= */
 /* CARTÃO DE INFORMAÇÃO / FORM   */
 /* ============================= */
 .perfil-card {
-  background-color: white;
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  max-width: 700px;
+  width: 100%;
   margin: 20px auto 40px;
   position: relative;
   transition: filter 0.3s ease;

@@ -5,15 +5,30 @@ const User = require("../database/models/User");
 const Conteudo = require("../database/models/Conteudo");
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
 
-// Obter todos os cursos
+// Obter todos os cursos com paginação
 const getAllCursos = async (req, res) => {
   try {
-    const cursos = await Curso.findAll();
-    res.json(cursos);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Curso.findAndCountAll({
+      offset,
+      limit,
+      order: [['data_inicio', 'DESC']] // ordena por data de início (opcional)
+    });
+
+    res.json({
+      cursos: rows,
+      total: count,
+      totalPages: Math.ceil(count / limit)
+    });
   } catch (error) {
+    console.error("Erro ao buscar cursos:", error);
     res.status(500).json({ message: "Erro ao buscar cursos" });
   }
 };
+
 
 // Criar um novo curso (recebe req.file da rota)
 const createCurso = async (req, res) => {

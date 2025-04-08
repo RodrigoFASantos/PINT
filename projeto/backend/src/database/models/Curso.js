@@ -57,6 +57,14 @@ const Curso = sequelize.define("cursos", {
       key: "id_area",
     },
   },
+  id_categoria: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "categorias",
+      key: "id_categoria",
+    },
+  },
   imagem_path: {
     type: DataTypes.STRING(500),
     allowNull: true,
@@ -65,6 +73,5 @@ const Curso = sequelize.define("cursos", {
   tableName: "cursos",
   timestamps: false,
 });
-
 
 module.exports = Curso;

@@ -1,14 +1,24 @@
-const User = require("./User");
-const Curso = require("./Curso");
-const InscricaoCurso = require("./InscricaoCurso");
-const Quiz = require("./Quiz");
-const QuizPergunta = require("./QuizPergunta");
-const QuizOpcao = require("./QuizOpcao");
-const QuizResposta = require("./QuizResposta");
-const QuizRespostaDetalhe = require("./QuizRespostaDetalhe");
-const OcorrenciaCurso = require("./OcorrenciaCurso");
+const User = require("./models/User");
+const Curso = require("./models/Curso");
+const InscricaoCurso = require("./models/InscricaoCurso");
+const Quiz = require("./models/Quiz");
+const QuizPergunta = require("./models/QuizPergunta");
+const QuizOpcao = require("./models/QuizOpcao");
+const QuizResposta = require("./models/QuizResposta");
+const QuizRespostaDetalhe = require("./models/QuizRespostaDetalhe");
+const OcorrenciaCurso = require("./models/OcorrenciaCurso");
+const Categoria = require("./models/Categoria");
 
+// Relação entre Curso e Categoria
+Curso.belongsTo(Categoria, {
+  foreignKey: "id_categoria",
+  as: "categoria"
+});
 
+Categoria.hasMany(Curso, {
+  foreignKey: "id_categoria",
+  as: "cursos"
+});
 
 // Relação muitos-para-muitos
 User.belongsToMany(Curso, {
@@ -24,8 +34,6 @@ Curso.belongsToMany(User, {
   otherKey: "id_utilizador",
   as: "utilizadores"
 });
-
-
 
 // Quiz pertence a um Curso
 Quiz.belongsTo(Curso, {
@@ -71,7 +79,7 @@ QuizResposta.belongsTo(Quiz, {
   as: "quiz"
 });
 
-QuizResposta.belongsTo(Inscricao_Curso, {
+QuizResposta.belongsTo(InscricaoCurso, {
   foreignKey: "id_inscricao",
   as: "inscricao"
 });
@@ -114,4 +122,4 @@ OcorrenciaCurso.belongsTo(Curso, {
   as: "curso_nova_ocorrencia"
 });
 
-module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso };
+module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso, Categoria };

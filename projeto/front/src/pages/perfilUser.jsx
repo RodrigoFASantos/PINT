@@ -301,27 +301,78 @@ export default function Perfil() {
 
 
 
-        {/* Cartão de informações do perfil */}
-        <div className="perfil-card">
-          {!editing ? (
-            <>
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Cargo:</strong> {user.cargo?.descricao || '---'}</p>
-              <p><strong>Telefone:</strong> {user.telefone}</p>
-              <p><strong>Idade:</strong> {user.idade}</p>
-              <button className="perfil-button" onClick={() => setEditing(true)}>Editar Perfil</button>
-            </>
-          ) : (
-            <form onSubmit={handleSubmit} className="perfil-form">
-              <input className="perfil-input" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome" />
-              <input className="perfil-input" name="email" value={formData.email} onChange={handleChange} placeholder="Email" />
-              <input className="perfil-input" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="Telefone" />
-              <input className="perfil-input" name="idade" value={formData.idade} onChange={handleChange} placeholder="Idade" />
-              <button type="submit" className="perfil-button">Guardar</button>
-              <button type="button" onClick={() => setEditing(false)} className="perfil-cancel">Cancelar</button>
-            </form>
-          )}
+
+
+
+
+
+
+
+
+
+
+
+
+        <div className="perfil-content">
+
+          {/* COLUNA ESQUERDA */}
+          <div className="perfil-left-col">
+            <div className="perfil-card">
+              {!editing ? (
+                <>
+                  <p><strong>Email:</strong> {user.email}</p>
+                  <p><strong>Cargo:</strong> {user.cargo?.descricao || '---'}</p>
+                  <p><strong>Telefone:</strong> {user.telefone}</p>
+                  <p><strong>Idade:</strong> {user.idade}</p>
+                  <button className="perfil-button" onClick={() => setEditing(true)}>
+                    Editar Perfil
+                  </button>
+                </>
+              ) : (
+                <form onSubmit={handleSubmit} className="perfil-form">
+                  <input className="perfil-input" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome" />
+                  <input className="perfil-input" name="email" value={formData.email} onChange={handleChange} placeholder="Email" />
+                  <input className="perfil-input" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="Telefone" />
+                  <input className="perfil-input" name="idade" value={formData.idade} onChange={handleChange} placeholder="Idade" />
+                  <button type="submit" className="perfil-button">Guardar</button>
+                  <button type="button" onClick={() => setEditing(false)} className="perfil-cancel">Cancelar</button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA */}
+          <div className="perfil-right-col">
+            <h2>Cursos em que está inscrito</h2>
+            {/* Exemplo de listagem de cursos (dependendo do seu backend) */}
+            {user.cursos?.length ? (
+              user.cursos.map((curso) => (
+                <div key={curso.id_curso} className="curso-item">
+                  <p><strong>{curso.nome}</strong></p>
+                  <p>Estado: {curso.estado}</p>
+                  {/* outros dados do curso */}
+                </div>
+              ))
+            ) : (
+              <p>Nenhum curso encontrado.</p>
+            )}
+          </div>
         </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       </main>
 
 
