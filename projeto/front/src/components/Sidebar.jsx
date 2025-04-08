@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import '../components/css/Sidebar.css';
+import './css/Sidebar.css';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
   const { currentUser } = useAuth();
@@ -49,8 +49,8 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   <i className="fas fa-comments"></i> Fórum de Partilha
                 </Link>
               </li>
-              <li className={isActive('/perfilUser') ? 'active' : ''}>
-                <Link to="/perfilUser" onClick={toggleSidebar}>
+              <li className={isActive('/perfil') ? 'active' : ''}>
+                <Link to="/perfil" onClick={toggleSidebar}>
                   <i className="fas fa-user"></i> Perfil
                 </Link>
               </li>

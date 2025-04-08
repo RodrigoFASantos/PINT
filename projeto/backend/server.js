@@ -148,6 +148,17 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: "Erro interno do servidor", error: err.message });
 });
 
+
+
+// Middleware para listar todas as rotas disponíveis
+app._router.stack.forEach(function(r){
+    if (r.route && r.route.path){
+        console.log(r.route.path)
+    }
+});
+
+
+
 // Iniciar o servidor
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

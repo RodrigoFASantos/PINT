@@ -24,20 +24,17 @@ export default function Perfil() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Carregar dados do perfil
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("🔍 Token recebido:", token);
-    console.log("🌐 API_BASE:", API_BASE);
-    
     if (!token) {
-      console.error("❌ Token não encontrado!");
+      console.error("Token não encontrado!");
       navigate('/login');
       return;
     }
-  
+
     const fetchPerfil = async () => {
       try {
-        console.log("🚀 Iniciando busca de perfil");
         const response = await fetch(`${API_BASE}/users/perfil`, {
           method: 'GET',
           headers: {
@@ -45,18 +42,13 @@ export default function Perfil() {
             'Accept': 'application/json'
           }
         });
-  
-        console.log("📡 Status da resposta:", response.status);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("❌ Erro na resposta:", errorText);
           throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
         }
-  
+
         const data = await response.json();
-        console.log("✅ Dados recebidos:", data);
-        
         setUser(data);
         setFormData({
           nome: data.nome || '',
@@ -65,11 +57,10 @@ export default function Perfil() {
           idade: data.idade || ''
         });
       } catch (err) {
-        console.error("❌ Erro detalhado ao carregar o perfil:", err);
         setError(`Erro ao carregar o perfil: ${err.message}`);
       }
     };
-  
+
     fetchPerfil();
   }, [navigate]);
 
@@ -80,7 +71,6 @@ export default function Perfil() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-
     try {
       const response = await fetch(`${API_BASE}/perfil`, {
         method: 'PUT',
@@ -90,11 +80,9 @@ export default function Perfil() {
         },
         body: JSON.stringify(formData),
       });
-
       if (!response.ok) {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
-
       const data = await response.json();
       setUser(data);
       setEditing(false);
@@ -110,10 +98,9 @@ export default function Perfil() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("imagem", file);
-    formData.append("type", type);
-
+    const formDataEnv = new FormData();
+    formDataEnv.append("imagem", file);
+    formDataEnv.append("type", type);
     const token = localStorage.getItem("token");
 
     try {
@@ -122,16 +109,15 @@ export default function Perfil() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: formDataEnv,
       });
 
       if (!response.ok) {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
-
       const data = await response.json();
       console.log("Resposta do upload:", data);
-      
+
       // Recarregar os dados do usuário
       const userResponse = await fetch(`${API_BASE}/users/perfil`, {
         method: 'GET',
@@ -140,35 +126,36 @@ export default function Perfil() {
           'Accept': 'application/json'
         }
       });
-
       if (!userResponse.ok) {
         throw new Error(`Erro HTTP: ${userResponse.status}`);
       }
-
       const userData = await userResponse.json();
       setUser(userData);
-      
-      // Resetar os estados de erro quando um novo upload for feito
-      if (type === 'capa') setCapaError(false);
-      if (type === 'perfil') setAvatarError(false);
-      
+      if (type === 'CAPA') setCapaError(false);
+      if (type === 'AVATAR') setAvatarError(false);
     } catch (err) {
       console.error("Erro ao fazer upload:", err);
       setError(`Erro ao fazer upload: ${err.message}`);
     }
   };
 
-  // Função para construir o URL da imagem
   const getImageUrl = (filename, type) => {
-    if (!filename) return `/default-${type}.jpg`;
-    
-    // Estado já indica erro? Use a imagem padrão
-    if ((type === 'capa' && capaError) || (type === 'avatar' && avatarError)) {
-      return `/default-${type}.jpg`;
+    let baseURL = API_BASE;
+    if (baseURL.endsWith('/api')) {
+      baseURL = baseURL.substring(0, baseURL.length - 4);
+    } else if (baseURL.includes('/api/')) {
+      baseURL = baseURL.substring(0, baseURL.indexOf('/api/'));
     }
-    
-    // Tente a URL completa
-    const baseURL = API_BASE.replace("/api", "");
+    if (!filename) {
+      return type === 'capa'
+        ? `${baseURL}/uploads/CAPA.png`
+        : `${baseURL}/uploads/AVATAR.png`;
+    }
+    if ((type === 'capa' && capaError) || (type === 'avatar' && avatarError)) {
+      return type === 'capa'
+        ? `${baseURL}/uploads/CAPA.png`
+        : `${baseURL}/uploads/AVATAR.png`;
+    }
     return `${baseURL}/uploads/${filename}`;
   };
 
@@ -183,11 +170,8 @@ export default function Perfil() {
   );
 
   if (!user) {
-    console.log("⏳ A carregar perfil...");
     return <p>A carregar perfil...</p>;
   }
-  
-  console.log("🖼️ Renderizando perfil do usuário:", user);
 
   return (
     <div className="perfil-wrapper">
@@ -197,66 +181,68 @@ export default function Perfil() {
       <main className="perfil-main">
         {successMsg && <div className="success-message">{successMsg}</div>}
 
+        {/* Capa */}
         <div className="perfil-capa-wrapper">
-          <img 
-            src={getImageUrl(user.foto_capa, 'capa')} 
-            alt="Capa" 
-            className="perfil-capa" 
+          <img
+            src={getImageUrl(user.foto_capa, 'capa')}
+            alt="Capa"
+            className="perfil-capa"
             onError={(e) => {
-              console.log("Erro ao carregar imagem de capa");
-              // Apenas tenta carregar a imagem padrão se ainda não tentou
               if (!capaError) {
                 setCapaError(true);
-                e.target.src = "/default-capa.jpg";
+                e.target.src = `${API_BASE.replace('/api', '')}/uploads/CAPA.png`;
               } else {
-                // Se mesmo a imagem padrão falhar, apenas oculte a imagem
                 e.target.style.display = 'none';
-                // Limpe o handler para impedir mais chamadas
                 e.target.onError = null;
               }
             }}
-            onClick={() => document.getElementById("input-capa").click()} 
+            onClick={() => document.getElementById("input-capa").click()}
           />
-          <input 
-            type="file" 
-            id="input-capa" 
-            style={{ display: 'none' }} 
-            onChange={(e) => handleFileChange(e, 'capa')} 
+          {/* Ícone de editar capa */}
+          <div className="edit-icon-overlay capa-edit-icon">
+            <span>&#9998;</span>
+          </div>
+          <input
+            type="file"
+            id="input-capa"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChange(e, 'capa')}
           />
+        </div>
 
+        {/* Header: Avatar sobreposto e Nome */}
+        <div className="perfil-header">
           <div className="perfil-avatar-wrapper">
-            <img 
-              src={getImageUrl(user.foto_perfil, 'avatar')} 
-              alt="Avatar" 
-              className="perfil-avatar" 
+            <img
+              src={getImageUrl(user.foto_perfil, 'avatar')}
+              alt="Avatar"
+              className="perfil-avatar"
               onError={(e) => {
-                console.log("Erro ao carregar imagem de avatar");
-                // Apenas tenta carregar a imagem padrão se ainda não tentou
                 if (!avatarError) {
                   setAvatarError(true);
-                  e.target.src = "/default-avatar.jpg";
+                  e.target.src = `${API_BASE.replace('/api', '')}/uploads/AVATAR.png`;
                 } else {
-                  // Se mesmo a imagem padrão falhar, apenas oculte a imagem
                   e.target.style.display = 'none';
-                  // Limpe o handler para impedir mais chamadas
                   e.target.onError = null;
                 }
               }}
-              onClick={() => document.getElementById("input-avatar").click()} 
+              onClick={() => document.getElementById("input-avatar").click()}
             />
-            <input 
-              type="file" 
-              id="input-avatar" 
-              style={{ display: 'none' }} 
-              onChange={(e) => handleFileChange(e, 'perfil')} 
+            {/* Ícone de editar avatar */}
+            <div className="edit-icon-overlay avatar-edit-icon">
+              <span>&#9998;</span>
+            </div>
+            <input
+              type="file"
+              id="input-avatar"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileChange(e, 'perfil')}
             />
           </div>
+          <h2 className="perfil-nome">{user.nome}</h2>
         </div>
 
-        <div className="perfil-titulo">
-          <h2>{user.nome}</h2>
-        </div>
-
+        {/* Cartão de informações do perfil */}
         <div className="perfil-card">
           {!editing ? (
             <>

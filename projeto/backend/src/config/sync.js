@@ -29,22 +29,54 @@ const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
 
 (async () => {
   try {
-    // Teste de conexão movido para dentro da função assíncrona
-    await sequelize.testConnection(); // Use a função que criou no db.js
+    // Teste de conexão
+    await sequelize.testConnection();
 
-    // Verificar se o sequelize está disponível e é um objeto Sequelize válido
+    // Verificar se o sequelize está disponível
     if (!sequelize || !sequelize.define) {
       console.error("ERRO: O objeto sequelize importado não é válido ou não possui o método define!");
       console.log("Objeto sequelize:", sequelize);
       process.exit(1);
     }
 
-    // Sincroniza e depois insere os dados
-    await sequelize.sync({ alter: true });
-    console.log("Base de dados sincronizada!");
+    // Sincroniza e recria todas as tabelas (force: true)
+    console.log("Apagando todas as tabelas e dados existentes...");
+    await sequelize.sync({ force: true });
+    console.log("Base de dados sincronizada e limpa!");
 
     // Executa os dados de teste
-    await sequelize.query(dadosSQL);
+    const statements = [];
+    const sqlScript = dadosSQL.replace(/\r\n/g, '\n'); // Normalize line endings
+    const rawStatements = sqlScript.split(';');
+
+    for (let rawStmt of rawStatements) {
+      // Remove comments and trim whitespace
+      const lines = rawStmt.split('\n')
+        .filter(line => !line.trim().startsWith('--'))
+        .join('\n');
+      
+      const trimmedStmt = lines.trim();
+      if (trimmedStmt) {
+        statements.push(trimmedStmt);
+      }
+    }
+
+    console.log(`Preparados ${statements.length} comandos SQL para execução.`);
+
+    // Execute each statement individually
+    for (let i = 0; i < statements.length; i++) {
+      const stmt = statements[i];
+      try {
+        console.log(`Executando comando SQL ${i+1}/${statements.length}`);
+        await sequelize.query(stmt);
+        console.log(`Comando SQL ${i+1} executado com sucesso.`);
+      } catch (error) {
+        console.error(`Erro ao executar comando SQL ${i+1}/${statements.length}:`);
+        console.error(stmt);
+        console.error(error.message);
+        // Não interrompe a execução para que os outros comandos possam ser tentados
+      }
+    }
     console.log("Dados de teste inseridos!");
 
     process.exit();

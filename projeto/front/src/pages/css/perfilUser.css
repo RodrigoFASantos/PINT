@@ -1,7 +1,6 @@
 /* ====================== */
 /* RESET BÁSICO DA PÁGINA */
 /* ====================== */
-
 .perfil-wrapper {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f4f4;
@@ -9,39 +8,20 @@
 }
 
 .perfil-main {
-  padding-top: 60px;
+  padding-top: 50px;
   margin-left: 0;
 }
-
-
-/* ===================== */
-/* TÍTULO DO PERFIL      */
-/* ===================== */
-
-.perfil-titulo {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 20px;
-  padding: 20px 30px 10px;
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 40px;
-}
-
 
 /* ===================== */
 /* CAPA DO PERFIL        */
 /* ===================== */
-
 .perfil-capa-wrapper {
   position: relative;
   width: 100%;
-  height: 250px;
+  height: 350px;
   background-color: #000;
-  overflow: visible;
+  overflow: hidden;
   cursor: pointer;
-  z-index: 1;
 }
 
 .perfil-capa {
@@ -52,47 +32,71 @@
   transition: filter 0.3s ease;
 }
 
-/* A imagem escurece só quando o rato está diretamente sobre ela */
 .perfil-capa:hover {
   filter: brightness(60%);
 }
 
-/* Mostra o lápis apenas quando se passa o rato sobre a imagem */
-.perfil-capa:hover + .perfil-capa-edit-icon {
+/* Overlay para a capa (se ainda quiser usar, opcional) */
+.capa-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 5;
 }
 
-.perfil-capa-edit-icon {
+/* ============================= */
+/* ÍCONES DE EDIÇÃO (Capa e Avatar) */
+/* ============================= */
+.edit-icon-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 36px;
   color: white;
-  background-color: rgba(0, 0, 0, 0.4);
-  width: 100%;
-  height: 100%;
-  display: none;
-  align-items: center;
-  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
   pointer-events: none;
 }
 
-.perfil-capa-edit-icon::before {
-  content: '\270E';
+.perfil-capa-wrapper:hover .capa-edit-icon,
+.perfil-avatar-wrapper:hover .avatar-edit-icon {
+  opacity: 1;
+}
+
+/* Tamanho específico para cada */
+.capa-edit-icon span {
+  font-size: 36px;
+}
+
+.avatar-edit-icon span {
+  font-size: 28px;
 }
 
 /* ===================== */
-/* AVATAR DO PERFIL      */
+/* HEADER: Avatar e Nome */
 /* ===================== */
+.perfil-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: -5%; /* O avatar ficará 50% sobreposto à capa */
+  padding: 0 100px 20px;
+  background-color: transparent;
+}
 
 .perfil-avatar-wrapper {
-  position: absolute;
-  bottom: -50px;
-  left: 30px;
-  width: 100px;
-  height: 100px;
-  z-index: 10;
+  position: relative;
+  width: 200px;
+  height: 200px;
   cursor: pointer;
 }
 
@@ -107,86 +111,30 @@
   transition: filter 0.3s ease;
 }
 
-/* Escurece o avatar ao passar o rato */
-.perfil-avatar-wrapper:hover .perfil-avatar {
+.perfil-avatar:hover {
   filter: brightness(60%);
 }
 
-/* Mostra o ícone de edição do avatar */
-.perfil-avatar-wrapper:hover::after {
-  content: '\270E';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 28px;
-  color: white;
-  background-color: rgba(0, 0, 0, 0.4);
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.perfil-avatar-wrapper:hover .perfil-avatar-edit-icon {
-  display: flex;
-}
-
-/* ============================= */
-/* SECÇÃO COM INFORMAÇÃO PESSOAL */
-/* ============================= */
-
-.perfil-info-top {
-  position: relative;
-  margin-top: -50px;
-  padding-left: 130px; /* Deixa espaço para o avatar */
-  padding-top: 20px;
-}
-
-.perfil-info-top h2 {
-  margin-top: 60px;
-  font-size: 24px;
+.perfil-nome {
+  font-size: 1.5rem;
   font-weight: bold;
+  margin-top: 3%;
 }
-
 
 /* ============================= */
 /* CARTÃO DE INFORMAÇÃO / FORM   */
 /* ============================= */
-
 .perfil-card {
   background-color: white;
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   max-width: 700px;
-  margin: 0 auto 40px;
+  margin: 20px auto 40px;
   position: relative;
   transition: filter 0.3s ease;
   z-index: 1;
 }
-
-.perfil-card:hover {
-  filter: brightness(90%);
-  cursor: pointer;
-}
-
-.perfil-card:hover::after {
-  content: '\270E';
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 24px;
-  color: #007bff;
-}
-
-
-/* ===================== */
-/* FORMULÁRIO DE PERFIL  */
-/* ===================== */
 
 .perfil-form {
   display: flex;
@@ -201,11 +149,9 @@
   font-size: 16px;
 }
 
-
 /* ===================== */
 /* BOTÕES DE AÇÃO        */
 /* ===================== */
-
 .perfil-button,
 .perfil-cancel {
   padding: 10px 20px;
@@ -230,11 +176,9 @@
   color: #000;
 }
 
-
 /* ===================== */
 /* TOAST DE CONFIRMAÇÃO  */
 /* ===================== */
-
 .perfil-toast {
   background-color: #d1e7dd;
   color: #0f5132;
@@ -247,11 +191,6 @@
   animation: fadeIn 0.4s ease-in-out;
 }
 
-
-/* ===================== */
-/* ANIMAÇÃO DE ENTRADA   */
-/* ===================== */
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -261,4 +200,16 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ===================== */
+/* ESTILIZAÇÃO DOS ÍCONES */
+/* (Opcional: se for usar overlays ou botões com ícones) */
+.edit-icon {
+  font-size: 28px;
+  color: white;
+}
+
+.capa-overlay .edit-icon {
+  font-size: 36px;
 }
