@@ -22,7 +22,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (roles.length > 0 && !roles.includes(currentUser.perfil)) {
+  if (roles.length > 0 && !roles.includes(currentUser.id_cargo)) {
     console.log('ProtectedRoute: Usuário sem permissão, redirecionando para home');
     return <Navigate to="/" replace />;
   }

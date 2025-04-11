@@ -10,7 +10,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
   useEffect(() => {
     if (currentUser) {
-      setUserRole(currentUser.perfil);
+      setUserRole(currentUser.id_cargo);
     }
   }, [currentUser]);
 
@@ -44,6 +44,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   <i className="fas fa-book"></i> Cursos
                 </Link>
               </li>
+
               <li className={isActive('/forum') ? 'active' : ''}>
                 <Link to="/forum" onClick={toggleSidebar}>
                   <i className="fas fa-comments"></i> Fórum de Partilha
@@ -58,7 +59,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           </div>
 
           {/* Links para formandos */}
-          {userRole === 'formando' && (
+          {userRole === 3 && (
             <div className="sidebar-section">
               <h3>Formando</h3>
               <ul>
@@ -72,10 +73,17 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           )}
 
           {/* Links para formadores */}
-          {userRole === 'formador' && (
+          {userRole === 2 && (
             <div className="sidebar-section">
               <h3>Formador</h3>
               <ul>
+                
+              <li className={isActive('/criarCurso') ? 'active' : ''}>
+                <Link to="/criarCurso" onClick={toggleSidebar}>
+                  <i className="fas fa-book"></i> Criar Cursos
+                </Link>
+              </li>
+
                 <li className={isActive('/area-professor') ? 'active' : ''}>
                   <Link to="/area-professor" onClick={toggleSidebar}>
                     <i className="fas fa-chalkboard-teacher"></i> Meus Cursos
@@ -86,7 +94,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           )}
 
           {/* Links para gestores/administradores */}
-          {userRole === 'gestor' && (
+          {userRole === 1 && (
             <div className="sidebar-section">
               <h3>Administração</h3>
               <ul>

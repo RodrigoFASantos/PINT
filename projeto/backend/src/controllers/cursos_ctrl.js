@@ -33,10 +33,10 @@ const getAllCursos = async (req, res) => {
 // Criar um novo curso (recebe req.file da rota)
 const createCurso = async (req, res) => {
   try {
-    const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area } = req.body;
+    const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria } = req.body;
     const imagem = req.file ? req.file.path : null;
 
-    if (!nome || !tipo || !data_inicio || !data_fim || !id_area) {
+    if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
 
@@ -49,7 +49,8 @@ const createCurso = async (req, res) => {
       data_fim,
       id_formador,
       id_area,
-      imagem_path: imagem // Guardar o caminho na BD, tipo "uploads/cursos/1710618592334.png"
+      id_categoria,
+      imagem_path: imagem // Guardar o caminho na BD, tipo "uploads/cursos/nome-do-curso.png"
     });
 
     res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso });
@@ -118,7 +119,8 @@ const getInscricoesCurso = async (req, res) => {
 const updateCurso = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area } = req.body;
+    const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria } = req.body;
+    const imagem = req.file ? req.file.path : null;
 
     const curso = await Curso.findByPk(id);
 
@@ -137,6 +139,8 @@ const updateCurso = async (req, res) => {
     if (ativo !== undefined) curso.ativo = ativo;
     if (id_formador) curso.id_formador = id_formador;
     if (id_area) curso.id_area = id_area;
+    if (id_categoria) curso.id_categoria = id_categoria;
+    if (imagem) curso.imagem_path = imagem;
 
     await curso.save();
 

@@ -6,13 +6,13 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/login';
 import Home from './pages/home';
 import Cursos from './pages/cursos';
+import CriarCurso from './pages/criarCurso';
 import DetalhesCurso from './pages/detalhesCurso';
 import PerfilUser from './pages/perfilUser';
 import PercursoFormativo from './pages/percursoFormativo';
 import AreaProfessor from './pages/areaProfessor';
 import ForumPartilha from './pages/forumPartilha';
 import DetalheTopico from './pages/detalheTopico';
-import CriarCurso from './pages/criarCurso';
 import CriarUtilizador from './pages/criarUtilizador';
 import AdminDashboard from './pages/adminDashboard';
 import GerenciarUsuarios from './pages/gerenciarUsuarios';
@@ -72,6 +72,15 @@ const App = () => {
             />
 
             <Route
+              path="/CriarCurso"
+              element={
+                <ProtectedRoute roles={[1,2]}>
+                  <CriarCurso />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/cursos/:id"
               element={
                 <ProtectedRoute>
@@ -102,7 +111,7 @@ const App = () => {
             <Route
               path="/percurso-formativo"
               element={
-                <ProtectedRoute roles={['formando']}>
+                <ProtectedRoute roles={[3]}>
                   <PercursoFormativo />
                 </ProtectedRoute>
               }
@@ -121,7 +130,7 @@ const App = () => {
             <Route
               path="/area-professor"
               element={
-                <ProtectedRoute roles={['formador']}>
+                <ProtectedRoute roles={[1,2]}>
                   <AreaProfessor />
                 </ProtectedRoute>
               }
@@ -131,7 +140,7 @@ const App = () => {
             <Route
               path="/admin/dashboard"
               element={
-                <ProtectedRoute roles={['gestor']}>
+                <ProtectedRoute roles={[1]}>
                   <AdminDashboard />
                 </ProtectedRoute>
               }
@@ -140,7 +149,7 @@ const App = () => {
             <Route
               path="/admin/usuarios"
               element={
-                <ProtectedRoute roles={['gestor']}>
+                <ProtectedRoute roles={[1]}>
                   <GerenciarUsuarios />
                 </ProtectedRoute>
               }
@@ -149,7 +158,7 @@ const App = () => {
             <Route
               path="/admin/cursos"
               element={
-                <ProtectedRoute roles={['gestor']}>
+                <ProtectedRoute roles={[1]}>
                   <GerenciarCursos />
                 </ProtectedRoute>
               }
@@ -158,7 +167,7 @@ const App = () => {
             <Route
               path="/admin/criar-curso"
               element={
-                <ProtectedRoute roles={['gestor']}>
+                <ProtectedRoute roles={[1]}>
                   <CriarCurso />
                 </ProtectedRoute>
               }
@@ -167,7 +176,7 @@ const App = () => {
             <Route
               path="/admin/criar-usuario"
               element={
-                <ProtectedRoute roles={['gestor']}>
+                <ProtectedRoute roles={[1]}>
                   <CriarUtilizador />
                 </ProtectedRoute>
               }

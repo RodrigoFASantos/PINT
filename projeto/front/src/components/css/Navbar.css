@@ -22,3 +22,18 @@
   font-size: 16px;
   color: #333;
 }
+
+/* Adicionado para mostrar avatar do usuário */
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

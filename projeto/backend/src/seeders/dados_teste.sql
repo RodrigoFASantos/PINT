@@ -11,6 +11,7 @@ VALUES
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@exemplo.com', '123456789', '12345678', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@exemplo.com', '123456789', '12345678', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@exemplo.com', '123456789', '12345678', 0, 'AVATAR.png', 'CAPA.png');
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formador', 25, 'ro@exemplo.com', '123456789', '12345678', 0, 'AVATAR.png', 'CAPA.png');
 
 -- Tabela de categorias
 INSERT INTO categorias (nome)
@@ -29,17 +30,17 @@ VALUES
 -- Tabela de cursos (atualizada para incluir id_categoria)
 INSERT INTO cursos (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria)
 VALUES
-  ('Curso de Vue.js', 'Curso prático sobre Vue.js para iniciantes.', 'sincrono', 20, '2025-04-01', '2025-04-30', 'planeado', true,
+  ('Engenharia Informática', 'Curso prático sobre Vue.js para iniciantes.', 'sincrono', 20, '2025-04-01', '2025-04-30', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1)),
 
-  ('Comunicação Assertiva', 'Melhore a sua comunicação no ambiente de trabalho.', 'assincrono', NULL, '2025-04-01', '2025-06-01', 'planeado', true,
+  ('Desenho', 'Melhore a sua comunicação no ambiente de trabalho.', 'assincrono', NULL, '2025-04-01', '2025-06-01', 'planeado', true,
    NULL,
    (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1)),
 
-  ('Gestão de Equipas Ágeis', 'Aprenda a liderar equipas com metodologias ágeis.', 'sincrono', 15, '2025-04-15', '2025-05-15', 'planeado', true,
+  ('Gestão de Equipas', 'Aprenda a liderar equipas com metodologias ágeis.', 'sincrono', 15, '2025-04-15', '2025-05-15', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1));

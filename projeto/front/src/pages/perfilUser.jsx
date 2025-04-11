@@ -1,384 +1,332 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import API_BASE from "../api";
-import "./css/perfilUser.css";
-import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
+import React, { useState, useEffect } from 'react';
+import './css/perfilUser.css';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import API_BASE, { IMAGES } from '../api';
 
-export default function Perfil() {
-  const [user, setUser] = useState(null);
-  const [editing, setEditing] = useState(false);
+const PerfilUser = () => {
+  const { currentUser } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
     telefone: '',
-    idade: '',
+    idade: ''
   });
-  const [successMsg, setSuccessMsg] = useState('');
-  const [error, setError] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // Estados para controlar erros de imagem e evitar loops
-  const [capaError, setCapaError] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
-  const navigate = useNavigate();
+  
+  // Estados para upload de imagens
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [capaFile, setCapaFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [capaPreview, setCapaPreview] = useState('');
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Carregar dados do perfil
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("Token não encontrado!");
-      navigate('/login');
-      return;
-    }
-
-    const fetchPerfil = async () => {
+    const fetchUserProfile = async () => {
       try {
-        const response = await fetch(`${API_BASE}/users/perfil`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE}/users/perfil`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-        setUser(data);
+        setUserInfo(response.data);
         setFormData({
-          nome: data.nome || '',
-          email: data.email || '',
-          telefone: data.telefone || '',
-          idade: data.idade || ''
+          nome: response.data.nome || '',
+          email: response.data.email || '',
+          telefone: response.data.telefone || '',
+          idade: response.data.idade || ''
         });
-      } catch (err) {
-        setError(`Erro ao carregar o perfil: ${err.message}`);
+
+        // Configurar URLs das imagens
+        const userEmail = response.data.email.toLowerCase().replace(/@/g, "-at-").replace(/\./g, "-dot-");
+        setAvatarPreview(response.data.foto_perfil === 'AVATAR.png' 
+          ? IMAGES.DEFAULT_AVATAR 
+          : IMAGES.USER_AVATAR(userEmail));
+        
+        setCapaPreview(response.data.foto_capa === 'CAPA.png' 
+          ? IMAGES.DEFAULT_CAPA 
+          : IMAGES.USER_CAPA(userEmail));
+
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+        toast.error('Não foi possível carregar os dados do perfil');
       }
     };
 
-    fetchPerfil();
-  }, [navigate]);
+    fetchUserProfile();
+  }, [currentUser]);
 
-  const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    // Se estiver cancelando a edição, restaurar os dados originais
+    if (isEditing && userInfo) {
+      setFormData({
+        nome: userInfo.nome || '',
+        email: userInfo.email || '',
+        telefone: userInfo.telefone || '',
+        idade: userInfo.idade || ''
+      });
+      // Limpar arquivos de upload
+      setAvatarFile(null);
+      setCapaFile(null);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    
     try {
-      // Alteração aqui: de ${API_BASE}/perfil para ${API_BASE}/users/perfil
-      const response = await fetch(`${API_BASE}/users/perfil`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
+      const token = localStorage.getItem('token');
+      
+      // Atualizar dados do perfil
+      await axios.put(`${API_BASE}/users/perfil`, formData, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
+      
+      // Upload de avatar se tiver sido selecionado
+      if (avatarFile) {
+        const avatarFormData = new FormData();
+        avatarFormData.append('imagem', avatarFile);
+        avatarFormData.append('tipo', 'perfil');
+        
+        await axios.post(`${API_BASE}/users/img/perfil`, avatarFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
       }
-      const data = await response.json();
-      setUser(data);
-      setEditing(false);
-      setSuccessMsg("Perfil atualizado com sucesso!");
-      setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err) {
-      console.error('Erro ao atualizar perfil:', err);
-      setError(`Erro ao atualizar perfil: ${err.message}`);
-    }
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  const handleFileChange = async (e, type) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Adicionar log para depuração
-    console.log(`Tentando fazer upload de ${type}, arquivo:`, file.name);
-
-    const formDataEnv = new FormData();
-    formDataEnv.append("imagem", file);
-    formDataEnv.append("type", type.toUpperCase()); // Normaliza para maiúsculo
-    const token = localStorage.getItem("token");
-
-    // Log da URL de requisição
-    const uploadUrl = `${API_BASE}/users/img/upload-foto`;
-    console.log("URL de upload:", uploadUrl);
-
-    try {
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataEnv,
+      
+      // Upload de capa se tiver sido selecionada
+      if (capaFile) {
+        const capaFormData = new FormData();
+        capaFormData.append('imagem', capaFile);
+        capaFormData.append('tipo', 'capa');
+        
+        await axios.post(`${API_BASE}/users/img/capa`, capaFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+      
+      toast.success('Perfil atualizado com sucesso!');
+      setIsEditing(false);
+      
+      // Recarregar dados do perfil
+      const response = await axios.get(`${API_BASE}/users/perfil`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Resposta de erro:", errorText);
-        throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
-      }
-      const data = await response.json();
-      console.log("Resposta do upload:", data);
-
-      // Recarregar os dados do usuário
-      const userResponse = await fetch(`${API_BASE}/users/perfil`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Accept': 'application/json'
+      
+      setUserInfo(response.data);
+      
+      // Atualizar previews com timestamp para forçar o reload
+      if (avatarFile || capaFile) {
+        const timestamp = new Date().getTime();
+        const userEmail = response.data.email.toLowerCase().replace(/@/g, "-at-").replace(/\./g, "-dot-");
+        
+        if (avatarFile) {
+          setAvatarPreview(`${IMAGES.USER_AVATAR(userEmail)}?t=${timestamp}`);
         }
-      });
-      if (!userResponse.ok) {
-        throw new Error(`Erro HTTP: ${userResponse.status}`);
+        
+        if (capaFile) {
+          setCapaPreview(`${IMAGES.USER_CAPA(userEmail)}?t=${timestamp}`);
+        }
       }
-      const userData = await userResponse.json();
-      setUser(userData);
-      if (type.toUpperCase() === 'CAPA') setCapaError(false);
-      if (type.toUpperCase() === 'AVATAR') setAvatarError(false);
-    } catch (err) {
-      console.error("Erro detalhado ao fazer upload:", err);
-      setError(`Erro ao fazer upload: ${err.message}`);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar o perfil: ' + (error.response?.data?.message || 'Erro desconhecido'));
     }
   };
 
-
-
-
-
-
-
-
-
-
-
-
-
-  const getImageUrl = (filename, type) => {
-    let baseURL = API_BASE;
-    if (baseURL.endsWith('/api')) {
-      baseURL = baseURL.substring(0, baseURL.length - 4);
-    } else if (baseURL.includes('/api/')) {
-      baseURL = baseURL.substring(0, baseURL.indexOf('/api/'));
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'image/png') {
+        toast.error('Apenas imagens PNG são permitidas!');
+        return;
+      }
+      
+      setAvatarFile(file);
+      
+      // Criar preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
-    if (!filename) {
-      return type === 'capa'
-        ? `${baseURL}/uploads/CAPA.png`
-        : `${baseURL}/uploads/AVATAR.png`;
-    }
-    if ((type === 'capa' && capaError) || (type === 'avatar' && avatarError)) {
-      return type === 'capa'
-        ? `${baseURL}/uploads/CAPA.png`
-        : `${baseURL}/uploads/AVATAR.png`;
-    }
-    return `${baseURL}/uploads/${filename}`;
   };
 
-  if (error) return (
-    <div className="perfil-wrapper">
-      <div className="error-message">
-        <h3>Erro:</h3>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Tentar novamente</button>
+  const handleCapaChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'image/png') {
+        toast.error('Apenas imagens PNG são permitidas!');
+        return;
+      }
+      
+      setCapaFile(file);
+      
+      // Criar preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCapaPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  if (!userInfo) {
+    return (
+      <div className="perfil-container">
+        <Navbar toggleSidebar={toggleSidebar} />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="loading">Carregando perfil...</div>
       </div>
-    </div>
-  );
-
-  if (!user) {
-    return <p>A carregar perfil...</p>;
+    );
   }
 
   return (
-    <div className="perfil-wrapper">
+    <div className="perfil-container">
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-
-
-
-      <main className="perfil-main">
-        {successMsg && <div className="success-message">{successMsg}</div>}
-
-
-
-
-
-        {/* Capa */}
-        <div className="perfil-capa-wrapper">
-          <img
-            src={getImageUrl(user.foto_capa, 'capa')}
-            alt="Capa"
-            className="perfil-capa"
-            onError={(e) => {
-              if (!capaError) {
-                setCapaError(true);
-                e.target.src = `${API_BASE.replace('/api', '')}/uploads/CAPA.png`;
-              } else {
-                e.target.style.display = 'none';
-                e.target.onError = null;
-              }
-            }}
-            onClick={() => document.getElementById("input-capa").click()}
-          />
-
-          {/* Ícone de editar capa */}
-          <div className="edit-icon-overlay capa-edit-icon">
-            <span>&#9998;</span>
-          </div>
-          <input
-            type="file"
-            id="input-capa"
-            style={{ display: 'none' }}
-            onChange={(e) => handleFileChange(e, 'CAPA')}
-          />
+      
+      <div className="perfil-content">
+        <div className="perfil-capa" style={{ backgroundImage: `url('${capaPreview}')` }}>
+          {isEditing && (
+            <label className="upload-capa-btn">
+              <input type="file" accept="image/png" onChange={handleCapaChange} />
+              <span>Alterar Capa</span>
+            </label>
+          )}
         </div>
-
-
-
-
-
-
-
-        {/* Header: Avatar sobreposto e Nome */}
-        <div className="perfil-header">
-          <div className="perfil-avatar-wrapper">
-
-            <img
-              src={getImageUrl(user.foto_perfil, 'avatar')}
-              alt="Avatar"
-              className="perfil-avatar"
-              onError={(e) => {
-                if (!avatarError) {
-                  setAvatarError(true);
-                  e.target.src = `${API_BASE.replace('/api', '')}/uploads/AVATAR.png`;
-                } else {
-                  e.target.style.display = 'none';
-                  e.target.onError = null;
-                }
-              }}
-              onClick={() => document.getElementById("input-avatar").click()}
-            />
-
-            {/* Ícone de editar avatar */}
-            <div className="edit-icon-overlay avatar-edit-icon">
-              <span>&#9998;</span>
-            </div>
-            <input
-              type="file"
-              id="input-avatar"
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileChange(e, 'AVATAR')}
-            />
-          </div>
-          <h2 className="perfil-nome">{user.nome}</h2>
-        </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        <div className="perfil-content">
-
-          {/* COLUNA ESQUERDA */}
-          <div className="perfil-left-col">
-            <div className="perfil-card">
-              {!editing ? (
-                <>
-                  <p><strong>Email:</strong> {user.email}</p>
-                  <p><strong>Cargo:</strong> {user.cargo?.descricao || '---'}</p>
-                  <p><strong>Telefone:</strong> {user.telefone}</p>
-                  <p><strong>Idade:</strong> {user.idade}</p>
-                  <button className="perfil-button" onClick={() => setEditing(true)}>
-                    Editar Perfil
-                  </button>
-                </>
-              ) : (
-                <form onSubmit={handleSubmit} className="perfil-form">
-                  <input className="perfil-input" name="nome" value={formData.nome} onChange={handleChange} placeholder="Nome" />
-                  <input className="perfil-input" name="email" value={formData.email} onChange={handleChange} placeholder="Email" />
-                  <input className="perfil-input" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="Telefone" />
-                  <input className="perfil-input" name="idade" value={formData.idade} onChange={handleChange} placeholder="Idade" />
-                  <button type="submit" className="perfil-button">Guardar</button>
-                  <button type="button" onClick={() => setEditing(false)} className="perfil-cancel">Cancelar</button>
-                </form>
+        
+        <div className="perfil-info">
+          <div className="perfil-avatar-container">
+            <div className="perfil-avatar" style={{ backgroundImage: `url('${avatarPreview}')` }}>
+              {isEditing && (
+                <label className="upload-avatar-btn">
+                  <input type="file" accept="image/png" onChange={handleAvatarChange} />
+                  <span>+</span>
+                </label>
               )}
             </div>
           </div>
-
-          {/* COLUNA DIREITA */}
-          <div className="perfil-right-col">
-            <h2>Cursos em que está inscrito</h2>
-            {/* Exemplo de listagem de cursos (dependendo do seu backend) */}
-            {user.cursos?.length ? (
-              user.cursos.map((curso) => (
-                <div key={curso.id_curso} className="curso-item">
-                  <p><strong>{curso.nome}</strong></p>
-                  <p>Estado: {curso.estado}</p>
-                  {/* outros dados do curso */}
-                </div>
-              ))
-            ) : (
-              <p>Nenhum curso encontrado.</p>
-            )}
-          </div>
+          
+          <form onSubmit={handleSubmit} className="perfil-detalhes">
+            <div className="perfil-header">
+              <h2>{userInfo.nome}</h2>
+              <span className="cargo-badge">{userInfo.cargo?.descricao || 'Cargo não definido'}</span>
+            </div>
+            
+            <div className="perfil-dados">
+              {isEditing ? (
+                <>
+                  <div className="form-group">
+                    <label>Nome</label>
+                    <input 
+                      type="text" 
+                      name="nome" 
+                      value={formData.nome} 
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Telefone</label>
+                    <input 
+                      type="tel" 
+                      name="telefone" 
+                      value={formData.telefone} 
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Idade</label>
+                    <input 
+                      type="number" 
+                      name="idade" 
+                      value={formData.idade} 
+                      onChange={handleInputChange}
+                      required
+                      min="18"
+                      max="99"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="info-item">
+                    <span className="info-label">Nome:</span>
+                    <span className="info-value">{userInfo.nome}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <span className="info-label">Email:</span>
+                    <span className="info-value">{userInfo.email}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <span className="info-label">Telefone:</span>
+                    <span className="info-value">{userInfo.telefone}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <span className="info-label">Idade:</span>
+                    <span className="info-value">{userInfo.idade}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="perfil-acoes">
+              {isEditing ? (
+                <>
+                  <button type="submit" className="btn-save">Salvar</button>
+                  <button type="button" className="btn-cancel" onClick={handleEditToggle}>Cancelar</button>
+                </>
+              ) : (
+                <button type="button" className="btn-edit" onClick={handleEditToggle}>Editar Perfil</button>
+              )}
+            </div>
+          </form>
         </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      </main>
-
-
-
-
-
+      </div>
+      
+      <ToastContainer />
     </div>
   );
-}
+};
+
+export default PerfilUser;

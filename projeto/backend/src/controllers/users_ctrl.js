@@ -46,6 +46,10 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+
+
+
+
 const getFormadores = async (req, res) => {
   try {
     const users = await User.findAll({ where: { id_cargo: 2 } });
@@ -54,6 +58,9 @@ const getFormadores = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar formadores" });
   }
 };
+
+
+
 
 const getFormandos = async (req, res) => {
   try {
@@ -108,6 +115,7 @@ const changePassword = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
+
     const { email, password } = req.body;
 
     const user = await User.findOne({
@@ -120,6 +128,7 @@ const loginUser = async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
+    
     const token = jwt.sign(
       {
         id_utilizador: user.id_utilizador,

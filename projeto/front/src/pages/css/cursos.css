@@ -1,154 +1,51 @@
-.criar-utilizador-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  
-  .main-content {
-    display: flex;
-    flex: 1;
-  }
-  
-  .criar-utilizador-content {
-    flex: 1;
-    padding: 1.5rem;
-  }
-  
-  .criar-utilizador-content h1 {
-    font-size: 1.8rem;
-    color: #212529;
-    margin-bottom: 1.5rem;
-  }
-  
-  .criar-utilizador-form {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    max-width: 600px;
-  }
-  
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #212529;
-  }
-  
-  .form-group input, 
-  .form-group select {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-  
-  .form-group input:focus, 
-  .form-group select:focus {
-    border-color: #0062cc;
-    box-shadow: 0 0 0 0.2rem rgba(0, 98, 204, 0.25);
-    outline: none;
-  }
-  
-  .form-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  .form-row .form-group {
-    flex: 1;
-    min-width: 200px;
-  }
-  
-  .password-field {
-    position: relative;
-  }
-  
-  .toggle-password {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #6c757d;
-  }
-  
-  .toggle-password:hover {
-    color: #0062cc;
-  }
-  
-  .form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 2rem;
-  }
-  
-  .cancelar-btn {
-    padding: 0.75rem 1.5rem;
-    background-color: #e9ecef;
-    color: #495057;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  
-  .cancelar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .salvar-btn {
-    padding: 0.75rem 1.5rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  
-  .salvar-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .salvar-btn:disabled,
-  .cancelar-btn:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-  }
-  
-  .error-message {
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-  }
-  
-  .form-footer {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e9ecef;
-    text-align: center;
-    font-size: 0.875rem;
-    color: #6c757d;
-  }
-  
-  @media (max-width: 768px) {
-    .main-content {
-      flex-direction: column;
-    }
-    
-    .form-row {
-      flex-direction: column;
-      gap: 0;
-    }
-  }
+/* Layout principal */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+/* Cartões dos cursos */
+.grid > div {
+  position: relative;
+  height: 12rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.grid > div:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Sobreposição escura + texto */
+.grid > div .overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid > div .overlay h3 {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+/* Paginação */
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Mensagem de nenhum curso */
+.text-center p {
+  font-size: 1.125rem;
+}

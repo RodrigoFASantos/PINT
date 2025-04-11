@@ -30,7 +30,7 @@ function carregarRota(caminho, prefixo) {
         console.log(`✅ Rota carregada: ${prefixo}`);
         return true;
     } catch (error) {
-        console.warn(`⚠️    Não foi possível carregar a rota ${prefixo}:`, error.message);
+        console.warn(`⚠️ Não foi possível carregar a rota ${prefixo}:`, error.message);
         // Para rotas essenciais, podemos criar uma rota simples que retorna erro 503
         app.use(prefixo, (req, res) => {
             res.status(503).json({
@@ -45,6 +45,8 @@ function carregarRota(caminho, prefixo) {
 // Verificar e criar diretórios essenciais
 const diretoriosEssenciais = [
     "./uploads",
+    "./uploads/cursos",
+    "./uploads/users",
     "./public",
     "./public/fonts",
     "./config"
@@ -105,7 +107,8 @@ app.get("/api", (req, res) => {
 
 // Carregar todas as rotas essenciais
 carregarRota("./src/routes/users", "/api/users");
-carregarRota("./src/routes/users_imagens", "/api/users/img");
+// Removemos a linha abaixo, pois agora as funcionalidades de imagens estão integradas em users.js
+// carregarRota("./src/routes/users_imagens", "/api/users/img");
 
 // Servir arquivos estáticos
 app.use('/uploads', express.static('uploads'));

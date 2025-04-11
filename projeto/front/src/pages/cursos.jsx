@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API_BASE from "../api";
+import API_BASE, { IMAGES } from "../api";
+import "./css/cursos.css";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
@@ -46,10 +47,26 @@ export default function CursosPage() {
     navigate(`/curso/${cursoId}`);
   };
 
+  // Função para obter o URL da imagem
+  const getImageUrl = (curso) => {
+    if (!curso || !curso.nome) return '/placeholder-curso.jpg';
+    
+    const nomeCursoSlug = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    // Usar a nova função de URLs de imagens
+    return IMAGES.CURSO(nomeCursoSlug);
+  };
+
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
+      <Navbar toggleSidebar={toggleSidebar} />
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      
       {/* Barra de paginação */}
-      <div className="flex justify-center items-center mb-6">
+      <div className="flex justify-center items-center my-6">
         <button
           onClick={goToPreviousPage}
           disabled={currentPage === 1}
@@ -81,18 +98,19 @@ export default function CursosPage() {
             onClick={() => handleCursoClick(curso.id_curso)}
             className="cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105"
             style={{
-              backgroundImage: `url(${curso.imagem_path || '/placeholder-curso.jpg'})`,
+              backgroundImage: `url(${getImageUrl(curso)})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
           >
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center">
               <h3 className="text-white text-xl font-semibold text-center px-4">{curso.nome}</h3>
+              <p className="text-white text-sm mt-2">
+                {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
+              </p>
             </div>
           </div>
         ))}
-
-
       </div>
 
       {/* Mensagem para quando não há cursos */}
