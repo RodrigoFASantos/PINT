@@ -12,22 +12,20 @@ function verificarToken(req, res, next) {
   console.log('Token recebido:', token ? 'Sim' : 'Não');
 
   if (!token) {
-    console.log('❌ Nenhum token fornecido');
+    console.log('Nenhum token fornecido');
     return res.status(401).json({ message: 'Token não fornecido!' });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'segredo', (err, user) => {
     if (err) {
-      console.log('❌ Erro na verificação do token:', err.message);
-      return res.status(403).json({ message: 'Token inválido!' });
+      console.log('Erro na verificação do token:', err.message);
     }
 
     console.log('✅ Token validado com sucesso');
     console.log('Usuário autenticado:', user);
 
     if (!user.id_utilizador) {
-      console.log('❌ ID de usuário não encontrado no token');
-      return res.status(403).json({ message: 'Token inválido! ID do utilizador não encontrado.' });
+      console.log('ID de usuário não encontrado no token');
     }
 
     req.user = user;

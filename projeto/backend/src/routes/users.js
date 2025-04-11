@@ -12,17 +12,18 @@ const storage = multer.diskStorage({
     cb(null, "uploads/users/");
   },
   filename: (req, file, cb) => {
-    // Usar o email do usuário como nome do arquivo (convertendo para slug)
-    // Aqui vamos assumir que o email estará disponível em req.user após a autenticação
-    const email = req.user && req.user.email 
-      ? req.user.email.toLowerCase().replace(/@/g, "-at-").replace(/\./g, "-dot-")
-      : Date.now(); // Fallback para timestamp se não houver email
+    // Usar o nome do usuário como nome do arquivo (convertendo para slug)
+    const user = req.user;
+    // Formata o nome do usuário para usar no arquivo
+    const userName = user && user.nome 
+      ? user.nome.toLowerCase().replace(/\s+/g, "-")
+      : Date.now(); // Fallback para timestamp se não houver nome
 
     // Determinar o tipo de imagem (perfil ou capa)
-    const tipoImagem = req.body.tipo === "capa" ? "capa" : "perfil";
+    const tipoImagem = req.body.tipo === "capa" ? "capa" : "avatar";
     
     // Verificar se já existe um arquivo com esse nome e removê-lo
-    const filename = `${email}-${tipoImagem}.png`;
+    const filename = `${userName}_${tipoImagem}.png`;
     const filePath = path.join("uploads/users/", filename);
     
     if (fs.existsSync(filePath)) {

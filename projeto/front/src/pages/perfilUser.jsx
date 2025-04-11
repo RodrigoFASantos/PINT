@@ -19,7 +19,7 @@ const PerfilUser = () => {
     telefone: '',
     idade: ''
   });
-  
+
   // Estados para upload de imagens
   const [avatarFile, setAvatarFile] = useState(null);
   const [capaFile, setCapaFile] = useState(null);
@@ -33,11 +33,11 @@ const PerfilUser = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-
+  
         const response = await axios.get(`${API_BASE}/users/perfil`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-
+  
         setUserInfo(response.data);
         setFormData({
           nome: response.data.nome || '',
@@ -45,25 +45,34 @@ const PerfilUser = () => {
           telefone: response.data.telefone || '',
           idade: response.data.idade || ''
         });
-
-        // Configurar URLs das imagens
-        const userEmail = response.data.email.toLowerCase().replace(/@/g, "-at-").replace(/\./g, "-dot-");
-        setAvatarPreview(response.data.foto_perfil === 'AVATAR.png' 
-          ? IMAGES.DEFAULT_AVATAR 
-          : IMAGES.USER_AVATAR(userEmail));
+  
+        // Usar URLs diretas para garantir o funcionamento
+        if (response.data.foto_perfil === 'AVATAR.png') {
+          setAvatarPreview(IMAGES.DEFAULT_AVATAR);
+        } else {
+          const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
+          setAvatarPreview(IMAGES.USER_AVATAR(userName));
+        }
         
-        setCapaPreview(response.data.foto_capa === 'CAPA.png' 
-          ? IMAGES.DEFAULT_CAPA 
-          : IMAGES.USER_CAPA(userEmail));
-
+        if (response.data.foto_capa === 'CAPA.png') {
+          setCapaPreview(IMAGES.DEFAULT_CAPA);
+        } else {
+          const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
+          setCapaPreview(IMAGES.USER_CAPA(userName));
+        }
+  
       } catch (error) {
         console.error('Erro ao buscar perfil:', error);
         toast.error('Não foi possível carregar os dados do perfil');
       }
     };
-
+  
     fetchUserProfile();
   }, [currentUser]);
+
+  console.log("Avatar URL:", avatarPreview);
+  console.log("Capa URL:", capaPreview);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -86,69 +95,100 @@ const PerfilUser = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleAvatarUpload = async (file) => {
+    if (!file) return null;
+    
+    const formData = new FormData();
+    formData.append('imagem', file);
     
     try {
       const token = localStorage.getItem('token');
-      
+      const response = await axios.post(`${API_BASE}/users/img/perfil`, formData, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao fazer upload do avatar:', error);
+      toast.error('Falha ao enviar imagem de perfil');
+      return null;
+    }
+  };
+
+  const handleCapaUpload = async (file) => {
+    if (!file) return null;
+    
+    const formData = new FormData();
+    formData.append('imagem', file);
+    formData.append('tipo', 'capa');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE}/users/img/capa`, formData, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao fazer upload da capa:', error);
+      toast.error('Falha ao enviar imagem de capa');
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+
       // Atualizar dados do perfil
       await axios.put(`${API_BASE}/users/perfil`, formData, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // Upload de avatar se tiver sido selecionado
+
+      // Upload de imagens se tiverem sido selecionadas
+      let avatarUploaded = false;
+      let capaUploaded = false;
+
       if (avatarFile) {
-        const avatarFormData = new FormData();
-        avatarFormData.append('imagem', avatarFile);
-        avatarFormData.append('tipo', 'perfil');
-        
-        await axios.post(`${API_BASE}/users/img/perfil`, avatarFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const result = await handleAvatarUpload(avatarFile);
+        avatarUploaded = !!result;
       }
-      
-      // Upload de capa se tiver sido selecionada
+
       if (capaFile) {
-        const capaFormData = new FormData();
-        capaFormData.append('imagem', capaFile);
-        capaFormData.append('tipo', 'capa');
-        
-        await axios.post(`${API_BASE}/users/img/capa`, capaFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const result = await handleCapaUpload(capaFile);
+        capaUploaded = !!result;
       }
-      
+
       toast.success('Perfil atualizado com sucesso!');
       setIsEditing(false);
-      
+
       // Recarregar dados do perfil
       const response = await axios.get(`${API_BASE}/users/perfil`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       setUserInfo(response.data);
-      
+
       // Atualizar previews com timestamp para forçar o reload
-      if (avatarFile || capaFile) {
+      if (avatarUploaded || capaUploaded) {
         const timestamp = new Date().getTime();
-        const userEmail = response.data.email.toLowerCase().replace(/@/g, "-at-").replace(/\./g, "-dot-");
-        
-        if (avatarFile) {
-          setAvatarPreview(`${IMAGES.USER_AVATAR(userEmail)}?t=${timestamp}`);
+        const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
+
+        if (avatarUploaded) {
+          setAvatarPreview(`${IMAGES.USER_AVATAR(userName)}?t=${timestamp}`);
         }
-        
-        if (capaFile) {
-          setCapaPreview(`${IMAGES.USER_CAPA(userEmail)}?t=${timestamp}`);
+
+        if (capaUploaded) {
+          setCapaPreview(`${IMAGES.USER_CAPA(userName)}?t=${timestamp}`);
         }
       }
-      
+
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       toast.error('Erro ao atualizar o perfil: ' + (error.response?.data?.message || 'Erro desconhecido'));
@@ -162,9 +202,9 @@ const PerfilUser = () => {
         toast.error('Apenas imagens PNG são permitidas!');
         return;
       }
-      
+
       setAvatarFile(file);
-      
+
       // Criar preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -181,9 +221,9 @@ const PerfilUser = () => {
         toast.error('Apenas imagens PNG são permitidas!');
         return;
       }
-      
+
       setCapaFile(file);
-      
+
       // Criar preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -207,77 +247,81 @@ const PerfilUser = () => {
     <div className="perfil-container">
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
+
       <div className="perfil-content">
         <div className="perfil-capa" style={{ backgroundImage: `url('${capaPreview}')` }}>
-          {isEditing && (
-            <label className="upload-capa-btn">
-              <input type="file" accept="image/png" onChange={handleCapaChange} />
-              <span>Alterar Capa</span>
-            </label>
-          )}
+          {/* Botão invisível que cobre toda a capa */}
+          <label className="upload-capa-btn">
+            <input
+              type="file"
+              accept="image/png"
+              onChange={handleCapaChange}
+            />
+          </label>
         </div>
-        
+
         <div className="perfil-info">
           <div className="perfil-avatar-container">
             <div className="perfil-avatar" style={{ backgroundImage: `url('${avatarPreview}')` }}>
-              {isEditing && (
-                <label className="upload-avatar-btn">
-                  <input type="file" accept="image/png" onChange={handleAvatarChange} />
-                  <span>+</span>
-                </label>
-              )}
+              {/* Botão invisível que cobre todo o avatar */}
+              <label className="upload-avatar-btn">
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={handleAvatarChange}
+                />
+              </label>
             </div>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="perfil-detalhes">
             <div className="perfil-header">
               <h2>{userInfo.nome}</h2>
               <span className="cargo-badge">{userInfo.cargo?.descricao || 'Cargo não definido'}</span>
             </div>
-            
+
             <div className="perfil-dados">
               {isEditing ? (
                 <>
                   <div className="form-group">
                     <label>Nome</label>
-                    <input 
-                      type="text" 
-                      name="nome" 
-                      value={formData.nome} 
+                    <input
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Email</label>
-                    <input 
-                      type="email" 
-                      name="email" 
-                      value={formData.email} 
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Telefone</label>
-                    <input 
-                      type="tel" 
-                      name="telefone" 
-                      value={formData.telefone} 
+                    <input
+                      type="tel"
+                      name="telefone"
+                      value={formData.telefone}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Idade</label>
-                    <input 
-                      type="number" 
-                      name="idade" 
-                      value={formData.idade} 
+                    <input
+                      type="number"
+                      name="idade"
+                      value={formData.idade}
                       onChange={handleInputChange}
                       required
                       min="18"
@@ -291,17 +335,17 @@ const PerfilUser = () => {
                     <span className="info-label">Nome:</span>
                     <span className="info-value">{userInfo.nome}</span>
                   </div>
-                  
+
                   <div className="info-item">
                     <span className="info-label">Email:</span>
                     <span className="info-value">{userInfo.email}</span>
                   </div>
-                  
+
                   <div className="info-item">
                     <span className="info-label">Telefone:</span>
                     <span className="info-value">{userInfo.telefone}</span>
                   </div>
-                  
+
                   <div className="info-item">
                     <span className="info-label">Idade:</span>
                     <span className="info-value">{userInfo.idade}</span>
@@ -309,7 +353,7 @@ const PerfilUser = () => {
                 </>
               )}
             </div>
-            
+
             <div className="perfil-acoes">
               {isEditing ? (
                 <>
@@ -323,7 +367,7 @@ const PerfilUser = () => {
           </form>
         </div>
       </div>
-      
+
       <ToastContainer />
     </div>
   );
