@@ -11,7 +11,7 @@ VALUES
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@exemplo.com', '123456789', '12345678', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@exemplo.com', '123456789', '12345678', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@exemplo.com', '123456789', '12345678', 0, 'AVATAR.png', 'CAPA.png');
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formador', 25, 'ro@exemplo.com', '123456789', '12345678', 0, 'AVATAR.png', 'CAPA.png');
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'ro@exemplo.com', '123456789', '12345678', 0, 'AVATAR.png', 'CAPA.png');
 
 -- Tabela de categorias
 INSERT INTO categorias (nome)

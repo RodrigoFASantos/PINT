@@ -74,4 +74,28 @@ const Curso = sequelize.define("cursos", {
   timestamps: false,
 });
 
+// Adicione as associações aqui
+const User = require("./User");
+const Area = require("./Area");
+const Categoria = require("./Categoria");
+
+// Associação com o formador (User)
+Curso.belongsTo(User, {
+  foreignKey: "id_formador",
+  as: "formador"
+});
+
+// Associação com a área
+Curso.belongsTo(Area, {
+  foreignKey: "id_area",
+  as: "area"
+});
+
+// Associação com a categoria
+Curso.belongsTo(Categoria, {
+  foreignKey: "id_categoria",
+  as: "categoria"
+});
+
+
 module.exports = Curso;

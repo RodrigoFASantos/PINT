@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { getAllComentarios, createComentario } = require("../controllers/comentarios_ctrl");
 
-router.get("/comentarios", getAllComentarios);
-router.post("/comentarios", createComentario);
+// Corrigir os caminhos para não incluir 'comentarios' no path
+router.get("/", getAllComentarios);
+router.post("/", createComentario);
 
 module.exports = router;

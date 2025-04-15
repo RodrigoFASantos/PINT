@@ -1,89 +1,109 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { inscricoesService } from '../../src/services/api';
 import './css/FormularioInscricao.css';
 
 const FormularioInscricao = ({ cursoId, onClose, onSuccess }) => {
-  const [motivacao, setMotivacao] = useState('');
-  const [concordaTermos, setConcordaTermos] = useState(false);
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    motivacao: '',
+    expectativas: '',
+    termos: false
+  });
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!concordaTermos) {
-      setErro('Você precisa concordar com os termos de inscrição.');
+    if (!formData.termos) {
+      setError('Você deve aceitar os termos e condições para prosseguir.');
       return;
     }
     
-    setEnviando(true);
-    setErro('');
+    setLoading(true);
+    setError('');
     
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/cursos/${cursoId}/inscricao`, 
-        { motivacao },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Usar o serviço de inscrições para processar a inscrição
+      await inscricoesService.inscreverCurso(cursoId, {
+        motivacao: formData.motivacao,
+        expectativas: formData.expectativas
+      });
       
+      // Chamar o callback de sucesso
       onSuccess();
     } catch (error) {
-      console.error('Erro ao realizar inscrição:', error);
-      setErro(error.response?.data?.message || 'Erro ao realizar inscrição. Tente novamente.');
-      setEnviando(false);
+      console.error('Erro ao processar inscrição:', error);
+      setError(error.message || 'Erro ao processar sua inscrição. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
+  
 
   return (
     <div className="formulario-inscricao-overlay">
-      <div className="formulario-inscricao-modal">
-        <button className="close-btn" onClick={onClose}>×</button>
+      <div className="formulario-inscricao-container">
+        <div className="formulario-header">
+          <h2>Inscrição no Curso</h2>
+          <button onClick={onClose} className="close-btn">
+            &times;
+          </button>
+        </div>
         
-        <h2>Inscrição no Curso</h2>
-        
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="formulario-content">
           <div className="form-group">
-            <label htmlFor="motivacao">Motivação para participar do curso:</label>
+            <label htmlFor="motivacao">Qual sua motivação para realizar este curso?</label>
             <textarea
               id="motivacao"
-              value={motivacao}
-              onChange={(e) => setMotivacao(e.target.value)}
-              rows="4"
-              placeholder="Descreva brevemente sua motivação para participar deste curso..."
-              required
+              name="motivacao"
+              value={formData.motivacao}
+              onChange={handleChange}
+              rows="3"
+              placeholder="Descreva sua motivação..."
             />
           </div>
           
-          <div className="form-group checkbox">
+          <div className="form-group">
+            <label htmlFor="expectativas">Quais suas expectativas para este curso?</label>
+            <textarea
+              id="expectativas"
+              name="expectativas"
+              value={formData.expectativas}
+              onChange={handleChange}
+              rows="3"
+              placeholder="Descreva suas expectativas..."
+            />
+          </div>
+          
+          <div className="form-group checkbox-group">
             <input
               type="checkbox"
               id="termos"
-              checked={concordaTermos}
-              onChange={(e) => setConcordaTermos(e.target.checked)}
+              name="termos"
+              checked={formData.termos}
+              onChange={handleChange}
             />
             <label htmlFor="termos">
-              Concordo com os termos de inscrição e me comprometo a participar ativamente do curso.
+              Concordo com os termos e condições do curso e confirmo minha disponibilidade para participar.
             </label>
           </div>
           
-          {erro && <p className="erro-message">{erro}</p>}
+          {error && <div className="error-message">{error}</div>}
           
           <div className="form-actions">
-            <button 
-              type="button" 
-              className="cancelar-btn"
-              onClick={onClose}
-              disabled={enviando}
-            >
+            <button type="button" onClick={onClose} className="cancel-btn">
               Cancelar
             </button>
-            
-            <button 
-              type="submit" 
-              className="confirmar-btn"
-              disabled={enviando}
-            >
-              {enviando ? 'Inscrevendo...' : 'Confirmar Inscrição'}
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? 'Processando...' : 'Confirmar Inscrição'}
             </button>
           </div>
         </form>

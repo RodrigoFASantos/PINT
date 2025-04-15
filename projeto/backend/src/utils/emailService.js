@@ -130,9 +130,40 @@ const sendMailingList = async (users, cursos, area) => {
   }
 };
 
+// NOVA FUNÇÃO: Enviar email com certificado
+const sendCertificateEmail = async (user, curso, certificadoPath) => {
+  try {
+    await transporter.sendMail({
+      from: `"The SoftSkills" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: `Seu Certificado do Curso: ${curso.nome}`,
+      html: `
+        <h1>Certificado de Conclusão</h1>
+        <p>Olá ${user.nome},</p>
+        <p>Parabéns por concluir o curso "${curso.nome}"!</p>
+        <p>Em anexo, você encontrará seu certificado de conclusão.</p>
+        <p>Você também pode acessar seu certificado a qualquer momento em seu perfil na plataforma.</p>
+        <p>Atenciosamente,<br>Equipe The SoftSkills</p>
+      `,
+      attachments: [
+        {
+          filename: `Certificado_${curso.nome.replace(/\s+/g, '_')}.pdf`,
+          path: certificadoPath
+        }
+      ]
+    });
+    console.log(`Email com certificado enviado para ${user.email}`);
+    return true;
+  } catch (error) {
+    console.error("Erro ao enviar email com certificado:", error);
+    return false;
+  }
+};
+
 module.exports = {
   sendRegistrationEmail,
   sendEnrollmentEmail,
   sendCourseUpdateEmail,
-  sendMailingList
+  sendMailingList,
+  sendCertificateEmail  // Adicionando a nova função ao módulo exportado
 };

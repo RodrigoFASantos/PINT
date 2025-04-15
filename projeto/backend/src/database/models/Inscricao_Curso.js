@@ -32,10 +32,45 @@ const Inscricao_Curso = sequelize.define("inscricoes_cursos", {
     type: DataTypes.ENUM("inscrito", "cancelado"),
     allowNull: false,
     defaultValue: "inscrito",
+  },
+  motivacao: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  expectativas: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  nota_final: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: true,
+  },
+  certificado_gerado: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  horas_presenca: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   }
 }, {
   tableName: "inscricoes_cursos",
   timestamps: false,
+});
+
+// Definir relações
+const User = require("./User");
+const Curso = require("./Curso");
+
+Inscricao_Curso.belongsTo(User, {
+  foreignKey: "id_utilizador",
+  as: "utilizador"
+});
+
+Inscricao_Curso.belongsTo(Curso, {
+  foreignKey: "id_curso",
+  as: "curso"
 });
 
 module.exports = Inscricao_Curso;

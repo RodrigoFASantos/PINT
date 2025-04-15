@@ -18,6 +18,7 @@ import AdminDashboard from './pages/adminDashboard';
 import GerenciarUsuarios from './pages/gerenciarUsuarios';
 import GerenciarCursos from './pages/gerenciarCursos';
 import QuizPage from './pages/quizPage';
+import Formadores from './pages/formadores';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
@@ -70,6 +71,15 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/formadores"
+              element={
+                <ProtectedRoute>
+                  <Formadores />
+                </ProtectedRoute>
+              }
+              />
 
             <Route
               path="/CriarCurso"

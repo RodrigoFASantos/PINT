@@ -19,6 +19,7 @@ function verificarToken(req, res, next) {
   jwt.verify(token, process.env.JWT_SECRET || 'segredo', (err, user) => {
     if (err) {
       console.log('Erro na verificação do token:', err.message);
+      return res.status(403).json({ message: 'Token inválido!' });
     }
 
     console.log('✅ Token validado com sucesso');
@@ -32,4 +33,6 @@ function verificarToken(req, res, next) {
     next();
   });
 }
+
+// Exporta apenas a função verificarToken
 module.exports = verificarToken;

@@ -44,7 +44,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   <i className="fas fa-book"></i> Cursos
                 </Link>
               </li>
-
+              <li className={isActive('/perfil') ? 'active' : ''}>
+                <Link to="/formadores" onClick={toggleSidebar}>
+                  <i className="fas fa-user"></i> Formadores
+                </Link>
+              </li>
               <li className={isActive('/forum') ? 'active' : ''}>
                 <Link to="/forum" onClick={toggleSidebar}>
                   <i className="fas fa-comments"></i> Fórum de Partilha

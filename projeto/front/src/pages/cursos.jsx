@@ -44,7 +44,7 @@ export default function CursosPage() {
   };
 
   const handleCursoClick = (cursoId) => {
-    navigate(`/curso/${cursoId}`);
+    navigate(`/cursos/${cursoId}`);
   };
 
   // Função para obter o URL da imagem
@@ -92,6 +92,7 @@ export default function CursosPage() {
 
       {/* Lista de cursos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
         {cursos.map((curso) => (
           <div
             key={curso.id_curso}

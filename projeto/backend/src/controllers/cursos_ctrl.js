@@ -5,6 +5,7 @@ const User = require("../database/models/User");
 const Conteudo = require("../database/models/Conteudo");
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
 
+
 // Obter todos os cursos com paginação
 const getAllCursos = async (req, res) => {
   try {
@@ -64,19 +65,17 @@ const createCurso = async (req, res) => {
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
-
+    
     const curso = await Curso.findByPk(id, {
       include: [
-        {
-          model: Area,
-          as: "area",
-          include: { model: Categoria, as: "categoria" }
-        },
-        { model: Conteudo, as: "conteudos" },
-        {
-          model: User,
+        { 
+          model: User, 
           as: "formador",
           attributes: ['id_utilizador', 'nome', 'email']
+        },
+        {
+          model: Area,
+          as: "area"
         }
       ]
     });
@@ -88,7 +87,7 @@ const getCursoById = async (req, res) => {
     res.json(curso);
   } catch (error) {
     console.error("Erro ao buscar curso:", error);
-    res.status(500).json({ message: "Erro ao buscar curso" });
+    res.status(500).json({ message: "Erro ao buscar curso", error: error.message });
   }
 };
 

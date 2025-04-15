@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { getAllTopicos, createTopico } = require("../controllers/topicos_ctrl");
 
-router.get("/topicos", getAllTopicos);
-router.post("/topicos", createTopico);
+// Corrigir os caminhos para não incluir 'topicos' no path
+router.get("/", getAllTopicos);
+router.post("/", createTopico);
 
 module.exports = router;

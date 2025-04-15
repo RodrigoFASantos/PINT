@@ -122,4 +122,36 @@ OcorrenciaCurso.belongsTo(Curso, {
   as: "curso_nova_ocorrencia"
 });
 
-module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso, Categoria };
+Curso.belongsTo(User, {
+  foreignKey: "id_formador",
+  as: "formador"
+});
+
+User.hasMany(Curso, {
+  foreignKey: "id_formador",
+  as: "cursos_ministrados"
+});
+
+Area.belongsTo(Categoria, {
+  foreignKey: "id_categoria",
+  as: "categoria"
+});
+
+Categoria.hasMany(Area, {
+  foreignKey: "id_categoria",
+  as: "areas"
+});
+
+// Relação entre Curso e Area
+Curso.belongsTo(Area, {
+  foreignKey: "id_area",
+  as: "area"
+});
+
+Area.hasMany(Curso, {
+  foreignKey: "id_area",
+  as: "cursos"
+});
+
+// No final do arquivo associations.js
+module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso, Categoria, Area };

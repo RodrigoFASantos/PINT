@@ -25,13 +25,26 @@ app.use(express.json());
 // Função para carregar rotas com tratamento de erro
 function carregarRota(caminho, prefixo) {
     try {
+        console.log(`Tentando carregar rota: ${caminho} -> ${prefixo}`);
         const rota = require(caminho);
+        
+        // Validar se o módulo exportado é um router do Express
+        if (!rota || typeof rota !== 'function' || !rota.stack) {
+            console.warn(`⚠️ Módulo em ${caminho} não parece ser um router Express válido`);
+            app.use(prefixo, (req, res) => {
+                res.status(503).json({
+                    message: "Serviço temporariamente indisponível",
+                    details: "Módulo de rota inválido"
+                });
+            });
+            return false;
+        }
+        
         app.use(prefixo, rota);
         console.log(`✅ Rota carregada: ${prefixo}`);
         return true;
     } catch (error) {
         console.warn(`⚠️ Não foi possível carregar a rota ${prefixo}:`, error.message);
-        // Para rotas essenciais, podemos criar uma rota simples que retorna erro 503
         app.use(prefixo, (req, res) => {
             res.status(503).json({
                 message: "Serviço temporariamente indisponível",
@@ -41,6 +54,7 @@ function carregarRota(caminho, prefixo) {
         return false;
     }
 }
+carregarRota("./src/routes/auth", "/api/auth");
 
 // Verificar e criar diretórios essenciais
 const diretoriosEssenciais = [
