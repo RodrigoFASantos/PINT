@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { cursoService as cursosService, inscricoesService, authService } from '../../src/services/api';
 import './css/detalhesCurso.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConteudoCursoList from '../components/ConteudoCursoList';
 import FormularioInscricao from '../components/FormularioInscricao';
+import API_BASE, { IMAGES } from "../api";  // Importar API_BASE corretamente
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -32,25 +32,54 @@ const DetalhesCurso = () => {
         return;
       }
       
-      // Obter detalhes do curso
-      const cursoData = await cursosService.getCursoById(id);
-      setCurso(cursoData);
+      // Obter detalhes do curso usando API_BASE
+      try {
+        const response = await fetch(`${API_BASE}/cursos/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const cursoData = await response.json();
+        setCurso(cursoData);
+      } catch (cursoError) {
+        console.error('Erro ao carregar curso:', cursoError);
+        throw new Error('Não foi possível carregar os detalhes do curso.');
+      }
       
-      // Verificar perfil do usuário
-      const userData = await authService.getPerfil();
+      // Definir um papel padrão para o usuário para contornar o endpoint /auth/perfil
+      // Isso é temporário até você implementar o endpoint no backend
+      setUserRole('formando');
       
-      // Definir perfil baseado no cargo (1=Gestor, 2=Formador, 3=Formando)
-      const userCargo = userData.id_cargo;
-      setUserRole(userCargo === 1 ? 'gestor' : userCargo === 2 ? 'formador' : 'formando');
-      
-      // Verificar se o usuário está inscrito neste curso
-      const inscricaoData = await inscricoesService.verificarInscricao(id);
-      setInscrito(inscricaoData.inscrito);
+      try {
+        // Verificar se o usuário está inscrito neste curso (opcional)
+        const inscricaoResponse = await fetch(`${API_BASE}/inscricoes/verificar/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (inscricaoResponse.ok) {
+          const inscricaoData = await inscricaoResponse.json();
+          setInscrito(inscricaoData.inscrito);
+        } else {
+          // Se o endpoint não existir, assumir que não está inscrito
+          setInscrito(false);
+        }
+      } catch (inscricaoError) {
+        console.error('Erro ao verificar inscrição:', inscricaoError);
+        // Continuar mesmo se houver erro na verificação de inscrição
+        setInscrito(false);
+      }
       
       setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar detalhes do curso:', error);
-      setError('Não foi possível carregar os detalhes do curso. Por favor, tente novamente mais tarde.');
+      setError(error.message || 'Não foi possível carregar os detalhes do curso. Por favor, tente novamente mais tarde.');
       setLoading(false);
     }
   }, [id, navigate]);
