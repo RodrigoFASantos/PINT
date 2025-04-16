@@ -22,6 +22,7 @@ import Formadores from './pages/formadores';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
+import Categoria_Chat from './components/Categoria_Chat';
 
 const App = () => {
 
@@ -113,6 +114,15 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DetalheTopico />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/chat/:topicoId"
+              element={
+                <ProtectedRoute>
+                  <Categoria_Chat />
                 </ProtectedRoute>
               }
             />

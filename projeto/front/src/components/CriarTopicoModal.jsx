@@ -1,151 +1,124 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './css/CriarTopicoModal.css';
+import API_BASE from '../api';
 
 const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [arquivos, setArquivos] = useState([]);
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validação básica
     if (!titulo.trim()) {
-      setErro('O título é obrigatório.');
+      setError('Por favor, insira um título para o tópico');
       return;
     }
     
-    if (!descricao.trim()) {
-      setErro('A descrição é obrigatória.');
-      return;
-    }
-    
-    setEnviando(true);
-    setErro('');
+    setLoading(true);
+    setError('');
     
     try {
       const token = localStorage.getItem('token');
       
-      const formData = new FormData();
-      formData.append('titulo', titulo);
-      formData.append('descricao', descricao);
-      formData.append('categoria', categoria);
-      formData.append('area', area);
+      // Obter IDs de categoria e área
+      const [categoriaResponse, areaResponse] = await Promise.all([
+        axios.get(`${API_BASE}/categorias?nome=${encodeURIComponent(categoria)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE}/areas?nome=${encodeURIComponent(area)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
       
-      // Adicionar arquivos ao formData
-      for (const arquivo of arquivos) {
-        formData.append('arquivos', arquivo);
+      const categoriaId = categoriaResponse.data[0]?.id;
+      const areaId = areaResponse.data[0]?.id;
+      
+      if (!categoriaId || !areaId) {
+        throw new Error('Não foi possível identificar a categoria ou área');
       }
       
-      await axios.post('/api/forum/topicos', 
-        formData,
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          } 
-        }
-      );
+      // Criar tópico
+      await axios.post(`${API_BASE}/topicos`, {
+        titulo,
+        descricao,
+        id_categoria: categoriaId,
+        id_area: areaId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
+      // Sucesso
+      setLoading(false);
       onSuccess();
     } catch (error) {
       console.error('Erro ao criar tópico:', error);
-      setErro(error.response?.data?.message || 'Erro ao criar tópico. Tente novamente.');
-      setEnviando(false);
+      setError(error.response?.data?.mensagem || 'Não foi possível criar o tópico. Tente novamente.');
+      setLoading(false);
     }
   };
 
-  const handleArquivoChange = (e) => {
-    setArquivos(Array.from(e.target.files));
-  };
-
-  const removerArquivo = (index) => {
-    setArquivos(arquivos.filter((_, i) => i !== index));
-  };
-
   return (
-    <div className="criar-topico-overlay">
-      <div className="criar-topico-modal">
-        <button className="close-btn" onClick={onClose}>×</button>
-        
-        <h2>Criar Novo Tópico</h2>
-        <p className="categoria-info">{categoria} &gt; {area}</p>
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className="modal-header">
+          <h3>Criar Novo Tópico</h3>
+          <button className="btn-fechar" onClick={onClose}>×</button>
+        </div>
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="titulo">Título:</label>
-            <input
-              type="text"
-              id="titulo"
-              value={titulo}
+            <label>Categoria:</label>
+            <input type="text" value={categoria} disabled />
+          </div>
+          
+          <div className="form-group">
+            <label>Área:</label>
+            <input type="text" value={area} disabled />
+          </div>
+          
+          <div className="form-group">
+            <label>Título do Tópico:</label>
+            <input 
+              type="text" 
+              value={titulo} 
               onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Digite o título do tópico"
+              placeholder="Insira um título descritivo"
+              maxLength={100}
               required
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="descricao">Descrição:</label>
-            <textarea
-              id="descricao"
-              value={descricao}
+            <label>Descrição:</label>
+            <textarea 
+              value={descricao} 
               onChange={(e) => setDescricao(e.target.value)}
-              rows="5"
-              placeholder="Descreva o tópico..."
-              required
+              placeholder="Descreva o objetivo deste tópico..."
+              rows={4}
             />
           </div>
           
-          <div className="form-group">
-            <label htmlFor="arquivos">Anexos (opcional):</label>
-            <input
-              type="file"
-              id="arquivos"
-              onChange={handleArquivoChange}
-              multiple
-            />
-            
-            {arquivos.length > 0 && (
-              <div className="arquivos-preview">
-                <h4>Arquivos selecionados:</h4>
-                <ul>
-                  {arquivos.map((arquivo, index) => (
-                    <li key={index}>
-                      {arquivo.name}
-                      <button 
-                        type="button"
-                        className="remover-arquivo"
-                        onClick={() => removerArquivo(index)}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          {error && <div className="error-message">{error}</div>}
           
-          {erro && <p className="erro-message">{erro}</p>}
-          
-          <div className="form-actions">
+          <div className="modal-actions">
             <button 
               type="button" 
-              className="cancelar-btn"
+              className="btn-cancelar" 
               onClick={onClose}
-              disabled={enviando}
+              disabled={loading}
             >
               Cancelar
             </button>
-            
             <button 
               type="submit" 
-              className="confirmar-btn"
-              disabled={enviando}
+              className="btn-salvar" 
+              disabled={loading}
             >
-              {enviando ? 'Criando...' : 'Criar Tópico'}
+              {loading ? 'Criando...' : 'Criar Tópico'}
             </button>
           </div>
         </form>

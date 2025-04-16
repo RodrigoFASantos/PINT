@@ -5,6 +5,7 @@ import './css/forumPartilha.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import CriarTopicoModal from '../components/CriarTopicoModal';
+import API_BASE from '../api';
 
 const ForumPartilha = () => {
   const navigate = useNavigate();
@@ -20,14 +21,14 @@ const ForumPartilha = () => {
     const fetchCategorias = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('/api/categorias', {
+        const response = await axios.get(`${API_BASE}/categorias`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         setCategorias(response.data);
         
         // Obter perfil do usuário
-        const userResponse = await axios.get('/api/user/profile', {
+        const userResponse = await axios.get(`${API_BASE}/users/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -49,7 +50,7 @@ const ForumPartilha = () => {
         setLoading(true);
         try {
           const token = localStorage.getItem('token');
-          const response = await axios.get(`/api/forum/topicos`, {
+          const response = await axios.get(`${API_BASE}/topicos`, {
             params: {
               categoria: categoriaSelecionada,
               area: areaSelecionada
@@ -69,13 +70,13 @@ const ForumPartilha = () => {
     fetchTopicos();
   }, [categoriaSelecionada, areaSelecionada]);
 
-  const handleSelecionarCategoria = (categoria) => {
-    setCategoriaSelecionada(categoria);
+  const handleSelecionarCategoria = (categoriaId, categoriaNome) => {
+    setCategoriaSelecionada({ id: categoriaId, nome: categoriaNome });
     setAreaSelecionada(null);
   };
 
-  const handleSelecionarArea = (area) => {
-    setAreaSelecionada(area);
+  const handleSelecionarArea = (areaId, areaNome) => {
+    setAreaSelecionada({ id: areaId, nome: areaNome });
   };
 
   const handleVerTopico = (id) => {
@@ -83,7 +84,7 @@ const ForumPartilha = () => {
   };
 
   const handleCriarTopico = () => {
-    if (userRole === 'gestor') {
+    if (userRole === 1 || userRole === 2) { // Admin ou Gestor
       setShowCriarTopico(true);
     } else {
       // Para outros perfis, exibe mensagem de solicitar ao gestor
@@ -91,8 +92,23 @@ const ForumPartilha = () => {
     }
   };
 
-  if (loading && !categoriaSelecionada && !areaSelecionada) {
-    return <div className="loading">Carregando fórum de partilha...</div>;
+  const formatarData = (dataString) => {
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR');
+  };
+
+  if (loading && !categorias.length) {
+    return (
+      <div className="forum-partilha-container">
+        <Navbar />
+        <div className="main-content">
+          <Sidebar />
+          <div className="loading-container">
+            <div className="loading">Carregando fórum de partilha...</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -110,8 +126,8 @@ const ForumPartilha = () => {
                 {categorias.map(categoria => (
                   <li 
                     key={categoria.id} 
-                    className={categoriaSelecionada === categoria.nome ? 'selected' : ''}
-                    onClick={() => handleSelecionarCategoria(categoria.nome)}
+                    className={categoriaSelecionada?.id === categoria.id ? 'selected' : ''}
+                    onClick={() => handleSelecionarCategoria(categoria.id, categoria.nome)}
                   >
                     {categoria.nome}
                   </li>
@@ -124,12 +140,12 @@ const ForumPartilha = () => {
                 <h2>Áreas</h2>
                 <ul>
                   {categorias
-                    .find(cat => cat.nome === categoriaSelecionada)
+                    .find(cat => cat.id === categoriaSelecionada.id)
                     .areas.map(area => (
                       <li 
                         key={area.id} 
-                        className={areaSelecionada === area.nome ? 'selected' : ''}
-                        onClick={() => handleSelecionarArea(area.nome)}
+                        className={areaSelecionada?.id === area.id ? 'selected' : ''}
+                        onClick={() => handleSelecionarArea(area.id, area.nome)}
                       >
                         {area.nome}
                       </li>
@@ -143,12 +159,12 @@ const ForumPartilha = () => {
           {categoriaSelecionada && areaSelecionada && (
             <div className="topicos-section">
               <div className="topicos-header">
-                <h2>Tópicos em {areaSelecionada}</h2>
+                <h2>Tópicos em {areaSelecionada.nome}</h2>
                 <button 
                   className="criar-topico-btn"
                   onClick={handleCriarTopico}
                 >
-                  {userRole === 'gestor' ? 'Criar Tópico' : 'Solicitar Tópico'}
+                  {userRole === 1 || userRole === 2 ? 'Criar Tópico' : 'Solicitar Tópico'}
                 </button>
               </div>
               
@@ -167,14 +183,14 @@ const ForumPartilha = () => {
                           onClick={() => handleVerTopico(topico.id)}
                         >
                           <h3>{topico.titulo}</h3>
-                          <p className="topico-desc">{topico.descricao}</p>
+                          <p className="topico-desc">{topico.descricao || 'Sem descrição'}</p>
                           <div className="topico-meta">
-                            <span className="autor">Por: {topico.criador.nome}</span>
+                            <span className="autor">Por: {topico.criador?.nome || 'Usuário'}</span>
                             <span className="data">
-                              {new Date(topico.dataCriacao).toLocaleDateString()}
+                              {formatarData(topico.dataCriacao)}
                             </span>
                             <span className="comentarios">
-                              {topico.comentarios} comentário(s)
+                              {topico.comentarios || 0} comentário(s)
                             </span>
                           </div>
                         </div>
@@ -199,10 +215,10 @@ const ForumPartilha = () => {
             const fetchTopicos = async () => {
               try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get(`/api/forum/topicos`, {
+                const response = await axios.get(`${API_BASE}/topicos`, {
                   params: {
-                    categoria: categoriaSelecionada,
-                    area: areaSelecionada
+                    categoria: categoriaSelecionada.id,
+                    area: areaSelecionada.id
                   },
                   headers: { Authorization: `Bearer ${token}` }
                 });
