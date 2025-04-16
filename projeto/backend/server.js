@@ -125,6 +125,7 @@ carregarRota("./src/routes/users", "/api/users");
 // carregarRota("./src/routes/users_imagens", "/api/users/img");
 
 // Servir arquivos estáticos
+app.use('/api/uploads', express.static('uploads'));
 app.use('/uploads', express.static('uploads'));
 
 // Carregar outras rotas não essenciais

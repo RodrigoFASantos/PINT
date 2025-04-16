@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import API_BASE, { IMAGES } from '../api';
 
 const PerfilUser = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, updateUserInfo } = useAuth(); // Adicionei updateUserInfo se existir
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -25,54 +25,49 @@ const PerfilUser = () => {
   const [capaFile, setCapaFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [capaPreview, setCapaPreview] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-  
-        const response = await axios.get(`${API_BASE}/users/perfil`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-  
-        setUserInfo(response.data);
-        setFormData({
-          nome: response.data.nome || '',
-          email: response.data.email || '',
-          telefone: response.data.telefone || '',
-          idade: response.data.idade || ''
-        });
-  
-        // Usar URLs diretas para garantir o funcionamento
-        if (response.data.foto_perfil === 'AVATAR.png') {
-          setAvatarPreview(IMAGES.DEFAULT_AVATAR);
-        } else {
-          const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
-          setAvatarPreview(IMAGES.USER_AVATAR(userName));
-        }
-        
-        if (response.data.foto_capa === 'CAPA.png') {
-          setCapaPreview(IMAGES.DEFAULT_CAPA);
-        } else {
-          const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
-          setCapaPreview(IMAGES.USER_CAPA(userName));
-        }
-  
-      } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
-        toast.error('Não foi possível carregar os dados do perfil');
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE}/users/perfil`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      setUserInfo(response.data);
+      setFormData({
+        nome: response.data.nome || '',
+        email: response.data.email || '',
+        telefone: response.data.telefone || '',
+        idade: response.data.idade || ''
+      });
+
+      // Configurar as URLs das imagens
+      if (response.data.foto_perfil === 'AVATAR.png') {
+        setAvatarPreview(IMAGES.DEFAULT_AVATAR);
+      } else {
+        setAvatarPreview(IMAGES.USER_AVATAR(response.data.email));
       }
-    };
-  
+      
+      if (response.data.foto_capa === 'CAPA.png') {
+        setCapaPreview(IMAGES.DEFAULT_CAPA);
+      } else {
+        setCapaPreview(IMAGES.USER_CAPA(response.data.email));
+      }
+
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      toast.error('Não foi possível carregar os dados do perfil');
+    }
+  };
+
+  useEffect(() => {
     fetchUserProfile();
   }, [currentUser]);
-
-  console.log("Avatar URL:", avatarPreview);
-  console.log("Capa URL:", capaPreview);
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,6 +97,7 @@ const PerfilUser = () => {
     formData.append('imagem', file);
     
     try {
+      setIsUploading(true);
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API_BASE}/users/img/perfil`, formData, {
         headers: { 
@@ -109,8 +105,10 @@ const PerfilUser = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+      setIsUploading(false);
       return response.data;
     } catch (error) {
+      setIsUploading(false);
       console.error('Erro ao fazer upload do avatar:', error);
       toast.error('Falha ao enviar imagem de perfil');
       return null;
@@ -125,6 +123,7 @@ const PerfilUser = () => {
     formData.append('tipo', 'capa');
     
     try {
+      setIsUploading(true);
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API_BASE}/users/img/capa`, formData, {
         headers: { 
@@ -132,8 +131,10 @@ const PerfilUser = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+      setIsUploading(false);
       return response.data;
     } catch (error) {
+      setIsUploading(false);
       console.error('Erro ao fazer upload da capa:', error);
       toast.error('Falha ao enviar imagem de capa');
       return null;
@@ -151,42 +152,15 @@ const PerfilUser = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Upload de imagens se tiverem sido selecionadas
-      let avatarUploaded = false;
-      let capaUploaded = false;
-
-      if (avatarFile) {
-        const result = await handleAvatarUpload(avatarFile);
-        avatarUploaded = !!result;
-      }
-
-      if (capaFile) {
-        const result = await handleCapaUpload(capaFile);
-        capaUploaded = !!result;
-      }
-
       toast.success('Perfil atualizado com sucesso!');
       setIsEditing(false);
 
       // Recarregar dados do perfil
-      const response = await axios.get(`${API_BASE}/users/perfil`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await fetchUserProfile();
 
-      setUserInfo(response.data);
-
-      // Atualizar previews com timestamp para forçar o reload
-      if (avatarUploaded || capaUploaded) {
-        const timestamp = new Date().getTime();
-        const userName = response.data.nome.toLowerCase().replace(/\s+/g, "-");
-
-        if (avatarUploaded) {
-          setAvatarPreview(`${IMAGES.USER_AVATAR(userName)}?t=${timestamp}`);
-        }
-
-        if (capaUploaded) {
-          setCapaPreview(`${IMAGES.USER_CAPA(userName)}?t=${timestamp}`);
-        }
+      // Atualizar o contexto de autenticação se essa função existir
+      if (typeof updateUserInfo === 'function') {
+        updateUserInfo(userInfo);
       }
 
     } catch (error) {
@@ -195,7 +169,19 @@ const PerfilUser = () => {
     }
   };
 
-  const handleAvatarChange = (e) => {
+  // Funções para lidar com cliques nas áreas de imagem
+  const handleAvatarClick = () => {
+    // Aciona o input de arquivo
+    document.getElementById('avatar-upload').click();
+  };
+
+  const handleCapaClick = () => {
+    // Aciona o input de arquivo
+    document.getElementById('capa-upload').click();
+  };
+
+  // Função modificada para fazer upload automático
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.type !== 'image/png') {
@@ -211,10 +197,34 @@ const PerfilUser = () => {
         setAvatarPreview(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Toast de notificação
+      toast.info('Enviando imagem de perfil...', {autoClose: false, toastId: 'uploading-avatar'});
+      
+      // Upload automático
+      const result = await handleAvatarUpload(file);
+      
+      if (result) {
+        toast.update('uploading-avatar', {
+          render: 'Imagem de perfil atualizada com sucesso!',
+          type: 'success',
+          autoClose: 3000
+        });
+        
+        // Recarrega o perfil para obter a URL atualizada
+        await fetchUserProfile();
+      } else {
+        toast.update('uploading-avatar', {
+          render: 'Falha ao enviar imagem de perfil',
+          type: 'error',
+          autoClose: 3000
+        });
+      }
     }
   };
 
-  const handleCapaChange = (e) => {
+  // Função modificada para fazer upload automático
+  const handleCapaChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.type !== 'image/png') {
@@ -230,6 +240,29 @@ const PerfilUser = () => {
         setCapaPreview(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Toast de notificação
+      toast.info('Enviando imagem de capa...', {autoClose: false, toastId: 'uploading-capa'});
+      
+      // Upload automático
+      const result = await handleCapaUpload(file);
+      
+      if (result) {
+        toast.update('uploading-capa', {
+          render: 'Imagem de capa atualizada com sucesso!',
+          type: 'success',
+          autoClose: 3000
+        });
+        
+        // Recarrega o perfil para obter a URL atualizada
+        await fetchUserProfile();
+      } else {
+        toast.update('uploading-capa', {
+          render: 'Falha ao enviar imagem de capa',
+          type: 'error',
+          autoClose: 3000
+        });
+      }
     }
   };
 
@@ -245,32 +278,34 @@ const PerfilUser = () => {
 
   return (
     <div className="perfil-container">
-      <Navbar toggleSidebar={toggleSidebar} />
+      <Navbar toggleSidebar={toggleSidebar} userInfo={userInfo} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <div className="perfil-content">
-        <div className="perfil-capa" style={{ backgroundImage: `url('${capaPreview}')` }}>
-          {/* Botão invisível que cobre toda a capa */}
-          <label className="upload-capa-btn">
-            <input
-              type="file"
-              accept="image/png"
-              onChange={handleCapaChange}
-            />
-          </label>
+        <div className="perfil-capa" style={{ backgroundImage: `url('${capaPreview}')` }} onClick={isUploading ? null : handleCapaClick}>
+          {/* Input oculto para upload de capa */}
+          <input
+            id="capa-upload"
+            type="file"
+            accept="image/png"
+            onChange={handleCapaChange}
+            style={{ display: 'none' }}
+            disabled={isUploading}
+          />
         </div>
 
         <div className="perfil-info">
           <div className="perfil-avatar-container">
-            <div className="perfil-avatar" style={{ backgroundImage: `url('${avatarPreview}')` }}>
-              {/* Botão invisível que cobre todo o avatar */}
-              <label className="upload-avatar-btn">
-                <input
-                  type="file"
-                  accept="image/png"
-                  onChange={handleAvatarChange}
-                />
-              </label>
+            <div className="perfil-avatar" style={{ backgroundImage: `url('${avatarPreview}')` }} onClick={isUploading ? null : handleAvatarClick}>
+              {/* Input oculto para upload de avatar */}
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/png"
+                onChange={handleAvatarChange}
+                style={{ display: 'none' }}
+                disabled={isUploading}
+              />
             </div>
           </div>
 

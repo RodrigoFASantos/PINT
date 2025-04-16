@@ -19,12 +19,7 @@ export default function Navbar({ toggleSidebar }) {
               src={
                 currentUser.foto_perfil === 'AVATAR.png'
                   ? IMAGES.DEFAULT_AVATAR
-                  : IMAGES.USER_AVATAR(
-                      currentUser.email
-                        .toLowerCase()
-                        .replace(/@/g, "-at-")
-                        .replace(/\./g, "-dot-")
-                    )
+                  : IMAGES.USER_AVATAR(currentUser.email)
               }
               alt="Avatar"
               className="user-avatar"

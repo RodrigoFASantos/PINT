@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../database/models/User.js");
 const Cargo = require("../database/models/Cargo");
 const { sendRegistrationEmail } = require("../utils/emailService"); //email
+const fs = require("fs");
+const path = require("path");
 
 const createUser = async (req, res) => {
   try {
@@ -46,10 +48,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
-
-
-
 const getFormadores = async (req, res) => {
   try {
     const users = await User.findAll({ where: { id_cargo: 2 } });
@@ -58,9 +56,6 @@ const getFormadores = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar formadores" });
   }
 };
-
-
-
 
 const getFormandos = async (req, res) => {
   try {
@@ -79,12 +74,6 @@ const getGestores = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar gestores" });
   }
 };
-
-
-
-
-
-
 
 const changePassword = async (req, res) => {
   try {
@@ -109,13 +98,8 @@ const changePassword = async (req, res) => {
   }
 };
 
-
-
-
-
 const loginUser = async (req, res) => {
   try {
-
     const { email, password } = req.body;
 
     const user = await User.findOne({
@@ -128,7 +112,6 @@ const loginUser = async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
-    
     const token = jwt.sign(
       {
         id_utilizador: user.id_utilizador,
@@ -153,12 +136,6 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao fazer login." });
   }
 };
-
-
-
-
-
-
 
 const perfilUser = async (req, res) => {
   try {
@@ -196,14 +173,6 @@ const perfilUser = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
 const updatePerfilUser = async (req, res) => {
   try {
     const userId = req.user.id_utilizador;
@@ -227,13 +196,153 @@ const updatePerfilUser = async (req, res) => {
   }
 };
 
+// Novas funções de upload de imagens
+const uploadImagemPerfil = async (req, res) => {
+  try {
+    console.log('Iniciando upload de imagem de perfil');
+    if (!req.file) {
+      console.log('Nenhuma imagem enviada');
+      return res.status(400).json({ message: "Nenhuma imagem enviada" });
+    }
+    
+    // Buscar informações do usuário
+    const userId = req.user.id_utilizador;
+    console.log('ID do usuário:', userId);
+    const user = await User.findByPk(userId);
+    
+    if (!user || !user.email) {
+      console.log('Usuário não encontrado ou sem email:', user ? 'Tem user mas sem email' : 'User não encontrado');
+      // Remover arquivo temporário
+      fs.unlinkSync(path.join("uploads/users/", req.file.filename));
+      return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
+    }
+    
+    console.log('Email do usuário:', user.email);
+    
+    // Criar o nome do arquivo final usando o email do usuário - sempre AVATAR para perfil
+    const tipoImagem = "AVATAR";
+    const finalFilename = `${user.email}_${tipoImagem}.png`;
+    const tempPath = path.join("uploads/users/", req.file.filename);
+    const finalPath = path.join("uploads/users/", finalFilename);
+    
+    console.log('Arquivo temporário:', tempPath);
+    console.log('Arquivo final:', finalPath);
+    
+    // Remover arquivo existente com mesmo nome, se houver
+    if (fs.existsSync(finalPath)) {
+      console.log('Removendo arquivo existente');
+      fs.unlinkSync(finalPath);
+    }
+    
+    // Renomear o arquivo
+    console.log('Renomeando arquivo');
+    fs.renameSync(tempPath, finalPath);
+    
+    // Atualizar o banco de dados
+    console.log('Atualizando banco de dados com nome do arquivo:', finalFilename);
+    try {
+      const updateResult = await User.update(
+        { foto_perfil: finalFilename },
+        { where: { id_utilizador: userId } }
+      );
+      console.log('Resultado da atualização:', updateResult);
+    } catch (dbError) {
+      console.error('Erro ao atualizar banco de dados:', dbError);
+      throw dbError;
+    }
+    
+    // Verificar se a atualização foi bem-sucedida
+    const updatedUser = await User.findByPk(userId);
+    console.log('Campo foto_perfil após atualização:', updatedUser.foto_perfil);
+    
+    res.json({ 
+      message: "Imagem de perfil atualizada com sucesso",
+      path: `/uploads/users/${finalFilename}`
+    });
+  } catch (error) {
+    console.error("Erro ao fazer upload de imagem de perfil:", error);
+    res.status(500).json({ message: "Erro ao processar imagem" });
+  }
+};
 
+const uploadImagemCapa = async (req, res) => {
+  try {
+    console.log('Iniciando upload de imagem de capa');
+    if (!req.file) {
+      console.log('Nenhuma imagem enviada');
+      return res.status(400).json({ message: "Nenhuma imagem enviada" });
+    }
+    
+    // Buscar informações do usuário
+    const userId = req.user.id_utilizador;
+    console.log('ID do usuário:', userId);
+    const user = await User.findByPk(userId);
+    
+    if (!user || !user.email) {
+      console.log('Usuário não encontrado ou sem email:', user ? 'Tem user mas sem email' : 'User não encontrado');
+      // Remover arquivo temporário
+      fs.unlinkSync(path.join("uploads/users/", req.file.filename));
+      return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
+    }
+    
+    console.log('Email do usuário:', user.email);
+    
+    // Criar o nome do arquivo final usando o email do usuário - sempre CAPA para capa
+    const tipoImagem = "CAPA";
+    const finalFilename = `${user.email}_${tipoImagem}.png`;
+    const tempPath = path.join("uploads/users/", req.file.filename);
+    const finalPath = path.join("uploads/users/", finalFilename);
+    
+    console.log('Arquivo temporário:', tempPath);
+    console.log('Arquivo final:', finalPath);
+    
+    // Remover arquivo existente com mesmo nome, se houver
+    if (fs.existsSync(finalPath)) {
+      console.log('Removendo arquivo existente');
+      fs.unlinkSync(finalPath);
+    }
+    
+    // Renomear o arquivo
+    console.log('Renomeando arquivo');
+    fs.renameSync(tempPath, finalPath);
+    
+    // Atualizar o banco de dados
+    console.log('Atualizando banco de dados com nome do arquivo:', finalFilename);
+    try {
+      const updateResult = await User.update(
+        { foto_capa: finalFilename },
+        { where: { id_utilizador: userId } }
+      );
+      console.log('Resultado da atualização:', updateResult);
+    } catch (dbError) {
+      console.error('Erro ao atualizar banco de dados:', dbError);
+      throw dbError;
+    }
+    
+    // Verificar se a atualização foi bem-sucedida
+    const updatedUser = await User.findByPk(userId);
+    console.log('Campo foto_capa após atualização:', updatedUser.foto_capa);
+    
+    res.json({ 
+      message: "Imagem de capa atualizada com sucesso",
+      path: `/uploads/users/${finalFilename}`
+    });
+  } catch (error) {
+    console.error("Erro ao fazer upload de imagem de capa:", error);
+    res.status(500).json({ message: "Erro ao processar imagem" });
+  }
+};
 
-
-
-
-
-
-
-
-module.exports = { getAllUsers, getFormadores, getFormandos, getGestores, createUser, loginUser, perfilUser, changePassword, updatePerfilUser };
+module.exports = { 
+  getAllUsers, 
+  getFormadores, 
+  getFormandos, 
+  getGestores, 
+  createUser, 
+  loginUser, 
+  perfilUser, 
+  changePassword, 
+  updatePerfilUser,
+  uploadImagemPerfil,
+  uploadImagemCapa
+};

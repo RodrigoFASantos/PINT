@@ -1,7 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const verificarToken = require('../middleware/auth');
-const { getAllUsers, getFormadores, getFormandos, getGestores, createUser, loginUser, perfilUser, updatePerfilUser, changePassword } = require("../controllers/users_ctrl");
+const { 
+  getAllUsers, 
+  getFormadores, 
+  getFormandos, 
+  getGestores, 
+  createUser, 
+  loginUser, 
+  perfilUser, 
+  updatePerfilUser, 
+  changePassword,
+  uploadImagemPerfil,
+  uploadImagemCapa
+} = require("../controllers/users_ctrl");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -9,28 +21,25 @@ const fs = require("fs");
 // Configuração do upload para imagens de usuários
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/users/");
+    // Assegura que o diretório existe
+    const dir = "uploads/users/";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
-    // Usar o nome do usuário como nome do arquivo (convertendo para slug)
-    const user = req.user;
-    // Formata o nome do usuário para usar no arquivo
-    const userName = user && user.nome 
-      ? user.nome.toLowerCase().replace(/\s+/g, "-")
-      : Date.now(); // Fallback para timestamp se não houver nome
-
-    // Determinar o tipo de imagem (perfil ou capa)
-    const tipoImagem = req.body.tipo === "capa" ? "capa" : "avatar";
+    // Determinar o tipo de imagem (CAPA ou AVATAR)
+    const tipoImagem = req.body.tipo === "capa" ? "CAPA" : "AVATAR";
     
-    // Verificar se já existe um arquivo com esse nome e removê-lo
-    const filename = `${userName}_${tipoImagem}.png`;
-    const filePath = path.join("uploads/users/", filename);
+    // Armazenar temporariamente o tipo no request para uso posterior
+    req.tipoImagem = tipoImagem;
     
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    // Criar um nome de arquivo temporário com timestamp
+    // Será renomeado após a obtenção dos dados do usuário
+    const tempFilename = `temp_${Date.now()}_${tipoImagem}.png`;
     
-    cb(null, filename);
+    cb(null, tempFilename);
   }
 });
 
@@ -64,44 +73,8 @@ router.get("/perfil", verificarToken, perfilUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
 router.put("/users/change-password", changePassword);
 
-// Rotas de upload de imagens (anteriormente em users_imagens.js)
-router.post("/img/perfil", verificarToken, upload.single("imagem"), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "Nenhuma imagem enviada" });
-    }
-    
-    // Aqui é atualizado o caminho da imagem na BD
-    //  Por exemplo:
-    // await User.update(
-    //   { foto_perfil: req.file.path },
-    //   { where: { id_utilizador: req.user.id_utilizador } }
-    // );
-    
-    res.json({ 
-      message: "Imagem de perfil atualizada com sucesso",
-      path: req.file.path
-    });
-  } catch (error) {
-    console.error("Erro ao fazer upload de imagem de perfil:", error);
-    res.status(500).json({ message: "Erro ao processar imagem" });
-  }
-});
-
-router.post("/img/capa", verificarToken, upload.single("imagem"), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "Nenhuma imagem enviada" });
-    }
-        
-    res.json({ 
-      message: "Imagem de capa atualizada com sucesso",
-      path: req.file.path
-    });
-  } catch (error) {
-    console.error("Erro ao fazer upload de imagem de capa:", error);
-    res.status(500).json({ message: "Erro ao processar imagem" });
-  }
-});
+// Rotas de upload de imagens - Agora usando as funções do controlador
+router.post("/img/perfil", verificarToken, upload.single("imagem"), uploadImagemPerfil);
+router.post("/img/capa", verificarToken, upload.single("imagem"), uploadImagemCapa);
 
 module.exports = router;
