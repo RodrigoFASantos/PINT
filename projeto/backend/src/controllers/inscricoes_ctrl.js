@@ -1,8 +1,15 @@
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
 const User = require("../database/models/User");
 const Curso = require("../database/models/Curso");
+const Categoria = require("../database/models/Categoria");
+const Area = require("../database/models/Area");
 const { sendEnrollmentEmail } = require("../utils/emailService");
 const { sequelize } = require("../../config/db");
+
+
+
+
+
 
 // Obter todas as inscrições
 const getAllInscricoes = async (req, res) => {
@@ -173,4 +180,95 @@ const cancelarInscricao = async (req, res) => {
   }
 };
 
-module.exports = { getAllInscricoes, createInscricao, cancelarInscricao };
+
+
+
+// Buscar inscrições do utilizador logado
+const getInscricoesUtilizador = async (req, res) => {
+  try {
+    // Usar o ID do utilizador do token
+    const id_utilizador = req.user.id_utilizador;
+
+    // Buscar todas as inscrições do utilizador
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: { 
+        id_utilizador,
+        estado: 'inscrito' // Apenas inscrições ativas
+      },
+      include: [
+        {
+          model: Curso,
+          as: "curso",
+          include: [
+            {
+              model: Categoria,
+              as: "categoria",
+              attributes: ['nome']
+            },
+            {
+              model: Area,
+              as: "area",
+              attributes: ['nome']
+            }
+          ],
+          attributes: [
+            'id_curso', 
+            'nome', 
+            'id_categoria',
+            'id_area',
+            'data_inicio', 
+            'data_fim', 
+            'tipo', 
+            'vagas'
+          ]
+        }
+      ],
+      order: [['data_inscricao', 'DESC']]
+    });
+
+    // Mapear para um formato mais amigável
+    const inscricoesFormatadas = inscricoes.map(inscricao => {
+      const curso = inscricao.curso;
+      return {
+        id: inscricao.id_inscricao,
+        cursoId: curso.id_curso,
+        nomeCurso: curso.nome,
+        // Agora obtemos os nomes da categoria e área através das relações
+        categoria: curso.categoria ? curso.categoria.nome : "N/A",
+        area: curso.area ? curso.area.nome : "N/A",
+        dataInicio: curso.data_inicio,
+        dataFim: curso.data_fim,
+        tipoCurso: curso.tipo,
+        vagasTotais: curso.vagas,
+        dataInscricao: inscricao.data_inscricao,
+        status: calcularStatusCurso(curso)
+      };
+    });
+
+    res.json(inscricoesFormatadas);
+  } catch (error) {
+    console.error("Erro ao buscar inscrições do utilizador:", error);
+    res.status(500).json({ 
+      message: "Erro ao buscar inscrições", 
+      error: error.message 
+    });
+  }
+};
+
+// Função auxiliar para calcular o status do curso
+function calcularStatusCurso(curso) {
+  const hoje = new Date();
+  const dataInicio = new Date(curso.data_inicio);
+  const dataFim = new Date(curso.data_fim);
+
+  if (hoje < dataInicio) {
+    return "Agendado";
+  } else if (hoje >= dataInicio && hoje <= dataFim) {
+    return "Em curso";
+  } else {
+    return "Terminado";
+  }
+}
+
+
+module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador };
