@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import API_BASE, { IMAGES } from '../api';
 
 const PerfilUser = () => {
-  const { currentUser, updateUserInfo } = useAuth(); // Adicionei updateUserInfo se existir
+  const { currentUser, updateUserInfo } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -74,8 +74,15 @@ const PerfilUser = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleEditToggle = () => {
+  // Modificado para prevenir o comportamento padrão do evento
+  const handleEditToggle = (e) => {
+    // IMPORTANTE: Prevenir o comportamento padrão do evento
+    e.preventDefault();
+    
+    console.log("Botão de edição clicado. Estado atual de isEditing:", isEditing);
+    
     setIsEditing(!isEditing);
+    
     // Se estiver cancelando a edição, restaurar os dados originais
     if (isEditing && userInfo) {
       setFormData({
@@ -143,24 +150,29 @@ const PerfilUser = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Formulário enviado com dados:", formData);
 
     try {
       const token = localStorage.getItem('token');
 
       // Atualizar dados do perfil
-      await axios.put(`${API_BASE}/users/perfil`, formData, {
+      const response = await axios.put(`${API_BASE}/users/perfil`, formData, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      toast.success('Perfil atualizado com sucesso!');
-      setIsEditing(false);
-
-      // Recarregar dados do perfil
-      await fetchUserProfile();
-
-      // Atualizar o contexto de autenticação se essa função existir
-      if (typeof updateUserInfo === 'function') {
-        updateUserInfo(userInfo);
+      if (response.status === 200) {
+        toast.success('Perfil atualizado com sucesso!');
+        setIsEditing(false);
+        
+        // Recarregar dados do perfil
+        await fetchUserProfile();
+        
+        // Atualizar o contexto de autenticação se essa função existir
+        if (typeof updateUserInfo === 'function') {
+          updateUserInfo(userInfo);
+        }
+      } else {
+        toast.error('Erro ao atualizar o perfil. Por favor, tente novamente.');
       }
 
     } catch (error) {
@@ -292,6 +304,7 @@ const PerfilUser = () => {
             style={{ display: 'none' }}
             disabled={isUploading}
           />
+          {isUploading && <div className="uploading-overlay">A enviar imagem...</div>}
         </div>
 
         <div className="perfil-info">
@@ -306,18 +319,20 @@ const PerfilUser = () => {
                 style={{ display: 'none' }}
                 disabled={isUploading}
               />
+              {isUploading && <div className="uploading-avatar-overlay">A enviar...</div>}
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="perfil-detalhes">
+          {/* Note que aqui movemos o onSubmit APENAS para o formulário de salvar */}
+          <div className="perfil-detalhes">
             <div className="perfil-header">
               <h2>{userInfo.nome}</h2>
               <span className="cargo-badge">{userInfo.cargo?.descricao || 'Cargo não definido'}</span>
             </div>
 
-            <div className="perfil-dados">
+            <div className={`perfil-dados ${isEditing ? 'editing-mode' : ''}`}>
               {isEditing ? (
-                <>
+                <form id="edit-form" onSubmit={handleSubmit}>
                   <div className="form-group">
                     <label>Nome</label>
                     <input
@@ -326,6 +341,7 @@ const PerfilUser = () => {
                       value={formData.nome}
                       onChange={handleInputChange}
                       required
+                      className="edit-input"
                     />
                   </div>
 
@@ -337,6 +353,7 @@ const PerfilUser = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      className="edit-input"
                     />
                   </div>
 
@@ -348,6 +365,7 @@ const PerfilUser = () => {
                       value={formData.telefone}
                       onChange={handleInputChange}
                       required
+                      className="edit-input"
                     />
                   </div>
 
@@ -361,9 +379,10 @@ const PerfilUser = () => {
                       required
                       min="18"
                       max="99"
+                      className="edit-input"
                     />
                   </div>
-                </>
+                </form>
               ) : (
                 <>
                   <div className="info-item">
@@ -392,14 +411,20 @@ const PerfilUser = () => {
             <div className="perfil-acoes">
               {isEditing ? (
                 <>
-                  <button type="submit" className="btn-save">Salvar</button>
+                  <button type="submit" form="edit-form" className="btn-save">Guardar</button>
                   <button type="button" className="btn-cancel" onClick={handleEditToggle}>Cancelar</button>
                 </>
               ) : (
-                <button type="button" className="btn-edit" onClick={handleEditToggle}>Editar Perfil</button>
+                <button 
+                  type="button" 
+                  className="btn-edit" 
+                  onClick={handleEditToggle}
+                >
+                  Editar Perfil
+                </button>
               )}
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
