@@ -4,7 +4,7 @@ import './css/detalhesCurso.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConteudoCursoList from '../components/ConteudoCursoList';
-import API_BASE, { IMAGES } from "../api";  
+import API_BASE, { IMAGES } from "../api";
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -15,6 +15,7 @@ const DetalhesCurso = () => {
   // Definir userRole diretamente como 'admin' para teste
   const [userRole, setUserRole] = useState('admin');
   const [inscrito, setInscrito] = useState(false);
+  const [inscrevendo, setInscrevendo] = useState(false);
   const [showInscricaoForm, setShowInscricaoForm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -22,19 +23,44 @@ const DetalhesCurso = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  
+
+  // Verificar se o usuário já está inscrito no curso
+  const verificarInscricao = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE}/inscricoes/verificar/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Erro ao verificar inscrição:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      setInscrito(data.inscrito);
+
+    } catch (error) {
+      console.error('Erro ao verificar inscrição:', error);
+    }
+  }, [id]);
+
   // Buscar dados do curso
   const fetchCursoDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/login', { state: { redirectTo: `/cursos/${id}` } });
         return;
       }
-      
+
       // Obter detalhes do curso usando API_BASE
       try {
         const response = await fetch(`${API_BASE}/cursos/${id}`, {
@@ -42,30 +68,29 @@ const DetalhesCurso = () => {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const cursoData = await response.json();
         setCurso(cursoData);
+
+        // Verificar se o usuário está inscrito neste curso
+        await verificarInscricao();
+
       } catch (cursoError) {
         console.error('Erro ao carregar curso:', cursoError);
         throw new Error('Não foi possível carregar os detalhes do curso.');
       }
-      
-      // IMPORTANTE: Vamos manter o userRole como 'admin' já que o endpoint /auth/perfil não está funcionando
-      
-      // Não vamos tentar verificar a inscrição já que o endpoint não está funcionando
-      setInscrito(false);
-      
+
       setLoading(false);
     } catch (error) {
       console.error("Erro ao carregar curso:", error);
       setError("Não foi possível carregar os detalhes do curso. Tente novamente mais tarde.");
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, verificarInscricao]);
 
   useEffect(() => {
     fetchCursoDetails();
@@ -74,7 +99,7 @@ const DetalhesCurso = () => {
   // Verificar o status do curso em relação às datas
   const verificarStatusCurso = (curso) => {
     if (!curso) return 'Indisponível';
-    
+
     const hoje = new Date();
     const dataInicio = new Date(curso.data_inicio);
     const dataFim = new Date(curso.data_fim);
@@ -95,6 +120,85 @@ const DetalhesCurso = () => {
     setShowInscricaoForm(true);
   };
 
+  // Confirmar inscrição no curso
+  const handleInscricaoConfirm = async () => {
+    try {
+      setInscrevendo(true);
+  
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login', { state: { redirectTo: `/cursos/${id}` } });
+        return;
+      }
+  
+      const userId = JSON.parse(atob(token.split('.')[1])).id_utilizador;
+  
+      // Verificar a conexão com o servidor antes de enviar a requisição principal
+      try {
+        const pingResponse = await fetch(`${API_BASE}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!pingResponse.ok) {
+          throw new Error("Servidor indisponível no momento. Tente novamente mais tarde.");
+        }
+      } catch (pingError) {
+        throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão com a internet.");
+      }
+  
+      const response = await fetch(`${API_BASE}/inscricoes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id_utilizador: userId,
+          id_curso: id
+        })
+      });
+  
+      if (!response.ok) {
+        // Tentar obter a mensagem de erro da resposta
+        let errorMessage = "Erro ao realizar inscrição";
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Se não conseguir extrair o JSON, usar mensagens baseadas no status HTTP
+          if (response.status === 503) {
+            errorMessage = "Serviço temporariamente indisponível. Tente novamente mais tarde.";
+          } else if (response.status === 400) {
+            errorMessage = "Não foi possível completar sua inscrição. Você pode já estar inscrito ou não há vagas disponíveis.";
+          } else if (response.status === 401 || response.status === 403) {
+            errorMessage = "Você não tem permissão para se inscrever neste curso.";
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+  
+      setInscrito(true);
+      setShowInscricaoForm(false);
+      // Exibir mensagem de sucesso temporária
+      alert('Inscrição realizada com sucesso! Você receberá um email de confirmação.');
+  
+    } catch (error) {
+      console.error('Erro ao realizar inscrição:', error);
+      alert(`Erro: ${error.message}`);
+    } finally {
+      setInscrevendo(false);
+    }
+  };
+
+
+
+
+
   // Após inscrição bem-sucedida
   const handleInscricaoSuccess = () => {
     setInscrito(true);
@@ -107,24 +211,24 @@ const DetalhesCurso = () => {
   const handleDeleteCurso = async () => {
     try {
       setIsDeleting(true); // Mostrar indicador de carregamento
-  
+
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/login');
         return;
       }
-  
+
       const response = await fetch(`${API_BASE}/cursos/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-  
+
       // Verificar o status da resposta
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Verificar os tipos específicos de erro
         if (response.status === 503) {
           throw new Error("Banco de dados temporariamente indisponível. Tente novamente mais tarde.");
@@ -136,7 +240,7 @@ const DetalhesCurso = () => {
           throw new Error(errorData.message || "Erro ao excluir curso");
         }
       }
-  
+
       // Sucesso
       alert('Curso excluído com sucesso!');
       navigate('/cursos');
@@ -217,11 +321,11 @@ const DetalhesCurso = () => {
 
   // Definir o status do curso
   const statusCurso = verificarStatusCurso(curso);
-  
+
   // Verificar vagas disponíveis
-  const vagasDisponiveis = 
-    curso.tipo === 'sincrono' && curso.vagas 
-      ? curso.vagas - (curso.inscricoesAtivas || 0) 
+  const vagasDisponiveis =
+    curso.tipo === 'sincrono' && curso.vagas
+      ? curso.vagas - (curso.inscricoesAtivas || 0)
       : null;
 
   return (
@@ -229,36 +333,36 @@ const DetalhesCurso = () => {
       <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        
+
         {/* Modal de confirmação de exclusão */}
         {showDeleteConfirmation && (
-  <div className="modal-overlay">
-    <div className="modal-content">
-      <h2 className="modal-title">Confirmar Exclusão</h2>
-      <p className="modal-text">
-        Tem certeza que deseja excluir este curso? Esta ação irá remover o curso e todas as inscrições associadas.
-      </p>
-      <div className="modal-buttons">
-        <button
-          onClick={() => setShowDeleteConfirmation(false)}
-          className="btn-cancelar"
-          disabled={isDeleting}
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleDeleteCurso}
-          className="btn-confirmar"
-          disabled={isDeleting}
-        >
-          {isDeleting ? 'Excluindo...' : 'Excluir Curso'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2 className="modal-title">Confirmar Exclusão</h2>
+              <p className="modal-text">
+                Tem certeza que deseja excluir este curso? Esta ação irá remover o curso e todas as inscrições associadas.
+              </p>
+              <div className="modal-buttons">
+                <button
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  className="btn-cancelar"
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteCurso}
+                  className="btn-confirmar"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Excluindo...' : 'Excluir Curso'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        
+
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="curso-details-container bg-white rounded-lg shadow-md">
             {/* Cabeçalho do curso */}
@@ -285,7 +389,7 @@ const DetalhesCurso = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Conteúdo principal */}
             <div className="curso-content p-6">
               {/* Descrição */}
@@ -293,31 +397,31 @@ const DetalhesCurso = () => {
                 <h2 className="text-xl font-semibold mb-3">Descrição</h2>
                 <p className="text-gray-700">{curso.descricao || 'Sem descrição disponível.'}</p>
               </div>
-              
+
               {/* Detalhes do curso */}
               <div className="curso-meta mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="meta-item">
                   <span className="meta-label">Tipo:</span>
                   <span className="meta-value">{curso.tipo === 'sincrono' ? 'Síncrono (com formador)' : 'Assíncrono (auto-estudo)'}</span>
                 </div>
-                
+
                 {curso.id_formador && curso.formador && (
                   <div className="meta-item">
                     <span className="meta-label">Formador:</span>
                     <span className="meta-value">{curso.formador.nome}</span>
                   </div>
                 )}
-                
+
                 <div className="meta-item">
                   <span className="meta-label">Data de início:</span>
                   <span className="meta-value">{new Date(curso.data_inicio).toLocaleDateString()}</span>
                 </div>
-                
+
                 <div className="meta-item">
                   <span className="meta-label">Data de término:</span>
                   <span className="meta-value">{new Date(curso.data_fim).toLocaleDateString()}</span>
                 </div>
-                
+
                 {curso.tipo === 'sincrono' && (
                   <div className="meta-item">
                     <span className="meta-label">Vagas:</span>
@@ -326,7 +430,7 @@ const DetalhesCurso = () => {
                     </span>
                   </div>
                 )}
-                
+
                 {curso.horas_curso && (
                   <div className="meta-item">
                     <span className="meta-label">Duração:</span>
@@ -334,40 +438,60 @@ const DetalhesCurso = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Botão de inscrição ou informações para alunos inscritos */}
               <div className="curso-actions mt-8">
-                {/* Outras ações do curso permanecem as mesmas */}
-                
-                {/* Removida condição para exibir apenas para administradores */}
+                {/* Verificar se o curso não está terminado para mostrar o botão de inscrição */}
+                {statusCurso !== "Terminado" && (
+                  <div className="mb-6">
+                    {inscrito ? (
+                      <div className="inscrito-badge bg-green-100 text-green-800 py-2 px-4 rounded-md inline-flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span className="font-medium">Inscrito</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleInscricao}
+                        className="btn-inscrever"
+                        disabled={statusCurso === "Terminado"}
+                      >
+                        Inscrever
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Acesso de administrador */}
                 <div className="gestor-actions mt-4">
                   <p className="text-purple-700 font-medium mb-3">
                     Acesso de administrador
                   </p>
-                  
+
                   <div className="flex flex-wrap gap-3">
-                    <button 
+                    <button
                       onClick={() => navigate(`/admin/cursos/${id}/editar`)}
                       className="btn-editar"
                     >
                       Editar Curso
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => navigate(`/admin/cursos/${id}/conteudos`)}
                       className="btn-conteudos"
                     >
                       Gerenciar Conteúdos
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => navigate(`/admin/cursos/${id}/inscricoes`)}
                       className="btn-inscricoes"
                     >
                       Gerenciar Inscrições
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => navigate(`/admin/cursos/${id}/avaliacoes`)}
                       className="btn-avaliacoes"
                     >
@@ -380,25 +504,24 @@ const DetalhesCurso = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Modal de confirmação de inscrição */}
       {showInscricaoForm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="fixed inset-0 bg-black opacity-50"></div>
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full relative z-10 text-center">
-            <h3 className="text-xl font-semibold mb-4">Confirmar Inscrição</h3>
-            <p className="mb-6">Tem certeza que deseja se inscrever no curso "{curso.nome}"?</p>
-            <div className="flex justify-center space-x-4">
-              <button 
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">Confirmar Inscrição</h3>
+            <p className="modal-text">Tem certeza que deseja se inscrever no curso "{curso.nome}"?</p>
+            <div className="modal-buttons">
+              <button
                 onClick={() => setShowInscricaoForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                className="btn-cancelar"
                 disabled={inscrevendo}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleInscricaoConfirm}
-                className={`px-4 py-2 bg-orange-500 text-black font-medium rounded-lg hover:bg-orange-600 transition-colors ${inscrevendo ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`btn-confirmar ${inscrevendo ? 'opacity-70 cursor-not-allowed' : ''}`}
                 disabled={inscrevendo}
               >
                 {inscrevendo ? 'Processando...' : 'Confirmar'}
@@ -407,6 +530,7 @@ const DetalhesCurso = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

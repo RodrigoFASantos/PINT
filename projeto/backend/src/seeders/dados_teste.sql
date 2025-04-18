@@ -99,3 +99,38 @@ SELECT u.id_utilizador, c.id_curso, NOW() - INTERVAL '2 DAY', 'inscrito',
    'Quero aprender a identificar e corrigir vulnerabilidades comuns em aplicações web.'
 FROM utilizadores u, cursos c
 WHERE u.email = 'ro@exemplo.com' AND c.nome = 'Curso de Vue.js';
+
+
+
+-- Criar inscrição original (para garantir que existe o ID)
+INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
+VALUES (
+  (SELECT id_utilizador FROM utilizadores WHERE email = 'b@exemplo.com' LIMIT 1),
+  (SELECT id_curso FROM cursos WHERE nome = 'Curso de Vue.js' LIMIT 1),
+  NOW() - INTERVAL '7 days',
+  'inscrito'
+);
+
+-- Inserir inscrição cancelada com base na inscrição original recém-criada
+INSERT INTO inscricoes_cursos_canceladas (
+  id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
+  estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
+)
+SELECT
+  ic.id_inscricao,
+  ic.id_utilizador,
+  ic.id_curso,
+  ic.data_inscricao,
+  NOW(),
+  'cancelado',
+  'Motivo pessoal: indisponibilidade de horário.',
+  'Esperava um curso mais técnico.',
+  NULL,
+  FALSE,
+  3,
+  'Cancelado devido a conflitos de agenda.'
+FROM inscricoes_cursos ic
+WHERE ic.id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'b@exemplo.com' LIMIT 1)
+  AND ic.id_curso = (SELECT id_curso FROM cursos WHERE nome = 'Curso de Vue.js' LIMIT 1)
+ORDER BY ic.id_inscricao DESC
+LIMIT 1;

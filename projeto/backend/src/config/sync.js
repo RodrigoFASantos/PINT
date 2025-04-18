@@ -22,6 +22,7 @@ const QuizPergunta = require("../database/models/QuizPergunta");
 const QuizResposta = require("../database/models/QuizResposta");
 const QuizRespostaDetalhe = require("../database/models/QuizRespostaDetalhe");
 const TipoConteudo = require("../database/models/TipoConteudo");
+const Inscricao_Curso_Cancelada = require("../database/models/InscricaoCursoCancelada");
 
 // Dados Teste
 const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');

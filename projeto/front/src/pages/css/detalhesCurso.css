@@ -6,6 +6,7 @@ button,
 .btn-conteudos,
 .btn-inscricoes,
 .btn-avaliacoes,
+.btn-inscrever,
 .btn-apagar {
   padding: 0.5rem 1.2rem;
   font-size: 1rem;
@@ -72,7 +73,10 @@ button,
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
-
+.btn-inscrever{
+  background-color: #059669;
+  transform: scale(1.05);
+}
 
 .titulo{
   color: black;
@@ -92,13 +96,97 @@ button,
 
 
 
+/* =============================
+   MODAL DE CONFIRMAÇÃO: INSCRIÇÃO
+   ============================= */
+
+   .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  .modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    animation: slideIn 0.3s ease-out;
+    position: relative;
+    z-index: 60;
+    text-align: center;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ea580c;
+    margin-bottom: 1rem;
+  }
+  
+  .modal-text {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 2rem;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  .modal-buttons .btn-cancelar {
+    background-color: #e5e7eb;
+    color: #111827;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .modal-buttons .btn-cancelar:hover {
+    background-color: #d1d5db;
+    transform: translateY(-2px);
+  }
+  
+  .modal-buttons .btn-confirmar {
+    background-color: #f97316;
+    color: white;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .modal-buttons .btn-confirmar:hover {
+    background-color: #ea580c;
+    transform: translateY(-2px);
+  }
+  
 
 
 
 
-
-/* =====================
-   MODAL DE CONFIRMAÇÃO
+/* ===================== 
+   MODAL DE CONFIRMAÇÃO DA EXCLUSÃO
    ===================== */
 
    .modal-overlay {

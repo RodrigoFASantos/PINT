@@ -35,10 +35,53 @@ const getAllInscricoes = async (req, res) => {
   }
 };
 
+// Função para verificar se um user está inscrito em um curso específico
+const verificarInscricao = async (req, res) => {
+  try {
+    const { id_curso } = req.params;
+    const id_utilizador = req.user.id_utilizador;
+
+    if (!id_curso) {
+      return res.status(400).json({ message: "ID do curso é obrigatório" });
+    }
+
+    // Buscar inscrição ativa do usuário no curso específico
+    const inscricao = await Inscricao_Curso.findOne({
+      where: {
+        id_utilizador,
+        id_curso,
+        estado: "inscrito" // Apenas inscrições ativas
+      }
+    });
+
+    // Retornar se o usuário está inscrito ou não
+    return res.json({
+      inscrito: !!inscricao,
+      inscricao: inscricao ? {
+        id: inscricao.id_inscricao,
+        data_inscricao: inscricao.data_inscricao
+      } : null
+    });
+  } catch (error) {
+    console.error("Erro ao verificar inscrição:", error);
+    res.status(500).json({ 
+      message: "Erro ao verificar inscrição", 
+      error: error.message 
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
 // Criar uma nova inscrição
 const createInscricao = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
   try {
     const { id_utilizador, id_curso, motivacao, expectativas } = req.body;
 
@@ -61,28 +104,24 @@ const createInscricao = async (req, res) => {
         id_utilizador,
         id_curso,
         estado: "inscrito" // Apenas considerar inscrições ativas
-      },
-      transaction
+      }
     });
 
     if (inscricaoExistente) {
-      await transaction.rollback();
       return res.status(400).json({ 
         message: "Você já está inscrito neste curso" 
       });
     }
 
     // Obter detalhes do curso
-    const curso = await Curso.findByPk(id_curso, { transaction });
+    const curso = await Curso.findByPk(id_curso);
     
     if (!curso) {
-      await transaction.rollback();
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
     // Verificar se o curso está ativo
     if (!curso.ativo) {
-      await transaction.rollback();
       return res.status(400).json({ 
         message: "Este curso não está disponível para inscrições" 
       });
@@ -91,7 +130,6 @@ const createInscricao = async (req, res) => {
     // Verificar se o curso está em período de inscrição
     const dataAtual = new Date();
     if (dataAtual > new Date(curso.data_inicio)) {
-      await transaction.rollback();
       return res.status(400).json({ 
         message: "O período de inscrição deste curso já encerrou" 
       });
@@ -104,12 +142,10 @@ const createInscricao = async (req, res) => {
         where: {
           id_curso,
           estado: "inscrito"
-        },
-        transaction
+        }
       });
 
       if (inscricoesCount >= curso.vagas) {
-        await transaction.rollback();
         return res.status(400).json({ 
           message: "Não há vagas disponíveis para este curso" 
         });
@@ -124,10 +160,10 @@ const createInscricao = async (req, res) => {
       expectativas: expectativas || null,
       data_inscricao: new Date(),
       estado: "inscrito"
-    }, { transaction });
+    });
 
     // Buscar informações do usuário para enviar email
-    const user = await User.findByPk(id_utilizador, { transaction });
+    const user = await User.findByPk(id_utilizador);
 
     // Enviar email de confirmação de inscrição
     if (user && curso) {
@@ -136,26 +172,53 @@ const createInscricao = async (req, res) => {
         // Não interrompe o fluxo se o email falhar
       });
     }
-
-    await transaction.commit();
     
     res.status(201).json({ 
       message: "Inscrição realizada com sucesso!", 
       inscricao: novaInscricao 
     });
   } catch (error) {
-    await transaction.rollback();
     console.error("Erro ao criar inscrição:", error);
+    
+    // Verificar se é um erro de conexão
+    if (error.name === 'SequelizeConnectionError' || 
+        error.name === 'SequelizeConnectionRefusedError' ||
+        error.name === 'SequelizeHostNotFoundError' ||
+        error.name === 'SequelizeConnectionTimedOutError') {
+      return res.status(503).json({ 
+        message: "Serviço temporariamente indisponível. Problemas com o banco de dados.",
+        error: "Erro de conexão com o banco de dados"
+      });
+    }
+    
     res.status(500).json({ 
-      message: "Erro no servidor ao processar inscrição." 
+      message: "Erro no servidor ao processar inscrição.",
+      error: error.message 
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Cancelar uma inscrição
 const cancelarInscricao = async (req, res) => {
   try {
     const { id } = req.params;
+    const { motivo_cancelamento } = req.body; // Opcional: motivo do cancelamento
+    
     const inscricao = await Inscricao_Curso.findByPk(id);
 
     if (!inscricao) {
@@ -169,17 +232,60 @@ const cancelarInscricao = async (req, res) => {
       });
     }
 
-    // Atualizar o estado para "cancelado"
-    inscricao.estado = "cancelado";
-    await inscricao.save();
+    // Iniciar transação para garantir a consistência dos dados
+    const t = await sequelize.transaction();
 
-    res.json({ message: "Inscrição cancelada com sucesso" });
+    try {
+      // Criar entrada na tabela de inscrições canceladas
+      await Inscricao_Curso_Cancelada.create({
+        id_inscricao_original: inscricao.id_inscricao,
+        id_utilizador: inscricao.id_utilizador,
+        id_curso: inscricao.id_curso,
+        data_inscricao: inscricao.data_inscricao,
+        estado: "cancelado",
+        motivacao: inscricao.motivacao,
+        expectativas: inscricao.expectativas,
+        nota_final: inscricao.nota_final,
+        certificado_gerado: inscricao.certificado_gerado,
+        horas_presenca: inscricao.horas_presenca,
+        motivo_cancelamento: motivo_cancelamento || null
+      }, { transaction: t });
+
+      // Excluir a inscrição original
+      await inscricao.destroy({ transaction: t });
+
+      // Commit da transação
+      await t.commit();
+
+      // Caso o curso tenha limite de vagas, notificar usuários em lista de espera
+      const curso = await Curso.findByPk(inscricao.id_curso);
+      if (curso && curso.vagas_disponiveis !== null) {
+        // Notificar próximo usuário na lista de espera (implementar conforme necessário)
+        // Esta lógica pode ser implementada posteriormente
+      }
+
+      // Notificar o usuário via WebSocket (se disponível)
+      if (req.io) {
+        req.io.to(`user_${inscricao.id_utilizador}`).emit('inscricao_cancelada', {
+          message: `Sua inscrição no curso "${curso ? curso.titulo : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
+          id_inscricao: id
+        });
+      }
+
+      res.json({ 
+        message: "Inscrição cancelada com sucesso",
+        inscricao_cancelada_id: id
+      });
+    } catch (error) {
+      // Em caso de erro, reverter a transação
+      await t.rollback();
+      throw error;
+    }
   } catch (error) {
     console.error("Erro ao cancelar inscrição:", error);
     res.status(500).json({ message: "Erro no servidor ao cancelar inscrição" });
   }
 };
-
 
 
 
@@ -255,6 +361,9 @@ const getInscricoesUtilizador = async (req, res) => {
   }
 };
 
+
+
+
 // Função auxiliar para calcular o status do curso
 function calcularStatusCurso(curso) {
   const hoje = new Date();
@@ -292,4 +401,4 @@ const removerInscricoesDoCurso = async (id_curso, transaction) => {
 };
 
 
-module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador, removerInscricoesDoCurso };
+module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador, removerInscricoesDoCurso, verificarInscricao };

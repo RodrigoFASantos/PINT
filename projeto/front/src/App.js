@@ -19,6 +19,8 @@ import GerenciarUsuarios from './pages/gerenciarUsuarios';
 import GerenciarCursos from './pages/gerenciarCursos';
 import QuizPage from './pages/quizPage';
 import Formadores from './pages/formadores';
+import EditarCurso from './pages/editarCurso';
+import GerenciarInscricoes from './pages/gerenciarInscricoes';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
@@ -201,6 +203,9 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            
+        <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute adminOnly><EditarCurso /></ProtectedRoute>} />
+        <Route path="/admin/cursos/:id/inscricoes" element={<ProtectedRoute adminOnly><GerenciarInscricoes /></ProtectedRoute>} />
 
             {/* Redirecionar para a página inicial por padrão */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -18,12 +18,14 @@ function Login() {
       navigate("/home");
     }
   }, [navigate]);
-
+  
   const handleLogin = async (e) => {
     e.preventDefault();
 
     const success = await login(email, password);
     if (success) {
+      // Definir flag de login bem-sucedido antes de navegar
+      sessionStorage.setItem('needsRefresh', 'true');
       navigate("/home");
     }
   };

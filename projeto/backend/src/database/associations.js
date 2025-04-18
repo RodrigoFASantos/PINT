@@ -8,6 +8,8 @@ const QuizResposta = require("./models/QuizResposta");
 const QuizRespostaDetalhe = require("./models/QuizRespostaDetalhe");
 const OcorrenciaCurso = require("./models/OcorrenciaCurso");
 const Categoria = require("./models/Categoria");
+const Area = require("./models/Area");
+const InscricaoCursoCancelada = require("./models/InscricaoCursoCancelada");
 
 // Relação entre Curso e Categoria
 Curso.belongsTo(Categoria, {
@@ -33,6 +35,27 @@ Curso.belongsToMany(User, {
   foreignKey: "id_curso",
   otherKey: "id_utilizador",
   as: "utilizadores"
+});
+
+// Relações para inscrições canceladas
+InscricaoCursoCancelada.belongsTo(User, {
+  foreignKey: "id_utilizador",
+  as: "utilizador"
+});
+
+InscricaoCursoCancelada.belongsTo(Curso, {
+  foreignKey: "id_curso",
+  as: "curso"
+});
+
+User.hasMany(InscricaoCursoCancelada, {
+  foreignKey: "id_utilizador",
+  as: "inscricoes_canceladas"
+});
+
+Curso.hasMany(InscricaoCursoCancelada, {
+  foreignKey: "id_curso",
+  as: "inscricoes_canceladas"
 });
 
 // Quiz pertence a um Curso
@@ -154,4 +177,17 @@ Area.hasMany(Curso, {
 });
 
 // No final do arquivo associations.js
-module.exports = { User, Curso, InscricaoCurso, Quiz, QuizPergunta, QuizOpcao, QuizResposta, QuizRespostaDetalhe, OcorrenciaCurso, Categoria, Area };
+module.exports = { 
+  User, 
+  Curso, 
+  InscricaoCurso, 
+  InscricaoCursoCancelada,
+  Quiz, 
+  QuizPergunta, 
+  QuizOpcao, 
+  QuizResposta, 
+  QuizRespostaDetalhe, 
+  OcorrenciaCurso, 
+  Categoria, 
+  Area 
+};

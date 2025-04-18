@@ -4,7 +4,8 @@ const {
   getAllInscricoes, 
   createInscricao, 
   cancelarInscricao,
-  getInscricoesUtilizador 
+  getInscricoesUtilizador,
+  verificarInscricao
 } = require("../controllers/inscricoes_ctrl");
 const verificarToken = require('../middleware/auth');
 
@@ -25,5 +26,8 @@ router.post("/", verificarToken, createInscricao);
 
 // Rota para cancelar uma inscrição
 router.delete("/:id", verificarToken, cancelarInscricao);
+
+// Rota para verificar se o utilizador está inscrito em um curso
+router.get("/verificar/:id_curso", verificarToken, verificarInscricao);
 
 module.exports = router;
