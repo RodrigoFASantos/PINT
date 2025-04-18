@@ -4,6 +4,8 @@ const Categoria = require("../database/models/Categoria");
 const User = require("../database/models/User");
 const Conteudo = require("../database/models/Conteudo");
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
+const { removerInscricoesDoCurso } = require("./inscricoes_ctrl");
+const { sequelize } = require("../../config/db");
 
 
 // Obter todos os cursos com paginação
@@ -150,24 +152,111 @@ const updateCurso = async (req, res) => {
   }
 };
 
-// Excluir curso
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Delete curso
 const deleteCurso = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const curso = await Curso.findByPk(id);
+    // Verificar permissão (id_cargo === 1 para administrador)
+    if (req.user.id_cargo !== 1) {
+      return res.status(403).json({ 
+        message: "Você não tem permissão para excluir cursos" 
+      });
+    }
 
-    if (!curso) {
+    // Verificar se o curso existe antes de iniciar transações
+    const cursoExists = await Curso.findByPk(id);
+    
+    if (!cursoExists) {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    await curso.destroy();
+    // Primeiro eliminar as inscrições (sem usar transação)
+    try {
+      // Excluir diretamente as inscrições
+      const numInscricoesRemovidas = await Inscricao_Curso.destroy({
+        where: { id_curso: id }
+      });
+      
+      console.log(`Removidas ${numInscricoesRemovidas} inscrições do curso ${id}`);
 
-    res.json({ message: "Curso excluído com sucesso!" });
+      // Excluir os conteúdos do curso
+      await Conteudo.destroy({
+        where: { id_curso: id }
+      });
+      
+      console.log(`Removidos conteúdos do curso ${id}`);
+
+      // Excluir o curso
+      await cursoExists.destroy();
+      
+      console.log(`Curso ${id} excluído com sucesso`);
+
+      // Retornar resposta de sucesso
+      return res.json({ 
+        message: "Curso excluído com sucesso!", 
+        inscricoesRemovidas: numInscricoesRemovidas 
+      });
+    } catch (error) {
+      console.error("Erro específico ao excluir relações:", error);
+      return res.status(500).json({ 
+        message: "Erro ao excluir relações do curso", 
+        error: error.message 
+      });
+    }
   } catch (error) {
-    console.error("Erro ao excluir curso:", error);
-    res.status(500).json({ message: "Erro no servidor ao excluir curso." });
+    console.error("Erro geral ao excluir curso:", error);
+    
+    // Verificar se é um erro de conexão
+    if (error.name === 'SequelizeConnectionError' || 
+        error.name === 'SequelizeConnectionRefusedError' ||
+        error.name === 'SequelizeHostNotFoundError' ||
+        error.name === 'SequelizeConnectionTimedOutError') {
+      return res.status(503).json({ 
+        message: "Serviço temporariamente indisponível. Problemas com o banco de dados.",
+        error: "Erro de conexão com o banco de dados"
+      });
+    }
+    
+    return res.status(500).json({ 
+      message: "Erro no servidor ao excluir curso.", 
+      error: error.message 
+    });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 module.exports = { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso };

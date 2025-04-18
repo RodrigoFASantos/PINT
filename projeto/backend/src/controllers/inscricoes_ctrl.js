@@ -270,5 +270,26 @@ function calcularStatusCurso(curso) {
   }
 }
 
+// Método para remover todas as inscrições relacionadas a um curso específico
+const removerInscricoesDoCurso = async (id_curso, transaction) => {
+  try {
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: { id_curso },
+      transaction
+    });
 
-module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador };
+    // Remover todas as inscrições relacionadas ao curso
+    await Inscricao_Curso.destroy({
+      where: { id_curso },
+      transaction
+    });
+
+    return inscricoes.length; // Retorna o número de inscrições removidas
+  } catch (error) {
+    console.error(`Erro ao remover inscrições do curso ${id_curso}:`, error);
+    throw error;
+  }
+};
+
+
+module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador, removerInscricoesDoCurso };

@@ -1,4 +1,191 @@
-/* Detalhes Curso CSS */
+
+
+/* Botão base */
+button,
+.btn-editar,
+.btn-conteudos,
+.btn-inscricoes,
+.btn-avaliacoes,
+.btn-apagar {
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s ease-in-out;
+  transform: scale(1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Editar Curso */
+.btn-editar {
+  background-color: #2563eb;
+}
+
+.btn-editar:hover {
+  background-color: #1e40af;
+  transform: scale(1.05);
+}
+
+/* Gerenciar Conteúdos */
+.btn-conteudos {
+  background-color: #10b981;
+}
+
+.btn-conteudos:hover {
+  background-color: #059669;
+  transform: scale(1.05);
+}
+
+/* Gerenciar Inscrições */
+.btn-inscricoes {
+  background-color: #f59e0b;
+}
+
+.btn-inscricoes:hover {
+  background-color: #d97706;
+  transform: scale(1.05);
+}
+
+/* Gerenciar Avaliações */
+.btn-avaliacoes {
+  background-color: #8b5cf6;
+}
+
+.btn-avaliacoes:hover {
+  background-color: #7c3aed;
+  transform: scale(1.05);
+}
+
+/* Botão Apagar */
+.btn-apagar {
+  background-color: #dc2626;
+  color: white;
+  border: 1px solid #b91c1c;
+}
+
+.btn-apagar:hover {
+  background-color: #ef4444;
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+
+
+.titulo{
+  color: black;
+}
+
+.subtitulo{
+  color: #4b5563;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =====================
+   MODAL DE CONFIRMAÇÃO
+   ===================== */
+
+   .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #dc2626;
+    margin-bottom: 1rem;
+  }
+  
+  .modal-text {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 2rem;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .modal-buttons button {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .modal-buttons .btn-cancelar {
+    background-color: #e5e7eb;
+    color: #111827;
+  }
+  
+  .modal-buttons .btn-cancelar:hover {
+    background-color: #d1d5db;
+    transform: translateY(-2px);
+  }
+  
+  .modal-buttons .btn-confirmar {
+    background-color: #dc2626;
+    color: white;
+  }
+  
+  .modal-buttons .btn-confirmar:hover {
+    background-color: #b91c1c;
+    transform: translateY(-2px);
+  }
+
+  
+  
+
+
+
+
+
+
 
 .loading-spinner {
   border: 3px solid rgba(0, 0, 0, 0.1);
@@ -9,6 +196,10 @@
   animation: spin 1s linear infinite;
 }
 
+
+
+
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -16,7 +207,11 @@
 
 .curso-details-container {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 2rem auto;
+  background-color: black;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
 }
 
 /* Estilização do status do curso */
@@ -30,12 +225,12 @@
 }
 
 .status-badge.agendado {
-  background-color: #ebf5ff;
+  background-color: black;
   color: #1e40af;
 }
 
 .status-badge.em-curso {
-  background-color: #ecfdf5;
+  background-color: black;
   color: #065f46;
 }
 
@@ -52,39 +247,58 @@
 /* Estilização dos metadados do curso */
 .curso-meta {
   margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
 }
 
 .meta-item {
   display: flex;
-  margin-bottom: 0.75rem;
-  align-items: baseline;
+  flex-direction: column;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .meta-label {
   font-weight: 600;
   color: #4b5563;
-  min-width: 120px;
-  margin-right: 0.75rem;
+  margin-bottom: 0.25rem;
 }
 
 .meta-value {
   color: #1f2937;
 }
 
+/* Conteúdo do curso */
+.curso-content {
+  margin-top: 2rem;
+}
+
+.curso-content h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  color: #1f2937;
+}
+
 /* Botão de inscrição */
 .inscricao-btn {
   display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: white;
+  border-radius: 0.375rem;
+  font-weight: 500;
   transition: all 0.2s ease-in-out;
 }
 
 .inscricao-btn:hover {
+  background-color: #1d4ed8;
   transform: translateY(-2px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Conteúdo do curso */
-.conteudo-curso {
-  margin-top: 2rem;
 }
 
 /* Resultado do curso */
@@ -119,6 +333,22 @@
 
 .certificado-btn:hover {
   background-color: #1d4ed8;
+}
+
+/* Botões de ação (admin) */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.02);
+}
+
+/* Separador visual em ações de gestão */
+.gestor-actions {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 /* Cursos relacionados */
@@ -171,19 +401,19 @@
 /* Responsividade */
 @media screen and (max-width: 768px) {
   .curso-meta {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
-  
+
   .formador-actions,
   .gestor-actions {
     flex-direction: column;
   }
-  
+
   .formador-actions > *,
   .gestor-actions > * {
     margin-bottom: 0.5rem;
   }
-  
+
   .relacionados-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
