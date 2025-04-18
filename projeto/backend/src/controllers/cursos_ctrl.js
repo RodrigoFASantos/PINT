@@ -171,7 +171,10 @@ const updateCurso = async (req, res) => {
 
 
 
-// Delete curso
+const fs = require('fs');
+const path = require('path');
+
+// Função para deletar curso com remoção da imagem
 const deleteCurso = async (req, res) => {
   try {
     const { id } = req.params;
@@ -183,14 +186,16 @@ const deleteCurso = async (req, res) => {
       });
     }
 
-    // Verificar se o curso existe antes de iniciar transações
-    const cursoExists = await Curso.findByPk(id);
+    // Verificar se o curso existe antes de iniciar operações
+    const curso = await Curso.findByPk(id);
     
-    if (!cursoExists) {
+    if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    // Primeiro eliminar as inscrições (sem usar transação)
+    // Guardar o caminho da imagem para excluir depois
+    const imagemPath = curso.imagem_path;
+
     try {
       // Excluir diretamente as inscrições
       const numInscricoesRemovidas = await Inscricao_Curso.destroy({
@@ -207,14 +212,28 @@ const deleteCurso = async (req, res) => {
       console.log(`Removidos conteúdos do curso ${id}`);
 
       // Excluir o curso
-      await cursoExists.destroy();
+      await curso.destroy();
       
       console.log(`Curso ${id} excluído com sucesso`);
+
+      // Remover a imagem do curso do sistema de arquivos, se existir
+      if (imagemPath) {
+        const fullPath = path.resolve(imagemPath);
+        
+        // Verificar se o arquivo existe antes de tentar excluí-lo
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+          console.log(`Imagem do curso removida: ${fullPath}`);
+        } else {
+          console.log(`Imagem não encontrada no caminho: ${fullPath}`);
+        }
+      }
 
       // Retornar resposta de sucesso
       return res.json({ 
         message: "Curso excluído com sucesso!", 
-        inscricoesRemovidas: numInscricoesRemovidas 
+        inscricoesRemovidas: numInscricoesRemovidas,
+        imagemRemovida: !!imagemPath
       });
     } catch (error) {
       console.error("Erro específico ao excluir relações:", error);
