@@ -11,16 +11,43 @@ export default function FormadoresPage() {
   const [error, setError] = useState(null);
   const [apiTested, setApiTested] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const formadoresPerPage = 10;
   
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // Dados de demonstração apenas para teste de renderização
-  const dadosExemplo = [
-    { id_utilizador: 1, nome: "João Silva", email: "joao.silva@exemplo.com" },
-    { id_utilizador: 2, nome: "Maria Santos", email: "maria.santos@exemplo.com" },
-    { id_utilizador: 3, nome: "Carlos Oliveira", email: "carlos.oliveira@exemplo.com" }
-  ];
+  useEffect(() => {
+    const fetchCursos = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/formadores?page=${currentPage}&limit=${formadoresPerPage}`);
+        const data = await response.json();
+        setFormadores(data.formadores || []);
+        setTotalPages(data.totalPages || 1);
+      } catch (error) {
+        console.error("Erro ao carregar formadores:", error);
+      }
+    };
+
+    
+    
+
+    fetchCursos();
+  }, [currentPage]);  
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   useEffect(() => {
     const testarEndpoints = async () => {
@@ -65,7 +92,7 @@ export default function FormadoresPage() {
                                      data.users;
               
               setFormadores(formadoresData);
-              formadoresEncontrados = true;
+              
               break;
             } else {
               console.log(`⚠️ Endpoint respondeu, mas sem dados: ${endpoint}`);
@@ -78,11 +105,7 @@ export default function FormadoresPage() {
         }
       }
       
-      if (!formadoresEncontrados) {
-        console.log("Nenhum endpoint válido encontrado. Usando dados de exemplo.");
-        setFormadores(dadosExemplo);
-        setError("Não foi possível conectar a nenhum endpoint válido para formadores.");
-      }
+     
       
       setLoading(false);
       setApiTested(true);
@@ -135,24 +158,33 @@ export default function FormadoresPage() {
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 mt-20 text-center">Formadores</h1>
-      
-      {error && (
-        <div className="bg-yellow-100 p-4 mb-6 rounded-md">
-          <p className="text-yellow-800">{error}</p>
-          <p className="text-sm text-yellow-700 mt-1">Mostrando dados de exemplo para fins de demonstração.</p>
-          <p className="text-sm text-yellow-700 mt-1">Verifique o console para detalhes sobre os endpoints testados.</p>
-        </div>
-      )}
-      
-      {apiTested && !error && (
-        <div className="bg-green-100 p-4 mb-6 rounded-md">
-          <p className="text-green-800">✅ Conexão com API estabelecida com sucesso!</p>
-          <p className="text-sm text-green-700 mt-1">Mostrando dados reais dos formadores.</p>
-        </div>
-      )}
 
+      {/* Barra de paginação */}
+      <div className="flex justify-center items-center my-6">
+        <button
+          onClick={goToPreviousPage}
+          disabled={currentPage === 1}
+          className={`px-4 py-2 ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <span className="mx-4 text-lg font-medium">{currentPage}/{totalPages}</span>
+
+        <button
+          onClick={goToNextPage}
+          disabled={currentPage === totalPages}
+          className={`px-4 py-2 ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      
       {/* Lista de formadores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {formadores.length > 0 ? (

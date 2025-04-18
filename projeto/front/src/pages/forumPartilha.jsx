@@ -16,6 +16,8 @@ const ForumPartilha = () => {
   const [loading, setLoading] = useState(true);
   const [showCriarTopico, setShowCriarTopico] = useState(false);
   const [userRole, setUserRole] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -113,9 +115,9 @@ const ForumPartilha = () => {
 
   return (
     <div className="forum-partilha-container">
-      <Navbar />
+      <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="forum-content">
           <h1>Fórum de Partilha de Conhecimento</h1>
           

@@ -1,190 +1,111 @@
-/* Detalhes Curso CSS */
+/* Estilos personalizados para a página de detalhes do curso */
 
-.loading-spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top: 3px solid #3498db;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
+/* Estilo para o nome do curso */
+/* Aumento da especificidade do seletor para garantir que sobrescreva outros estilos */
+.curso-header h1, 
+div.curso-header h1, 
+.curso-details-container .curso-header h1 {
+  color: #000000 !important; /* Texto preto para o nome do curso */
+  font-weight: bold !important;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Estilos para os botões de inscrição */
+/* Aumento da especificidade para garantir aplicação */
+button.inscricao-btn,
+.curso-actions .not-enrolled-actions button.inscricao-btn {
+  background-color: #f97316 !important; /* Laranja (orange-500) */
+  color: #000000 !important; /* Texto preto */
+  border-radius: 9999px !important; /* Cantos totalmente arredondados */
+  padding: 0.5rem 1.5rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease-in-out !important;
+  border: none !important;
+  outline: none !important;
 }
 
-.curso-details-container {
-  max-width: 1200px;
-  margin: 0 auto;
+button.inscricao-btn:hover,
+.curso-actions .not-enrolled-actions button.inscricao-btn:hover {
+  background-color: #ea580c !important; /* Laranja mais escuro (orange-600) */
 }
 
-/* Estilização do status do curso */
-.status-badge {
-  display: inline-block;
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
+/* Estilo para o botão de inscrito */
+button.inscrito-btn,
+.curso-actions .not-enrolled-actions button.inscrito-btn {
+  background-color: #000000 !important; /* Preto */
+  color: #ffffff !important; /* Texto branco */
+  border-radius: 9999px !important; /* Cantos totalmente arredondados */
+  padding: 0.5rem 1.5rem !important;
+  font-weight: 500 !important;
+  border: none !important;
+  outline: none !important;
 }
 
-.status-badge.agendado {
-  background-color: #ebf5ff;
-  color: #1e40af;
+/* Estilos para o modal de confirmação - aumento da especificidade */
+div.modal-confirmacao {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  z-index: 9999 !important; /* Aumento do z-index para garantir que fique acima de outros elementos */
 }
 
-.status-badge.em-curso {
-  background-color: #ecfdf5;
-  color: #065f46;
+div.modal-confirmacao .modal-content {
+  background-color: white !important;
+  padding: 1.5rem !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  max-width: 28rem !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 1rem !important;
 }
 
-.status-badge.terminado {
-  background-color: #f3f4f6;
-  color: #4b5563;
+/* Estilos para os botões do modal */
+button.btn-cancelar {
+  padding: 0.5rem 1rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  color: #374151 !important;
+  transition: background-color 0.2s !important;
+  margin: 0 0.5rem !important;
+  background-color: transparent !important;
 }
 
-.status-badge.indisponível {
-  background-color: #fef2f2;
-  color: #b91c1c;
+button.btn-cancelar:hover {
+  background-color: #f3f4f6 !important;
 }
 
-/* Estilização dos metadados do curso */
-.curso-meta {
-  margin-top: 1.5rem;
+button.btn-confirmar {
+  padding: 0.5rem 1rem !important;
+  background-color: #f97316 !important; /* Laranja (orange-500) */
+  color: #000000 !important; /* Texto preto */
+  font-weight: 500 !important;
+  border-radius: 0.5rem !important;
+  transition: background-color 0.2s !important;
+  margin: 0 0.5rem !important;
+  border: none !important;
 }
 
-.meta-item {
-  display: flex;
-  margin-bottom: 0.75rem;
-  align-items: baseline;
+button.btn-confirmar:hover {
+  background-color: #ea580c !important; /* Laranja mais escuro (orange-600) */
 }
 
-.meta-label {
-  font-weight: 600;
-  color: #4b5563;
-  min-width: 120px;
-  margin-right: 0.75rem;
+/* Garantindo que outros estilos não interfiram */
+.inscricao-btn, .inscrito-btn, .btn-cancelar, .btn-confirmar {
+  box-shadow: none !important;
+  text-transform: none !important;
 }
 
-.meta-value {
-  color: #1f2937;
+/* Reset de outros possíveis estilos que possam afetar */
+.inscricao-btn[class*="bg-"], .btn-confirmar[class*="bg-"] {
+  background-color: #f97316 !important;
 }
 
-/* Botão de inscrição */
-.inscricao-btn {
-  display: inline-block;
-  transition: all 0.2s ease-in-out;
-}
-
-.inscricao-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Conteúdo do curso */
-.conteudo-curso {
-  margin-top: 2rem;
-}
-
-/* Resultado do curso */
-.curso-resultado {
-  margin-top: 1.5rem;
-}
-
-.avaliacao {
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-radius: 0.5rem;
-}
-
-.avaliacao .nota {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-/* Certificado */
-.certificado-btn {
-  margin-top: 1rem;
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background-color: #2563eb;
-  color: white;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.certificado-btn:hover {
-  background-color: #1d4ed8;
-}
-
-/* Cursos relacionados */
-.cursos-relacionados {
-  margin-top: 3rem;
-}
-
-.relacionados-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-.curso-card {
-  background-color: white;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.curso-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.curso-card-image {
-  height: 150px;
-  background-size: cover;
-  background-position: center;
-}
-
-.curso-card-content {
-  padding: 1rem;
-}
-
-.curso-card-title {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
-}
-
-.curso-card-meta {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-/* Responsividade */
-@media screen and (max-width: 768px) {
-  .curso-meta {
-    grid-template-columns: 1fr;
-  }
-  
-  .formador-actions,
-  .gestor-actions {
-    flex-direction: column;
-  }
-  
-  .formador-actions > *,
-  .gestor-actions > * {
-    margin-bottom: 0.5rem;
-  }
-  
-  .relacionados-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
+.inscrito-btn[class*="bg-"] {
+  background-color: #000000 !important;
 }

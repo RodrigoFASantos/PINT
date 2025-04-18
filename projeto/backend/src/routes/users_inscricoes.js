@@ -44,7 +44,29 @@ router.get("/inscricoes", verificarToken, async (req, res) => {
   }
 });
 
+// ALTERAÇÃO IMPORTANTE: Rota corrigida para verificar inscrição
 // Verificar se o usuário está inscrito em um curso específico
+router.get("/verificar/:id_curso", verificarToken, async (req, res) => {
+  try {
+    const id_utilizador = req.user.id_utilizador;
+    const { id_curso } = req.params;
+    
+    const inscricao = await Inscricao_Curso.findOne({
+      where: { 
+        id_utilizador, 
+        id_curso,
+        estado: "inscrito" // apenas inscrições ativas
+      }
+    });
+    
+    res.json({ inscrito: !!inscricao });
+  } catch (error) {
+    console.error("Erro ao verificar inscrição:", error);
+    res.status(500).json({ message: "Erro ao verificar inscrição" });
+  }
+});
+
+// Mantendo a rota original também para compatibilidade
 router.get("/inscrito/:id_curso", verificarToken, async (req, res) => {
   try {
     const id_utilizador = req.user.id_utilizador;
