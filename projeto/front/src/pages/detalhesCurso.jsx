@@ -4,8 +4,7 @@ import './css/detalhesCurso.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConteudoCursoList from '../components/ConteudoCursoList';
-import FormularioInscricao from '../components/FormularioInscricao';
-import API_BASE, { IMAGES } from "../api";  // Importar API_BASE corretamente
+import API_BASE, { IMAGES } from "../api";  
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -62,8 +61,8 @@ const DetalhesCurso = () => {
       
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao carregar detalhes do curso:', error);
-      setError(error.message || 'Não foi possível carregar os detalhes do curso. Por favor, tente novamente mais tarde.');
+      console.error("Erro ao carregar curso:", error);
+      setError("Não foi possível carregar os detalhes do curso. Tente novamente mais tarde.");
       setLoading(false);
     }
   }, [id, navigate]);
@@ -89,8 +88,10 @@ const DetalhesCurso = () => {
     }
   };
 
-  // Abrir formulário de inscrição
+  // Abrir pop-up de confirmação de inscrição
   const handleInscricao = () => {
+    console.log('Botão de inscrição clicado');
+    console.log('Abrindo modal de confirmação de inscrição');
     setShowInscricaoForm(true);
   };
 
@@ -179,6 +180,12 @@ const DetalhesCurso = () => {
               >
                 Tentar novamente
               </button>
+              <button
+                onClick={() => navigate('/cursos')}
+                className="mt-4 ml-4 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Voltar para lista de cursos
+              </button>
             </div>
           </div>
         </div>
@@ -255,7 +262,7 @@ const DetalhesCurso = () => {
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="curso-details-container bg-white rounded-lg shadow-md">
             {/* Cabeçalho do curso */}
-            <div className="curso-header p-6 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-t-lg">
+            <div className="curso-header p-6 bg-gradient-to-r from-blue-500 to-blue-700 rounded-t-lg">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className='titulo'>{curso.nome}</h1>
@@ -374,13 +381,31 @@ const DetalhesCurso = () => {
         </div>
       </div>
       
-      {/* Modal de inscrição */}
+      {/* Modal de confirmação de inscrição */}
       {showInscricaoForm && (
-        <FormularioInscricao 
-          cursoId={id} 
-          onClose={() => setShowInscricaoForm(false)}
-          onSuccess={handleInscricaoSuccess}
-        />
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black opacity-50"></div>
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full relative z-10 text-center">
+            <h3 className="text-xl font-semibold mb-4">Confirmar Inscrição</h3>
+            <p className="mb-6">Tem certeza que deseja se inscrever no curso "{curso.nome}"?</p>
+            <div className="flex justify-center space-x-4">
+              <button 
+                onClick={() => setShowInscricaoForm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                disabled={inscrevendo}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleInscricaoConfirm}
+                className={`px-4 py-2 bg-orange-500 text-black font-medium rounded-lg hover:bg-orange-600 transition-colors ${inscrevendo ? 'opacity-70 cursor-not-allowed' : ''}`}
+                disabled={inscrevendo}
+              >
+                {inscrevendo ? 'Processando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
