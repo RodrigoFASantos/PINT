@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import banner from '../images/banner.jpg';
@@ -7,6 +8,7 @@ import API_BASE, { IMAGES } from '../api';
 import axios from 'axios';
 
 export default function Home() {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inscricoes, setInscricoes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,13 @@ export default function Home() {
     buscarInscricoes();
   }, []);
 
+  // Função para redirecionar para a página de detalhes do curso
+  // CORREÇÃO: Caminho alterado para "/cursos/" em vez de "/curso/"
+  const redirecionarParaDetalheCurso = (cursoId) => {
+    console.log('Redirecionando para o curso:', cursoId);
+    navigate(`/cursos/${cursoId}`);
+  };
+
   // Cursos para serem exibidos caso não haja inscrições ou o usuário não esteja logado
   const cursosSugeridos = [
     { id: 1, nome: "React Avançado", formador: "João Silva" },
@@ -103,8 +112,9 @@ export default function Home() {
                 <div 
                   key={inscricao.id} 
                   className="cartao-curso"
-                  onClick={() => window.location.href = `/curso/${inscricao.cursoId}`}
+                  onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
                 >
+                  {/* CORREÇÃO: Removido o atributo consolelog inválido */}
                   {/* Tentar usar a imagem do curso se disponível */}
                   <img 
                     src={IMAGES.CURSO(inscricao.nomeCurso?.replace(/\s+/g, '-').toLowerCase() || inscricao.cursoId)} 
@@ -137,7 +147,11 @@ export default function Home() {
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
             {cursosSugeridos.map((curso) => (
-              <div key={curso.id} className="cartao-curso">
+              <div 
+                key={curso.id} 
+                className="cartao-curso"
+                onClick={() => redirecionarParaDetalheCurso(curso.id)}
+              >
                 <div className="curso-info">
                   <h3>{curso.nome}</h3>
                   <p className="curso-detalhe">Formador: {curso.formador}</p>

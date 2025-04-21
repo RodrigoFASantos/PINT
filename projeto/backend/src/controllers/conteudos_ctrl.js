@@ -37,4 +37,31 @@ const createConteudo = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar conteúdo." });
   }
 };
+/*
+const deleteConteudo = async (req, res) => {
+try{
+  
+  const { id } = req.params;
+  
+  const conteudo = await Conteudo.findByPk(id);
+}
+
+if (!conteudo) {
+  return res.status(404).json({ message: "Conteudo não encontrado!" });
+}
+
+await conteudo.destroy();
+
+res.json({ message: "Conteudo apagado com sucesso!" });
+} catch (error) {
+console.error("Erro ao apagar conteudo:", error);
+res.status(500).json({ message: "Erro no servidor ao apagar conteudo." });
+}
+};
+*/
+
+
+
+
+
 module.exports = { getAllConteudos, createConteudo };

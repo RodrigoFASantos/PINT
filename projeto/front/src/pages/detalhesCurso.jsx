@@ -195,10 +195,6 @@ const DetalhesCurso = () => {
     }
   };
 
-
-
-
-
   // Após inscrição bem-sucedida
   const handleInscricaoSuccess = () => {
     setInscrito(true);
@@ -256,7 +252,7 @@ const DetalhesCurso = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="main-container">
         <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -271,7 +267,7 @@ const DetalhesCurso = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="main-container">
         <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -299,7 +295,7 @@ const DetalhesCurso = () => {
 
   if (!curso) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="main-container">
         <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -329,7 +325,7 @@ const DetalhesCurso = () => {
       : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="main-container">
       <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -362,11 +358,10 @@ const DetalhesCurso = () => {
           </div>
         )}
 
-
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="curso-details-container bg-white rounded-lg shadow-md">
+          <div className="curso-container">
             {/* Cabeçalho do curso */}
-            <div className="curso-header p-6 bg-gradient-to-r from-blue-500 to-blue-700 rounded-t-lg">
+            <div className="curso-cabecalho">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className='titulo'>{curso.nome}</h1>
@@ -391,15 +386,15 @@ const DetalhesCurso = () => {
             </div>
 
             {/* Conteúdo principal */}
-            <div className="curso-content p-6">
+            <div className="curso-conteudo">
               {/* Descrição */}
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-3">Descrição</h2>
-                <p className="text-gray-700">{curso.descricao || 'Sem descrição disponível.'}</p>
+              <div className="container-decricao">
+                <h2 className="descricao">Descrição</h2>
+                <p className="texto-descricao">{curso.descricao || 'Sem descrição disponível.'}</p>
               </div>
 
               {/* Detalhes do curso */}
-              <div className="curso-meta mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="informacoes-curso">
                 <div className="meta-item">
                   <span className="meta-label">Tipo:</span>
                   <span className="meta-value">{curso.tipo === 'sincrono' ? 'Síncrono (com formador)' : 'Assíncrono (auto-estudo)'}</span>
@@ -440,7 +435,7 @@ const DetalhesCurso = () => {
               </div>
 
               {/* Botão de inscrição ou informações para alunos inscritos */}
-              <div className="curso-actions mt-8">
+              <div className="admin-acoes-curso">
                 {/* Verificar se o curso não está terminado para mostrar o botão de inscrição */}
                 {statusCurso !== "Terminado" && (
                   <div className="mb-6">

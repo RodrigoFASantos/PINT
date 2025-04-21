@@ -116,19 +116,51 @@ const getInscricoesCurso = async (req, res) => {
   }
 };
 
+
+
 // Atualizar curso existente
 const updateCurso = async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria } = req.body;
-    const imagem = req.file ? req.file.path : null;
-
+    
     const curso = await Curso.findByPk(id);
 
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
+    // Verificar se o nome do curso foi alterado
+    const nomeAlterado = nome && nome !== curso.nome;
+    
+    // Imagem do upload (se houver)
+    const imagemUpload = req.file ? req.file.path : null;
+    
+    // Se o nome foi alterado e não há upload de nova imagem, precisamos renomear o arquivo existente
+    if (nomeAlterado && !imagemUpload && curso.imagem_path) {
+      try {
+        // Obter caminho antigo da imagem
+        const caminhoAntigo = curso.imagem_path;
+        
+        // Criar novo nome de arquivo baseado no novo nome do curso
+        const novoNomeArquivo = nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "") + ".png";
+        const novoCaminho = `uploads/cursos/${novoNomeArquivo}`;
+        
+        // Verificar se o arquivo antigo existe
+        if (fs.existsSync(caminhoAntigo)) {
+          // Renomear o arquivo
+          fs.renameSync(caminhoAntigo, novoCaminho);
+          
+          // Atualizar o caminho da imagem no objeto curso
+          curso.imagem_path = novoCaminho;
+          console.log(`Imagem renomeada de ${caminhoAntigo} para ${novoCaminho}`);
+        }
+      } catch (error) {
+        console.error("Erro ao renomear arquivo de imagem:", error);
+        // Continuar mesmo se houver erro no renomeio
+      }
+    }
+    
     // Atualizar campos
     if (nome) curso.nome = nome;
     if (descricao !== undefined) curso.descricao = descricao;
@@ -141,7 +173,7 @@ const updateCurso = async (req, res) => {
     if (id_formador) curso.id_formador = id_formador;
     if (id_area) curso.id_area = id_area;
     if (id_categoria) curso.id_categoria = id_categoria;
-    if (imagem) curso.imagem_path = imagem;
+    if (imagemUpload) curso.imagem_path = imagemUpload;
 
     await curso.save();
 
