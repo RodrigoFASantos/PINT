@@ -14,9 +14,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     }
   }, [currentUser]);
 
-  // Função para verificar se o link está ativo
+  // Função modificada para verificar se o link está ativo
   const isActive = (path) => {
-    return location.pathname === path;
+    // Verifica se o path é exatamente igual OU se é um subpath
+    return location.pathname === path || 
+           (path !== '/' && location.pathname.startsWith(path));
   };
 
   return (

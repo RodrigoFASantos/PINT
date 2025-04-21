@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './css/detalhesCurso.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import ConteudoCursoList from '../components/ConteudoCursoList';
 import API_BASE, { IMAGES } from "../api";
 
 const DetalhesCurso = () => {
@@ -12,17 +11,23 @@ const DetalhesCurso = () => {
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  // Definir userRole diretamente como 'admin' para teste
   const [userRole, setUserRole] = useState('admin');
   const [inscrito, setInscrito] = useState(false);
   const [inscrevendo, setInscrevendo] = useState(false);
   const [showInscricaoForm, setShowInscricaoForm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  // Adicionar estado para controlar carregamento durante exclusão
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
+
+  // Abrir pop-up de confirmação de inscrição
+  const handleInscricao = () => {
+    console.log('Botão de inscrição clicado');
+    setShowInscricaoForm(true);
+  };
 
   // Verificar se o usuário já está inscrito no curso
   const verificarInscricao = useCallback(async () => {
@@ -113,26 +118,19 @@ const DetalhesCurso = () => {
     }
   };
 
-  // Abrir pop-up de confirmação de inscrição
-  const handleInscricao = () => {
-    console.log('Botão de inscrição clicado');
-    console.log('Abrindo modal de confirmação de inscrição');
-    setShowInscricaoForm(true);
-  };
-
   // Confirmar inscrição no curso
   const handleInscricaoConfirm = async () => {
     try {
       setInscrevendo(true);
-  
+
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/login', { state: { redirectTo: `/cursos/${id}` } });
         return;
       }
-  
+
       const userId = JSON.parse(atob(token.split('.')[1])).id_utilizador;
-  
+
       // Verificar a conexão com o servidor antes de enviar a requisição principal
       try {
         const pingResponse = await fetch(`${API_BASE}`, {
@@ -141,14 +139,14 @@ const DetalhesCurso = () => {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (!pingResponse.ok) {
           throw new Error("Servidor indisponível no momento. Tente novamente mais tarde.");
         }
       } catch (pingError) {
         throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão com a internet.");
       }
-  
+
       const response = await fetch(`${API_BASE}/inscricoes`, {
         method: 'POST',
         headers: {
@@ -160,11 +158,11 @@ const DetalhesCurso = () => {
           id_curso: id
         })
       });
-  
+
       if (!response.ok) {
         // Tentar obter a mensagem de erro da resposta
         let errorMessage = "Erro ao realizar inscrição";
-        
+
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
@@ -178,29 +176,21 @@ const DetalhesCurso = () => {
             errorMessage = "Você não tem permissão para se inscrever neste curso.";
           }
         }
-        
+
         throw new Error(errorMessage);
       }
-  
+
       setInscrito(true);
       setShowInscricaoForm(false);
       // Exibir mensagem de sucesso temporária
       alert('Inscrição realizada com sucesso! Você receberá um email de confirmação.');
-  
+
     } catch (error) {
       console.error('Erro ao realizar inscrição:', error);
       alert(`Erro: ${error.message}`);
     } finally {
       setInscrevendo(false);
     }
-  };
-
-  // Após inscrição bem-sucedida
-  const handleInscricaoSuccess = () => {
-    setInscrito(true);
-    setShowInscricaoForm(false);
-    // Exibir mensagem de sucesso temporária
-    alert('Inscrição realizada com sucesso! Você receberá um email de confirmação.');
   };
 
   // Função para excluir curso
@@ -248,6 +238,15 @@ const DetalhesCurso = () => {
       setIsDeleting(false); // Desativar indicador de carregamento
       setShowDeleteConfirmation(false); // Fechar o modal de confirmação
     }
+  };
+
+  const getImageUrl = (curso) => {
+    if (!curso || !curso.nome) return '/placeholder-curso.jpg';
+    const nomeCursoSlug = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    return IMAGES.CURSO(nomeCursoSlug);
   };
 
   if (loading) {
@@ -334,7 +333,7 @@ const DetalhesCurso = () => {
         {showDeleteConfirmation && (
           <div className="modal-overlay">
             <div className="modal-content">
-              <h2 className="modal-title">Confirmar Exclusão</h2>
+              <h2 className="modal-title">Confirmar</h2>
               <p className="modal-text">
                 Tem certeza que deseja excluir este curso? Esta ação irá remover o curso e todas as inscrições associadas.
               </p>
@@ -358,10 +357,17 @@ const DetalhesCurso = () => {
           </div>
         )}
 
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           <div className="curso-container">
             {/* Cabeçalho do curso */}
-            <div className="curso-cabecalho">
+            <div
+              className="curso-cabecalho"
+              style={{
+                backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%), url(${getImageUrl(curso)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className='titulo'>{curso.nome}</h1>
@@ -373,129 +379,161 @@ const DetalhesCurso = () => {
                   <span className={`status-badge ${statusCurso.toLowerCase().replace(' ', '-')}`}>
                     {statusCurso}
                   </span>
-                  {/* Mostrar botão de exclusão para todos no momento, já que estamos simulando admin */}
-                  <button
-                    onClick={() => setShowDeleteConfirmation(true)}
-                    className="btn-apagar"
-                    disabled={isDeleting}
-                  >
-                    Excluir Curso
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            {/* Conteúdo principal */}
-            <div className="curso-conteudo">
-              {/* Descrição */}
-              <div className="container-decricao">
-                <h2 className="descricao">Descrição</h2>
-                <p className="texto-descricao">{curso.descricao || 'Sem descrição disponível.'}</p>
-              </div>
-
-              {/* Detalhes do curso */}
-              <div className="informacoes-curso">
-                <div className="meta-item">
-                  <span className="meta-label">Tipo:</span>
-                  <span className="meta-value">{curso.tipo === 'sincrono' ? 'Síncrono (com formador)' : 'Assíncrono (auto-estudo)'}</span>
-                </div>
-
-                {curso.id_formador && curso.formador && (
-                  <div className="meta-item">
-                    <span className="meta-label">Formador:</span>
-                    <span className="meta-value">{curso.formador.nome}</span>
-                  </div>
-                )}
-
-                <div className="meta-item">
-                  <span className="meta-label">Data de início:</span>
-                  <span className="meta-value">{new Date(curso.data_inicio).toLocaleDateString()}</span>
-                </div>
-
-                <div className="meta-item">
-                  <span className="meta-label">Data de término:</span>
-                  <span className="meta-value">{new Date(curso.data_fim).toLocaleDateString()}</span>
-                </div>
-
-                {curso.tipo === 'sincrono' && (
-                  <div className="meta-item">
-                    <span className="meta-label">Vagas:</span>
-                    <span className="meta-value">
-                      {vagasDisponiveis !== null ? `${curso.inscricoesAtivas || 0} / ${curso.vagas}` : 'Sem limite'}
-                    </span>
-                  </div>
-                )}
-
-                {curso.horas_curso && (
-                  <div className="meta-item">
-                    <span className="meta-label">Duração:</span>
-                    <span className="meta-value">{curso.horas_curso} horas</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Botão de inscrição ou informações para alunos inscritos */}
-              <div className="admin-acoes-curso">
-                {/* Verificar se o curso não está terminado para mostrar o botão de inscrição */}
-                {statusCurso !== "Terminado" && (
-                  <div className="mb-6">
-                    {inscrito ? (
-                      <div className="inscrito-badge bg-green-100 text-green-800 py-2 px-4 rounded-md inline-flex items-center">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span className="font-medium">Inscrito</span>
-                      </div>
-                    ) : (
+                  {/* Botão de excluir, se usuário for admin */}
+                  {userRole === 'admin' && (
+                    <div className="top-right-button">
                       <button
-                        onClick={handleInscricao}
-                        className="btn-inscrever"
-                        disabled={statusCurso === "Terminado"}
+                        onClick={() => setShowDeleteConfirmation(true)}
+                        className="btn-apagar"
+                        disabled={isDeleting}
                       >
-                        Inscrever
+                        <i className='fas fa-trash'></i>
                       </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Acesso de administrador */}
-                <div className="gestor-actions mt-4">
-                  <p className="text-purple-700 font-medium mb-3">
-                    Acesso de administrador
-                  </p>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => navigate(`/admin/cursos/${id}/editar`)}
-                      className="btn-editar"
-                    >
-                      Editar Curso
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/admin/cursos/${id}/conteudos`)}
-                      className="btn-conteudos"
-                    >
-                      Gerenciar Conteúdos
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/admin/cursos/${id}/inscricoes`)}
-                      className="btn-inscricoes"
-                    >
-                      Gerenciar Inscrições
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/admin/cursos/${id}/avaliacoes`)}
-                      className="btn-avaliacoes"
-                    >
-                      Gerenciar Avaliações
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Ícone de informação no canto inferior direito */}
+              <div className="info-icon-container">
+                <button
+                  className="info-icon"
+                  onClick={toggleDetalhes}
+                  aria-label="Mostrar detalhes do curso"
+                >
+                  {mostrarDetalhes ? (
+                    <i className='fas fa-times'></i>
+                  ) : (
+                    <i className='fas fa-info'></i>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Detalhes do curso */}
+            {mostrarDetalhes && (
+              <div className="curso-pormenores">
+                <div className="formulario-layout">
+                  {/* Primeira linha */}
+                  <div className="form-row">
+                    <div className="form-campo formador">
+                      <label>Formador</label>
+                      <div className="campo-valor">
+                        {curso?.formador?.nome || "Não atribuído"}
+                      </div>
+                    </div>
+                    <div className="form-campo estado-inscricao">
+                      <div 
+                        className={`inscricao-status ${inscrito ? 'inscrito' : 'nao-inscrito'}`}
+                        onClick={!inscrito ? handleInscricao : undefined}
+                      >
+                        {inscrito ? "Inscrito" : "Inscrever"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Segunda linha */}
+                  <div className="form-row">
+                    <div className="form-campo estado">
+                      <label>Estado</label>
+                      <div className="campo-valor">
+                        {statusCurso}
+                      </div>
+                    </div>
+                    <div className="form-campo vagas">
+                      <label>Vagas</label>
+                      <div className="campo-valor">
+                        {vagasDisponiveis !== null ? `${curso.inscricoesAtivas || 0} / ${curso.vagas}` : 'Sem limite'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Terceira linha */}
+                  <div className="form-row">
+                    <div className="form-campo area">
+                      <label>Área</label>
+                      <div className="campo-valor">
+                        {curso.area?.nome || "Não atribuída"}
+                      </div>
+                    </div>
+                    <div className="form-campo inicio">
+                      <label>Início</label>
+                      <div className="campo-valor">
+                        {new Date(curso.data_inicio).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="form-campo fim">
+                      <label>Fim</label>
+                      <div className="campo-valor">
+                        {new Date(curso.data_fim).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quarta linha */}
+                  <div className="form-row">
+                    <div className="form-campo tipo-curso">
+                      <label>Tipo Curso</label>
+                      <div className="campo-valor">
+                        {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
+                      </div>
+                    </div>
+                    <div className="form-campo categoria">
+                      <label>Categoria</label>
+                      <div className="campo-valor">
+                        {curso.area?.categoria?.nome || "Não atribuída"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Descrição */}
+                  <div className="form-row">
+                    <div className="form-campo descricao">
+                      <label>Descrição</label>
+                      <div className="campo-valor descricao-texto">
+                        {curso.descricao || 'Sem descrição disponível.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botões de administrador (se o usuário for admin) */}
+                  {userRole === 'admin' && (
+                    <div className="admin-buttons">
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => navigate(`/admin/cursos/${id}/editar`)}
+                          className="btn-editar"
+                        >
+                          Editar Curso
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/admin/cursos/${id}/conteudos`)}
+                          className="btn-conteudos"
+                        >
+                          Gerenciar Conteúdos
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/admin/cursos/${id}/inscricoes`)}
+                          className="btn-inscricoes"
+                        >
+                          Gerenciar Inscrições
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/admin/cursos/${id}/avaliacoes`)}
+                          className="btn-avaliacoes"
+                        >
+                          Gerenciar Avaliações
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

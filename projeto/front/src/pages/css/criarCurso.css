@@ -137,3 +137,124 @@ button[type="submit"]:hover {
     width: 100%;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Adicione estas regras ao seu arquivo criarCurso.css para estilizar o botão de seleção de formador */
+
+.select-formador-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.select-formador-button:hover {
+  background-color: #e2e8f0;
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.select-formador-button i {
+  color: #3b82f6;
+  font-size: 1rem;
+}
+
+/* Estilo para formador selecionado exibido no formulário */
+.formador-preview {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 0.75rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.formador-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.formador-avatar-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.formador-preview-info {
+  flex: 1;
+}
+
+.formador-nome {
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+.formador-email {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.remove-formador {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-formador:hover {
+  background-color: #fee2e2;
+}

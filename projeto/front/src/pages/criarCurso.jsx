@@ -37,7 +37,7 @@ const CriarCurso = () => {
   useEffect(() => {
     // Carregar formadores - usar rota correta
     axios.get(`${API_BASE}/users/formadores`, {
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
@@ -49,10 +49,10 @@ const CriarCurso = () => {
         console.error("Erro ao carregar formadores:", err);
         toast.error("Erro ao carregar formadores. Verifique o console para mais detalhes.");
       });
-      
+
     // Carregar categorias
     axios.get(`${API_BASE}/categorias`, {
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
@@ -64,10 +64,10 @@ const CriarCurso = () => {
         console.error("Erro ao carregar categorias:", err);
         toast.error("Erro ao carregar categorias");
       });
-      
+
     // Carregar todas as áreas
     axios.get(`${API_BASE}/areas`, {
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
@@ -98,7 +98,7 @@ const CriarCurso = () => {
     if (name === 'imagem') {
       const file = files[0];
       setFormData({ ...formData, imagem: file });
-      
+
       // Criar uma prévia da imagem
       if (file) {
         const reader = new FileReader();
@@ -125,9 +125,24 @@ const CriarCurso = () => {
     e.preventDefault();
 
     // Validar formador para cursos síncronos
-    if (formData.tipo === 'sincrono' && !formData.id_formador) {
-      toast.error('É necessário selecionar um formador para cursos síncronos');
-      return;
+    {
+      formData.tipo === 'sincrono' && (
+        <>
+          <button
+            type="button"
+            className="select-formador-button"
+            onClick={() => {
+              console.log("Abrindo modal de formadores");
+              setModalAberto(true);
+            }}
+          >
+            <i className="fas fa-user-plus"></i>
+            {formData.id_formador
+              ? `Formador selecionado (ID: ${formData.id_formador})`
+              : "Selecionar Formador"}
+          </button>
+        </>
+      )
     }
 
     const data = new FormData();
@@ -140,7 +155,7 @@ const CriarCurso = () => {
     try {
       // Usar a variável API_BASE em vez de hardcoded URL
       await axios.post(`${API_BASE}/cursos`, data, {
-        headers: { 
+        headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
@@ -173,7 +188,7 @@ const CriarCurso = () => {
 
       <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
         <h2>Criar Novo Curso</h2>
-        
+
         <div className="image-upload-container">
           <label className="custom-file-upload">
             <input
@@ -188,7 +203,7 @@ const CriarCurso = () => {
             </div>
             <span>Selecionar Imagem</span>
           </label>
-          
+
           {previewImage && (
             <div className="image-preview">
               <img src={previewImage} alt="Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
@@ -198,18 +213,18 @@ const CriarCurso = () => {
 
         <div className="inputs">
           <div className="row">
-            <input 
-              type="text" 
-              name="nome" 
-              placeholder="Nome do Curso" 
-              value={formData.nome} 
-              onChange={handleChange} 
-              required 
+            <input
+              type="text"
+              name="nome"
+              placeholder="Nome do Curso"
+              value={formData.nome}
+              onChange={handleChange}
+              required
             />
-            <select 
-              name="tipo" 
-              value={formData.tipo} 
-              onChange={handleChange} 
+            <select
+              name="tipo"
+              value={formData.tipo}
+              onChange={handleChange}
               required
             >
               <option value="">Selecione o Tipo</option>
@@ -219,10 +234,10 @@ const CriarCurso = () => {
           </div>
 
           <div className="row">
-            <select 
-              name="id_categoria" 
-              value={formData.id_categoria} 
-              onChange={handleChange} 
+            <select
+              name="id_categoria"
+              value={formData.id_categoria}
+              onChange={handleChange}
               required
             >
               <option value="">Selecione a Categoria</option>
@@ -232,11 +247,11 @@ const CriarCurso = () => {
                 </option>
               ))}
             </select>
-            
-            <select 
-              name="id_area" 
-              value={formData.id_area} 
-              onChange={handleChange} 
+
+            <select
+              name="id_area"
+              value={formData.id_area}
+              onChange={handleChange}
               required
               disabled={!formData.id_categoria}
             >
@@ -259,12 +274,12 @@ const CriarCurso = () => {
                   setModalAberto(true);
                 }}
               >
-                {formData.id_formador 
-                  ? `Formador selecionado (ID: ${formData.id_formador})` 
+                {formData.id_formador
+                  ? `Formador selecionado (ID: ${formData.id_formador})`
                   : "Selecionar Formador"}
               </button>
             )}
-            
+
             {formData.tipo === 'assincrono' && (
               <div className="info-box">
                 <i className="fas fa-info-circle"></i>
@@ -272,13 +287,13 @@ const CriarCurso = () => {
               </div>
             )}
 
-            <input 
-              type="number" 
-              name="vagas" 
-              placeholder="Vagas" 
-              value={formData.vagas} 
-              onChange={handleChange} 
-              disabled={formData.tipo === 'assincrono'} 
+            <input
+              type="number"
+              name="vagas"
+              placeholder="Vagas"
+              value={formData.vagas}
+              onChange={handleChange}
+              disabled={formData.tipo === 'assincrono'}
               required={formData.tipo === 'sincrono'}
             />
           </div>
@@ -286,35 +301,35 @@ const CriarCurso = () => {
           <div className="row">
             <div className="input-group">
               <label>Data de Início</label>
-              <input 
-                type="date" 
-                name="data_inicio" 
-                value={formData.data_inicio} 
-                onChange={handleChange} 
-                required 
+              <input
+                type="date"
+                name="data_inicio"
+                value={formData.data_inicio}
+                onChange={handleChange}
+                required
               />
             </div>
-            
+
             <div className="input-group">
               <label>Data de Término</label>
-              <input 
-                type="date" 
-                name="data_fim" 
-                value={formData.data_fim} 
-                onChange={handleChange} 
-                required 
+              <input
+                type="date"
+                name="data_fim"
+                value={formData.data_fim}
+                onChange={handleChange}
+                required
               />
             </div>
           </div>
 
-          <textarea 
-            name="descricao" 
-            placeholder="Descrição do curso" 
-            value={formData.descricao} 
+          <textarea
+            name="descricao"
+            placeholder="Descrição do curso"
+            value={formData.descricao}
             onChange={handleChange}
             rows="4"
           ></textarea>
-          
+
           <button type="submit" className="submit-button">Criar Curso</button>
         </div>
       </form>
