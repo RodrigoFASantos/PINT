@@ -563,13 +563,6 @@ const DetalhesCurso = () => {
                         </button>
 
                         <button
-                          onClick={() => navigate(`/admin/cursos/${id}/conteudos`)}
-                          className="btn-conteudos"
-                        >
-                          Gerenciar Conteúdos
-                        </button>
-
-                        <button
                           onClick={() => navigate(`/admin/cursos/${id}/inscricoes`)}
                           className="btn-inscricoes"
                         >
@@ -591,7 +584,6 @@ const DetalhesCurso = () => {
 
             {/* Conteúdos do curso - agora aparecem sempre, sem condição */}
             <div className="curso-conteudos-wrapper">
-              <h2 className="conteudos-titulo">Conteúdos do Curso</h2>
               <CursoConteudos cursoId={id} />
             </div>
           </div>

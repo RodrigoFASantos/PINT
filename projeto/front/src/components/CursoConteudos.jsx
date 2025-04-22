@@ -2,30 +2,28 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './css/cursoConteudos.css';
 import API_BASE from "../api";
-import ConteudoCursoList from './ConteudoCursoList';
 
 const CursoConteudos = ({ cursoId }) => {
   const { id } = useParams();
   const courseId = cursoId || id;
   const navigate = useNavigate();
-
+  
   const [topicos, setTopicos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState('user');
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'topico', 'pasta', 'conteudo'
+  const [modalType, setModalType] = useState('');
   const [modalTitle, setModalTitle] = useState('');
   const [modalInputValue, setModalInputValue] = useState('');
   const [currentTopicoId, setCurrentTopicoId] = useState(null);
   const [currentPastaId, setCurrentPastaId] = useState(null);
-  const [conteudoType, setConteudoType] = useState('file'); // 'file', 'link', 'video'
+  const [conteudoType, setConteudoType] = useState('file');
   const [fileToUpload, setFileToUpload] = useState(null);
-  const [userRole, setUserRole] = useState('user');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [viewMode, setViewMode] = useState('lista'); // 'estrutura' ou 'lista' - Alterado o default para 'lista'
 
   // Verificar permissões do usuário
   useEffect(() => {
@@ -44,87 +42,78 @@ const CursoConteudos = ({ cursoId }) => {
   const fetchTopicos = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
-
+      setError(null);
       const token = localStorage.getItem('token');
+      
       if (!token) {
+        setError('Token não encontrado. Faça login novamente.');
         navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
+        setLoading(false);
         return;
       }
-
-      // Atualizar para usar a nova rota
-      const response = await fetch(`${API_BASE}/topicos-curso/curso/${courseId}`, {
-        headers: {
+      
+      // Verificar validade do token
+      try {
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        const expDate = new Date(tokenData.exp * 1000);
+        const now = new Date();
+        
+        if (now > expDate) {
+          setError('Sua sessão expirou. Faça login novamente.');
+          setLoading(false);
+          return;
+        }
+      } catch (tokenError) {
+        console.error('Erro ao analisar token:', tokenError);
+      }
+      
+      const url = `${API_BASE}/topicos-curso/curso/${courseId}`;
+      const response = await fetch(url, {
+        headers: { 
           'Authorization': `Bearer ${token}`
         }
       });
-
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Erro ao buscar tópicos: ${response.status}`);
       }
-
+      
       const data = await response.json();
-      setTopicos(data);
+      
+      if (Array.isArray(data)) {
+        // Alterar para definir todos os tópicos e pastas como fechados por padrão
+        const collapsedTopicos = data.map(topico => ({
+          ...topico,
+          expanded: false, // Alterado de true para false
+          pastas: topico.pastas ? topico.pastas.map(pasta => ({
+            ...pasta,
+            expanded: false // Alterado de true para false
+          })) : []
+        }));
+        
+        setTopicos(collapsedTopicos);
+      } else {
+        setTopicos([]);
+      }
+      
       setLoading(false);
     } catch (error) {
-      console.error("Erro ao carregar tópicos:", error);
-      setError("Não foi possível carregar os tópicos do curso. Tente novamente mais tarde.");
+      console.error('Erro ao buscar tópicos:', error);
+      setError('Falha ao carregar os tópicos. Por favor, tente novamente mais tarde.');
       setLoading(false);
     }
   }, [courseId, navigate]);
 
+
   useEffect(() => {
-    fetchTopicos();
-  }, [fetchTopicos]);
-
-  // Adicionar novo tópico
-  const handleAddTopico = async () => {
-    if (!modalInputValue.trim()) {
-      alert('Por favor, insira um nome para o tópico.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      // Atualizar para usar a nova rota
-      const response = await fetch(`${API_BASE}/topicos-curso`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          nome: modalInputValue,
-          id_curso: courseId,
-          ordem: topicos.length + 1
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar tópico');
-      }
-
-      // Atualizar lista de tópicos
+    if (courseId) {
       fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao adicionar tópico:', error);
-      alert(`Erro: ${error.message}`);
+    } else {
+      setLoading(false);
+      setError('ID do curso não fornecido');
     }
-  };
+  }, [courseId, fetchTopicos]);
 
-  // Abrir modal para adicionar/editar tópico, pasta ou conteúdo
-  const openModal = (type, title, topicoId = null, pastaId = null, contentType = null) => {
-    setModalType(type);
-    setModalTitle(title);
-    setModalInputValue('');
-    setCurrentTopicoId(topicoId);
-    setCurrentPastaId(pastaId);
-    if (contentType) setConteudoType(contentType);
-    setShowModal(true);
-  };
 
   // Expandir/colapsar tópico
   const toggleTopico = (topicoId) => {
@@ -155,12 +144,76 @@ const CursoConteudos = ({ cursoId }) => {
     );
   };
 
-  // Alternar entre visualização estruturada e lista
-  const toggleViewMode = () => {
-    setViewMode(prevMode => prevMode === 'estrutura' ? 'lista' : 'estrutura');
+  // Renderizar ícone baseado no tipo de conteúdo
+  const getConteudoIcon = (tipo) => {
+    switch (tipo) {
+      case 'file':
+        return <i className="fas fa-file-alt"></i>;
+      case 'link':
+        return <i className="fas fa-link"></i>;
+      case 'video':
+        return <i className="fas fa-video"></i>;
+      default:
+        return <i className="fas fa-file"></i>;
+    }
   };
+  
+  // Abrir modal para adicionar/editar tópico, pasta ou conteúdo
+  const openModal = (type, title, topicoId = null, pastaId = null, contentType = null) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalInputValue('');
+    setCurrentTopicoId(topicoId);
+    setCurrentPastaId(pastaId);
+    if (contentType) setConteudoType(contentType);
+    setShowModal(true);
+  };
+  
+  // Fechar o modal
+  const closeModal = () => {
+    setShowModal(false);
+    setModalInputValue('');
+    setFileToUpload(null);
+  };
+  
+  // Adicionar novo tópico
+  const handleAddTopico = async () => {
+    if (!modalInputValue.trim()) {
+      alert('Por favor, insira um nome para o tópico.');
+      return;
+    }
 
-  // Adicionar nova pasta dentro de um tópico
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_BASE}/topicos-curso`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          nome: modalInputValue,
+          id_curso: courseId,
+          ordem: topicos.length + 1
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar tópico');
+      }
+
+      // Atualizar lista de tópicos
+      fetchTopicos();
+      setShowModal(false);
+
+    } catch (error) {
+      console.error('Erro ao adicionar tópico:', error);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+  
+  // Adicionar nova pasta
   const handleAddPasta = async () => {
     if (!modalInputValue.trim()) {
       alert('Por favor, insira um nome para a pasta.');
@@ -170,7 +223,6 @@ const CursoConteudos = ({ cursoId }) => {
     try {
       const token = localStorage.getItem('token');
 
-      // Atualizar para usar a nova rota
       const response = await fetch(`${API_BASE}/pastas-curso`, {
         method: 'POST',
         headers: {
@@ -197,7 +249,7 @@ const CursoConteudos = ({ cursoId }) => {
       alert(`Erro: ${error.message}`);
     }
   };
-
+  
   // Adicionar novo conteúdo
   const handleAddConteudo = async () => {
     if (conteudoType !== 'file' && !modalInputValue.trim()) {
@@ -246,118 +298,6 @@ const CursoConteudos = ({ cursoId }) => {
       console.error('Erro ao adicionar conteúdo:', error);
       alert(`Erro: ${error.message}`);
     }
-  };
-
-  // Mostrar modal de confirmação para remover tópico
-  const confirmRemoveTopico = (topicoId) => {
-    setConfirmMessage('Tem certeza que deseja remover este tópico e todos os seus conteúdos?');
-    setItemToDelete(topicoId);
-    setConfirmAction('removeTopico');
-    setShowConfirmModal(true);
-  };
-
-  // Remover tópico
-  const handleRemoveTopico = async (topicoId) => {
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/topicos-curso/${topicoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover tópico');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-
-    } catch (error) {
-      console.error('Erro ao remover tópico:', error);
-      alert(`Erro: ${error.message}`);
-    }
-  };
-
-  // Mostrar modal de confirmação para remover pasta
-  const confirmRemovePasta = (pastaId) => {
-    setConfirmMessage('Tem certeza que deseja remover esta pasta e todos os seus conteúdos?');
-    setItemToDelete(pastaId);
-    setConfirmAction('removePasta');
-    setShowConfirmModal(true);
-  };
-
-  // Remover pasta
-  const handleRemovePasta = async (pastaId) => {
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/pastas-curso/${pastaId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover pasta');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-
-    } catch (error) {
-      console.error('Erro ao remover pasta:', error);
-      alert(`Erro: ${error.message}`);
-    }
-  };
-
-  // Mostrar modal de confirmação para remover conteúdo
-  const confirmRemoveConteudo = (conteudoId) => {
-    setConfirmMessage('Tem certeza que deseja remover este conteúdo?');
-    setItemToDelete(conteudoId);
-    setConfirmAction('removeConteudo');
-    setShowConfirmModal(true);
-  };
-
-  // Remover conteúdo
-  const handleRemoveConteudo = async (conteudoId) => {
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/conteudos-curso/${conteudoId}`, {
-
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover conteúdo');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-
-    } catch (error) {
-      console.error('Erro ao remover conteúdo:', error);
-      alert(`Erro: ${error.message}`);
-    }
-  };
-
-  // Processar confirmação de exclusão
-  const handleConfirmAction = () => {
-    if (confirmAction === 'removeTopico') {
-      handleRemoveTopico(itemToDelete);
-    } else if (confirmAction === 'removePasta') {
-      handleRemovePasta(itemToDelete);
-    } else if (confirmAction === 'removeConteudo') {
-      handleRemoveConteudo(itemToDelete);
-    }
-    setShowConfirmModal(false);
   };
 
   // Editar nome do tópico
@@ -448,27 +388,117 @@ const CursoConteudos = ({ cursoId }) => {
     }
   };
 
-  // Renderizar ícone baseado no tipo de conteúdo
-  const getConteudoIcon = (tipo) => {
-    switch (tipo) {
-      case 'file':
-        return <i className="fas fa-file-alt"></i>;
-      case 'link':
-        return <i className="fas fa-link"></i>;
-      case 'video':
-        return <i className="fas fa-video"></i>;
-      default:
-        return <i className="fas fa-file"></i>;
+  // Mostrar modal de confirmação para remover tópico
+  const confirmRemoveTopico = (topicoId) => {
+    setConfirmMessage('Tem certeza que deseja remover este tópico e todos os seus conteúdos?');
+    setItemToDelete(topicoId);
+    setConfirmAction('removeTopico');
+    setShowConfirmModal(true);
+  };
+
+  // Remover tópico
+  const handleRemoveTopico = async (topicoId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_BASE}/topicos-curso/${topicoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover tópico');
+      }
+
+      // Atualizar lista de tópicos
+      fetchTopicos();
+
+    } catch (error) {
+      console.error('Erro ao remover tópico:', error);
+      alert(`Erro: ${error.message}`);
     }
   };
 
-  // Fechar o modal
-  const closeModal = () => {
-    setShowModal(false);
-    setModalInputValue('');
-    setFileToUpload(null);
+  // Mostrar modal de confirmação para remover pasta
+  const confirmRemovePasta = (pastaId) => {
+    setConfirmMessage('Tem certeza que deseja remover esta pasta e todos os seus conteúdos?');
+    setItemToDelete(pastaId);
+    setConfirmAction('removePasta');
+    setShowConfirmModal(true);
   };
 
+  // Remover pasta
+  const handleRemovePasta = async (pastaId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_BASE}/pastas-curso/${pastaId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover pasta');
+      }
+
+      // Atualizar lista de tópicos
+      fetchTopicos();
+
+    } catch (error) {
+      console.error('Erro ao remover pasta:', error);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+
+  // Mostrar modal de confirmação para remover conteúdo
+  const confirmRemoveConteudo = (conteudoId) => {
+    setConfirmMessage('Tem certeza que deseja remover este conteúdo?');
+    setItemToDelete(conteudoId);
+    setConfirmAction('removeConteudo');
+    setShowConfirmModal(true);
+  };
+
+  // Remover conteúdo
+  const handleRemoveConteudo = async (conteudoId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_BASE}/conteudos-curso/${conteudoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover conteúdo');
+      }
+
+      // Atualizar lista de tópicos
+      fetchTopicos();
+
+    } catch (error) {
+      console.error('Erro ao remover conteúdo:', error);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+  
+  // Processar confirmação de exclusão
+  const handleConfirmAction = () => {
+    if (confirmAction === 'removeTopico') {
+      handleRemoveTopico(itemToDelete);
+    } else if (confirmAction === 'removePasta') {
+      handleRemovePasta(itemToDelete);
+    } else if (confirmAction === 'removeConteudo') {
+      handleRemoveConteudo(itemToDelete);
+    }
+    setShowConfirmModal(false);
+  };
+  
   // Lidar com o envio do formulário do modal
   const handleModalSubmit = (e) => {
     e.preventDefault();
@@ -514,26 +544,25 @@ const CursoConteudos = ({ cursoId }) => {
     );
   }
 
+  if (topicos.length === 0) {
+    return (
+      <div className="no-conteudos">
+        <p>Nenhum conteúdo disponível para este curso.</p>
+        {(userRole === 'admin' || userRole === 'formador') && (
+          <button
+            onClick={() => openModal('topico', 'Adicionar Tópico')}
+            className="btn-add-first"
+          >
+            Adicionar primeiro tópico
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="curso-conteudos-container">
       <div className="conteudos-header">
-        <h2>Conteúdos do Curso</h2>
-        <div className="view-controls">
-          <button
-            className={`view-mode-btn ${viewMode === 'estrutura' ? 'active' : ''}`}
-            onClick={() => setViewMode('estrutura')}
-            title="Visualizar por estrutura"
-          >
-            <i className="fas fa-folder-tree"></i> Estrutura
-          </button>
-          <button
-            className={`view-mode-btn ${viewMode === 'lista' ? 'active' : ''}`}
-            onClick={() => setViewMode('lista')}
-            title="Visualizar em lista"
-          >
-            <i className="fas fa-list"></i> Lista
-          </button>
-        </div>
         {(userRole === 'admin' || userRole === 'formador') && (
           <button
             className="btn-add-topico"
@@ -544,153 +573,133 @@ const CursoConteudos = ({ cursoId }) => {
         )}
       </div>
 
-      {viewMode === 'lista' ? (
-        // Visualização em lista hierárquica
-        <ConteudoCursoList cursoId={courseId} />
-      ) : (
-        // Visualização estruturada original
-        <div className="topicos-list">
-          {topicos.length === 0 ? (
-            <div className="no-conteudos">
-              <p>Nenhum conteúdo disponível para este curso.</p>
+      <div className="conteudo-list-estruturada">
+        {topicos.map((topico) => (
+          <div key={topico.id_topico} className="topico-item">
+            <div className="topico-header">
+              <button
+                className="btn-toggle"
+                onClick={() => toggleTopico(topico.id_topico)}
+              >
+                <i className={`fas fa-chevron-${topico.expanded ? 'down' : 'right'}`}></i>
+              </button>
+              <span className="topico-nome">{topico.nome}</span>
+              
               {(userRole === 'admin' || userRole === 'formador') && (
-                <button
-                  onClick={() => openModal('topico', 'Adicionar Tópico')}
-                  className="btn-add-first"
-                >
-                  Adicionar primeiro tópico
-                </button>
+                <div className="topico-actions">
+                  <button 
+                    className="btn-add" 
+                    title="Adicionar pasta"
+                    onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
+                  >
+                    <i className="fas fa-plus"></i>
+                  </button>
+                  <button 
+                    className="btn-edit" 
+                    title="Editar tópico"
+                    onClick={() => handleEditTopico(topico.id_topico, topico.nome)}
+                  >
+                    <i className="fas fa-pencil-alt"></i>
+                  </button>
+                  <button 
+                    className="btn-delete" 
+                    title="Remover tópico"
+                    onClick={() => confirmRemoveTopico(topico.id_topico)}
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                </div>
               )}
             </div>
-          ) : (
-            topicos.map(topico => (
-              <div key={topico.id_topico} className="topico-item">
-                <div className="topico-header">
-                  <button
-                    className="btn-toggle"
-                    onClick={() => toggleTopico(topico.id_topico)}
-                  >
-                    <i className={`fas fa-chevron-${topico.expanded ? 'down' : 'right'}`}></i>
-                  </button>
-                  <span className="topico-nome">{topico.nome}</span>
 
-                  {(userRole === 'admin' || userRole === 'formador') && (
-                    <div className="topico-actions">
-                      <button
-                        className="btn-add"
-                        onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
-                        title="Adicionar pasta"
-                      >
-                        <i className="fas fa-plus"></i>
-                      </button>
-                      <button
-                        className="btn-edit"
-                        onClick={() => handleEditTopico(topico.id_topico, topico.nome)}
-                        title="Editar tópico"
-                      >
-                        <i className="fas fa-pencil-alt"></i>
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => confirmRemoveTopico(topico.id_topico)}
-                        title="Remover tópico"
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    </div>
-                  )}
-                </div>
+            {topico.expanded && (
+              <div className="pastas-list">
+                {topico.pastas && topico.pastas.length > 0 ? (
+                  topico.pastas.map(pasta => (
+                    <div key={pasta.id_pasta} className="pasta-item">
+                      <div className="pasta-header">
+                        <button
+                          className="btn-toggle"
+                          onClick={() => togglePasta(topico.id_topico, pasta.id_pasta)}
+                        >
+                          <i className={`fas fa-chevron-${pasta.expanded ? 'down' : 'right'}`}></i>
+                        </button>
+                        <i className="fas fa-folder"></i>
+                        <span className="pasta-nome">{pasta.nome}</span>
 
-                {topico.expanded && (
-                  <div className="pastas-list">
-                    {topico.pastas && topico.pastas.length > 0 ? (
-                      topico.pastas.map(pasta => (
-                        <div key={pasta.id_pasta} className="pasta-item">
-                          <div className="pasta-header">
-                            <button
-                              className="btn-toggle"
-                              onClick={() => togglePasta(topico.id_topico, pasta.id_pasta)}
-                            >
-                              <i className={`fas fa-chevron-${pasta.expanded ? 'down' : 'right'}`}></i>
-                            </button>
-                            <i className="fas fa-folder"></i>
-                            <span className="pasta-nome">{pasta.nome}</span>
-
-                            {(userRole === 'admin' || userRole === 'formador') && (
-                              <div className="pasta-actions">
-                                <button
-                                  className="btn-add"
-                                  onClick={() => openModal('conteudo', 'Adicionar Conteúdo', topico.id_topico, pasta.id_pasta)}
-                                  title="Adicionar conteúdo"
-                                >
-                                  <i className="fas fa-plus"></i>
-                                </button>
-                                <button
-                                  className="btn-edit"
-                                  onClick={() => handleEditPasta(pasta.id_pasta, pasta.nome)}
-                                  title="Editar pasta"
-                                >
-                                  <i className="fas fa-pencil-alt"></i>
-                                </button>
-                                <button
-                                  className="btn-delete"
-                                  onClick={() => confirmRemovePasta(pasta.id_pasta)}
-                                  title="Remover pasta"
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {pasta.expanded && (
-                            <div className="conteudos-list">
-                              {pasta.conteudos && pasta.conteudos.length > 0 ? (
-                                pasta.conteudos.map(conteudo => (
-                                  <div key={conteudo.id_conteudo} className="conteudo-item">
-                                    {getConteudoIcon(conteudo.tipo)}
-                                    <span className="conteudo-titulo">{conteudo.titulo}</span>
-
-                                    {(userRole === 'admin' || userRole === 'formador') && (
-                                      <div className="conteudo-actions">
-                                        <button
-                                          className="btn-delete"
-                                          onClick={() => confirmRemoveConteudo(conteudo.id_conteudo)}
-                                          title="Remover conteúdo"
-                                        >
-                                          <i className="fas fa-trash"></i>
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="pasta-empty">Pasta vazia</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="topico-empty">
-                        <p>Sem pastas neste tópico</p>
                         {(userRole === 'admin' || userRole === 'formador') && (
-                          <button
-                            onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
-                            className="btn-add-pasta"
-                          >
-                            <i className="fas fa-folder-plus"></i> Adicionar pasta
-                          </button>
+                          <div className="pasta-actions">
+                            <button 
+                              className="btn-add" 
+                              title="Adicionar conteúdo"
+                              onClick={() => openModal('conteudo', 'Adicionar Conteúdo', topico.id_topico, pasta.id_pasta)}
+                            >
+                              <i className="fas fa-plus"></i>
+                            </button>
+                            <button 
+                              className="btn-edit" 
+                              title="Editar pasta"
+                              onClick={() => handleEditPasta(pasta.id_pasta, pasta.nome)}
+                            >
+                              <i className="fas fa-pencil-alt"></i>
+                            </button>
+                            <button 
+                              className="btn-delete" 
+                              title="Remover pasta"
+                              onClick={() => confirmRemovePasta(pasta.id_pasta)}
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
                         )}
                       </div>
+
+                      {pasta.expanded && (
+                        <div className="conteudos-list">
+                          {pasta.conteudos && pasta.conteudos.length > 0 ? (
+                            pasta.conteudos.map(conteudo => (
+                              <div key={conteudo.id_conteudo} className="conteudo-item">
+                                {getConteudoIcon(conteudo.tipo)}
+                                <span className="conteudo-titulo">{conteudo.titulo}</span>
+
+                                {(userRole === 'admin' || userRole === 'formador') && (
+                                  <div className="conteudo-actions">
+                                    <button
+                                      className="btn-delete"
+                                      onClick={() => confirmRemoveConteudo(conteudo.id_conteudo)}
+                                      title="Remover conteúdo"
+                                    >
+                                      <i className="fas fa-trash"></i>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="pasta-empty">Pasta vazia</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="topico-empty">
+                    <p>Sem pastas neste tópico</p>
+                    {(userRole === 'admin' || userRole === 'formador') && (
+                      <button
+                        onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
+                        className="btn-add-pasta"
+                      >
+                        <i className="fas fa-folder-plus"></i> Adicionar pasta
+                      </button>
                     )}
                   </div>
                 )}
               </div>
-            ))
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        ))}
+      </div>
 
       {/* Modais para adicionar/editar tópicos, pastas e conteúdos */}
       {showModal && (
