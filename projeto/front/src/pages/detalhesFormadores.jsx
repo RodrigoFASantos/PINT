@@ -113,7 +113,7 @@ const DetalhesFormadores = () => {
 
   // Filtrar cursos ativos/todos
   const filteredCursos = activeTab === 'ativos' 
-    ? cursos.filter(curso => curso.estado === 'Em curso' || curso.estado === 'Disponível')
+    ? cursos.filter(curso => curso.estado === 'em_curso' || curso.estado === 'Disponível')
     : cursos;
 
   if (loading) {
@@ -275,7 +275,8 @@ const DetalhesFormadores = () => {
                 >
                   Ativos
                   <span className="tab-count">
-                    {cursos.filter(c => c.estado === 'Em curso' || c.estado === 'Disponível').length}
+                    {cursos.filter(c => c.estado === 'em_curso' ).length}
+                    
                   </span>
                 </button>
               </div>
@@ -301,7 +302,7 @@ const DetalhesFormadores = () => {
                         
                         {curso.estado && (
                           <span className={`curso-status ${
-                            curso.estado === 'Em curso' ? 'status-ativo' :
+                            curso.estado === 'em_curso' ? 'status-ativo' :
                             curso.estado === 'Terminado' ? 'status-terminado' :
                             'status-disponivel'
                           }`}>
@@ -313,7 +314,7 @@ const DetalhesFormadores = () => {
                   ))
                 ) : (
                   <div className="empty-cursos">
-                    Este formador ainda não tem cursos ministrados.
+                    Este formador é atrasado.
                   </div>
                 )}
               </div>

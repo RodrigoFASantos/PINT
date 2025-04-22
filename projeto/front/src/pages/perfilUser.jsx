@@ -278,6 +278,24 @@ const PerfilUser = () => {
     }
   };
 
+  const handleLogout = () => {
+    // Remover token do localStorage
+    localStorage.removeItem('token');
+    
+    // Se estiver usando o contexto de autenticação, atualize-o
+    if (typeof updateUserInfo === 'function') {
+      updateUserInfo(null);
+    }
+    
+    // Exibir mensagem de sucesso
+    toast.success('Sessão terminada com sucesso!');
+    
+    // Redirecionar para a página de login após um breve delay
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 1500);
+  };
+
   if (!userInfo) {
     return (
       <div className="perfil-container">
@@ -415,13 +433,22 @@ const PerfilUser = () => {
                   <button type="button" className="btn-cancel" onClick={handleEditToggle}>Cancelar</button>
                 </>
               ) : (
-                <button 
-                  type="button" 
-                  className="btn-edit" 
-                  onClick={handleEditToggle}
-                >
-                  Editar Perfil
-                </button>
+                <>
+                  <button 
+                    type="button" 
+                    className="btn-edit" 
+                    onClick={handleEditToggle}
+                  >
+                    Editar Perfil
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-edit" 
+                    onClick={handleLogout}
+                  >
+                    Terminar Sessão
+                  </button>
+                </>
               )}
             </div>
           </div>
