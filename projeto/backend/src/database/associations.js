@@ -11,6 +11,9 @@ const Categoria = require("./models/Categoria");
 const Area = require("./models/Area");
 const InscricaoCursoCancelada = require("./models/InscricaoCursoCancelada");
 const Formador = require("./models/Formador");
+const TopicoCurso = require("./models/TopicoCurso");
+const PastaCurso = require("./models/PastaCurso");
+const ConteudoCurso = require("./models/ConteudoCurso");
 
 // Relação entre Curso e Categoria
 
@@ -170,6 +173,48 @@ Formador.belongsTo(User, {
   as: "usuario"
 });
 
+// Associações para Tópicos, Pastas e Conteúdos
+Curso.hasMany(TopicoCurso, {
+  foreignKey: "id_curso",
+  as: "topicos"
+});
+
+TopicoCurso.belongsTo(Curso, {
+  foreignKey: "id_curso",
+  as: "curso"
+});
+
+TopicoCurso.hasMany(PastaCurso, {
+  foreignKey: "id_topico",
+  as: "pastas"
+});
+
+PastaCurso.belongsTo(TopicoCurso, {
+  foreignKey: "id_topico",
+  as: "topico"
+});
+
+PastaCurso.hasMany(ConteudoCurso, {
+  foreignKey: "id_pasta",
+  as: "conteudos"
+});
+
+ConteudoCurso.belongsTo(PastaCurso, {
+  foreignKey: "id_pasta",
+  as: "pasta"
+});
+
+// Relação direta entre Curso e ConteudoCurso
+Curso.hasMany(ConteudoCurso, {
+  foreignKey: "id_curso",
+  as: "conteudos"
+});
+
+ConteudoCurso.belongsTo(Curso, {
+  foreignKey: "id_curso",
+  as: "curso"
+});
+
 // No final do arquivo associations.js
 module.exports = { 
   User, 
@@ -184,5 +229,8 @@ module.exports = {
   OcorrenciaCurso, 
   Categoria, 
   Area,
-  Formador 
+  Formador, 
+  TopicoCurso,
+  PastaCurso,
+  ConteudoCurso
 };

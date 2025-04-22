@@ -1,11 +1,15 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const Conteudo = sequelize.define("conteudos", {
-  id_conteudo: {
+const TopicoCurso = sequelize.define("topicos_curso", {
+  id_topico: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+  },
+  nome: {
+    type: DataTypes.STRING(150),
+    allowNull: false,
   },
   id_curso: {
     type: DataTypes.INTEGER,
@@ -15,21 +19,19 @@ const Conteudo = sequelize.define("conteudos", {
       key: "id_curso",
     },
   },
-  tipo: {
-    type: DataTypes.STRING(50),
+  ordem: {
+    type: DataTypes.INTEGER,
     allowNull: false,
+    defaultValue: 1,
   },
-  descricao: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  url_ou_ficheiro: {
-    type: DataTypes.STRING(500),
-    allowNull: false, // Pode ser um URL ou caminho para o ficheiro no servidor
+  ativo: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
   },
 }, {
-  tableName: "conteudos",
+  tableName: "topicos_curso",
   timestamps: false,
 });
 
-module.exports = Conteudo;
+module.exports = TopicoCurso;

@@ -143,17 +143,20 @@ carregarRota("./src/routes/users", "/api/users");
 app.use('/api/uploads', express.static('uploads'));
 app.use('/uploads', express.static('uploads'));
 
-// Carregar outras rotas
+// Rotas
 const rotas = [
   { caminho: "./src/routes/areas", prefixo: "/api/areas" },
   { caminho: "./src/routes/avaliacoes", prefixo: "/api/avaliacoes" },
   { caminho: "./src/routes/categorias", prefixo: "/api/categorias" },
   { caminho: "./src/routes/comentarios", prefixo: "/api/comentarios" },
-  { caminho: "./src/routes/conteudos", prefixo: "/api/conteudos" },
   { caminho: "./src/routes/cursos", prefixo: "/api/cursos" },
   { caminho: "./src/routes/formadores", prefixo: "/api/formadores" },
   { caminho: "./src/routes/inscricoes", prefixo: "/api/inscricoes" },
-  { caminho: "./src/routes/topicos", prefixo: "/api/topicos" },
+  // Conteúdos de cursos
+  { caminho: "./src/routes/topicos_curso", prefixo: "/api/topicos-curso" },
+  { caminho: "./src/routes/pastas_curso", prefixo: "/api/pastas-curso" },
+  { caminho: "./src/routes/conteudos_curso", prefixo: "/api/conteudos-curso" },
+  // Resto das Rotas
   { caminho: "./src/routes/trabalhos", prefixo: "/api/trabalhos" },
   { caminho: "./src/routes/certificados", prefixo: "/api/certificados" },
   { caminho: "./src/routes/notificacoes", prefixo: "/api/notificacoes" },
@@ -162,7 +165,7 @@ const rotas = [
   { caminho: "./src/routes/ocorrencias", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/tipos_conteudo", prefixo: "/api/tipos-conteudo" },
   { caminho: "./src/routes/chatRoutes", prefixo: "/api/chat" },
-{ caminho: "./src/routes/inscricoes_cursos_canceladas", prefixo: "/api/inscricoes-canceladas" }
+  { caminho: "./src/routes/inscricaoCursoCancelada", prefixo: "/api/inscricoes-canceladas" }
 ];
 
 rotas.forEach(rota => {

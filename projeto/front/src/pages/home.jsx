@@ -13,13 +13,22 @@ export default function Home() {
   const [inscricoes, setInscricoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const getImageUrl = (curso) => {
+    if (!curso || !curso.nomeCurso) return '/fallback-curso.jpg';
+    const nomeCursoSlug = curso.nomeCurso
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    return IMAGES.CURSO(nomeCursoSlug);
+  };
 
   // Efeito para verificar se precisa recarregar após login
   useEffect(() => {
     const needsRefresh = sessionStorage.getItem('needsRefresh');
-  
+
     if (needsRefresh === 'true') {
       // Remover o flag para evitar loops de recargas
       sessionStorage.removeItem('needsRefresh');
@@ -27,30 +36,30 @@ export default function Home() {
       window.location.reload();
     }
   }, []);
-  
+
   // Função para buscar as inscrições do usuário
   const buscarInscricoes = async () => {
     try {
       setLoading(true);
       // Obter o token do localStorage
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         setError('Usuário não autenticado');
         setLoading(false);
         return;
       }
-      
+
       // Configurar o header com o token
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       };
-      
+
       // Fazer a requisição para a API
       const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, config);
-      
+
       // Atualizar o estado com as inscrições recebidas
       setInscricoes(response.data);
       setLoading(false);
@@ -60,7 +69,7 @@ export default function Home() {
       setLoading(false);
     }
   };
-  
+
   // Efeito para carregar as inscrições quando o componente montar
   useEffect(() => {
     buscarInscricoes();
@@ -101,7 +110,7 @@ export default function Home() {
         {/* Seção de cursos inscritos */}
         <section className="cursos-section">
           <h2 className="section-title">Meus Cursos Inscritos</h2>
-          
+
           {loading ? (
             <div className="loading">Carregando cursos...</div>
           ) : error ? (
@@ -109,19 +118,18 @@ export default function Home() {
           ) : inscricoes.length > 0 ? (
             <div className="cursos-grid">
               {inscricoes.map((inscricao) => (
-                <div 
-                  key={inscricao.id} 
+                <div
+                  key={inscricao.id}
                   className="cartao-curso"
                   onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
                 >
-                  {/* CORREÇÃO: Removido o atributo consolelog inválido */}
                   {/* Tentar usar a imagem do curso se disponível */}
-                  <img 
-                    src={IMAGES.CURSO(inscricao.nomeCurso?.replace(/\s+/g, '-').toLowerCase() || inscricao.cursoId)} 
-                    alt={inscricao.nomeCurso}
+                  <img
+                    src={getImageUrl(inscricao)}
+                    alt={inscricao.nomeCurso} a
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = '/fallback-curso.jpg'; // Imagem padrão caso não encontre
+                      e.target.src = '/fallback-curso.jpg';
                     }}
                   />
                   <div className="curso-info">
@@ -147,8 +155,8 @@ export default function Home() {
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
             {cursosSugeridos.map((curso) => (
-              <div 
-                key={curso.id} 
+              <div
+                key={curso.id}
                 className="cartao-curso"
                 onClick={() => redirecionarParaDetalheCurso(curso.id)}
               >

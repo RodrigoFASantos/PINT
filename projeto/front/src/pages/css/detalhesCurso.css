@@ -448,3 +448,51 @@ button,
   justify-content: center;
   gap: 1rem;
 }
+
+
+
+
+
+
+
+/* Estilo para os ícones de ação no canto inferior direito */
+.action-icons-container {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.info-icon, .conteudo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  color: #444;
+  transition: all 0.2s ease-in-out;
+}
+
+.info-icon:hover, .conteudo-icon:hover {
+  background-color: #fff;
+  transform: scale(1.1);
+}
+
+.info-icon i, .conteudo-icon i {
+  font-size: 1.2rem;
+}
+
+/* Estilos para o container de conteúdos */
+.curso-conteudos-wrapper {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}

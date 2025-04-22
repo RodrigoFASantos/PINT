@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const inscricoesCanceladasController = require("../controllers/inscricoes_cursos_canceladas_ctrl");
-const { authenticateToken } = require("../middleware/authMiddleware");
+const inscricoesCanceladasController = require("../controllers/inscricaoCursoCancelada_ctrl");
+// Corrigir o módulo de autenticação
+const verificarToken = require("../middleware/auth");
 
 // Middleware de autenticação para todas as rotas
-router.use(authenticateToken);
+router.use(verificarToken);
 
 // Obter todas as inscrições canceladas (apenas para gestores)
 router.get("/", inscricoesCanceladasController.getInscricoesCanceladas);

@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './css/detalhesCurso.css';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import CursoConteudos from '../components/CursoConteudos';
 import API_BASE, { IMAGES } from "../api";
+
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -19,9 +21,11 @@ const DetalhesCurso = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
+  // Removida a variável de estado mostrarConteudos pois agora os conteúdos serão sempre mostrados
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
+  // Removida a função toggleConteudos
 
   // Abrir pop-up de confirmação de inscrição
   const handleInscricao = () => {
@@ -395,8 +399,8 @@ const DetalhesCurso = () => {
                 </div>
               </div>
 
-              {/* Ícone de informação no canto inferior direito */}
-              <div className="info-icon-container">
+              {/* Ícone de informação no canto inferior direito (apenas info, conteúdos já são mostrados) */}
+              <div className="action-icons-container">
                 <button
                   className="info-icon"
                   onClick={toggleDetalhes}
@@ -408,6 +412,8 @@ const DetalhesCurso = () => {
                     <i className='fas fa-info'></i>
                   )}
                 </button>
+                
+                {/* Removido o botão de toggle para conteúdos */}
               </div>
             </div>
 
@@ -534,6 +540,12 @@ const DetalhesCurso = () => {
                 </div>
               </div>
             )}
+
+            {/* Conteúdos do curso - agora aparecem sempre, sem condição */}
+            <div className="curso-conteudos-wrapper">
+              <h2 className="conteudos-titulo">Conteúdos do Curso</h2>
+              <CursoConteudos cursoId={id} />
+            </div>
           </div>
         </div>
       </div>
