@@ -135,7 +135,6 @@ export default function FormadoresPage() {
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      <h1 className="text-2xl font-bold text-gray-800 my-6">Lista de Formadores</h1>
 
       {/* Barra de paginação */}
       <div className="flex justify-center items-center my-6">
