@@ -59,18 +59,4 @@ const Inscricao_Curso = sequelize.define("inscricoes_cursos", {
   timestamps: false,
 });
 
-// Definir relações
-const User = require("./User");
-const Curso = require("./Curso");
-
-Inscricao_Curso.belongsTo(User, {
-  foreignKey: "id_utilizador",
-  as: "utilizador"
-});
-
-Inscricao_Curso.belongsTo(Curso, {
-  foreignKey: "id_curso",
-  as: "curso"
-});
-
 module.exports = Inscricao_Curso;

@@ -3,52 +3,60 @@ const PastaCurso = require("../database/models/PastaCurso");
 const ConteudoCurso = require("../database/models/ConteudoCurso");
 
 // Obter todos os tópicos de um curso com suas pastas e conteúdos
+// Implementação alternativa que não depende de associações do Sequelize
 const getTopicosByCurso = async (req, res) => {
   try {
     const { id_curso } = req.params;
     
+    // Buscar tópicos
     const topicos = await TopicoCurso.findAll({
       where: { 
         id_curso,
         ativo: true 
       },
-      order: [
-        ['ordem', 'ASC'],
-        [{ model: PastaCurso, as: 'pastas' }, 'ordem', 'ASC'],
-        [{ model: PastaCurso, as: 'pastas' }, { model: ConteudoCurso, as: 'conteudos' }, 'ordem', 'ASC']
-      ],
-      include: [
-        {
-          model: PastaCurso,
-          as: 'pastas',
-          where: { ativo: true },
-          required: false,
-          include: [
-            {
-              model: ConteudoCurso,
-              as: 'conteudos',
-              where: { ativo: true },
-              required: false
-            }
-          ]
-        }
-      ]
+      order: [['ordem', 'ASC']]
     });
 
-    // Adicionar propriedade expanded para cada tópico e pasta (para frontend)
-    const topicosFormatados = topicos.map(topico => {
+    // Array para armazenar o resultado final com relacionamentos
+    const topicosFormatados = [];
+    
+    // Para cada tópico, buscar suas pastas
+    for (const topico of topicos) {
       const topicoObj = topico.toJSON();
       topicoObj.expanded = false; // inicialmente fechado
       
-      if (topicoObj.pastas) {
-        topicoObj.pastas = topicoObj.pastas.map(pasta => {
-          pasta.expanded = false; // inicialmente fechado
-          return pasta;
+      // Buscar pastas para este tópico
+      const pastas = await PastaCurso.findAll({
+        where: { 
+          id_topico: topico.id_topico,
+          ativo: true 
+        },
+        order: [['ordem', 'ASC']]
+      });
+      
+      // Para cada pasta, buscar conteúdos
+      const pastasComConteudos = [];
+      
+      for (const pasta of pastas) {
+        const pastaObj = pasta.toJSON();
+        pastaObj.expanded = false; // inicialmente fechada
+        
+        // Buscar conteúdos para esta pasta
+        const conteudos = await ConteudoCurso.findAll({
+          where: { 
+            id_pasta: pasta.id_pasta,
+            ativo: true 
+          },
+          order: [['ordem', 'ASC']]
         });
+        
+        pastaObj.conteudos = conteudos;
+        pastasComConteudos.push(pastaObj);
       }
       
-      return topicoObj;
-    });
+      topicoObj.pastas = pastasComConteudos;
+      topicosFormatados.push(topicoObj);
+    }
 
     res.json(topicosFormatados);
   } catch (error) {
@@ -84,30 +92,46 @@ const getTopicoById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const topico = await TopicoCurso.findByPk(id, {
-      include: [
-        {
-          model: PastaCurso,
-          as: 'pastas',
-          where: { ativo: true },
-          required: false,
-          include: [
-            {
-              model: ConteudoCurso,
-              as: 'conteudos',
-              where: { ativo: true },
-              required: false
-            }
-          ]
-        }
-      ]
-    });
+    // Buscar o tópico
+    const topico = await TopicoCurso.findByPk(id);
 
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
 
-    res.json(topico);
+    const topicoObj = topico.toJSON();
+    
+    // Buscar pastas para este tópico
+    const pastas = await PastaCurso.findAll({
+      where: { 
+        id_topico: id,
+        ativo: true 
+      },
+      order: [['ordem', 'ASC']]
+    });
+    
+    // Para cada pasta, buscar conteúdos
+    const pastasComConteudos = [];
+    
+    for (const pasta of pastas) {
+      const pastaObj = pasta.toJSON();
+      
+      // Buscar conteúdos para esta pasta
+      const conteudos = await ConteudoCurso.findAll({
+        where: { 
+          id_pasta: pasta.id_pasta,
+          ativo: true 
+        },
+        order: [['ordem', 'ASC']]
+      });
+      
+      pastaObj.conteudos = conteudos;
+      pastasComConteudos.push(pastaObj);
+    }
+    
+    topicoObj.pastas = pastasComConteudos;
+
+    res.json(topicoObj);
   } catch (error) {
     console.error("Erro ao buscar tópico:", error);
     res.status(500).json({ message: "Erro ao buscar tópico" });

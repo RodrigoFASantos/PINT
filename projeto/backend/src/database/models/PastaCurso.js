@@ -34,19 +34,4 @@ const PastaCurso = sequelize.define("pastas_curso", {
   timestamps: false,
 });
 
-
-PastaCurso.associate = function(models) {
-  // Associação com ConteudoCurso
-  PastaCurso.hasMany(models.ConteudoCurso, {
-    foreignKey: 'id_pasta',
-    as: 'conteudos'
-  });
-  
-  // Associação com TopicoCurso
-  PastaCurso.belongsTo(models.TopicoCurso, {
-    foreignKey: 'id_topico',
-    as: 'topico'
-  });
-};
-
 module.exports = PastaCurso;

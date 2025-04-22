@@ -6,7 +6,10 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
+
+// Carregar variáveis de ambiente
 require("dotenv").config();
+
 const app = express();
 
 // Criar servidor HTTP
@@ -134,6 +137,9 @@ diretoriosEssenciais.forEach(dir => {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
+
+// Carregar associações do banco de dados
+require('./src/database/associations');
 
 // Carregar as rotas principais
 carregarRota("./src/routes/auth", "/api/auth");

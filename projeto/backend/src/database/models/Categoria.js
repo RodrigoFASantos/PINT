@@ -12,7 +12,6 @@ const Categoria = sequelize.define("categorias", {
     allowNull: false,
     unique: true,
   },
-  // Campo imagem foi removido conforme solicitado
 }, {
   tableName: "categorias",
   timestamps: false,

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './css/ConteudoCursoList.css';
 import API_BASE from "../api";
 
@@ -7,15 +6,6 @@ const ConteudoCursoList = ({ cursoId }) => {
   const [conteudos, setConteudos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-
-
-
-
-
-
-
-
 
   useEffect(() => {
     console.log('ConteudoCursoList - cursoId:', cursoId);
@@ -32,7 +22,7 @@ const ConteudoCursoList = ({ cursoId }) => {
           return;
         }
         
-        // Decodificar e verificar se o token está expirado
+        // Verificar se o token está expirado
         try {
           const tokenData = JSON.parse(atob(token.split('.')[1]));
           const expDate = new Date(tokenData.exp * 1000);
@@ -53,98 +43,44 @@ const ConteudoCursoList = ({ cursoId }) => {
         
         // Log da URL que será usada
         const url = `${API_BASE}/conteudos-curso/curso/${cursoId}`;
-        console.log('Tentando URL:', url);
+        console.log('Buscando conteúdos na URL:', url);
         
-        // SOLUÇÃO TEMPORÁRIA: Usar dados de teste
-        const dadosTeste = [
-          {
-            id_conteudo: 1,
-            titulo: "Introdução ao Vue.js",
-            descricao: "Como instalar o Vue.js no seu ambiente de desenvolvimento",
-            tipo: "video",
-            url: "https://www.youtube.com/embed/qZXt1Aom3Cs",
-            pasta_nome: "Primeiros Passos",
-            topico_nome: "Fundamentos"
-          },
-          {
-            id_conteudo: 2,
-            titulo: "Olá Mundo com Vue.js",
-            descricao: "Criando sua primeira aplicação Vue.js",
-            tipo: "video",
-            url: "https://www.youtube.com/embed/qZXt1Aom3Cs",
-            pasta_nome: "Primeiros Passos",
-            topico_nome: "Fundamentos"
+        const response = await fetch(url, {
+          headers: { 
+            'Authorization': `Bearer ${token}`
           }
-        ];
+        });
         
-        try {
-          console.log('Enviando requisição...');
-          const response = await axios.get(url, {
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            // Adicionar timeout para não ficar esperando indefinidamente
-            timeout: 10000
-          });
-          
-          console.log('Status da resposta:', response.status);
-          console.log('Dados recebidos:', response.data);
-          
-          if (Array.isArray(response.data)) {
-            console.log(`Encontrados ${response.data.length} conteúdos`);
-            
-            if (response.data.length > 0) {
-              setConteudos(response.data);
-            } else {
-              console.log('Array vazio, usando dados de teste temporários');
-              setConteudos(dadosTeste); 
-            }
-          } else {
-            console.warn('Resposta não é um array:', response.data);
-            console.log('Usando dados de teste temporários');
-            setConteudos(dadosTeste);
-          }
-          setLoading(false);
-        } catch (error) {
-          console.error('Detalhes do erro:', {
-            message: error.message,
-            response: error.response ? {
-              status: error.response.status,
-              data: error.response.data
-            } : 'Sem resposta',
-            request: !!error.request
-          });
-          
-          // Usar dados de teste em caso de erro
-          console.log('Erro na API, usando dados de teste');
-          setConteudos(dadosTeste);
-          setLoading(false);
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar conteúdos: ${response.status}`);
         }
-      } catch (outerError) {
-        console.error('Erro externo:', outerError);
+        
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+        
+        if (Array.isArray(data)) {
+          console.log(`Encontrados ${data.length} conteúdos`);
+          setConteudos(data);
+        } else {
+          console.warn('Resposta não é um array:', data);
+          setConteudos([]);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao buscar conteúdos:', error);
         setError('Falha ao carregar os conteúdos. Por favor, tente novamente mais tarde.');
         setLoading(false);
       }
     };
   
-    fetchConteudos();
+    if (cursoId) {
+      fetchConteudos();
+    } else {
+      setLoading(false);
+      setError('ID do curso não fornecido');
+    }
   }, [cursoId]);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   if (loading) {
     return <div className="loading">Carregando conteúdos...</div>;
@@ -196,7 +132,7 @@ const ConteudoCursoList = ({ cursoId }) => {
 
       case 'file':
         const downloadUrl = conteudo.arquivo_path
-          ? `${API_BASE}/download/${encodeURIComponent(conteudo.arquivo_path)}`
+          ? `${API_BASE}/uploads/${encodeURIComponent(conteudo.arquivo_path.replace('uploads/', ''))}`
           : '#';
 
         return (
@@ -225,9 +161,9 @@ const ConteudoCursoList = ({ cursoId }) => {
                 <span className="conteudo-icon">{getIconByType(conteudo.tipo)}</span>
                 {conteudo.titulo}
               </h3>
-              {conteudo.topico_nome && conteudo.pasta_nome && (
+              {conteudo.pasta_nome && (
                 <span className="conteudo-path">
-                  {conteudo.topico_nome} → {conteudo.pasta_nome}
+                  {conteudo.pasta_nome}
                 </span>
               )}
             </div>

@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
+require('../database/associations');
 
 // Importar os modelos necessários
 let Curso, Inscricao_Curso;

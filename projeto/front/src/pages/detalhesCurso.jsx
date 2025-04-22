@@ -6,7 +6,6 @@ import Sidebar from '../components/Sidebar';
 import CursoConteudos from '../components/CursoConteudos';
 import API_BASE, { IMAGES } from "../api";
 
-
 const DetalhesCurso = () => {
   const { id } = useParams();
   const navigate = useNavigate();
