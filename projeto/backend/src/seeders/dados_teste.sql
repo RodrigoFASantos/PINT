@@ -11,6 +11,7 @@ VALUES
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 1, 'AVATAR.png', 'CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'AVATAR.png', 'CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rareura', 25, 'fe@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/fe@gmail.com_AVATAR.png', 'uploads/users/fe@gmail.com_CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rodrigo', 25, 'ro@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/ro@gmail.com_AVATAR.png', 'uploads/users/ro@gmail.com_CAPA.png');
   
 
@@ -89,7 +90,7 @@ VALUES (
 );
 
 -- Inserir inscrição cancelada com base na inscrição original recém-criada
-INSERT INTO inscricoes_cursos_canceladas (
+INSERT INTO inscricao_curso_cancelada (
   id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
   estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
 )

@@ -78,7 +78,7 @@ User.belongsToMany(Curso, {
 
 User.hasMany(InscricaoCursoCancelada, {
   foreignKey: "id_utilizador",
-  as: "inscricoes_canceladas"
+  as: "inscricao_cancelada"
 });
 
 User.hasMany(ChatMensagem, {
@@ -154,7 +154,7 @@ Curso.belongsToMany(User, {
 
 Curso.hasMany(InscricaoCursoCancelada, {
   foreignKey: "id_curso",
-  as: "inscricoes_canceladas"
+  as: "inscricao_cancelada"
 });
 
 Curso.hasMany(Quiz, {

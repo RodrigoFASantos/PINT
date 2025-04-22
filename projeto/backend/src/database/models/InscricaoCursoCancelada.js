@@ -10,6 +10,10 @@ const InscricaoCursoCancelada = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    id_inscricao_original: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     id_utilizador: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -18,10 +22,41 @@ const InscricaoCursoCancelada = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    data_inscricao: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     data_cancelamento: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+    },
+    estado: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'cancelado',
+    },
+    motivacao: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    expectativas: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    nota_final: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    certificado_gerado: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    horas_presenca: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
     },
     motivo_cancelamento: {
       type: DataTypes.TEXT,
