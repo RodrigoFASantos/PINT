@@ -170,7 +170,9 @@ const rotas = [
   { caminho: "./src/routes/ocorrencias", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/tipos_conteudo", prefixo: "/api/tipos-conteudo" },
   { caminho: "./src/routes/chatRoutes", prefixo: "/api/chat" },
-  { caminho: "./src/routes/inscricaoCursoCancelada", prefixo: "/api/inscricoes-canceladas" }
+  { caminho: "./src/routes/inscricaoCursoCancelada", prefixo: "/api/inscricoes-canceladas" },
+  
+  { caminho: "./src/routes/formadores", prefixo: "/api/formadores" },
 ];
 
 rotas.forEach(rota => {
