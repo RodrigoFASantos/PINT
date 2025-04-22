@@ -20,11 +20,41 @@ const DetalhesCurso = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
-  // Removida a variável de estado mostrarConteudos pois agora os conteúdos serão sempre mostrados
+  const [categoria, setCategoria] = useState(null);
+  const [carregandoCategoria, setCarregandoCategoria] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
-  // Removida a função toggleConteudos
+
+  // Função para buscar categoria diretamente pelo ID
+  const getCategoriaById = async (categoriaId) => {
+    try {
+      setCarregandoCategoria(true);
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      // Chamada direta para o endpoint de categorias para obter uma categoria específica
+      const response = await fetch(`${API_BASE}/categorias/${categoriaId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`Erro ao buscar categoria ${categoriaId}: ${response.status}`);
+        return null;
+      }
+
+      const categoriaData = await response.json();
+      setCategoria(categoriaData);
+      return categoriaData;
+    } catch (error) {
+      console.error(`Erro ao buscar categoria ${categoriaId}:`, error);
+      return null;
+    } finally {
+      setCarregandoCategoria(false);
+    }
+  };
 
   // Abrir pop-up de confirmação de inscrição
   const handleInscricao = () => {
@@ -82,7 +112,14 @@ const DetalhesCurso = () => {
         }
 
         const cursoData = await response.json();
+        console.log('Dados do curso recebidos da API:', JSON.stringify(cursoData, null, 2));
+        
         setCurso(cursoData);
+        
+        // Se temos id_categoria, buscar os detalhes da categoria
+        if (cursoData.id_categoria) {
+          getCategoriaById(cursoData.id_categoria);
+        }
 
         // Verificar se o usuário está inscrito neste curso
         await verificarInscricao();
@@ -181,6 +218,20 @@ const DetalhesCurso = () => {
         }
 
         throw new Error(errorMessage);
+      }
+
+      // Obter a resposta da API para atualizar o número de vagas 
+      const responseData = await response.json();
+      
+      // Atualizar o estado do curso com o novo número de vagas se disponível
+      if (responseData.vagasRestantes !== undefined && curso) {
+        setCurso(prevCurso => ({
+          ...prevCurso,
+          vagas: responseData.vagasRestantes
+        }));
+      } else {
+        // Se o backend não retornar o número de vagas atualizado, recarregar os detalhes do curso
+        fetchCursoDetails();
       }
 
       setInscrito(true);
@@ -320,12 +371,6 @@ const DetalhesCurso = () => {
   // Definir o status do curso
   const statusCurso = verificarStatusCurso(curso);
 
-  // Verificar vagas disponíveis
-  const vagasDisponiveis =
-    curso.tipo === 'sincrono' && curso.vagas
-      ? curso.vagas - (curso.inscricoesAtivas || 0)
-      : null;
-
   return (
     <div className="main-container">
       <Navbar toggleSidebar={toggleSidebar} />
@@ -375,7 +420,7 @@ const DetalhesCurso = () => {
                 <div>
                   <h1 className='titulo'>{curso.nome}</h1>
                   <p className="subtitulo">
-                    {curso.area?.nome} {curso.area?.categoria && `> ${curso.area.categoria.nome}`}
+                    {curso.area?.nome} {categoria && `> ${categoria.nome}`}
                   </p>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -449,7 +494,9 @@ const DetalhesCurso = () => {
                     <div className="form-campo vagas">
                       <label>Vagas</label>
                       <div className="campo-valor">
-                        {vagasDisponiveis !== null ? `${curso.inscricoesAtivas || 0} / ${curso.vagas}` : 'Sem limite'}
+                        {curso.tipo === 'sincrono' && curso.vagas !== null 
+                          ? `${curso.vagas}` 
+                          : 'Sem limite'}
                       </div>
                     </div>
                   </div>
@@ -486,8 +533,10 @@ const DetalhesCurso = () => {
                     </div>
                     <div className="form-campo categoria">
                       <label>Categoria</label>
-                      <div className="campo-valor">
-                        {curso.area?.categoria?.nome || "Não atribuída"}
+                      <div className="campo-valor"> 
+                        {carregandoCategoria 
+                          ? "Carregando..." 
+                          : (categoria?.nome || "Não atribuída")}
                       </div>
                     </div>
                   </div>

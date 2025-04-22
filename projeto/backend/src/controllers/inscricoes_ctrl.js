@@ -85,7 +85,7 @@ const createInscricao = async (req, res) => {
   try {
     const { id_utilizador, id_curso, motivacao, expectativas } = req.body;
 
-    // Verificar se o usuário é quem diz ser (através do token)
+    // Verificações de permissão e dados
     if (req.user.id_utilizador != id_utilizador && req.user.id_cargo !== 1) {
       return res.status(403).json({ 
         message: "Você não pode inscrever outros usuários em cursos" 
@@ -98,12 +98,12 @@ const createInscricao = async (req, res) => {
       });
     }
 
-    // Verificar se o usuário já está inscrito neste curso
+    // Verificar se já está inscrito
     const inscricaoExistente = await Inscricao_Curso.findOne({
       where: {
         id_utilizador,
         id_curso,
-        estado: "inscrito" // Apenas considerar inscrições ativas
+        estado: "inscrito"
       }
     });
 
@@ -113,21 +113,20 @@ const createInscricao = async (req, res) => {
       });
     }
 
-    // Obter detalhes do curso
+    // Obter detalhes do curso e atualizar vagas
     const curso = await Curso.findByPk(id_curso);
-    
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Verificar se o curso está ativo
+    // Verificações do curso
     if (!curso.ativo) {
       return res.status(400).json({ 
         message: "Este curso não está disponível para inscrições" 
       });
     }
 
-    // Verificar se o curso está em período de inscrição
+    // Verificar data
     const dataAtual = new Date();
     if (dataAtual > new Date(curso.data_inicio)) {
       return res.status(400).json({ 
@@ -135,24 +134,20 @@ const createInscricao = async (req, res) => {
       });
     }
 
-    // Se for curso síncrono, verificar se há vagas disponíveis
+    // Atualizar vagas se necessário
     if (curso.tipo === "sincrono" && curso.vagas) {
-      // Contar inscrições atuais
-      const inscricoesCount = await Inscricao_Curso.count({
-        where: {
-          id_curso,
-          estado: "inscrito"
-        }
-      });
-
-      if (inscricoesCount >= curso.vagas) {
+      if (curso.vagas <= 0) {
         return res.status(400).json({ 
           message: "Não há vagas disponíveis para este curso" 
         });
       }
+      
+      // Atualizar vagas
+      curso.vagas = curso.vagas - 1;
+      await curso.save();
     }
 
-    // Criar a inscrição
+    // Criar inscrição
     const novaInscricao = await Inscricao_Curso.create({
       id_utilizador,
       id_curso,
@@ -161,30 +156,19 @@ const createInscricao = async (req, res) => {
       data_inscricao: new Date(),
       estado: "inscrito"
     });
-
-    // Buscar informações do usuário para enviar email
-    const user = await User.findByPk(id_utilizador);
-
-    // Enviar email de confirmação de inscrição
-    if (user && curso) {
-      await sendEnrollmentEmail(user, curso).catch(error => {
-        console.error("Erro ao enviar email de confirmação:", error);
-        // Não interrompe o fluxo se o email falhar
-      });
-    }
     
+    // Resposta
     res.status(201).json({ 
       message: "Inscrição realizada com sucesso!", 
-      inscricao: novaInscricao 
+      inscricao: novaInscricao,
+      vagasRestantes: curso.vagas
     });
+    
   } catch (error) {
     console.error("Erro ao criar inscrição:", error);
     
-    // Verificar se é um erro de conexão
-    if (error.name === 'SequelizeConnectionError' || 
-        error.name === 'SequelizeConnectionRefusedError' ||
-        error.name === 'SequelizeHostNotFoundError' ||
-        error.name === 'SequelizeConnectionTimedOutError') {
+    // Verificar erro de conexão
+    if (error.name?.includes('SequelizeConnection')) {
       return res.status(503).json({ 
         message: "Serviço temporariamente indisponível. Problemas com o banco de dados.",
         error: "Erro de conexão com o banco de dados"
@@ -197,8 +181,6 @@ const createInscricao = async (req, res) => {
     });
   }
 };
-
-
 
 
 

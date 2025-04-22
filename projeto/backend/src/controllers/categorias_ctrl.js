@@ -10,6 +10,24 @@ const getAllCategorias = async (req, res) => {
   }
 };
 
+// Obter categoria por ID
+const getCategoriaById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const categoria = await Categoria.findByPk(id);
+    
+    if (!categoria) {
+      return res.status(404).json({ message: "Categoria não encontrada!" });
+    }
+    
+    res.json(categoria);
+  } catch (error) {
+    console.error("Erro ao buscar categoria por ID:", error);
+    res.status(500).json({ message: "Erro no servidor ao buscar categoria." });
+  }
+};
+
 // Criar uma nova categoria
 const createCategoria = async (req, res) => {
   try {
@@ -71,4 +89,4 @@ const deleteCategoria = async (req, res) => {
   }
 };
 
-module.exports = { getAllCategorias, createCategoria, updateCategoria, deleteCategoria };
+module.exports = { getAllCategorias, getCategoriaById, createCategoria, updateCategoria, deleteCategoria };

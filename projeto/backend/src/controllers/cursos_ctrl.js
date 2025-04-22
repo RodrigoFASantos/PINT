@@ -63,11 +63,15 @@ const createCurso = async (req, res) => {
   }
 };
 
+
+
+
 // Buscar curso por ID com detalhes
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
     
+    // Buscar o curso com suas relações (mantenha o código original)
     const curso = await Curso.findByPk(id, {
       include: [
         { 
@@ -86,12 +90,63 @@ const getCursoById = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    res.json(curso);
+    // Crie uma cópia do curso para modificar
+    const cursoComInscritos = JSON.parse(JSON.stringify(curso));
+    
+    try {
+      // Tente contar as inscrições em um bloco try/catch separado
+      // para evitar que um erro aqui afete o retorno do curso
+      if (curso.tipo === 'sincrono' && curso.vagas) {
+        // Verificar a estrutura da tabela Inscricao_Curso primeiro
+        let where = { id_curso: id };
+        
+        // Adicione condições de inscrição ativa apenas se soubermos que o campo existe
+        // Aqui estamos testando as possíveis colunas para inscrições ativas
+        try {
+          const inscricao = await Inscricao_Curso.findOne({ where: { id_curso: id } });
+          if (inscricao) {
+            if ('ativo' in inscricao.dataValues) {
+              where.ativo = true;
+            } else if ('status' in inscricao.dataValues) {
+              where.status = 'ativo';
+            }
+          }
+        } catch (e) {
+          console.log("Aviso: Não foi possível determinar coluna de status de inscrição", e.message);
+        }
+        
+        const inscricoesAtivas = await Inscricao_Curso.count({ where });
+        cursoComInscritos.inscricoesAtivas = inscricoesAtivas;
+      }
+    } catch (inscricoesError) {
+      console.error("Erro ao contar inscrições (não fatal):", inscricoesError);
+      // Se houver erro, apenas defina como 0 e continue
+      cursoComInscritos.inscricoesAtivas = 0;
+    }
+
+    res.json(cursoComInscritos);
   } catch (error) {
     console.error("Erro ao buscar curso:", error);
     res.status(500).json({ message: "Erro ao buscar curso", error: error.message });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Listar inscrições de um curso
 const getInscricoesCurso = async (req, res) => {

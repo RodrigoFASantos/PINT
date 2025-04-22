@@ -25,7 +25,7 @@ const CursoConteudos = ({ cursoId }) => {
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [viewMode, setViewMode] = useState('estrutura'); // 'estrutura' ou 'lista'
+  const [viewMode, setViewMode] = useState('lista'); // 'estrutura' ou 'lista' - Alterado o default para 'lista'
 
   // Verificar permissões do usuário
   useEffect(() => {
@@ -545,10 +545,10 @@ const CursoConteudos = ({ cursoId }) => {
       </div>
 
       {viewMode === 'lista' ? (
-        // Visualização em lista simples usando ConteudoCursoList
+        // Visualização em lista hierárquica
         <ConteudoCursoList cursoId={courseId} />
       ) : (
-        // Visualização estruturada
+        // Visualização estruturada original
         <div className="topicos-list">
           {topicos.length === 0 ? (
             <div className="no-conteudos">
