@@ -151,6 +151,7 @@ const rotas = [
   { caminho: "./src/routes/comentarios", prefixo: "/api/comentarios" },
   { caminho: "./src/routes/conteudos", prefixo: "/api/conteudos" },
   { caminho: "./src/routes/cursos", prefixo: "/api/cursos" },
+  { caminho: "./src/routes/formadores", prefixo: "/api/formadores" },
   { caminho: "./src/routes/inscricoes", prefixo: "/api/inscricoes" },
   { caminho: "./src/routes/topicos", prefixo: "/api/topicos" },
   { caminho: "./src/routes/trabalhos", prefixo: "/api/trabalhos" },

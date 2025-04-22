@@ -1,6 +1,6 @@
 const User = require("./models/User");
 const Curso = require("./models/Curso");
-const InscricaoCurso = require("./models/InscricaoCurso");
+const InscricaoCurso = require("./models/Inscricao_Curso");
 const Quiz = require("./models/Quiz");
 const QuizPergunta = require("./models/QuizPergunta");
 const QuizOpcao = require("./models/QuizOpcao");
@@ -10,19 +10,11 @@ const OcorrenciaCurso = require("./models/OcorrenciaCurso");
 const Categoria = require("./models/Categoria");
 const Area = require("./models/Area");
 const InscricaoCursoCancelada = require("./models/InscricaoCursoCancelada");
+const Formador = require("./models/Formador");
 
 // Relação entre Curso e Categoria
-Curso.belongsTo(Categoria, {
-  foreignKey: "id_categoria",
-  as: "categoria"
-});
 
-Categoria.hasMany(Curso, {
-  foreignKey: "id_categoria",
-  as: "cursos"
-});
 
-// Relação muitos-para-muitos
 User.belongsToMany(Curso, {
   through: InscricaoCurso,
   foreignKey: "id_utilizador",
@@ -38,15 +30,7 @@ Curso.belongsToMany(User, {
 });
 
 // Relações para inscrições canceladas
-InscricaoCursoCancelada.belongsTo(User, {
-  foreignKey: "id_utilizador",
-  as: "utilizador"
-});
 
-InscricaoCursoCancelada.belongsTo(Curso, {
-  foreignKey: "id_curso",
-  as: "curso"
-});
 
 User.hasMany(InscricaoCursoCancelada, {
   foreignKey: "id_utilizador",
@@ -147,7 +131,7 @@ OcorrenciaCurso.belongsTo(Curso, {
 
 Curso.belongsTo(User, {
   foreignKey: "id_formador",
-  as: "formador"
+  as: "formador_curso"
 });
 
 User.hasMany(Curso, {
@@ -168,12 +152,22 @@ Categoria.hasMany(Area, {
 // Relação entre Curso e Area
 Curso.belongsTo(Area, {
   foreignKey: "id_area",
-  as: "area"
+  as: "area_curso"
 });
 
 Area.hasMany(Curso, {
   foreignKey: "id_area",
   as: "cursos"
+});
+
+User.hasOne(Formador, {
+  foreignKey: "id_utilizador",
+  as: "detalhes_formador"
+});
+
+Formador.belongsTo(User, {
+  foreignKey: "id_utilizador",
+  as: "usuario"
 });
 
 // No final do arquivo associations.js
@@ -189,5 +183,6 @@ module.exports = {
   QuizRespostaDetalhe, 
   OcorrenciaCurso, 
   Categoria, 
-  Area 
+  Area,
+  Formador 
 };

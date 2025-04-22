@@ -21,6 +21,7 @@ import QuizPage from './pages/quizPage';
 import Formadores from './pages/formadores';
 import EditarCurso from './pages/editarCurso';
 import GerenciarInscricoes from './pages/gerenciarInscricoes';
+import DetalhesFormadores from './pages/detalhesFormadores';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
@@ -89,6 +90,15 @@ const App = () => {
               element={
                 <ProtectedRoute roles={[1,2]}>
                   <CriarCurso />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/formadores/:id"
+              element={
+                <ProtectedRoute>
+                  <DetalhesFormadores />
                 </ProtectedRoute>
               }
             />
