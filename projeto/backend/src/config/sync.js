@@ -31,49 +31,101 @@ const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');
 const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
 
 // Criar tabelas diretamente com SQL em vez de usar sync do Sequelize
+// Modificado para usar IF NOT EXISTS em todos os lugares e DROP INDEX IF EXISTS
 const createTablesSQL = `
+-- Remover índices se existirem para evitar conflitos
+DROP INDEX IF EXISTS idx_topicos_curso_curso;
+DROP INDEX IF EXISTS idx_pastas_curso_topico;
+DROP INDEX IF EXISTS idx_conteudos_curso_pasta;
+
 -- Criar tabela para tópicos do curso
-CREATE TABLE IF NOT EXISTS topicos_curso (
+CREATE TABLE IF NOT EXISTS curso_topico (
   id_topico SERIAL PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
-  id_curso INTEGER NOT NULL REFERENCES cursos(id_curso) ON DELETE CASCADE,
+  id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
   ordem INTEGER NOT NULL DEFAULT 1,
-  ativo BOOLEAN NOT NULL DEFAULT TRUE
+  ativo BOOLEAN NOT NULL DEFAULT TRUE,
+  arquivo_path VARCHAR(500)
 );
 
 -- Criar tabela para pastas
-CREATE TABLE IF NOT EXISTS pastas_curso (
+CREATE TABLE IF NOT EXISTS curso_topico_pasta (
   id_pasta SERIAL PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
-  id_topico INTEGER NOT NULL REFERENCES topicos_curso(id_topico) ON DELETE CASCADE,
+  id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
   ordem INTEGER NOT NULL DEFAULT 1,
-  ativo BOOLEAN NOT NULL DEFAULT TRUE
+  ativo BOOLEAN NOT NULL DEFAULT TRUE,
+  arquivo_path VARCHAR(500)
 );
 
 -- Criar tabela para conteúdos
-CREATE TABLE IF NOT EXISTS conteudos_curso (
+CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
   id_conteudo SERIAL PRIMARY KEY,
   titulo VARCHAR(255) NOT NULL,
   descricao TEXT,
   tipo VARCHAR(10) NOT NULL,
   url VARCHAR(500),
   arquivo_path VARCHAR(500),
-  id_pasta INTEGER NOT NULL REFERENCES pastas_curso(id_pasta) ON DELETE CASCADE,
+  id_pasta INTEGER NOT NULL REFERENCES curso_topico_pasta(id_pasta) ON DELETE CASCADE,
+  id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
   data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   ordem INTEGER NOT NULL DEFAULT 1,
   ativo BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Criar índices para otimizar consultas
-CREATE INDEX idx_topicos_curso_curso ON topicos_curso(id_curso);
-CREATE INDEX idx_pastas_curso_topico ON pastas_curso(id_topico);
-CREATE INDEX idx_conteudos_curso_pasta ON conteudos_curso(id_pasta);
+CREATE INDEX IF NOT EXISTS idx_topicos_curso_curso ON curso_topico(id_curso);
+CREATE INDEX IF NOT EXISTS idx_pastas_curso_topico ON curso_topico_pasta(id_topico);
+CREATE INDEX IF NOT EXISTS idx_conteudos_curso_pasta ON curso_topico_pasta_conteudo(id_pasta);
 `;
+
+// Execute SQL statements in sequence
+const executeSQLStatements = async (statements) => {
+  for (let i = 0; i < statements.length; i++) {
+    const stmt = statements[i];
+    try {
+      console.log(`Executando comando SQL ${i+1}/${statements.length}`);
+      await sequelize.query(stmt);
+      console.log(`Comando SQL ${i+1} executado com sucesso.`);
+    } catch (error) {
+      console.error(`Erro ao executar comando SQL ${i+1}/${statements.length}:`);
+      console.error(stmt);
+      console.error(error.message);
+      // Continua a execução para permitir que outros comandos sejam tentados
+    }
+  }
+};
+
+// Divide o script SQL em comandos individuais
+const prepareSQLStatements = (sqlScript) => {
+  const statements = [];
+  const rawStatements = sqlScript.replace(/\r\n/g, '\n').split(';');
+
+  for (let rawStmt of rawStatements) {
+    // Remove comments and trim whitespace
+    const lines = rawStmt.split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
+    const trimmedStmt = lines.trim();
+    if (trimmedStmt) {
+      statements.push(trimmedStmt);
+    }
+  }
+
+  return statements;
+};
+
+// Divide o SQL de criação de tabelas em comandos separados
+const prepareCreateTableStatements = () => {
+  return createTablesSQL.split(';').filter(stmt => stmt.trim().length > 0).map(stmt => stmt.trim() + ';');
+};
 
 (async () => {
   try {
     // Teste de conexão
     await sequelize.testConnection();
+    console.log("Conexão com o banco de dados estabelecida com sucesso!");
 
     // Verificar se o sequelize está disponível
     if (!sequelize || !sequelize.define) {
@@ -87,47 +139,21 @@ CREATE INDEX idx_conteudos_curso_pasta ON conteudos_curso(id_pasta);
     await sequelize.sync({ force: true });
     console.log("Base de dados sincronizada e limpa!");
 
-    // Criando as novas tabelas para conteúdos de cursos usando SQL direto
+    // Separar as instruções SQL de criação de tabelas
     console.log("Criando tabelas para conteúdos de cursos...");
-    await sequelize.query(createTablesSQL);
+    const createTableStatements = prepareCreateTableStatements();
+    await executeSQLStatements(createTableStatements);
     console.log("Tabelas de conteúdos criadas com sucesso!");
 
-    // Executa os dados de teste
-    const statements = [];
-    const sqlScript = dadosSQL.replace(/\r\n/g, '\n'); // Normalize line endings
-    const rawStatements = sqlScript.split(';');
-
-    for (let rawStmt of rawStatements) {
-      // Remove comments and trim whitespace
-      const lines = rawStmt.split('\n')
-        .filter(line => !line.trim().startsWith('--'))
-        .join('\n');
-      
-      const trimmedStmt = lines.trim();
-      if (trimmedStmt) {
-        statements.push(trimmedStmt);
-      }
-    }
-
-    console.log(`Preparados ${statements.length} comandos SQL para execução.`);
-
-    // Execute each statement individually
-    for (let i = 0; i < statements.length; i++) {
-      const stmt = statements[i];
-      try {
-        console.log(`Executando comando SQL ${i+1}/${statements.length}`);
-        await sequelize.query(stmt);
-        console.log(`Comando SQL ${i+1} executado com sucesso.`);
-      } catch (error) {
-        console.error(`Erro ao executar comando SQL ${i+1}/${statements.length}:`);
-        console.error(stmt);
-        console.error(error.message);
-        // Não interrompe a execução para que os outros comandos possam ser tentados
-      }
-    }
+    // Preparar e executar os dados de teste
+    console.log("Preparando dados de teste...");
+    const testDataStatements = prepareSQLStatements(dadosSQL);
+    console.log(`Preparados ${testDataStatements.length} comandos SQL para execução.`);
+    
+    await executeSQLStatements(testDataStatements);
     console.log("Dados de teste inseridos!");
 
-    process.exit();
+    process.exit(0);
   } catch (error) {
     console.error("Erro ao sincronizar ou carregar os dados de teste:", error.message);
     console.error("Detalhes do erro:", error);

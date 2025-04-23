@@ -11,15 +11,11 @@ const TopicoCurso = sequelize.define("curso_topico", {
     type: DataTypes.STRING(150),
     allowNull: false,
   },
-  arquivo_path: {
-    type: DataTypes.STRING(500),
-    allowNull: true,
-  },
   id_curso: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "curso", // Alterado de "cursos" para "curso" para corresponder ao modelo Curso
+      model: "curso", // Alterado para "curso" em vez de "cursos"
       key: "id_curso",
     },
   },
@@ -32,6 +28,10 @@ const TopicoCurso = sequelize.define("curso_topico", {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true,
+  },
+  arquivo_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
   },
 }, {
   tableName: "curso_topico",
