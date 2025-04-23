@@ -15,7 +15,7 @@ import ForumPartilha from './pages/forumPartilha';
 import DetalheTopico from './pages/detalheTopico';
 import CriarUtilizador from './pages/criarUtilizador';
 import AdminDashboard from './pages/adminDashboard';
-import GerenciarUsuarios from './pages/gerenciarUsuarios';
+import GerenciarUtilizadores from './pages/gerenciarUtilizadores';
 import GerenciarCursos from './pages/gerenciarCursos';
 import QuizPage from './pages/quizPage';
 import Formadores from './pages/formadores';
@@ -182,7 +182,7 @@ const App = () => {
               path="/admin/usuarios"
               element={
                 <ProtectedRoute roles={[1]}>
-                  <GerenciarUsuarios />
+                  <GerenciarUtilizadores />
                 </ProtectedRoute>
               }
             />

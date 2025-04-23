@@ -232,9 +232,6 @@ const AdminDashboard = () => {
             <button className="action-btn" onClick={handleVerUsuarios}>
               Gerenciar Usuários
             </button>
-            <button className="action-btn" onClick={handleVerPercursos}>
-              Ver Percursos Formativos
-            </button>
           </div>
           
           <div className="stats-cards">

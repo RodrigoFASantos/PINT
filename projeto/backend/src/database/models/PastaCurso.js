@@ -11,6 +11,10 @@ const PastaCurso = sequelize.define("pastas_curso", {
     type: DataTypes.STRING(150),
     allowNull: false,
   },
+  arquivo_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  },
   id_topico: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -30,7 +34,7 @@ const PastaCurso = sequelize.define("pastas_curso", {
     defaultValue: true,
   },
 }, {
-  tableName: "pastas_curso",
+  tableName: "curso_topico_pasta",
   timestamps: false,
 });
 

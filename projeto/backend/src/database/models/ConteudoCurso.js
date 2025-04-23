@@ -62,7 +62,7 @@ const ConteudoCurso = sequelize.define("conteudos_curso", {
     defaultValue: true,
   },
 }, {
-  tableName: "conteudos_curso",
+  tableName: "curso_topico_pasta_conteudo",
   timestamps: false,
 });
 
