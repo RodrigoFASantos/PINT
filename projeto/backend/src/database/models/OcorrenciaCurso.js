@@ -11,7 +11,7 @@ const OcorrenciaCurso = sequelize.define("ocorrencias_cursos", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "cursos",
+      model: "curso",
       key: "id_curso",
     },
   },
@@ -19,7 +19,7 @@ const OcorrenciaCurso = sequelize.define("ocorrencias_cursos", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "cursos",
+      model: "curso",
       key: "id_curso",
     },
   },

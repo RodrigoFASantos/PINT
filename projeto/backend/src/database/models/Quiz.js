@@ -11,7 +11,7 @@ const Quiz = sequelize.define("quizzes", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "cursos",
+      model: "curso",
       key: "id_curso",
     },
   },
