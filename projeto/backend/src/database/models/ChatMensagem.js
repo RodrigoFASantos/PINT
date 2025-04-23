@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
-const ChatMensagem = sequelize.define('ChatMensagem', {
+const ChatMensagem = sequelize.define('chat_mensagens', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -12,16 +12,16 @@ const ChatMensagem = sequelize.define('ChatMensagem', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Topicos',
-      key: 'id'
+      model: 'topicos_categorias',
+      key: 'id_topico'
     }
   },
   id_usuario: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Users',
-      key: 'id'
+      model: 'utilizadores',
+      key: 'id_utilizador'
     }
   },
   texto: {

@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const Curso = sequelize.define("cursos", {
+const Curso = sequelize.define("curso", {
   id_curso: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -70,7 +70,7 @@ const Curso = sequelize.define("cursos", {
     allowNull: true,
   },
 }, {
-  tableName: "curso",
+  tableName: "curso", // Changed from "cursos" to match the model name
   timestamps: false,
 });
 

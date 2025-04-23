@@ -82,7 +82,7 @@ User.hasMany(InscricaoCursoCancelada, {
 });
 
 User.hasMany(ChatMensagem, {
-  foreignKey: "id_usuario",
+  foreignKey: "id_usuario", // Mantido como está pois corresponde ao campo no modelo
   as: "mensagens_enviadas"
 });
 
@@ -199,6 +199,11 @@ InscricaoCursoCancelada.belongsTo(Curso, {
   as: "curso"
 });
 
+InscricaoCursoCancelada.belongsTo(Inscricao_Curso, {
+  foreignKey: "id_inscricao_original",
+  as: "inscricao_original"
+});
+
 // === Associações Quiz e relacionados ===
 Quiz.belongsTo(Curso, {
   foreignKey: "id_curso",
@@ -301,6 +306,11 @@ Topico_Categoria.belongsTo(Categoria, {
 Topico_Categoria.belongsTo(User, {
   foreignKey: "criado_por",
   as: "criador"
+});
+
+Topico_Categoria.hasMany(Comentario_Topico, {
+  foreignKey: "id_topico",
+  as: "comentarios"
 });
 
 // === Associações TopicoCurso ===

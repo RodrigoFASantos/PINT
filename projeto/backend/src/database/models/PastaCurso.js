@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const PastaCurso = sequelize.define("pastas_curso", {
+const PastaCurso = sequelize.define("curso_topico_pasta", {
   id_pasta: {
     type: DataTypes.INTEGER,
     primaryKey: true,

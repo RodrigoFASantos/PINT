@@ -28,7 +28,7 @@ VALUES
   ('Comunicação Interpessoal', (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1)),
   ('Liderança e Gestão de Equipas', (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1));
 
--- Tabela de cursos (renomeada para curso)
+-- Tabela de cursos (já estava correta como curso)
 INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria, imagem_path)
 VALUES
   ('Curso de Vue.js', 'Curso prático sobre Vue.js para iniciantes.', 'sincrono', 20, '2025-04-01', '2025-04-30', 'planeado', true,
@@ -111,7 +111,7 @@ WHERE ic.id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = '
 ORDER BY ic.id_inscricao DESC
 LIMIT 1;
 
--- Inserir tópicos para o curso de Vue.js (tabela renomeada para curso_topico)
+-- Inserir tópicos para o curso de Vue.js (tabela curso_topico está correta)
 INSERT INTO curso_topico (nome, id_curso, ordem, ativo, arquivo_path)
 SELECT 'Introdução', id_curso, 1, true, NULL
 FROM curso 
@@ -169,7 +169,7 @@ SELECT 'Liderança Ágil', id_curso, 4, true, NULL
 FROM curso 
 WHERE nome = 'Gestão de Equipas Ágeis';
 
--- Inserir pastas para o tópico 'Introdução' do curso Vue.js (tabela renomeada para curso_topico_pasta)
+-- Inserir pastas para o tópico 'Introdução' do curso Vue.js (tabela curso_topico_pasta está correta)
 INSERT INTO curso_topico_pasta (nome, id_topico, ordem, ativo, arquivo_path)
 SELECT 'Instalação', id_topico, 1, true, NULL
 FROM curso_topico
@@ -229,7 +229,7 @@ SELECT 'Barreiras na Comunicação', id_topico, 2, true, NULL
 FROM curso_topico
 WHERE nome = 'Fundamentos da Comunicação' AND id_curso = (SELECT id_curso FROM curso WHERE nome = 'Comunicação Assertiva');
 
--- Inserir conteúdos para a pasta 'Instalação' do tópico 'Introdução' do curso Vue.js (tabela renomeada para curso_topico_pasta_conteudo)
+-- Inserir conteúdos para a pasta 'Instalação' do tópico 'Introdução' do curso Vue.js (tabela curso_topico_pasta_conteudo está correta)
 INSERT INTO curso_topico_pasta_conteudo (titulo, descricao, tipo, url, arquivo_path, id_pasta, id_curso, ordem, ativo, data_criacao)
 SELECT 'Instalação do Vue.js', 'Como instalar o Vue.js no seu ambiente de desenvolvimento', 'video', 'https://www.youtube.com/watch?v=exemplo-instalacao', NULL, pc.id_pasta, c.id_curso, 1, true, NOW()
 FROM curso_topico_pasta pc

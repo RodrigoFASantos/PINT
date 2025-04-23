@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
-const Topico = sequelize.define('Topico', {
+const Topico = sequelize.define('topicos', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -12,24 +12,24 @@ const Topico = sequelize.define('Topico', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Categorias',
-      key: 'id'
+      model: 'categorias',
+      key: 'id_categoria'
     }
   },
   id_area: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Areas',
-      key: 'id'
+      model: 'areas',
+      key: 'id_area'
     }
   },
   id_criador: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Users',
-      key: 'id'
+      model: 'utilizadores',
+      key: 'id_utilizador'
     }
   },
   titulo: {

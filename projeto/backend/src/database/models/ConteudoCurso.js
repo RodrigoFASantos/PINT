@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const ConteudoCurso = sequelize.define("conteudos_curso", {
+const ConteudoCurso = sequelize.define("curso_topico_pasta_conteudo", {
   id_conteudo: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -34,7 +34,7 @@ const ConteudoCurso = sequelize.define("conteudos_curso", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "pastas_curso",
+      model: "curso_topico_pasta", // Changed to match the tableName in PastaCurso
       key: "id_pasta",
     },
   },
@@ -42,7 +42,7 @@ const ConteudoCurso = sequelize.define("conteudos_curso", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "cursos",
+      model: "curso", // Changed to match tableName in Curso
       key: "id_curso",
     },
   },
@@ -62,7 +62,7 @@ const ConteudoCurso = sequelize.define("conteudos_curso", {
     defaultValue: true,
   },
 }, {
-  tableName: "curso_topico_pasta_conteudo",
+  tableName: "curso_topico_pasta_conteudo", // Left as is since it's already correct
   timestamps: false,
 });
 
