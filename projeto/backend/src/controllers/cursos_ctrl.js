@@ -3,10 +3,13 @@ const Area = require("../database/models/Area");
 const Categoria = require("../database/models/Categoria");
 const User = require("../database/models/User");
 const Conteudo = require("../database/models/ConteudoCurso");
+const TopicoCurso = require("../database/models/TopicoCurso");
+const PastaCurso = require("../database/models/PastaCurso");
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
 const { removerInscricoesDoCurso } = require("./inscricoes_ctrl");
 const { sequelize } = require("../../config/db");
-
+const fs = require('fs');
+const path = require('path');
 
 // Obter todos os cursos com paginação
 const getAllCursos = async (req, res) => {
@@ -32,16 +35,30 @@ const getAllCursos = async (req, res) => {
   }
 };
 
-
 // Criar um novo curso (recebe req.file da rota)
 const createCurso = async (req, res) => {
   try {
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria } = req.body;
-    const imagem = req.file ? req.file.path : null;
-
+    
     if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
+
+    // Criar diretório para o curso
+    const nomeCursoDir = nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const cursoDir = `uploads/cursos/${nomeCursoDir}`;
+    
+    // Verificar se o diretório existe, se não, criar
+    if (!fs.existsSync(cursoDir)) {
+      fs.mkdirSync(cursoDir, { recursive: true });
+    }
+
+    // Verificar se foi enviada uma imagem
+    const imagem = req.file ? req.file.path : null;
 
     const novoCurso = await Curso.create({
       nome,
@@ -53,7 +70,8 @@ const createCurso = async (req, res) => {
       id_formador,
       id_area,
       id_categoria,
-      imagem_path: imagem // Guardar o caminho na BD, tipo "uploads/cursos/nome-do-curso.png"
+      imagem_path: imagem, // Guardar o caminho na BD, já estará no diretório correto do curso
+      dir_path: cursoDir // Guardar o caminho do diretório do curso
     });
 
     res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso });
@@ -63,15 +81,12 @@ const createCurso = async (req, res) => {
   }
 };
 
-
-
-
 // Buscar curso por ID com detalhes
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
     
-    // Buscar o curso com suas relações (mantenha o código original)
+    // Buscar o curso com suas relações
     const curso = await Curso.findByPk(id, {
       include: [
         { 
@@ -131,23 +146,6 @@ const getCursoById = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Listar inscrições de um curso
 const getInscricoesCurso = async (req, res) => {
   try {
@@ -171,8 +169,6 @@ const getInscricoesCurso = async (req, res) => {
   }
 };
 
-
-
 // Atualizar curso existente
 const updateCurso = async (req, res) => {
   try {
@@ -188,33 +184,41 @@ const updateCurso = async (req, res) => {
     // Verificar se o nome do curso foi alterado
     const nomeAlterado = nome && nome !== curso.nome;
     
-    // Imagem do upload (se houver)
-    const imagemUpload = req.file ? req.file.path : null;
+    // Diretório atual do curso
+    const nomeCursoAtualDir = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
     
-    // Se o nome foi alterado e não há upload de nova imagem, precisamos renomear o arquivo existente
-    if (nomeAlterado && !imagemUpload && curso.imagem_path) {
-      try {
-        // Obter caminho antigo da imagem
-        const caminhoAntigo = curso.imagem_path;
+    const cursoAtualDir = `uploads/cursos/${nomeCursoAtualDir}`;
+    
+    // Se o nome foi alterado, renomear o diretório
+    if (nomeAlterado) {
+      const nomeCursoNovoDir = nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      
+      const cursoNovoDir = `uploads/cursos/${nomeCursoNovoDir}`;
+      
+      // Verificar se o diretório existe e renomear
+      if (fs.existsSync(cursoAtualDir)) {
+        fs.renameSync(cursoAtualDir, cursoNovoDir);
+        console.log(`Diretório renomeado de ${cursoAtualDir} para ${cursoNovoDir}`);
         
-        // Criar novo nome de arquivo baseado no novo nome do curso
-        const novoNomeArquivo = nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "") + ".png";
-        const novoCaminho = `uploads/cursos/${novoNomeArquivo}`;
-        
-        // Verificar se o arquivo antigo existe
-        if (fs.existsSync(caminhoAntigo)) {
-          // Renomear o arquivo
-          fs.renameSync(caminhoAntigo, novoCaminho);
-          
-          // Atualizar o caminho da imagem no objeto curso
-          curso.imagem_path = novoCaminho;
-          console.log(`Imagem renomeada de ${caminhoAntigo} para ${novoCaminho}`);
+        // Atualizar o caminho do diretório no banco
+        curso.dir_path = cursoNovoDir;
+      } else {
+        // Se não existir, criar o novo diretório
+        if (!fs.existsSync(cursoNovoDir)) {
+          fs.mkdirSync(cursoNovoDir, { recursive: true });
         }
-      } catch (error) {
-        console.error("Erro ao renomear arquivo de imagem:", error);
-        // Continuar mesmo se houver erro no renomeio
+        curso.dir_path = cursoNovoDir;
       }
     }
+    
+    // Imagem do upload (se houver)
+    const imagemUpload = req.file ? req.file.path : null;
     
     // Atualizar campos
     if (nome) curso.nome = nome;
@@ -239,29 +243,7 @@ const updateCurso = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const fs = require('fs');
-const path = require('path');
-
-// Função para deletar curso com remoção da imagem
+// Função para deletar curso com remoção da imagem e diretórios
 const deleteCurso = async (req, res) => {
   try {
     const { id } = req.params;
@@ -280,8 +262,9 @@ const deleteCurso = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    // Guardar o caminho da imagem para excluir depois
-    const imagemPath = curso.imagem_path;
+    // Guardar o caminho do diretório do curso
+    const cursoDir = curso.dir_path || 
+                    `uploads/cursos/${curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")}`;
 
     try {
       // Excluir diretamente as inscrições
@@ -303,24 +286,37 @@ const deleteCurso = async (req, res) => {
       
       console.log(`Curso ${id} excluído com sucesso`);
 
-      // Remover a imagem do curso do sistema de arquivos, se existir
-      if (imagemPath) {
-        const fullPath = path.resolve(imagemPath);
+      // Remover o diretório do curso e todos os seus conteúdos
+      if (fs.existsSync(cursoDir)) {
+        // Função recursiva para remover diretórios e arquivos
+        const removerDiretorioRecursivo = (dir) => {
+          if (fs.existsSync(dir)) {
+            fs.readdirSync(dir).forEach((arquivo) => {
+              const caminhoCompleto = path.join(dir, arquivo);
+              if (fs.lstatSync(caminhoCompleto).isDirectory()) {
+                // Se for diretório, chamar recursivamente
+                removerDiretorioRecursivo(caminhoCompleto);
+              } else {
+                // Se for arquivo, remover
+                fs.unlinkSync(caminhoCompleto);
+              }
+            });
+            // Remover o diretório vazio
+            fs.rmdirSync(dir);
+          }
+        };
         
-        // Verificar se o arquivo existe antes de tentar excluí-lo
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
-          console.log(`Imagem do curso removida: ${fullPath}`);
-        } else {
-          console.log(`Imagem não encontrada no caminho: ${fullPath}`);
-        }
+        removerDiretorioRecursivo(cursoDir);
+        console.log(`Diretório do curso removido: ${cursoDir}`);
+      } else {
+        console.log(`Diretório não encontrado no caminho: ${cursoDir}`);
       }
 
       // Retornar resposta de sucesso
       return res.json({ 
         message: "Curso excluído com sucesso!", 
         inscricoesRemovidas: numInscricoesRemovidas,
-        imagemRemovida: !!imagemPath
+        diretorioRemovido: true
       });
     } catch (error) {
       console.error("Erro específico ao excluir relações:", error);
@@ -349,20 +345,5 @@ const deleteCurso = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 module.exports = { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso };

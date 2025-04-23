@@ -1,0 +1,102 @@
+.body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+}
+
+.p-6 {
+  padding: 1.5rem;
+  margin-top: 60px;
+}
+
+/* Espaço extra para rodapé fixo */
+.p-6.min-h-screen {
+  padding-bottom: 4rem;
+}
+
+/* Paginação fixa no fundo da página */
+.flex.justify-center.items-center.my-6 {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  z-index: 100;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Grid de cursos com 3 colunas */
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Cartões dos cursos */
+.grid > div {
+  position: relative;
+  height: 12rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  /* Estes dois são ESSENCIAIS para mostrar a imagem corretamente */
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.grid > div:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Overlay escura e centralização de conteúdo */
+.grid > div > div {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.grid > div > div h3 {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 1rem;
+}
+.grid > div > div p {
+  color: #fff;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Botão de paginação desativado */
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Mensagem de nenhum curso */
+.text-center p {
+  font-size: 1.125rem;
+}

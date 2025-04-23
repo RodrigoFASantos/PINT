@@ -1,0 +1,84 @@
+.body123 {
+    background-color: #1a1a1a;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  
+  .container {
+    background-color: #1a1a1a;
+    border: 2px solid #ff8000;
+    border-radius: 15px;
+    padding: 30px 20px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(255, 128, 0, 0.8);
+  }
+  
+  .logo {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  
+  .logo img {
+    width: 100%;
+    height: auto;
+  }
+  
+  .input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+  }
+  
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 14px;
+    max-width: 80px;
+  }
+  
+  
+  
+  .button {
+    width: 100%;
+    padding: 10px;
+    background-color: #ff8000;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+  
+  .button:hover {
+    background-color: #e67300;
+  }
+  
+  .a {
+    color: #ff8000;
+    text-decoration: none;
+    display: block;
+    margin-top: 5px;
+  }
+  
+  .a:hover {
+    text-decoration: underline;
+  }
+  
+  .message {
+    color: #ff4d4d;
+    margin-bottom: 10px;
+  }
+  

@@ -10,16 +10,20 @@ const multer = require('multer');
 // Configuração do Multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = 'uploads/cursos/conteudos_curso';
+    // Inicialmente salvar em diretório temporário
+    // O arquivo será movido para o diretório correto depois de processar os metadados
+    const dir = 'uploads/temp';
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     cb(null, dir);
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    // Manter o nome original do arquivo, mas adicionar timestamp para evitar conflitos
+    const originalName = file.originalname;
+    const timestamp = Date.now();
+    const fileName = `${timestamp}-${originalName}`;
+    cb(null, fileName);
   }
 });
 
@@ -181,7 +185,6 @@ const getConteudoById = async (req, res) => {
 };
 
 // Obter todos os conteúdos de um curso específico
-// Obter todos os conteúdos de um curso específico (versão simplificada)
 const getConteudosByCurso = async (req, res) => {
   try {
     const cursoId = req.params.cursoId;
@@ -317,7 +320,7 @@ const createConteudo = async (req, res) => {
       return res.status(404).json({ message: 'Curso não encontrado' });
     }
 
-    // Verificar se a pasta pertence ao tópico do curso
+    // Buscar o tópico para obter a estrutura completa do diretório
     const topico = await TopicoCurso.findByPk(pasta.id_topico);
     if (!topico || topico.id_curso !== parseInt(id_curso)) {
       return res.status(400).json({ 
@@ -330,6 +333,30 @@ const createConteudo = async (req, res) => {
       return res.status(400).json({ 
         message: 'Tipo de conteúdo inválido. Use: file, link ou video' 
       });
+    }
+
+    // Criar estrutura de diretórios
+    const nomeCursoDir = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const nomeTopicoDir = topico.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const nomePastaDir = pasta.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    // Caminho completo para a pasta de conteúdo
+    const conteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+    
+    // Garantir que o diretório exista
+    if (!fs.existsSync(conteudoDir)) {
+      fs.mkdirSync(conteudoDir, { recursive: true });
     }
 
     // Preparar o objeto para criação
@@ -347,7 +374,17 @@ const createConteudo = async (req, res) => {
       if (!req.file) {
         return res.status(400).json({ message: 'Arquivo não enviado' });
       }
-      conteudoData.arquivo_path = req.file.path;
+      
+      // Mover o arquivo do diretório temporário para o diretório correto
+      const tempPath = req.file.path;
+      const fileName = path.basename(tempPath);
+      const destPath = path.join(conteudoDir, fileName);
+      
+      // Mover o arquivo
+      fs.renameSync(tempPath, destPath);
+      
+      // Armazenar o caminho relativo no banco de dados
+      conteudoData.arquivo_path = destPath;
     } else if (tipo === 'link' || tipo === 'video') {
       if (!url) {
         return res.status(400).json({ message: 'URL é obrigatória para tipos link e video' });
@@ -399,27 +436,49 @@ const updateConteudo = async (req, res) => {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Verificar se a pasta existe (se estiver mudando)
+    // Buscar informações para o diretório
+    const pastaAtual = await PastaCurso.findByPk(conteudo.id_pasta);
+    const topicoAtual = pastaAtual ? await TopicoCurso.findByPk(pastaAtual.id_topico) : null;
+    const cursoAtual = topicoAtual ? await Curso.findByPk(topicoAtual.id_curso) : null;
+
+    // Variáveis para controlar a mudança de localização
+    let pastaAlvo = pastaAtual;
+    let topicoAlvo = topicoAtual;
+    let cursoAlvo = cursoAtual;
+    let precisaMoverArquivo = false;
+
+    // Verificar se está mudando de pasta
     if (id_pasta && id_pasta !== conteudo.id_pasta) {
-      const pasta = await PastaCurso.findByPk(id_pasta);
-      if (!pasta) {
+      pastaAlvo = await PastaCurso.findByPk(id_pasta);
+      if (!pastaAlvo) {
         return res.status(404).json({ message: 'Pasta não encontrada' });
       }
       
-      // Verificar se a pasta pertence ao curso
-      const topico = await TopicoCurso.findByPk(pasta.id_topico);
-      if (!topico || topico.id_curso !== parseInt(id_curso || conteudo.id_curso)) {
-        return res.status(400).json({ 
-          message: 'A pasta selecionada não pertence a este curso' 
-        });
+      topicoAlvo = await TopicoCurso.findByPk(pastaAlvo.id_topico);
+      if (!topicoAlvo) {
+        return res.status(404).json({ message: 'Tópico não encontrado' });
       }
-    }
-
-    // Verificar se o curso existe (se estiver mudando)
-    if (id_curso && id_curso !== conteudo.id_curso) {
-      const curso = await Curso.findByPk(id_curso);
-      if (!curso) {
+      
+      cursoAlvo = await Curso.findByPk(topicoAlvo.id_curso);
+      if (!cursoAlvo) {
         return res.status(404).json({ message: 'Curso não encontrado' });
+      }
+      
+      precisaMoverArquivo = true;
+    }
+    
+    // Verificar se está mudando de curso (e a pasta não foi alterada)
+    else if (id_curso && id_curso !== conteudo.id_curso) {
+      cursoAlvo = await Curso.findByPk(id_curso);
+      if (!cursoAlvo) {
+        return res.status(404).json({ message: 'Curso não encontrado' });
+      }
+      
+      // Se a pasta atual pertence ao novo curso
+      if (topicoAtual && topicoAtual.id_curso !== parseInt(id_curso)) {
+        return res.status(400).json({ 
+          message: 'A pasta atual não pertence ao novo curso' 
+        });
       }
     }
 
@@ -433,6 +492,33 @@ const updateConteudo = async (req, res) => {
     if (id_curso !== undefined) dadosAtualizacao.id_curso = id_curso;
     if (ordem !== undefined) dadosAtualizacao.ordem = ordem;
     if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+
+    // Determinar o diretório de destino correto (para caso de movimentação)
+    let novoConteudoDir = '';
+    
+    if (cursoAlvo && topicoAlvo && pastaAlvo) {
+      const nomeCursoDir = cursoAlvo.nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      
+      const nomeTopicoDir = topicoAlvo.nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      
+      const nomePastaDir = pastaAlvo.nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      
+      novoConteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+      
+      // Garantir que o diretório de destino exista
+      if (!fs.existsSync(novoConteudoDir)) {
+        fs.mkdirSync(novoConteudoDir, { recursive: true });
+      }
+    }
 
     // Se estiver mudando o tipo, verificar os campos necessários
     if (tipo !== undefined && tipo !== conteudo.tipo) {
@@ -457,7 +543,26 @@ const updateConteudo = async (req, res) => {
           if (conteudo.arquivo_path && fs.existsSync(conteudo.arquivo_path)) {
             fs.unlinkSync(conteudo.arquivo_path);
           }
-          dadosAtualizacao.arquivo_path = req.file.path;
+          
+          // Mover o novo arquivo para o diretório correto
+          const tempPath = req.file.path;
+          const fileName = path.basename(tempPath);
+          const destPath = path.join(novoConteudoDir, fileName);
+          
+          fs.renameSync(tempPath, destPath);
+          dadosAtualizacao.arquivo_path = destPath;
+        } else if (precisaMoverArquivo && conteudo.arquivo_path) {
+          // Mover o arquivo existente para nova localização
+          const fileName = path.basename(conteudo.arquivo_path);
+          const novoPath = path.join(novoConteudoDir, fileName);
+          
+          // Copiar arquivo para nova localização se existir
+          if (fs.existsSync(conteudo.arquivo_path)) {
+            fs.copyFileSync(conteudo.arquivo_path, novoPath);
+            fs.unlinkSync(conteudo.arquivo_path);
+          }
+          
+          dadosAtualizacao.arquivo_path = novoPath;
         }
       } else {
         if (!url && !conteudo.url) {
@@ -480,7 +585,26 @@ const updateConteudo = async (req, res) => {
           if (conteudo.arquivo_path && fs.existsSync(conteudo.arquivo_path)) {
             fs.unlinkSync(conteudo.arquivo_path);
           }
-          dadosAtualizacao.arquivo_path = req.file.path;
+          
+          // Mover o novo arquivo para o diretório correto
+          const tempPath = req.file.path;
+          const fileName = path.basename(tempPath);
+          const destPath = path.join(novoConteudoDir || path.dirname(conteudo.arquivo_path), fileName);
+          
+          fs.renameSync(tempPath, destPath);
+          dadosAtualizacao.arquivo_path = destPath;
+        } else if (precisaMoverArquivo && conteudo.arquivo_path) {
+          // Mover o arquivo existente para nova localização
+          const fileName = path.basename(conteudo.arquivo_path);
+          const novoPath = path.join(novoConteudoDir, fileName);
+          
+          // Copiar arquivo para nova localização se existir
+          if (fs.existsSync(conteudo.arquivo_path)) {
+            fs.copyFileSync(conteudo.arquivo_path, novoPath);
+            fs.unlinkSync(conteudo.arquivo_path);
+          }
+          
+          dadosAtualizacao.arquivo_path = novoPath;
         }
       } else if ((tipo === 'link' || tipo === 'video' || 
                 conteudo.tipo === 'link' || conteudo.tipo === 'video') && 

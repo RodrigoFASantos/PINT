@@ -12,11 +12,25 @@ const fs = require("fs");
 // Configuração do upload para cursos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/cursos/");
+    // Criar diretório específico para o curso
+    const nomeCurso = req.body.nome
+      ? req.body.nome
+          .toLowerCase()
+          .replace(/ /g, "-")
+          .replace(/[^\w-]+/g, "")
+      : Date.now();
+
+    const cursoDir = `uploads/cursos/${nomeCurso}`;
+    
+    // Criar diretório se não existir
+    if (!fs.existsSync(cursoDir)) {
+      fs.mkdirSync(cursoDir, { recursive: true });
+    }
+    
+    cb(null, cursoDir);
   },
   filename: (req, file, cb) => {
     // Usar o nome do curso como nome do arquivo (convertendo para slug)
-    // Pegar nome do curso do body
     const nomeCurso = req.body.nome
       ? req.body.nome
           .toLowerCase()
@@ -25,8 +39,9 @@ const storage = multer.diskStorage({
       : Date.now(); // Fallback para timestamp se não houver nome
 
     // Verificar se já existe um arquivo com esse nome e removê-lo
-    const filename = `${nomeCurso}.png`;
-    const filePath = path.join("uploads/cursos/", filename);
+    const filename = `capa.png`;
+    const cursoDir = `uploads/cursos/${nomeCurso}`;
+    const filePath = path.join(cursoDir, filename);
     
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);

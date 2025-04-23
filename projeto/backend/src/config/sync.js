@@ -32,52 +32,57 @@ const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
 
 // Criar tabelas diretamente com SQL em vez de usar sync do Sequelize
 // Modificado para usar IF NOT EXISTS em todos os lugares e DROP INDEX IF EXISTS
-const createTablesSQL = `
--- Remover índices se existirem para evitar conflitos
-DROP INDEX IF EXISTS idx_topicos_curso_curso;
-DROP INDEX IF EXISTS idx_pastas_curso_topico;
-DROP INDEX IF EXISTS idx_conteudos_curso_pasta;
-
--- Criar tabela para tópicos do curso
-CREATE TABLE IF NOT EXISTS curso_topico (
-  id_topico SERIAL PRIMARY KEY,
-  nome VARCHAR(150) NOT NULL,
-  id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
-  ordem INTEGER NOT NULL DEFAULT 1,
-  ativo BOOLEAN NOT NULL DEFAULT TRUE,
-  arquivo_path VARCHAR(500)
-);
-
--- Criar tabela para pastas
-CREATE TABLE IF NOT EXISTS curso_topico_pasta (
-  id_pasta SERIAL PRIMARY KEY,
-  nome VARCHAR(150) NOT NULL,
-  id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
-  ordem INTEGER NOT NULL DEFAULT 1,
-  ativo BOOLEAN NOT NULL DEFAULT TRUE,
-  arquivo_path VARCHAR(500)
-);
-
--- Criar tabela para conteúdos
-CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
-  id_conteudo SERIAL PRIMARY KEY,
-  titulo VARCHAR(255) NOT NULL,
-  descricao TEXT,
-  tipo VARCHAR(10) NOT NULL,
-  url VARCHAR(500),
-  arquivo_path VARCHAR(500),
-  id_pasta INTEGER NOT NULL REFERENCES curso_topico_pasta(id_pasta) ON DELETE CASCADE,
-  id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
-  data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  ordem INTEGER NOT NULL DEFAULT 1,
-  ativo BOOLEAN NOT NULL DEFAULT TRUE
-);
-
--- Criar índices para otimizar consultas
-CREATE INDEX IF NOT EXISTS idx_topicos_curso_curso ON curso_topico(id_curso);
-CREATE INDEX IF NOT EXISTS idx_pastas_curso_topico ON curso_topico_pasta(id_topico);
-CREATE INDEX IF NOT EXISTS idx_conteudos_curso_pasta ON curso_topico_pasta_conteudo(id_pasta);
-`;
+const createTablesSQL = [
+  // Remover índices se existirem para evitar conflitos
+  "DROP INDEX IF EXISTS idx_topicos_curso_curso;",
+  "DROP INDEX IF EXISTS idx_pastas_curso_topico;",
+  "DROP INDEX IF EXISTS idx_conteudos_curso_pasta;",
+  
+  // Adicionar coluna dir_path à tabela curso se não existir
+  "ALTER TABLE curso ADD COLUMN IF NOT EXISTS dir_path VARCHAR(500);",
+  
+  // Criar tabela para tópicos do curso
+  `CREATE TABLE IF NOT EXISTS curso_topico (
+    id_topico SERIAL PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
+    ordem INTEGER NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    arquivo_path VARCHAR(500),
+    dir_path VARCHAR(500)
+  );`,
+  
+  // Criar tabela para pastas
+  `CREATE TABLE IF NOT EXISTS curso_topico_pasta (
+    id_pasta SERIAL PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
+    ordem INTEGER NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    arquivo_path VARCHAR(500),
+    dir_path VARCHAR(500)
+  );`,
+  
+  // Criar tabela para conteúdos
+  `CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
+    id_conteudo SERIAL PRIMARY KEY,
+    titulo VARCHAR(255) NOT NULL,
+    descricao TEXT,
+    tipo VARCHAR(10) NOT NULL,
+    url VARCHAR(500),
+    arquivo_path VARCHAR(500),
+    id_pasta INTEGER NOT NULL REFERENCES curso_topico_pasta(id_pasta) ON DELETE CASCADE,
+    id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
+    data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    ordem INTEGER NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+  );`,
+  
+  // Criar índices para otimizar consultas
+  "CREATE INDEX IF NOT EXISTS idx_topicos_curso_curso ON curso_topico(id_curso);",
+  "CREATE INDEX IF NOT EXISTS idx_pastas_curso_topico ON curso_topico_pasta(id_topico);",
+  "CREATE INDEX IF NOT EXISTS idx_conteudos_curso_pasta ON curso_topico_pasta_conteudo(id_pasta);"
+];
 
 // Execute SQL statements in sequence
 const executeSQLStatements = async (statements) => {
@@ -116,9 +121,25 @@ const prepareSQLStatements = (sqlScript) => {
   return statements;
 };
 
-// Divide o SQL de criação de tabelas em comandos separados
-const prepareCreateTableStatements = () => {
-  return createTablesSQL.split(';').filter(stmt => stmt.trim().length > 0).map(stmt => stmt.trim() + ';');
+// Função para criar estrutura de diretórios necessária
+const createDirectoryStructure = () => {
+  console.log("Criando estrutura de diretórios para cursos...");
+  const baseDir = 'uploads/cursos';
+  
+  // Garantir que o diretório base existe
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+    console.log(`Diretório criado: ${baseDir}`);
+  }
+  
+  // Criar diretório temporário para uploads intermediários
+  const tempDir = 'uploads/temp';
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+    console.log(`Diretório temporário criado: ${tempDir}`);
+  }
+  
+  console.log("Estrutura de diretórios base criada!");
 };
 
 (async () => {
@@ -134,6 +155,9 @@ const prepareCreateTableStatements = () => {
       process.exit(1);
     }
 
+    // Criar estrutura de diretórios necessária
+    createDirectoryStructure();
+
     // Sincroniza e recria todas as tabelas existentes (force: true)
     console.log("Apagando todas as tabelas e dados existentes...");
     await sequelize.sync({ force: true });
@@ -141,8 +165,7 @@ const prepareCreateTableStatements = () => {
 
     // Separar as instruções SQL de criação de tabelas
     console.log("Criando tabelas para conteúdos de cursos...");
-    const createTableStatements = prepareCreateTableStatements();
-    await executeSQLStatements(createTableStatements);
+    await executeSQLStatements(createTablesSQL);
     console.log("Tabelas de conteúdos criadas com sucesso!");
 
     // Preparar e executar os dados de teste

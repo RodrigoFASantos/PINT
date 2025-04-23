@@ -1,5 +1,9 @@
 const PastaCurso = require("../database/models/PastaCurso");
+const TopicoCurso = require("../database/models/TopicoCurso");
+const Curso = require("../database/models/Curso");
 const ConteudoCurso = require("../database/models/ConteudoCurso");
+const fs = require('fs');
+const path = require('path');
 
 // Criar uma nova pasta
 const createPasta = async (req, res) => {
@@ -10,10 +14,45 @@ const createPasta = async (req, res) => {
       return res.status(400).json({ message: "Nome e ID do tópico são obrigatórios" });
     }
 
+    // Buscar informações do tópico e curso para criar o caminho do diretório
+    const topico = await TopicoCurso.findByPk(id_topico);
+    if (!topico) {
+      return res.status(404).json({ message: "Tópico não encontrado" });
+    }
+
+    const curso = await Curso.findByPk(topico.id_curso);
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado" });
+    }
+
+    // Criar caminho para o diretório da pasta
+    const nomeCursoDir = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const nomeTopicoDir = topico.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const nomePastaDir = nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    const pastaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+    
+    // Criar diretório se não existir
+    if (!fs.existsSync(pastaDir)) {
+      fs.mkdirSync(pastaDir, { recursive: true });
+    }
+
     const novaPasta = await PastaCurso.create({
       nome,
       id_topico,
-      ordem: ordem || 1
+      ordem: ordem || 1,
+      dir_path: pastaDir // Salvar o caminho do diretório
     });
 
     res.status(201).json({ message: "Pasta criada com sucesso", pasta: novaPasta });
@@ -98,6 +137,52 @@ const updatePasta = async (req, res) => {
 
     if (!pasta) {
       return res.status(404).json({ message: "Pasta não encontrada" });
+    }
+
+    // Se estiver mudando o nome, atualizar também o diretório
+    if (nome !== undefined && nome !== pasta.nome) {
+      // Buscar o tópico e curso para obter o caminho completo
+      const topico = await TopicoCurso.findByPk(pasta.id_topico);
+      if (topico) {
+        const curso = await Curso.findByPk(topico.id_curso);
+        if (curso) {
+          const nomeCursoDir = curso.nome
+            .toLowerCase()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
+          
+          const nomeTopicoDir = topico.nome
+            .toLowerCase()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
+          
+          const nomePastaAntigaDir = pasta.nome
+            .toLowerCase()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
+          
+          const nomePastaNovaDir = nome
+            .toLowerCase()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
+          
+          const pastaAntigaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`;
+          const pastaNovaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`;
+          
+          // Se o diretório antigo existir, renomear para o novo nome
+          if (fs.existsSync(pastaAntigaDir)) {
+            fs.renameSync(pastaAntigaDir, pastaNovaDir);
+          } else {
+            // Se não existir, criar o novo diretório
+            if (!fs.existsSync(pastaNovaDir)) {
+              fs.mkdirSync(pastaNovaDir, { recursive: true });
+            }
+          }
+          
+          // Atualizar o caminho do diretório no banco de dados
+          pasta.dir_path = pastaNovaDir;
+        }
+      }
     }
 
     // Atualizar campos

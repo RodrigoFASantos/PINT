@@ -1,0 +1,52 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+  background: #f8f9fa; /* cor de fundo visível */
+  z-index: 100;
+  background-color: white;
+}
+
+/* Agrupamento dos ícones à direita */
+.navbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: transparent; /* fundo da zona dos ícones */
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+}
+
+/* Botão de ícone sem bordas nem transições */
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.icon-btn i {
+  font-size: 18px;
+  color: #000;
+  transition: none;
+  border: none;
+  outline: none;
+}
+
+/* Avatar */
+.user-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+  box-shadow: none;
+}
