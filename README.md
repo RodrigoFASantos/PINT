@@ -9,3 +9,11 @@ nodemon server.js
 # Frontend
 Executar o front:
 npm start
+
+
+# Mobile
+Executar o projeto:
+flutter run
+
+Executar o emulator no cmd:
+.\emulator -avd android34
