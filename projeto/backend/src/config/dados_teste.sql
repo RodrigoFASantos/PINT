@@ -13,25 +13,25 @@ VALUES
 INSERT INTO utilizadores (id_cargo, nome, idade, email, telefone, password, primeiro_login, foto_perfil, foto_capa)
 VALUES
   -- Administradores
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 1, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rareura', 25, 'fe@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/fe@gmail.com_AVATAR.png', 'uploads/users/fe@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rodrigo', 25, 'ro@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/ro@gmail.com_AVATAR.png', 'uploads/users/ro@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', TRUE, 'AVATAR.png', 'CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rareura', 25, 'fe@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/fe@gmail.com_AVATAR.png', 'uploads/users/fe@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rodrigo', 25, 'ro@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ro@gmail.com_AVATAR.png', 'uploads/users/ro@gmail.com_CAPA.png'),
   
   -- Formadores
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 1, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Carla Pereira', 38, 'carla@gmail.com', '923456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/carla@gmail.com_AVATAR.png', 'uploads/users/carla@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Miguel Santos', 42, 'miguel@gmail.com', '933456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/miguel@gmail.com_AVATAR.png', 'uploads/users/miguel@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Sara Oliveira', 35, 'sara@gmail.com', '943456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/sara@gmail.com_AVATAR.png', 'uploads/users/sara@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', TRUE, 'AVATAR.png', 'CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Carla Pereira', 38, 'carla@gmail.com', '923456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/carla@gmail.com_AVATAR.png', 'uploads/users/carla@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Miguel Santos', 42, 'miguel@gmail.com', '933456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/miguel@gmail.com_AVATAR.png', 'uploads/users/miguel@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Sara Oliveira', 35, 'sara@gmail.com', '943456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sara@gmail.com_AVATAR.png', 'uploads/users/sara@gmail.com_CAPA.png'),
   
   -- Formandos
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'João Silva', 28, 'joao@gmail.com', '953456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/joao@gmail.com_AVATAR.png', 'uploads/users/joao@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ana Martins', 24, 'ana@gmail.com', '963456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/ana@gmail.com_AVATAR.png', 'uploads/users/ana@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Pedro Costa', 31, 'pedro@gmail.com', '973456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/pedro@gmail.com_AVATAR.png', 'uploads/users/pedro@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Sofia Nunes', 26, 'sofia@gmail.com', '983456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/sofia@gmail.com_AVATAR.png', 'uploads/users/sofia@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ricardo Ferreira', 29, 'ricardo@gmail.com', '993456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/ricardo@gmail.com_AVATAR.png', 'uploads/users/ricardo@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Mariana Lopes', 27, 'mariana@gmail.com', '913456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/mariana@gmail.com_AVATAR.png', 'uploads/users/mariana@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Luís Rodrigues', 33, 'luis@gmail.com', '913456788', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', 0, 'uploads/users/luis@gmail.com_AVATAR.png', 'uploads/users/luis@gmail.com_CAPA.png');
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'AVATAR.png', 'CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'João Silva', 28, 'joao@gmail.com', '953456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/joao@gmail.com_AVATAR.png', 'uploads/users/joao@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ana Martins', 24, 'ana@gmail.com', '963456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ana@gmail.com_AVATAR.png', 'uploads/users/ana@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Pedro Costa', 31, 'pedro@gmail.com', '973456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/pedro@gmail.com_AVATAR.png', 'uploads/users/pedro@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Sofia Nunes', 26, 'sofia@gmail.com', '983456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sofia@gmail.com_AVATAR.png', 'uploads/users/sofia@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ricardo Ferreira', 29, 'ricardo@gmail.com', '993456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ricardo@gmail.com_AVATAR.png', 'uploads/users/ricardo@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Mariana Lopes', 27, 'mariana@gmail.com', '913456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/mariana@gmail.com_AVATAR.png', 'uploads/users/mariana@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Luís Rodrigues', 33, 'luis@gmail.com', '913456788', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/luis@gmail.com_AVATAR.png', 'uploads/users/luis@gmail.com_CAPA.png');
 
 -- =============================================
 -- 3. CATEGORIAS
@@ -549,12 +549,22 @@ SELECT u.id_utilizador, c.id_curso, NOW() - INTERVAL '3 DAY', 'inscrito',
 FROM utilizadores u, curso c
 WHERE u.email = 'pedro@gmail.com' AND c.nome = 'Curso de Vue.js';
 
-INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado, motivacao, expectativas)
-SELECT u.id_utilizador, c.id_curso, NOW() - INTERVAL '2 DAY', 'inscrito',
-       'Preocupado com a segurança das aplicações que desenvolvo.',
-       'Quero aprender a identificar e corrigir vulnerabilidades comuns em aplicações web.'
-FROM utilizadores u, curso c
-WHERE u.email = 'ro@gmail.com' AND c.nome = 'Curso de Vue.js';
+-- Inscrição de ro@gmail.com no Curso de Vue.js
+DO $$
+DECLARE
+    user_id INTEGER;
+    course_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'ro@gmail.com';
+    SELECT id_curso INTO course_id FROM curso WHERE nome = 'Curso de Vue.js';
+    
+    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
+        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado, motivacao, expectativas)
+        VALUES (user_id, course_id, NOW() - INTERVAL '2 DAY', 'inscrito',
+            'Preocupado com a segurança das aplicações que desenvolvo.',
+            'Quero aprender a identificar e corrigir vulnerabilidades comuns em aplicações web.');
+    END IF;
+END $$;
 
 -- Inscrições no curso de Comunicação Assertiva
 INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado, motivacao, expectativas)
@@ -577,13 +587,19 @@ FROM utilizadores u, curso c
 WHERE u.email = 'ricardo@gmail.com' AND c.nome = 'Comunicação Assertiva';
 
 -- Inscrições em Gestão de Equipas Ágeis
-INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
-VALUES (
-  (SELECT id_utilizador FROM utilizadores WHERE email = 'b@gmail.com' LIMIT 1),
-  (SELECT id_curso FROM curso WHERE nome = 'Gestão de Equipas Ágeis' LIMIT 1),
-  NOW() - INTERVAL '7 days',
-  'inscrito'
-);
+DO $$
+DECLARE
+    user_id INTEGER;
+    course_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'b@gmail.com';
+    SELECT id_curso INTO course_id FROM curso WHERE nome = 'Gestão de Equipas Ágeis';
+    
+    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
+        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
+        VALUES (user_id, course_id, NOW() - INTERVAL '7 days', 'inscrito');
+    END IF;
+END $$;
 
 INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado, motivacao, expectativas)
 SELECT u.id_utilizador, c.id_curso, NOW() - INTERVAL '7 DAY', 'inscrito', 
@@ -670,93 +686,122 @@ WHERE u.email = 'joao@gmail.com' AND c.nome = 'Introdução a Investimentos';
 -- 10. INSCRIÇÕES CANCELADAS
 -- =============================================
 
--- Inscrição cancelada para o curso Gestão de Equipas Ágeis
-INSERT INTO inscricao_curso_cancelada (
-  id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-  estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
-)
-SELECT
-  ic.id_inscricao,
-  ic.id_utilizador,
-  ic.id_curso,
-  ic.data_inscricao,
-  NOW(),
-  'cancelado',
-  'Motivo pessoal: indisponibilidade de horário.',
-  'Esperava um curso mais técnico.',
-  NULL,
-  FALSE,
-  3,
-  'Cancelado devido a conflitos de agenda.'
-FROM inscricoes_cursos ic
-WHERE ic.id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'b@gmail.com' LIMIT 1)
-  AND ic.id_curso = (SELECT id_curso FROM curso WHERE nome = 'Gestão de Equipas Ágeis' LIMIT 1)
-ORDER BY ic.id_inscricao DESC
-LIMIT 1;
+-- Cancelamento da inscrição em Gestão de Equipas Ágeis
+DO $$
+DECLARE
+    inscricao_id INTEGER;
+BEGIN
+    -- Buscar ID da inscrição original
+    SELECT id_inscricao INTO inscricao_id
+    FROM inscricoes_cursos
+    WHERE id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'b@gmail.com')
+      AND id_curso = (SELECT id_curso FROM curso WHERE nome = 'Gestão de Equipas Ágeis')
+    ORDER BY id_inscricao DESC
+    LIMIT 1;
+    
+    -- Se existir, criar o cancelamento
+    IF inscricao_id IS NOT NULL THEN
+        INSERT INTO inscricao_curso_cancelada (
+          id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
+          estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
+        )
+        SELECT
+          inscricao_id,
+          id_utilizador,
+          id_curso,
+          data_inscricao,
+          NOW(),
+          'cancelado',
+          'Motivo pessoal: indisponibilidade de horário.',
+          'Esperava um curso mais técnico.',
+          NULL,
+          FALSE,
+          3,
+          'Cancelado devido a conflitos de agenda.'
+        FROM inscricoes_cursos
+        WHERE id_inscricao = inscricao_id;
+    END IF;
+END $$;
 
 -- Criar inscrição que será cancelada para Meditação para o Dia a Dia
-INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
-VALUES (
-  (SELECT id_utilizador FROM utilizadores WHERE email = 'sofia@gmail.com' LIMIT 1),
-  (SELECT id_curso FROM curso WHERE nome = 'Meditação para o Dia a Dia' LIMIT 1),
-  NOW() - INTERVAL '10 days',
-  'inscrito'
-);
-
--- Inserir inscrição cancelada para Meditação para o Dia a Dia
-INSERT INTO inscricao_curso_cancelada (
-  id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-  estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
-)
-SELECT
-  MAX(id_inscricao),
-  id_utilizador,
-  id_curso,
-  data_inscricao,
-  NOW(),
-  'cancelado',
-  'Inscrevi-me no curso errado.',
-  'Esperava um curso mais avançado.',
-  NULL,
-  FALSE,
-  0,
-  'Cancelado por engano na inscrição.'
-FROM inscricoes_cursos 
-WHERE id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'sofia@gmail.com' LIMIT 1)
-  AND id_curso = (SELECT id_curso FROM curso WHERE nome = 'Meditação para o Dia a Dia' LIMIT 1)
-GROUP BY id_utilizador, id_curso, data_inscricao;
+DO $$
+DECLARE
+    user_id INTEGER;
+    course_id INTEGER;
+    inscricao_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'sofia@gmail.com';
+    SELECT id_curso INTO course_id FROM curso WHERE nome = 'Meditação para o Dia a Dia';
+    
+    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
+        -- Inserir a inscrição
+        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
+        VALUES (user_id, course_id, NOW() - INTERVAL '10 days', 'inscrito')
+        RETURNING id_inscricao INTO inscricao_id;
+        
+        -- Inserir o cancelamento se a inscrição foi criada com sucesso
+        IF inscricao_id IS NOT NULL THEN
+            INSERT INTO inscricao_curso_cancelada (
+              id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
+              estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
+            )
+            VALUES (
+              inscricao_id,
+              user_id,
+              course_id,
+              NOW() - INTERVAL '10 days',
+              NOW(),
+              'cancelado',
+              'Inscrevi-me no curso errado.',
+              'Esperava um curso mais avançado.',
+              NULL,
+              FALSE,
+              0,
+              'Cancelado por engano na inscrição.'
+            );
+        END IF;
+    END IF;
+END $$;
 
 -- Criar inscrição que será cancelada para SEO para Iniciantes
-INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
-VALUES (
-  (SELECT id_utilizador FROM utilizadores WHERE email = 'luis@gmail.com' LIMIT 1),
-  (SELECT id_curso FROM curso WHERE nome = 'SEO para Iniciantes' LIMIT 1),
-  NOW() - INTERVAL '8 days',
-  'inscrito'
-);
-
--- Inserir inscrição cancelada para SEO para Iniciantes
-INSERT INTO inscricao_curso_cancelada (
-  id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-  estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
-)
-SELECT
-  MAX(id_inscricao),
-  id_utilizador,
-  id_curso,
-  data_inscricao,
-  NOW(),
-  'cancelado',
-  'Preciso me dedicar a outros cursos no momento.',
-  'Esperava aprender SEO para melhorar meu site pessoal.',
-  NULL,
-  FALSE,
-  2,
-  'Indisponibilidade de tempo para acompanhar o curso.'
-FROM inscricoes_cursos 
-WHERE id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'luis@gmail.com' LIMIT 1)
-  AND id_curso = (SELECT id_curso FROM curso WHERE nome = 'SEO para Iniciantes' LIMIT 1)
-GROUP BY id_utilizador, id_curso, data_inscricao;
+DO $$
+DECLARE
+    user_id INTEGER;
+    course_id INTEGER;
+    inscricao_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'luis@gmail.com';
+    SELECT id_curso INTO course_id FROM curso WHERE nome = 'SEO para Iniciantes';
+    
+    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
+        -- Inserir a inscrição
+        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
+        VALUES (user_id, course_id, NOW() - INTERVAL '8 days', 'inscrito')
+        RETURNING id_inscricao INTO inscricao_id;
+        
+        -- Inserir o cancelamento se a inscrição foi criada com sucesso
+        IF inscricao_id IS NOT NULL THEN
+            INSERT INTO inscricao_curso_cancelada (
+              id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
+              estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
+            )
+            VALUES (
+              inscricao_id,
+              user_id,
+              course_id,
+              NOW() - INTERVAL '8 days',
+              NOW(),
+              'cancelado',
+              'Preciso me dedicar a outros cursos no momento.',
+              'Esperava aprender SEO para melhorar meu site pessoal.',
+              NULL,
+              FALSE,
+              2,
+              'Indisponibilidade de tempo para acompanhar o curso.'
+            );
+        END IF;
+    END IF;
+END $$;
 
 -- =============================================
 -- 11. QUIZZES E PERGUNTAS
@@ -1009,90 +1054,91 @@ VALUES
 -- =============================================
 
 -- Comentários para o tópico "Como começar com React?"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Essa é uma ótima questão! Para começar com React, recomendo a documentação oficial e alguns tutoriais.', NOW()
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Formador';
+DO $$
+DECLARE
+    topico_id INTEGER;
+    user_id INTEGER;
+BEGIN
+    SELECT t.id_topico, u.id_utilizador 
+    INTO topico_id, user_id
+    FROM topicos_categorias t, utilizadores u
+    WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Formador'
+    LIMIT 1;
+    
+    IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
+        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        VALUES (topico_id, user_id, 'Essa é uma ótima questão! Para começar com React, recomendo a documentação oficial e alguns tutoriais.', NOW());
+    END IF;
+END $$;
 
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Obrigado pelas dicas! Vou começar a estudar hoje mesmo.', NOW() + INTERVAL '1 hour'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Formando';
+DO $$
+DECLARE
+    topico_id INTEGER;
+    user_id INTEGER;
+BEGIN
+    SELECT t.id_topico, u.id_utilizador 
+    INTO topico_id, user_id
+    FROM topicos_categorias t, utilizadores u
+    WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Formando'
+    LIMIT 1;
+    
+    IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
+        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        VALUES (topico_id, user_id, 'Obrigado pelas dicas! Vou começar a estudar hoje mesmo.', NOW() + INTERVAL '1 hour');
+    END IF;
+END $$;
 
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Estou tendo dificuldades para entender os hooks no React. Alguém poderia explicar de forma mais simples?', NOW() - INTERVAL '3 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Pedro Costa';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Hooks são funções especiais que permitem usar estado e outras características do React sem escrever uma classe. O useState é o mais básico, permite adicionar estado a componentes funcionais.', NOW() - INTERVAL '2 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Sara Oliveira';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Obrigado pela explicação! Agora faz mais sentido. Vou praticar mais com os exemplos da documentação.', NOW() - INTERVAL '1 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Pedro Costa';
+DO $$
+DECLARE
+    topico_id INTEGER;
+    user_id INTEGER;
+BEGIN
+    SELECT t.id_topico, u.id_utilizador 
+    INTO topico_id, user_id
+    FROM topicos_categorias t, utilizadores u
+    WHERE t.titulo = 'Como começar com React?' AND u.nome = 'Pedro Costa'
+    LIMIT 1;
+    
+    IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
+        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        VALUES (topico_id, user_id, 'Estou tendo dificuldades para entender os hooks no React. Alguém poderia explicar de forma mais simples?', NOW() - INTERVAL '3 DAY');
+    END IF;
+END $$;
 
 -- Comentários para o tópico "Empatia no ambiente de trabalho"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Como vocês praticam empatia no ambiente de trabalho remoto? Tenho achado desafiador sem a interação presencial.', NOW() - INTERVAL '5 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Empatia no ambiente de trabalho' AND u.nome = 'Sofia Nunes';
+DO $$
+DECLARE
+    topico_id INTEGER;
+    user_id INTEGER;
+BEGIN
+    SELECT t.id_topico, u.id_utilizador 
+    INTO topico_id, user_id
+    FROM topicos_categorias t, utilizadores u
+    WHERE t.titulo = 'Empatia no ambiente de trabalho' AND u.nome = 'Sofia Nunes'
+    LIMIT 1;
+    
+    IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
+        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        VALUES (topico_id, user_id, 'Como vocês praticam empatia no ambiente de trabalho remoto? Tenho achado desafiador sem a interação presencial.', NOW() - INTERVAL '5 DAY');
+    END IF;
+END $$;
 
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Uma técnica que uso é fazer check-ins emocionais no início das reuniões. Perguntar como as pessoas estão se sentindo realmente, não só profissionalmente.', NOW() - INTERVAL '4 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Empatia no ambiente de trabalho' AND u.nome = 'Carla Pereira';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Também acho importante ter momentos informais virtuais, como cafés ou happy hours online. Ajuda a manter as conexões pessoais.', NOW() - INTERVAL '3 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Empatia no ambiente de trabalho' AND u.nome = 'Mariana Lopes';
-
--- Comentários para o tópico "Melhores práticas em Python"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Acho que a legibilidade do código é fundamental. Prefiro código mais explícito do que compacto e difícil de entender.', NOW() - INTERVAL '2 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Melhores práticas em Python' AND u.nome = 'João Silva';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Concordo! E também é importante seguir a PEP 8 para manter um estilo consistente.', NOW() - INTERVAL '1 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Melhores práticas em Python' AND u.nome = 'Formador';
-
--- Comentários para o tópico "Estratégias de marketing para pequenos negócios"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Para pequenos negócios, o marketing de conteúdo costuma dar ótimos resultados com custo relativamente baixo.', NOW() - INTERVAL '3 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Estratégias de marketing para pequenos negócios' AND u.nome = 'Formador Rodrigo';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Também não podemos esquecer do marketing local e parcerias com outros pequenos negócios.', NOW() - INTERVAL '2 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Estratégias de marketing para pequenos negócios' AND u.nome = 'Ricardo Ferreira';
-
--- Comentários para o tópico "Tendências de UI/UX para 2025"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Acredito que interfaces minimalistas e foco em acessibilidade continuarão sendo tendências fortes.', NOW() - INTERVAL '2 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Tendências de UI/UX para 2025' AND u.nome = 'Formador Rareura';
-
--- Comentários para o tópico "Investimentos para iniciantes"
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Para iniciantes com pouco capital, recomendo começar com investimentos de renda fixa mais seguros.', NOW() - INTERVAL '3 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Investimentos para iniciantes' AND u.nome = 'Miguel Santos';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Qual valor vocês recomendam como mínimo para começar a investir?', NOW() - INTERVAL '2 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Investimentos para iniciantes' AND u.nome = 'Sofia Nunes';
-
-INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
-SELECT t.id_topico, u.id_utilizador, 'Não existe um valor mínimo ideal. O importante é começar, mesmo que com pequenas quantias, e ir aprendendo ao longo do tempo.', NOW() - INTERVAL '1 DAY'
-FROM topicos_categorias t, utilizadores u
-WHERE t.titulo = 'Investimentos para iniciantes' AND u.nome = 'Miguel Santos';
+DO $$
+DECLARE
+    topico_id INTEGER;
+    user_id INTEGER;
+BEGIN
+    SELECT t.id_topico, u.id_utilizador 
+    INTO topico_id, user_id
+    FROM topicos_categorias t, utilizadores u
+    WHERE t.titulo = 'Empatia no ambiente de trabalho' AND u.nome = 'Carla Pereira'
+    LIMIT 1;
+    
+    IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
+        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        VALUES (topico_id, user_id, 'Uma técnica que uso é fazer check-ins emocionais no início das reuniões. Perguntar como as pessoas estão se sentindo realmente, não só profissionalmente.', NOW() - INTERVAL '4 DAY');
+    END IF;
+END $$;
 
 -- =============================================
 -- 14. TIPOS DE CONTEÚDO
@@ -1110,34 +1156,38 @@ VALUES
 -- 15. SUBSCRIÇÕES DE NOTIFICAÇÕES
 -- =============================================
 
-INSERT INTO push_subscriptions (id_utilizador, endpoint, p256dh, auth, created_at)
-VALUES
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
-   'https://exemplo.com/endpoint-formador', 
-   'chave-p256dh-exemplo-formador', 
-   'chave-auth-exemplo-formador', 
-   NOW()),
-  
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formando' LIMIT 1), 
-   'https://exemplo.com/endpoint-formando', 
-   'chave-p256dh-exemplo-formando', 
-   'chave-auth-exemplo-formando', 
-   NOW()),
-  
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'João Silva' LIMIT 1), 
-   'https://exemplo.com/endpoint-joao', 
-   'chave-p256dh-exemplo-joao', 
-   'chave-auth-exemplo-joao', 
-   NOW()),
-  
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Ana Martins' LIMIT 1), 
-   'https://exemplo.com/endpoint-ana', 
-   'chave-p256dh-exemplo-ana', 
-   'chave-auth-exemplo-ana', 
-   NOW()),
-  
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
-   'https://exemplo.com/endpoint-sara', 
-   'chave-p256dh-exemplo-sara', 
-   'chave-auth-exemplo-sara', 
-   NOW());
+DO $$
+DECLARE
+    user_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE nome = 'Formador' LIMIT 1;
+    
+    IF user_id IS NOT NULL THEN
+        INSERT INTO push_subscriptions (id_utilizador, endpoint, p256dh, auth, created_at)
+        VALUES (user_id, 'https://exemplo.com/endpoint-formador', 'chave-p256dh-exemplo-formador', 'chave-auth-exemplo-formador', NOW());
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    user_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE nome = 'Formando' LIMIT 1;
+    
+    IF user_id IS NOT NULL THEN
+        INSERT INTO push_subscriptions (id_utilizador, endpoint, p256dh, auth, created_at)
+        VALUES (user_id, 'https://exemplo.com/endpoint-formando', 'chave-p256dh-exemplo-formando', 'chave-auth-exemplo-formando', NOW());
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    user_id INTEGER;
+BEGIN
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE nome = 'João Silva' LIMIT 1;
+    
+    IF user_id IS NOT NULL THEN
+        INSERT INTO push_subscriptions (id_utilizador, endpoint, p256dh, auth, created_at)
+        VALUES (user_id, 'https://exemplo.com/endpoint-joao', 'chave-p256dh-exemplo-joao', 'chave-auth-exemplo-joao', NOW());
+    END IF;
+END $$;

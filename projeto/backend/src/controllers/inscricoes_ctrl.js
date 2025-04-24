@@ -1,15 +1,11 @@
 const Inscricao_Curso = require("../database/models/Inscricao_Curso");
+const InscricaoCursoCancelada = require("../database/models/InscricaoCursoCancelada");
 const User = require("../database/models/User");
 const Curso = require("../database/models/Curso");
 const Categoria = require("../database/models/Categoria");
 const Area = require("../database/models/Area");
 const { sendEnrollmentEmail } = require("../utils/emailService");
 const { sequelize } = require("../../config/db");
-
-
-
-
-
 
 // Obter todas as inscrições
 const getAllInscricoes = async (req, res) => {
@@ -70,15 +66,6 @@ const verificarInscricao = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
 
 // Criar uma nova inscrição
 const createInscricao = async (req, res) => {
@@ -182,19 +169,6 @@ const createInscricao = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Cancelar uma inscrição
 const cancelarInscricao = async (req, res) => {
   try {
@@ -219,11 +193,13 @@ const cancelarInscricao = async (req, res) => {
 
     try {
       // Criar entrada na tabela de inscrições canceladas
-      await Inscricao_Curso_Cancelada.create({
+      await InscricaoCursoCancelada.create({
+        // Não definimos id_cancelamento pois é autoincrement
         id_inscricao_original: inscricao.id_inscricao,
         id_utilizador: inscricao.id_utilizador,
         id_curso: inscricao.id_curso,
         data_inscricao: inscricao.data_inscricao,
+        data_cancelamento: new Date(),
         estado: "cancelado",
         motivacao: inscricao.motivacao,
         expectativas: inscricao.expectativas,
@@ -241,15 +217,16 @@ const cancelarInscricao = async (req, res) => {
 
       // Caso o curso tenha limite de vagas, notificar usuários em lista de espera
       const curso = await Curso.findByPk(inscricao.id_curso);
-      if (curso && curso.vagas_disponiveis !== null) {
-        // Notificar próximo usuário na lista de espera (implementar conforme necessário)
-        // Esta lógica pode ser implementada posteriormente
+      if (curso && curso.vagas !== null) {
+        // Incrementar vaga disponível
+        curso.vagas = curso.vagas + 1;
+        await curso.save();
       }
 
       // Notificar o usuário via WebSocket (se disponível)
       if (req.io) {
         req.io.to(`user_${inscricao.id_utilizador}`).emit('inscricao_cancelada', {
-          message: `Sua inscrição no curso "${curso ? curso.titulo : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
+          message: `Sua inscrição no curso "${curso ? curso.nome : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
           id_inscricao: id
         });
       }
@@ -268,8 +245,6 @@ const cancelarInscricao = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao cancelar inscrição" });
   }
 };
-
-
 
 // Buscar inscrições do utilizador logado
 const getInscricoesUtilizador = async (req, res) => {
@@ -343,9 +318,6 @@ const getInscricoesUtilizador = async (req, res) => {
   }
 };
 
-
-
-
 // Função auxiliar para calcular o status do curso
 function calcularStatusCurso(curso) {
   const hoje = new Date();
@@ -381,6 +353,5 @@ const removerInscricoesDoCurso = async (id_curso, transaction) => {
     throw error;
   }
 };
-
 
 module.exports = { getAllInscricoes, createInscricao, cancelarInscricao, getInscricoesUtilizador, removerInscricoesDoCurso, verificarInscricao };

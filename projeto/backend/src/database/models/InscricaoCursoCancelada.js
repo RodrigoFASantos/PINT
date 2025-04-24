@@ -1,3 +1,4 @@
+// src/models/InscricaoCursoCancelada.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -12,14 +13,26 @@ const InscricaoCursoCancelada = sequelize.define(
     id_inscricao_original: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: "inscricoes_cursos",
+        key: "id_inscricao",
+      },
     },
     id_utilizador: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "utilizadores",
+        key: "id_utilizador",
+      },
     },
     id_curso: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "cursos",
+        key: "id_curso",
+      },
     },
     data_inscricao: {
       type: DataTypes.DATE,
@@ -44,7 +57,7 @@ const InscricaoCursoCancelada = sequelize.define(
       allowNull: true,
     },
     nota_final: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(5, 2), // Changed from FLOAT to match other models
       allowNull: true,
     },
     certificado_gerado: {
@@ -53,7 +66,7 @@ const InscricaoCursoCancelada = sequelize.define(
       defaultValue: false,
     },
     horas_presenca: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.INTEGER, // Changed from FLOAT to match other models
       allowNull: true,
       defaultValue: 0,
     },

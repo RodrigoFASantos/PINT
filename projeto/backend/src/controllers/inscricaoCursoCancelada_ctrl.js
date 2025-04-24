@@ -1,7 +1,7 @@
-const Inscricao_Curso_Cancelada = require("../database/models/InscricaoCursoCancelada");
+const InscricaoCursoCancelada = require("../database/models/InscricaoCursoCancelada");
 const User = require("../database/models/User");
 const Curso = require("../database/models/Curso");
-const { Op } = require("sequelize");
+const { Op, sequelize } = require("sequelize");
 
 // Obter todas as inscrições canceladas
 const getInscricoesCanceladas = async (req, res) => {
@@ -34,7 +34,7 @@ const getInscricoesCanceladas = async (req, res) => {
       };
     }
 
-    const { count, rows } = await Inscricao_Curso_Cancelada.findAndCountAll({
+    const { count, rows } = await InscricaoCursoCancelada.findAndCountAll({
       where: filtros,
       limit,
       offset,
@@ -47,7 +47,7 @@ const getInscricoesCanceladas = async (req, res) => {
         {
           model: Curso,
           as: "curso",
-          attributes: ["id_curso", "titulo", "tipo"]
+          attributes: ["id_curso", "nome", "tipo"]
         }
       ],
       order: [["data_cancelamento", "DESC"]]
@@ -70,7 +70,7 @@ const getInscricaoCancelada = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const inscricao = await Inscricao_Curso_Cancelada.findByPk(id, {
+    const inscricao = await InscricaoCursoCancelada.findByPk(id, {
       include: [
         {
           model: User,
@@ -80,7 +80,7 @@ const getInscricaoCancelada = async (req, res) => {
         {
           model: Curso,
           as: "curso",
-          attributes: ["id_curso", "titulo", "tipo", "descricao"]
+          attributes: ["id_curso", "nome", "tipo", "descricao"]
         }
       ]
     });
@@ -119,7 +119,7 @@ const getInscricoesCanceladasByUser = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows } = await Inscricao_Curso_Cancelada.findAndCountAll({
+    const { count, rows } = await InscricaoCursoCancelada.findAndCountAll({
       where: { id_utilizador: userId },
       limit,
       offset,
@@ -127,7 +127,7 @@ const getInscricoesCanceladasByUser = async (req, res) => {
         {
           model: Curso,
           as: "curso",
-          attributes: ["id_curso", "titulo", "tipo", "descricao"]
+          attributes: ["id_curso", "nome", "tipo", "descricao"]
         }
       ],
       order: [["data_cancelamento", "DESC"]]
@@ -167,7 +167,7 @@ const getInscricoesCanceladasByCurso = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows } = await Inscricao_Curso_Cancelada.findAndCountAll({
+    const { count, rows } = await InscricaoCursoCancelada.findAndCountAll({
       where: { id_curso: cursoId },
       limit,
       offset,
@@ -204,16 +204,16 @@ const getEstatisticasCancelamentos = async (req, res) => {
     }
     
     // Contagem total de cancelamentos
-    const totalCancelamentos = await Inscricao_Curso_Cancelada.count();
+    const totalCancelamentos = await InscricaoCursoCancelada.count();
     
     // Cancelamentos por curso
-    const cancelamentosPorCurso = await Inscricao_Curso_Cancelada.findAll({
-      attributes: ['id_curso', [sequelize.fn('COUNT', sequelize.col('id_inscricao_cancelada')), 'total']],
+    const cancelamentosPorCurso = await InscricaoCursoCancelada.findAll({
+      attributes: ['id_curso', [sequelize.fn('COUNT', sequelize.col('id_cancelamento')), 'total']],
       include: [
         {
           model: Curso,
           as: "curso",
-          attributes: ["titulo"]
+          attributes: ["nome"]
         }
       ],
       group: ['id_curso', 'curso.id_curso'],
@@ -225,11 +225,11 @@ const getEstatisticasCancelamentos = async (req, res) => {
     const dataLimite = new Date();
     dataLimite.setMonth(dataLimite.getMonth() - 6);
     
-    const cancelamentosPorMes = await Inscricao_Curso_Cancelada.findAll({
+    const cancelamentosPorMes = await InscricaoCursoCancelada.findAll({
       attributes: [
         [sequelize.fn('MONTH', sequelize.col('data_cancelamento')), 'mes'],
         [sequelize.fn('YEAR', sequelize.col('data_cancelamento')), 'ano'],
-        [sequelize.fn('COUNT', sequelize.col('id_inscricao_cancelada')), 'total']
+        [sequelize.fn('COUNT', sequelize.col('id_cancelamento')), 'total']
       ],
       where: {
         data_cancelamento: {

@@ -1,99 +1,22 @@
 const sequelize = require("../config/db");
 const fs = require('fs');
 const path = require('path');
+const { createTablesInOrder } = require('./criarTabelas');
 
-// Models
-const User = require("../database/models/User");
-const Cargo = require("../database/models/Cargo");
-const Categoria = require("../database/models/Categoria");
-const Area = require("../database/models/Area");
-const Curso = require("../database/models/Curso");
-const Inscricao_Curso = require("../database/models/Inscricao_Curso");
-const Topico_Categoria = require("../database/models/Topico_Categoria");
-const Comentario_Topico = require("../database/models/Comentario_Topico");
-const Trabalho_Entregue = require("../database/models/Trabalho_Entregue");
-const Avaliacao = require("../database/models/Avaliacao");
-const OcorrenciaCurso = require("../database/models/OcorrenciaCurso");
-const PushSubscription = require("../database/models/PushSubscription");
-const Quiz = require("../database/models/Quiz");
-const QuizOpcao = require("../database/models/QuizOpcao");
-const QuizPergunta = require("../database/models/QuizPergunta");
-const QuizResposta = require("../database/models/QuizResposta");
-const QuizRespostaDetalhe = require("../database/models/QuizRespostaDetalhe");
-const TipoConteudo = require("../database/models/TipoConteudo");
-const Inscricao_Curso_Cancelada = require("../database/models/InscricaoCursoCancelada");
-const TopicoCurso = require("../database/models/TopicoCurso");
-const PastaCurso = require("../database/models/PastaCurso");
-const ConteudoCurso = require("../database/models/ConteudoCurso");
-
-// Dados Teste
-const sqlPath = path.join(__dirname, '../seeders/dados_teste.sql');
+// Dados Teste (nova localização)
+const sqlPath = path.join(__dirname, './dados_teste.sql');
 const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
-
-// Criar tabelas diretamente com SQL em vez de usar sync do Sequelize
-// Modificado para usar IF NOT EXISTS em todos os lugares e DROP INDEX IF EXISTS
-const createTablesSQL = [
-  // Remover índices se existirem para evitar conflitos
-  "DROP INDEX IF EXISTS idx_topicos_curso_curso;",
-  "DROP INDEX IF EXISTS idx_pastas_curso_topico;",
-  "DROP INDEX IF EXISTS idx_conteudos_curso_pasta;",
-  
-  // Adicionar coluna dir_path à tabela curso se não existir
-  "ALTER TABLE curso ADD COLUMN IF NOT EXISTS dir_path VARCHAR(500);",
-  
-  // Criar tabela para tópicos do curso
-  `CREATE TABLE IF NOT EXISTS curso_topico (
-    id_topico SERIAL PRIMARY KEY,
-    nome VARCHAR(150) NOT NULL,
-    id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
-    ordem INTEGER NOT NULL DEFAULT 1,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    arquivo_path VARCHAR(500),
-    dir_path VARCHAR(500)
-  );`,
-  
-  // Criar tabela para pastas
-  `CREATE TABLE IF NOT EXISTS curso_topico_pasta (
-    id_pasta SERIAL PRIMARY KEY,
-    nome VARCHAR(150) NOT NULL,
-    id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
-    ordem INTEGER NOT NULL DEFAULT 1,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    arquivo_path VARCHAR(500),
-    dir_path VARCHAR(500)
-  );`,
-  
-  // Criar tabela para conteúdos
-  `CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
-    id_conteudo SERIAL PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    descricao TEXT,
-    tipo VARCHAR(10) NOT NULL,
-    url VARCHAR(500),
-    arquivo_path VARCHAR(500),
-    id_pasta INTEGER NOT NULL REFERENCES curso_topico_pasta(id_pasta) ON DELETE CASCADE,
-    id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
-    data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    ordem INTEGER NOT NULL DEFAULT 1,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE
-  );`,
-  
-  // Criar índices para otimizar consultas
-  "CREATE INDEX IF NOT EXISTS idx_topicos_curso_curso ON curso_topico(id_curso);",
-  "CREATE INDEX IF NOT EXISTS idx_pastas_curso_topico ON curso_topico_pasta(id_topico);",
-  "CREATE INDEX IF NOT EXISTS idx_conteudos_curso_pasta ON curso_topico_pasta_conteudo(id_pasta);"
-];
 
 // Execute SQL statements in sequence
 const executeSQLStatements = async (statements) => {
   for (let i = 0; i < statements.length; i++) {
     const stmt = statements[i];
     try {
-      console.log(`Executando comando SQL ${i+1}/${statements.length}`);
+      console.log(`Executando comando SQL ${i + 1}/${statements.length}`);
       await sequelize.query(stmt);
-      console.log(`Comando SQL ${i+1} executado com sucesso.`);
+      console.log(`Comando SQL ${i + 1} executado com sucesso.`);
     } catch (error) {
-      console.error(`Erro ao executar comando SQL ${i+1}/${statements.length}:`);
+      console.error(`Erro ao executar comando SQL ${i + 1}/${statements.length}:`);
       console.error(stmt);
       console.error(error.message);
       // Continua a execução para permitir que outros comandos sejam tentados
@@ -101,23 +24,60 @@ const executeSQLStatements = async (statements) => {
   }
 };
 
-// Divide o script SQL em comandos individuais
+// Divide o script SQL em comandos individuais, preservando blocos PL/pgSQL
 const prepareSQLStatements = (sqlScript) => {
   const statements = [];
-  const rawStatements = sqlScript.replace(/\r\n/g, '\n').split(';');
-
-  for (let rawStmt of rawStatements) {
-    // Remove comments and trim whitespace
-    const lines = rawStmt.split('\n')
-      .filter(line => !line.trim().startsWith('--'))
-      .join('\n');
+  let currentStatement = '';
+  let inPlpgsqlBlock = false;
+  
+  // Dividir o script em linhas
+  const lines = sqlScript.replace(/\r\n/g, '\n').split('\n');
+  
+  for (let line of lines) {
+    // Ignorar linhas de comentário
+    if (line.trim().startsWith('--')) {
+      continue;
+    }
     
-    const trimmedStmt = lines.trim();
-    if (trimmedStmt) {
-      statements.push(trimmedStmt);
+    // Detectar início de bloco PL/pgSQL
+    if (line.trim().startsWith('DO $$')) {
+      inPlpgsqlBlock = true;
+      currentStatement = line;
+      continue;
+    }
+    
+    // Detectar fim de bloco PL/pgSQL
+    if (inPlpgsqlBlock && line.trim() === 'END $$;') {
+      currentStatement += '\n' + line;
+      statements.push(currentStatement.trim());
+      currentStatement = '';
+      inPlpgsqlBlock = false;
+      continue;
+    }
+    
+    // Se estamos dentro de um bloco PL/pgSQL, adicionar a linha ao bloco
+    if (inPlpgsqlBlock) {
+      currentStatement += '\n' + line;
+      continue;
+    }
+    
+    // Para comandos normais, adicionar a linha e verificar se termina com ponto e vírgula
+    currentStatement += (currentStatement ? '\n' : '') + line;
+    
+    if (line.trim().endsWith(';')) {
+      const trimmedStmt = currentStatement.trim();
+      if (trimmedStmt) {
+        statements.push(trimmedStmt);
+      }
+      currentStatement = '';
     }
   }
-
+  
+  // Adicionar qualquer comando restante
+  if (currentStatement.trim()) {
+    statements.push(currentStatement.trim());
+  }
+  
   return statements;
 };
 
@@ -125,21 +85,95 @@ const prepareSQLStatements = (sqlScript) => {
 const createDirectoryStructure = () => {
   console.log("Criando estrutura de diretórios para cursos...");
   const baseDir = 'uploads/cursos';
-  
+
   // Garantir que o diretório base existe
   if (!fs.existsSync(baseDir)) {
     fs.mkdirSync(baseDir, { recursive: true });
     console.log(`Diretório criado: ${baseDir}`);
   }
-  
+
   // Criar diretório temporário para uploads intermediários
   const tempDir = 'uploads/temp';
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
     console.log(`Diretório temporário criado: ${tempDir}`);
   }
-  
+
   console.log("Estrutura de diretórios base criada!");
+};
+
+// Função para apagar todas as tabelas do banco de dados
+const dropAllTables = async () => {
+  console.log("\n🔄 Iniciando processo de limpeza...");
+
+  try {
+    // Obter o nome do schema atual (geralmente 'public' em PostgreSQL)
+    const [schemaResult] = await sequelize.query(`SELECT current_schema() as schema`);
+    const schema = schemaResult[0].schema;
+    console.log(`🔍 Schema atual: ${schema}`);
+
+    // Pegar uma lista de todas as tabelas no banco de dados
+    const [tablesResult] = await sequelize.query(
+      `SELECT tablename FROM pg_tables WHERE schemaname = '${schema}' AND 
+       tablename NOT LIKE 'pg_%' AND tablename NOT LIKE 'sql_%'`
+    );
+    
+    if (tablesResult.length === 0) {
+      console.log("ℹ️ Não foram encontradas tabelas para apagar.");
+      return;
+    }
+
+    console.log(`🔍 Encontradas ${tablesResult.length} tabelas para apagar.`);
+    
+    // Primeiro, desabilitar todas as verificações de chave estrangeira
+    console.log("🔓 Desabilitando verificações de chave estrangeira...");
+    await sequelize.query("SET CONSTRAINTS ALL DEFERRED;");
+    
+    // Preparar o comando para apagar todas as tabelas
+    const tableNames = tablesResult.map(table => `"${table.tablename}"`).join(", ");
+    
+    console.log("🗑️ Apagando todas as tabelas...");
+    await sequelize.query(`DROP TABLE IF EXISTS ${tableNames} CASCADE;`);
+    
+    // Também eliminar todas as sequências, que são usadas para campos autoincrement/serial
+    const [sequencesResult] = await sequelize.query(
+      `SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = '${schema}'`
+    );
+    
+    if (sequencesResult.length > 0) {
+      console.log(`🔍 Encontradas ${sequencesResult.length} sequências para apagar.`);
+      const sequenceNames = sequencesResult.map(seq => `"${seq.sequence_name}"`).join(", ");
+      
+      console.log("🗑️ Apagando todas as sequências...");
+      await sequelize.query(`DROP SEQUENCE IF EXISTS ${sequenceNames} CASCADE;`);
+    }
+    
+    // Eliminar também funções personalizadas que podem ter sido criadas
+    const [functionsResult] = await sequelize.query(
+      `SELECT routine_name FROM information_schema.routines 
+       WHERE routine_schema = '${schema}' AND routine_type = 'FUNCTION'`
+    );
+    
+    if (functionsResult.length > 0) {
+      console.log(`🔍 Encontradas ${functionsResult.length} funções para apagar.`);
+      
+      // Apagar cada função individualmente
+      for (const func of functionsResult) {
+        try {
+          console.log(`🗑️ Apagando função: ${func.routine_name}`);
+          await sequelize.query(`DROP FUNCTION IF EXISTS "${func.routine_name}" CASCADE;`);
+        } catch (error) {
+          console.error(`Erro ao apagar função ${func.routine_name}:`, error.message);
+          // Continua para a próxima função
+        }
+      }
+    }
+    
+    console.log("\n✅ Todas as tabelas, sequências e funções foram removidas com sucesso!");
+  } catch (error) {
+    console.error("\n❌ Erro ao apagar tabelas:", error.message);
+    throw error;
+  }
 };
 
 (async () => {
@@ -158,26 +192,44 @@ const createDirectoryStructure = () => {
     // Criar estrutura de diretórios necessária
     createDirectoryStructure();
 
-    // Sincroniza e recria todas as tabelas existentes (force: true)
-    console.log("Apagando todas as tabelas e dados existentes...");
-    await sequelize.sync({ force: true });
-    console.log("Base de dados sincronizada e limpa!");
-
-    // Separar as instruções SQL de criação de tabelas
-    console.log("Criando tabelas para conteúdos de cursos...");
-    await executeSQLStatements(createTablesSQL);
-    console.log("Tabelas de conteúdos criadas com sucesso!");
-
-    // Preparar e executar os dados de teste
+    // Etapa 1: Apagar todas as tabelas existentes
+    console.log("\n===== ETAPA 1: APAGANDO TODAS AS TABELAS =====");
+    await dropAllTables();
+    
+    // Etapa 2: Criar tabelas na ordem correta
+    console.log("\n===== ETAPA 2: CRIANDO TABELAS NA ORDEM CORRETA =====");
+    
+    // Desabilitar verificações de chave estrangeira temporariamente
+    await sequelize.query("SET session_replication_role = 'replica';");
+    
+    // Criar as tabelas na ordem correta usando o módulo separado
+    console.log("Criando tabelas na ordem correta...");
+    await createTablesInOrder();
+    
+    // Etapa 3: Inserir dados de teste
+    console.log("\n===== ETAPA 3: INSERINDO DADOS DE TESTE =====");
+    
+    // Carregar os dados de teste
     console.log("Preparando dados de teste...");
     const testDataStatements = prepareSQLStatements(dadosSQL);
     console.log(`Preparados ${testDataStatements.length} comandos SQL para execução.`);
     
     await executeSQLStatements(testDataStatements);
     console.log("Dados de teste inseridos!");
+    
+    // Reativar verificações
+    await sequelize.query("SET session_replication_role = 'origin';");
 
+    console.log("\n✅ Processo concluído com sucesso!");
     process.exit(0);
   } catch (error) {
+    // Em caso de erro, certifique-se de reativar as verificações de chave estrangeira
+    try {
+      await sequelize.query("SET session_replication_role = 'origin';");
+    } catch (e) {
+      console.error("Erro ao reativar verificações de chave estrangeira:", e.message);
+    }
+    
     console.error("Erro ao sincronizar ou carregar os dados de teste:", error.message);
     console.error("Detalhes do erro:", error);
     process.exit(1);
