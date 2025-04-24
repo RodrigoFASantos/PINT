@@ -13,7 +13,7 @@ const {
   changePassword,
   uploadImagemPerfil,
   uploadImagemCapa
-} = require("../controllers/users_ctrl");
+} = require("../controllers/users/users_ctrl");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
