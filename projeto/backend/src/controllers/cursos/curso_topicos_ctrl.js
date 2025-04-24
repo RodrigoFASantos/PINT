@@ -93,7 +93,7 @@ const createTopico = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const topicoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}`; // Adicionado "backend/"
+    const topicoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}`; // Adicionado "backend/"
     
     // Criar o diretório se não existir
     if (!fs.existsSync(topicoDir)) {

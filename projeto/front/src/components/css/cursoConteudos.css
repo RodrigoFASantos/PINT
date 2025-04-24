@@ -125,7 +125,17 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1000; /* Ajustado para permitir que topico-modal-wrapper fique acima */
+}
+
+/* Wrapper para o CriarTopicoModal */
+.topico-modal-wrapper {
+  z-index: 1050 !important; /* Maior que o modal-overlay padrão */
+}
+
+/* Modal específico para criação de tópicos */
+.topico-modal-wrapper .modal-overlay {
+  z-index: 1050 !important; /* Maior que o modal-overlay padrão */
 }
 
 .modal-content {
@@ -254,6 +264,7 @@
   border-radius: 6px;
   border: 1px dashed #ccc;
   margin: 20px 0;
+  position: relative; /* Para garantir que o modal filho tenha uma referência posicional */
 }
 
 .btn-add-first, .btn-add-pasta {

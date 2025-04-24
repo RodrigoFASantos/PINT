@@ -11,6 +11,11 @@
   z-index: 1000;
 }
 
+/* Classe adicional para o modal de criação de tópico para aumentar o z-index */
+.criar-topico-modal-overlay {
+  z-index: 1050 !important; /* Maior que o modal-overlay padrão */
+}
+
 .modal-container {
   background-color: white;
   border-radius: 8px;

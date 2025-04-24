@@ -83,96 +83,103 @@ VALUES
   ('Meditação', (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1)),
   ('Nutrição', (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1));
 
+
 -- =============================================
 -- 5. CURSOS
 -- =============================================
-INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria, imagem_path)
+INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria, imagem_path, dir_path)
 VALUES
-  -- Tecnologia
   ('Curso de Vue.js', 'Curso prático sobre Vue.js para iniciantes.', 'sincrono', 20, '2025-04-01', '2025-04-30', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
-   'uploads/cursos/curso-de-vuejs/capa.png'),
+   'uploads/cursos/curso-de-vuejs/capa.png',
+   'uploads/cursos/curso-de-vuejs'),
 
-  -- Soft Skills
   ('Comunicação Assertiva', 'Melhore a sua comunicação no ambiente de trabalho.', 'assincrono', NULL, '2025-04-01', '2025-06-01', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
-   'uploads/cursos/comunicacao-assertiva/capa.png'),
+   'uploads/cursos/comunicacao-assertiva/capa.png',
+   'uploads/cursos/comunicacao-assertiva'),
 
-  -- Gestão
   ('Gestão de Equipas Ágeis', 'Aprenda a liderar equipas com metodologias ágeis.', 'sincrono', 15, '2025-04-15', '2025-05-15', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1),
-   'uploads/cursos/gestao-de-equipas-ageis/capa.png'),
+   'uploads/cursos/gestao-de-equipas-ageis/capa.png',
+   'uploads/cursos/gestao-de-equipas-ageis'),
 
-  -- Programação
   ('Desenvolvimento React Native', 'Aprenda a criar aplicativos móveis multiplataforma.', 'sincrono', 25, '2025-05-15', '2025-06-30', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'React Native' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
-   'uploads/cursos/desenvolvimento-react-native/capa.png'),
-   
+   'uploads/cursos/desenvolvimento-react-native/capa.png',
+   'uploads/cursos/desenvolvimento-react-native'),
+
   ('Python para Análise de Dados', 'Domine as ferramentas Python para análise de dados.', 'sincrono', 30, '2025-06-01', '2025-07-15', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
-   'uploads/cursos/python-para-analise-de-dados/capa.png'),
-   
+   'uploads/cursos/python-para-analise-de-dados/capa.png',
+   'uploads/cursos/python-para-analise-de-dados'),
+
   ('JavaScript Avançado', 'Técnicas avançadas e padrões de design em JavaScript.', 'sincrono', 20, '2025-08-01', '2025-09-15', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
-   'uploads/cursos/javascript-avancado/capa.png'),
-   
-  -- Marketing Digital
+   'uploads/cursos/javascript-avancado/capa.png',
+   'uploads/cursos/javascript-avancado'),
+
   ('Marketing nas Redes Sociais', 'Estratégias avançadas para marketing em plataformas sociais.', 'assincrono', NULL, '2025-05-10', '2025-08-10', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Redes Sociais' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
-   'uploads/cursos/marketing-nas-redes-sociais/capa.png'),
-   
+   'uploads/cursos/marketing-nas-redes-sociais/capa.png',
+   'uploads/cursos/marketing-nas-redes-sociais'),
+
   ('SEO para Iniciantes', 'Fundamentos de otimização para mecanismos de busca.', 'assincrono', NULL, '2025-06-10', '2025-08-10', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rodrigo' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'SEO' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
-   'uploads/cursos/seo-para-iniciantes/capa.png'),
-   
-  -- Design
+   'uploads/cursos/seo-para-iniciantes/capa.png',
+   'uploads/cursos/seo-para-iniciantes'),
+
   ('UI/UX Design para Iniciantes', 'Princípios fundamentais de design de interfaces e experiência do usuário.', 'sincrono', 20, '2025-05-20', '2025-06-20', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
-   'uploads/cursos/uiux-design-para-iniciantes/capa.png'),
-   
-  -- Finanças
+   'uploads/cursos/uiux-design-para-iniciantes/capa.png',
+   'uploads/cursos/uiux-design-para-iniciantes'),
+
   ('Introdução a Investimentos', 'Aprenda os fundamentos para começar a investir.', 'assincrono', NULL, '2025-06-15', '2025-09-15', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Investimentos' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Finanças' LIMIT 1),
-   'uploads/cursos/introducao-a-investimentos/capa.png'),
-   
+   'uploads/cursos/introducao-a-investimentos/capa.png',
+   'uploads/cursos/introducao-a-investimentos'),
+
   ('Contabilidade para Pequenos Negócios', 'Princípios contábeis para empreendedores.', 'sincrono', 15, '2025-07-10', '2025-08-20', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Contabilidade' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Finanças' LIMIT 1),
-   'uploads/cursos/contabilidade-para-pequenos-negocios/capa.png'),
-   
-  -- Saúde e Bem-estar
+   'uploads/cursos/contabilidade-para-pequenos-negocios/capa.png',
+   'uploads/cursos/contabilidade-para-pequenos-negocios'),
+
   ('Meditação para o Dia a Dia', 'Técnicas de meditação para reduzir o estresse e aumentar o bem-estar.', 'assincrono', NULL, '2025-05-01', '2025-07-31', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Meditação' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
-   'uploads/cursos/meditacao-para-o-dia-a-dia/capa.png'),
-   
+   'uploads/cursos/meditacao-para-o-dia-a-dia/capa.png',
+   'uploads/cursos/meditacao-para-o-dia-a-dia'),
+
   ('Nutrição Funcional', 'Princípios da nutrição funcional para uma vida mais saudável.', 'assincrono', NULL, '2025-07-01', '2025-10-01', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rareura' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Nutrição' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
-   'uploads/cursos/nutricao-funcional/capa.png');
+   'uploads/cursos/nutricao-funcional/capa.png',
+   'uploads/cursos/nutricao-funcional');
+
 
 -- =============================================
 -- 6. TÓPICOS DOS CURSOS

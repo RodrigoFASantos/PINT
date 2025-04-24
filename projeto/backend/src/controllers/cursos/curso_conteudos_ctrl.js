@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Inicialmente salvar em diretório temporário
     // O arquivo será movido para o diretório correto depois de processar os metadados
-    const dir = 'backend/uploads/temp'; // Adicionado "backend/"
+    const dir = 'uploads/temp'; // Adicionado "backend/"
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -303,63 +303,64 @@ const getConteudosByPasta = async (req, res) => {
   }
 };
 
+
+
+const existeConteudoNaPasta = async (titulo, id_pasta) => {
+  const conteudoExistente = await ConteudoCurso.findOne({
+    where: {
+      titulo: titulo,
+      id_pasta: id_pasta,
+      ativo: true
+    }
+  });
+
+  return !!conteudoExistente; // true se existir, false se não existir
+};
+
+
 // Criar um novo conteúdo
 const createConteudo = async (req, res) => {
   try {
     const { titulo, descricao, tipo, url, id_pasta, id_curso, ordem } = req.body;
-    
-    // Verificar se a pasta existe
+
     const pasta = await PastaCurso.findByPk(id_pasta);
-    if (!pasta) {
-      return res.status(404).json({ message: 'Pasta não encontrada' });
-    }
+    if (!pasta) return res.status(404).json({ message: 'Pasta não encontrada' });
 
-    // Verificar se o curso existe
     const curso = await Curso.findByPk(id_curso);
-    if (!curso) {
-      return res.status(404).json({ message: 'Curso não encontrado' });
-    }
+    if (!curso) return res.status(404).json({ message: 'Curso não encontrado' });
 
-    // Buscar o tópico para obter a estrutura completa do diretório
     const topico = await TopicoCurso.findByPk(pasta.id_topico);
     if (!topico || topico.id_curso !== parseInt(id_curso)) {
-      return res.status(400).json({ 
-        message: 'A pasta selecionada não pertence a este curso' 
-      });
+      return res.status(400).json({ message: 'A pasta selecionada não pertence a este curso' });
     }
 
-    // Verificar tipo válido
     if (!['file', 'link', 'video'].includes(tipo)) {
-      return res.status(400).json({ 
-        message: 'Tipo de conteúdo inválido. Use: file, link ou video' 
-      });
+      return res.status(400).json({ message: 'Tipo de conteúdo inválido. Use: file, link ou video' });
     }
 
-    // Criar estrutura de diretórios
-    const nomeCursoDir = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const nomeTopicoDir = topico.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const nomePastaDir = pasta.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    // Caminho completo para a pasta de conteúdo
-    const conteudoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
-    
-    // Garantir que o diretório exista
-    if (!fs.existsSync(conteudoDir)) {
-      fs.mkdirSync(conteudoDir, { recursive: true });
+    // Verifica se já existe conteúdo com mesmo título na pasta
+    const conteudoExistente = await ConteudoCurso.findOne({
+      where: {
+        titulo: titulo,
+        id_pasta: id_pasta,
+        ativo: true
+      }
+    });
+
+    if (conteudoExistente) {
+      return res.status(409).json({ message: 'Já existe um conteúdo com esse título nesta pasta' });
     }
 
-    // Preparar o objeto para criação
+    const nomeCursoDir = curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
+    const nomeTopicoDir = topico.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
+    const nomePastaDir = pasta.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
+    const conteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+
+    if (!fs.existsSync(conteudoDir)) fs.mkdirSync(conteudoDir, { recursive: true });
+
+    const timestamp = Date.now();
+    const tituloBase = titulo.toLowerCase().replace(/ /g, "_").replace(/[^\w-]+/g, "");
+
     let conteudoData = {
       titulo,
       descricao,
@@ -367,33 +368,30 @@ const createConteudo = async (req, res) => {
       id_pasta,
       id_curso,
       ativo: true,
-      dir_path: conteudoDir // Adicionar dir_path aqui dentro do objeto
+      dir_path: conteudoDir
     };
 
-    // Adicionar campos específicos conforme o tipo
     if (tipo === 'file') {
-      if (!req.file) {
-        return res.status(400).json({ message: 'Arquivo não enviado' });
-      }
-      
-      // Mover o arquivo do diretório temporário para o diretório correto
+      if (!req.file) return res.status(400).json({ message: 'Arquivo não enviado' });
+
       const tempPath = req.file.path;
       const fileName = path.basename(tempPath);
       const destPath = path.join(conteudoDir, fileName);
-      
-      // Mover o arquivo
       fs.renameSync(tempPath, destPath);
-      
-      // Armazenar o caminho relativo no banco de dados
-      conteudoData.arquivo_path = destPath;
-    } else if (tipo === 'link' || tipo === 'video') {
-      if (!url) {
-        return res.status(400).json({ message: 'URL é obrigatória para tipos link e video' });
-      }
+
+      conteudoData.arquivo_path = destPath.replace(/\\/g, "/");
+    } else {
+      if (!url) return res.status(400).json({ message: 'URL é obrigatória para tipos link e video' });
+
+      const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
+      const fakeFilePath = path.join(conteudoDir, fakeFileName);
+
+      fs.writeFileSync(fakeFilePath, url);
+
       conteudoData.url = url;
+      conteudoData.arquivo_path = fakeFilePath.replace(/\\/g, "/");
     }
 
-    // Definir ordem (se não fornecida, calcular a próxima)
     if (ordem) {
       conteudoData.ordem = ordem;
     } else {
@@ -404,10 +402,8 @@ const createConteudo = async (req, res) => {
       conteudoData.ordem = ultimoConteudo ? ultimoConteudo.ordem + 1 : 1;
     }
 
-    // Criar o conteúdo
     const novoConteudo = await ConteudoCurso.create(conteudoData);
 
-    // Retornar o conteúdo criado
     res.status(201).json({
       message: 'Conteúdo criado com sucesso',
       conteudo: {
@@ -418,13 +414,12 @@ const createConteudo = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao criar conteúdo:', error);
-    res.status(500).json({
-      message: 'Erro ao criar conteúdo',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Erro ao criar conteúdo', error: error.message });
   }
-  
 };
+
+
+
 
 
 
@@ -523,7 +518,7 @@ const updateConteudo = async (req, res) => {
         .replace(/ /g, "-")
         .replace(/[^\w-]+/g, "");
       
-      novoConteudoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+      novoConteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
       
       // Garantir que o diretório de destino exista
       if (!fs.existsSync(novoConteudoDir)) {

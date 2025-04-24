@@ -41,7 +41,7 @@ const createPasta = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const pastaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
+    const pastaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
     
     // Criar diretório se não existir
     if (!fs.existsSync(pastaDir)) {
@@ -170,8 +170,8 @@ const updatePasta = async (req, res) => {
             .replace(/ /g, "-")
             .replace(/[^\w-]+/g, "");
           
-          const pastaAntigaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`; // Adicionado "backend/"
-          const pastaNovaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`; // Adicionado "backend/"
+          const pastaAntigaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`; // Adicionado "backend/"
+          const pastaNovaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`; // Adicionado "backend/"
           
           // Se o diretório antigo existir, renomear para o novo nome
           if (fs.existsSync(pastaAntigaDir)) {

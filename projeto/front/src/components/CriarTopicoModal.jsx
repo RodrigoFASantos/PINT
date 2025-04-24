@@ -1,20 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './css/CriarTopicoModal.css';
 import API_BASE from '../api';
 
-const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
-  const [titulo, setTitulo] = useState('');
+const CriarTopicoModal = ({ curso, onClose, onSuccess }) => {
+  const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Debug logs para mostrar os dados do curso
+  useEffect(() => {
+    console.log('Dados do curso recebidos no modal:', curso);
+    console.log('ID do curso extraído:', curso?.id_curso);
+  }, [curso]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validação básica
-    if (!titulo.trim()) {
-      setError('Por favor, insira um título para o tópico');
+    if (!nome.trim()) {
+      setError('Por favor, insira um nome para o tópico');
+      return;
+    }
+    
+    // Obter id_curso diretamente do objeto curso
+    const id_curso = curso?.id_curso;
+    
+    if (!id_curso) {
+      setError('ID do curso não fornecido');
       return;
     }
     
@@ -24,29 +38,17 @@ const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
     try {
       const token = localStorage.getItem('token');
       
-      // Obter IDs de categoria e área
-      const [categoriaResponse, areaResponse] = await Promise.all([
-        axios.get(`${API_BASE}/categorias?nome=${encodeURIComponent(categoria)}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_BASE}/areas?nome=${encodeURIComponent(area)}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
-      
-      const categoriaId = categoriaResponse.data[0]?.id;
-      const areaId = areaResponse.data[0]?.id;
-      
-      if (!categoriaId || !areaId) {
-        throw new Error('Não foi possível identificar a categoria ou área');
-      }
-      
-      // Criar tópico
-      await axios.post(`${API_BASE}/topicos`, {
-        titulo,
+      console.log('Enviando requisição para criar tópico:', {
+        nome,
         descricao,
-        id_categoria: categoriaId,
-        id_area: areaId
+        id_curso
+      });
+      
+      // Criar tópico com os campos corretos
+      await axios.post(`${API_BASE}/topicos-curso`, {
+        nome,
+        descricao,
+        id_curso
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -56,13 +58,13 @@ const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
       onSuccess();
     } catch (error) {
       console.error('Erro ao criar tópico:', error);
-      setError(error.response?.data?.mensagem || 'Não foi possível criar o tópico. Tente novamente.');
+      setError(error.response?.data?.message || 'Não foi possível criar o tópico. Tente novamente.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay criar-topico-modal-overlay">
       <div className="modal-container">
         <div className="modal-header">
           <h3>Criar Novo Tópico</h3>
@@ -71,22 +73,12 @@ const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Categoria:</label>
-            <input type="text" value={categoria} disabled />
-          </div>
-          
-          <div className="form-group">
-            <label>Área:</label>
-            <input type="text" value={area} disabled />
-          </div>
-          
-          <div className="form-group">
-            <label>Título do Tópico:</label>
+            <label>Nome do Tópico:</label>
             <input 
               type="text" 
-              value={titulo} 
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Insira um título descritivo"
+              value={nome} 
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Insira um nome descritivo"
               maxLength={100}
               required
             />
@@ -102,6 +94,14 @@ const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
             />
           </div>
           
+          {curso && (
+            <div className="form-group">
+              <label>Curso:</label>
+              <input type="text" value={curso.nome || ''} disabled />
+              <input type="hidden" value={curso.id_curso || ''} />
+            </div>
+          )}
+          
           {error && <div className="error-message">{error}</div>}
           
           <div className="modal-actions">
@@ -116,7 +116,7 @@ const CriarTopicoModal = ({ categoria, area, onClose, onSuccess }) => {
             <button 
               type="submit" 
               className="btn-salvar" 
-              disabled={loading}
+              disabled={loading || !curso?.id_curso}
             >
               {loading ? 'Criando...' : 'Criar Tópico'}
             </button>
