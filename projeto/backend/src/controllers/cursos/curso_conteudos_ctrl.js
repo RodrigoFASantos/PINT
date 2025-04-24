@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Inicialmente salvar em diretório temporário
     // O arquivo será movido para o diretório correto depois de processar os metadados
-    const dir = 'uploads/temp';
+    const dir = 'backend/uploads/temp'; // Adicionado "backend/"
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -352,7 +352,7 @@ const createConteudo = async (req, res) => {
       .replace(/[^\w-]+/g, "");
     
     // Caminho completo para a pasta de conteúdo
-    const conteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+    const conteudoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
     
     // Garantir que o diretório exista
     if (!fs.existsSync(conteudoDir)) {
@@ -366,7 +366,8 @@ const createConteudo = async (req, res) => {
       tipo,
       id_pasta,
       id_curso,
-      ativo: true
+      ativo: true,
+      dir_path: conteudoDir // Adicionar dir_path aqui dentro do objeto
     };
 
     // Adicionar campos específicos conforme o tipo
@@ -422,7 +423,17 @@ const createConteudo = async (req, res) => {
       error: error.message
     });
   }
+  
 };
+
+
+
+
+
+
+
+
+
 
 // Atualizar um conteúdo existente
 const updateConteudo = async (req, res) => {
@@ -512,12 +523,15 @@ const updateConteudo = async (req, res) => {
         .replace(/ /g, "-")
         .replace(/[^\w-]+/g, "");
       
-      novoConteudoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+      novoConteudoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
       
       // Garantir que o diretório de destino exista
       if (!fs.existsSync(novoConteudoDir)) {
         fs.mkdirSync(novoConteudoDir, { recursive: true });
       }
+      
+      // Atualizar dir_path
+      dadosAtualizacao.dir_path = novoConteudoDir;
     }
 
     // Se estiver mudando o tipo, verificar os campos necessários
@@ -670,6 +684,30 @@ const updateConteudo = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Excluir um conteúdo (exclusão lógica)
 const deleteConteudo = async (req, res) => {

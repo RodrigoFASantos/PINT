@@ -69,6 +69,10 @@ const Curso = sequelize.define("curso", {
     type: DataTypes.STRING(500),
     allowNull: true,
   },
+  dir_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  },
 }, {
   tableName: "curso", // Changed from "cursos" to match the model name
   timestamps: false,

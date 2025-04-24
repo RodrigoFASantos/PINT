@@ -267,9 +267,11 @@ const CursoConteudos = ({ cursoId }) => {
       const formData = new FormData();
 
       // Dados comuns para todos os tipos de conteúdo
+      formData.append('id_curso', courseId);
       formData.append('id_pasta', currentPastaId);
       formData.append('tipo', conteudoType);
       formData.append('titulo', modalInputValue || fileToUpload?.name || 'Arquivo');
+
 
       // Dependendo do tipo, adicionar dados específicos
       if (conteudoType === 'file') {

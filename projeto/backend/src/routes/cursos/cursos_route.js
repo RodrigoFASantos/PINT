@@ -1,55 +1,19 @@
 const express = require("express");
 const router = express.Router();
-
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
+const {
+  getAllCursos,
+  createCurso,
+  getCursoById,
+  getInscricoesCurso,
+  updateCurso,
+  deleteCurso
+} = require("../../controllers/cursos/cursos_ctrl");
 
-const { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso } = require("../../controllers/cursos/cursos_ctrl");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-
-// Configuração do upload para cursos
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Criar diretório específico para o curso
-    const nomeCurso = req.body.nome
-      ? req.body.nome
-          .toLowerCase()
-          .replace(/ /g, "-")
-          .replace(/[^\w-]+/g, "")
-      : Date.now();
-
-    const cursoDir = `uploads/cursos/${nomeCurso}`;
-    
-    // Criar diretório se não existir
-    if (!fs.existsSync(cursoDir)) {
-      fs.mkdirSync(cursoDir, { recursive: true });
-    }
-    
-    cb(null, cursoDir);
-  },
-  filename: (req, file, cb) => {
-    // Usar o nome do curso como nome do arquivo (convertendo para slug)
-    const nomeCurso = req.body.nome
-      ? req.body.nome
-          .toLowerCase()
-          .replace(/ /g, "-")
-          .replace(/[^\w-]+/g, "")
-      : Date.now(); // Fallback para timestamp se não houver nome
-
-    // Verificar se já existe um arquivo com esse nome e removê-lo
-    const filename = `capa.png`;
-    const cursoDir = `uploads/cursos/${nomeCurso}`;
-    const filePath = path.join(cursoDir, filename);
-    
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    
-    cb(null, filename);
-  }
-});
 
 // Filtro para aceitar apenas imagens PNG
 const fileFilter = (req, file, cb) => {
@@ -60,23 +24,63 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
+// Configuração do armazenamento de imagens do curso
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const nomeCurso = req.body.nome
+      ? req.body.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
+      : Date.now().toString();
+
+    // Usar path.join para criar caminhos de forma independente do SO
+    const cursoDir = path.join('backend', 'uploads', 'cursos', nomeCurso);
+
+    if (!fs.existsSync(cursoDir)) {
+      fs.mkdirSync(cursoDir, { recursive: true });
+    }
+
+    cb(null, cursoDir);
+  },
+  filename: (req, file, cb) => {
+    const nomeCurso = req.body.nome
+      ? req.body.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
+      : Date.now().toString();
+
+    const filename = `capa.png`;
+    const cursoDir = path.join('backend', 'uploads', 'cursos', nomeCurso);
+    const filePath = path.join(cursoDir, filename);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    cb(null, filename);
+  }
+});
+
+// Middleware do multer
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter
 });
 
-// Rota GET para listar todos os cursos
-router.get("/", getAllCursos);
+// ========== ROTAS ==========
 
-// Rota POST para criar curso (com upload de imagem)
+// Criar curso (com upload de imagem)
 router.post("/", verificarToken, autorizar([1, 2]), upload.single("imagem"), createCurso);
 
-// Rotas para operações específicas em um curso
+// Listar todos os cursos
+router.get("/", getAllCursos);
+
+// Obter curso por ID
 router.get("/:id", getCursoById);
+
+// Atualizar curso (pode incluir nova imagem)
 router.put("/:id", verificarToken, autorizar([1, 2]), upload.single("imagem"), updateCurso);
+
+// Deletar curso
 router.delete("/:id", verificarToken, autorizar([1]), deleteCurso);
 
-// Rota para listar inscrições de um curso
+// Listar inscrições do curso
 router.get("/:id/inscricoes", verificarToken, getInscricoesCurso);
 
 module.exports = router;

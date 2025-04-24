@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 
 // Obter todos os tópicos de um curso com suas pastas e conteúdos
-// Implementação alternativa que não depende de associações do Sequelize
 const getTopicosByCurso = async (req, res) => {
   try {
     const { id_curso } = req.params;
@@ -94,7 +93,7 @@ const createTopico = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const topicoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}`;
+    const topicoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}`; // Adicionado "backend/"
     
     // Criar o diretório se não existir
     if (!fs.existsSync(topicoDir)) {
@@ -105,7 +104,8 @@ const createTopico = async (req, res) => {
       nome,
       id_curso,
       ordem: ordem || 1,
-      dir_path: topicoDir // Salvar o caminho do diretório
+      dir_path: topicoDir, // Salvar o caminho do diretório
+      arquivo_path: topicoDir // Adicionar arquivo_path também
     });
 
     res.status(201).json({ 
@@ -117,6 +117,17 @@ const createTopico = async (req, res) => {
     res.status(500).json({ message: "Erro ao criar tópico" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
 
 // Obter um tópico específico
 const getTopicoById = async (req, res) => {
@@ -201,8 +212,8 @@ const updateTopico = async (req, res) => {
           .replace(/ /g, "-")
           .replace(/[^\w-]+/g, "");
         
-        const topicoAntigoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoAntigoDir}`;
-        const topicoNovoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoNovoDir}`;
+        const topicoAntigoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoAntigoDir}`; // Adicionado "backend/"
+        const topicoNovoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoNovoDir}`; // Adicionado "backend/"
         
         // Se o diretório antigo existir, renomear para o novo nome
         if (fs.existsSync(topicoAntigoDir)) {
@@ -216,6 +227,7 @@ const updateTopico = async (req, res) => {
         
         // Atualizar o caminho do diretório no banco de dados
         topico.dir_path = topicoNovoDir;
+        topico.arquivo_path = topicoNovoDir; // Atualizar arquivo_path também
       }
     }
 
@@ -232,6 +244,11 @@ const updateTopico = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar tópico" });
   }
 };
+
+
+
+
+
 
 // Excluir um tópico (soft delete)
 const deleteTopico = async (req, res) => {

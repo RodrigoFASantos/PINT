@@ -42,27 +42,28 @@ const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
       const token = localStorage.getItem('token');
       
       const formData = new FormData();
-      formData.append('tipo', tipo);
+      formData.append('tipo', tipo === 'arquivo' ? 'file' : tipo);
       formData.append('titulo', titulo);
       formData.append('descricao', descricao);
+      formData.append('id_pasta', curso.id_pasta);
+      formData.append('id_curso', curso.id_curso);
       
       if (tipo === 'link') {
-        formData.append('link', link);
+        formData.append('url', link);
       } else if (tipo === 'arquivo') {
         formData.append('arquivo', arquivo);
       } else if (tipo === 'video') {
-        formData.append('videoUrl', videoUrl);
+        formData.append('url', videoUrl);
       }
       
-      await axios.post(`/api/cursos/${curso.id}/conteudos`, 
-        formData,
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          } 
+      
+      await axios.post(`/api/conteudos-curso`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
         }
-      );
+      });
+      
       
       onSuccess();
     } catch (error) {

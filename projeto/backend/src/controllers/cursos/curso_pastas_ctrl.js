@@ -41,7 +41,7 @@ const createPasta = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const pastaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`;
+    const pastaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
     
     // Criar diretório se não existir
     if (!fs.existsSync(pastaDir)) {
@@ -52,7 +52,8 @@ const createPasta = async (req, res) => {
       nome,
       id_topico,
       ordem: ordem || 1,
-      dir_path: pastaDir // Salvar o caminho do diretório
+      dir_path: pastaDir, // Salvar o caminho do diretório
+      arquivo_path: pastaDir // Adicionar arquivo_path também
     });
 
     res.status(201).json({ message: "Pasta criada com sucesso", pasta: novaPasta });
@@ -61,6 +62,9 @@ const createPasta = async (req, res) => {
     res.status(500).json({ message: "Erro ao criar pasta" });
   }
 };
+
+
+
 
 // Obter todas as pastas de um tópico com seus conteúdos
 const getPastasByTopico = async (req, res) => {
@@ -166,8 +170,8 @@ const updatePasta = async (req, res) => {
             .replace(/ /g, "-")
             .replace(/[^\w-]+/g, "");
           
-          const pastaAntigaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`;
-          const pastaNovaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`;
+          const pastaAntigaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`; // Adicionado "backend/"
+          const pastaNovaDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`; // Adicionado "backend/"
           
           // Se o diretório antigo existir, renomear para o novo nome
           if (fs.existsSync(pastaAntigaDir)) {
@@ -181,6 +185,7 @@ const updatePasta = async (req, res) => {
           
           // Atualizar o caminho do diretório no banco de dados
           pasta.dir_path = pastaNovaDir;
+          pasta.arquivo_path = pastaNovaDir; // Atualizar arquivo_path também
         }
       }
     }
@@ -198,6 +203,8 @@ const updatePasta = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar pasta" });
   }
 };
+
+
 
 // Excluir uma pasta (soft delete)
 const deletePasta = async (req, res) => {

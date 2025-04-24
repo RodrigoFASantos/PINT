@@ -35,6 +35,12 @@ const getAllCursos = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
 // Criar um novo curso (recebe req.file da rota)
 const createCurso = async (req, res) => {
   try {
@@ -50,7 +56,7 @@ const createCurso = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const cursoDir = `uploads/cursos/${nomeCursoDir}`;
+    const cursoDir = `backend/uploads/cursos/${nomeCursoDir}`;
     
     // Verificar se o diretório existe, se não, criar
     if (!fs.existsSync(cursoDir)) {
@@ -58,7 +64,11 @@ const createCurso = async (req, res) => {
     }
 
     // Verificar se foi enviada uma imagem
-    const imagem = req.file ? req.file.path : null;
+    let imagemPath = null;
+    if (req.file) {
+      // Normalizar o caminho da imagem para usar barras normais '/'
+      imagemPath = req.file.path.replace(/\\/g, '/');
+    }
 
     const novoCurso = await Curso.create({
       nome,
@@ -70,8 +80,8 @@ const createCurso = async (req, res) => {
       id_formador,
       id_area,
       id_categoria,
-      imagem_path: imagem, // Guardar o caminho na BD, já estará no diretório correto do curso
-      dir_path: cursoDir // Guardar o caminho do diretório do curso
+      imagem_path: imagemPath, // Caminho da imagem normalizado
+      dir_path: cursoDir // Caminho do diretório do curso
     });
 
     res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso });
@@ -80,6 +90,28 @@ const createCurso = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar curso." });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Buscar curso por ID com detalhes
 const getCursoById = async (req, res) => {
@@ -190,7 +222,7 @@ const updateCurso = async (req, res) => {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const cursoAtualDir = `uploads/cursos/${nomeCursoAtualDir}`;
+    const cursoAtualDir = `backend/uploads/cursos/${nomeCursoAtualDir}`;
     
     // Se o nome foi alterado, renomear o diretório
     if (nomeAlterado) {
@@ -199,7 +231,7 @@ const updateCurso = async (req, res) => {
         .replace(/ /g, "-")
         .replace(/[^\w-]+/g, "");
       
-      const cursoNovoDir = `uploads/cursos/${nomeCursoNovoDir}`;
+      const cursoNovoDir = `backend/uploads/cursos/${nomeCursoNovoDir}`;
       
       // Verificar se o diretório existe e renomear
       if (fs.existsSync(cursoAtualDir)) {
@@ -217,8 +249,11 @@ const updateCurso = async (req, res) => {
       }
     }
     
-    // Imagem do upload (se houver)
-    const imagemUpload = req.file ? req.file.path : null;
+    // Normalizar o caminho da imagem, se houver upload
+    let imagemUpload = null;
+    if (req.file) {
+      imagemUpload = req.file.path.replace(/\\/g, '/');
+    }
     
     // Atualizar campos
     if (nome) curso.nome = nome;
@@ -242,6 +277,21 @@ const updateCurso = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao atualizar curso." });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Função para deletar curso com remoção da imagem e diretórios
 const deleteCurso = async (req, res) => {
