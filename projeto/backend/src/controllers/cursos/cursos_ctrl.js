@@ -41,7 +41,17 @@ const getAllCursos = async (req, res) => {
 
 
 
-// Criar um novo curso (recebe req.file da rota)
+
+
+
+
+
+
+
+
+
+
+// Função para criar um novo curso
 const createCurso = async (req, res) => {
   try {
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria } = req.body;
@@ -50,24 +60,21 @@ const createCurso = async (req, res) => {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
 
-    // Criar diretório para o curso
+    // Criar nome do diretório para o curso
     const nomeCursoDir = nome
       .toLowerCase()
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
     
-    const cursoDir = `backend/uploads/cursos/${nomeCursoDir}`;
+    // Caminho para o banco de dados (sem o 'backend/')
+    const dirPath = `uploads/cursos/${nomeCursoDir}`;
     
-    // Verificar se o diretório existe, se não, criar
-    if (!fs.existsSync(cursoDir)) {
-      fs.mkdirSync(cursoDir, { recursive: true });
-    }
-
     // Verificar se foi enviada uma imagem
     let imagemPath = null;
     if (req.file) {
-      // Normalizar o caminho da imagem para usar barras normais '/'
-      imagemPath = req.file.path.replace(/\\/g, '/');
+      // Configurar o caminho da imagem para o banco de dados
+      imagemPath = `uploads/cursos/${nomeCursoDir}/capa.png`;
+      console.log(`Caminho da imagem salvo no BD: ${imagemPath}`);
     }
 
     const novoCurso = await Curso.create({
@@ -80,8 +87,8 @@ const createCurso = async (req, res) => {
       id_formador,
       id_area,
       id_categoria,
-      imagem_path: imagemPath, // Caminho da imagem normalizado
-      dir_path: cursoDir // Caminho do diretório do curso
+      imagem_path: imagemPath,
+      dir_path: dirPath
     });
 
     res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso });
@@ -90,6 +97,126 @@ const createCurso = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar curso." });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+// Função updateCurso corrigida
+const updateCurso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria } = req.body;
+    
+    const curso = await Curso.findByPk(id);
+
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado!" });
+    }
+
+    // Verificar se o nome do curso foi alterado
+    const nomeAlterado = nome && nome !== curso.nome;
+    
+    // Diretório atual do curso
+    const nomeCursoAtualDir = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    // Caminhos para bancos de dados (sem o 'backend/')
+    const dirAtual = `uploads/cursos/${nomeCursoAtualDir}`;
+    
+    // Caminhos absolutos para o sistema de arquivos
+    const dirAbsolutoAtual = path.join(__dirname, '..', '..', '..', dirAtual);
+    
+    // Se o nome foi alterado, renomear o diretório
+    if (nomeAlterado) {
+      const nomeCursoNovoDir = nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      
+      const dirNovo = `uploads/cursos/${nomeCursoNovoDir}`;
+      const dirAbsolutoNovo = path.join(__dirname, '..', '..', '..', dirNovo);
+      
+      // Verificar se o diretório existe e renomear
+      if (fs.existsSync(dirAbsolutoAtual)) {
+        try {
+          fs.renameSync(dirAbsolutoAtual, dirAbsolutoNovo);
+          console.log(`Diretório renomeado de ${dirAbsolutoAtual} para ${dirAbsolutoNovo}`);
+          
+          // Atualizar o caminho do diretório no banco
+          curso.dir_path = dirNovo;
+          
+          // Atualizar caminho da imagem se existir
+          if (curso.imagem_path) {
+            curso.imagem_path = `uploads/cursos/${nomeCursoNovoDir}/capa.png`;
+          }
+        } catch (error) {
+          console.error(`Erro ao renomear diretório: ${error.message}`);
+          
+          // Se não conseguir renomear, criar o novo diretório
+          if (!fs.existsSync(dirAbsolutoNovo)) {
+            fs.mkdirSync(dirAbsolutoNovo, { recursive: true });
+          }
+          curso.dir_path = dirNovo;
+        }
+      } else {
+        // Se o diretório atual não existir, criar o novo
+        if (!fs.existsSync(dirAbsolutoNovo)) {
+          fs.mkdirSync(dirAbsolutoNovo, { recursive: true });
+          console.log(`Novo diretório criado: ${dirAbsolutoNovo}`);
+        }
+        curso.dir_path = dirNovo;
+      }
+    }
+    
+    // Processar imagem do upload (se houver)
+    if (req.file) {
+      const nomeDirCurso = nomeAlterado 
+        ? nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
+        : nomeCursoAtualDir;
+        
+      curso.imagem_path = `uploads/cursos/${nomeDirCurso}/capa.png`;
+      console.log(`Caminho da imagem atualizado: ${curso.imagem_path}`);
+    }
+    
+    // Atualizar campos
+    if (nome) curso.nome = nome;
+    if (descricao !== undefined) curso.descricao = descricao;
+    if (tipo) curso.tipo = tipo;
+    if (vagas !== undefined) curso.vagas = vagas;
+    if (data_inicio) curso.data_inicio = data_inicio;
+    if (data_fim) curso.data_fim = data_fim;
+    if (estado) curso.estado = estado;
+    if (ativo !== undefined) curso.ativo = ativo;
+    if (id_formador) curso.id_formador = id_formador;
+    if (id_area) curso.id_area = id_area;
+    if (id_categoria) curso.id_categoria = id_categoria;
+
+    await curso.save();
+
+    res.json({ message: "Curso atualizado com sucesso!", curso });
+  } catch (error) {
+    console.error("Erro ao atualizar curso:", error);
+    res.status(500).json({ message: "Erro no servidor ao atualizar curso." });
+  }
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -201,82 +328,7 @@ const getInscricoesCurso = async (req, res) => {
   }
 };
 
-// Atualizar curso existente
-const updateCurso = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria } = req.body;
-    
-    const curso = await Curso.findByPk(id);
 
-    if (!curso) {
-      return res.status(404).json({ message: "Curso não encontrado!" });
-    }
-
-    // Verificar se o nome do curso foi alterado
-    const nomeAlterado = nome && nome !== curso.nome;
-    
-    // Diretório atual do curso
-    const nomeCursoAtualDir = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const cursoAtualDir = `backend/uploads/cursos/${nomeCursoAtualDir}`;
-    
-    // Se o nome foi alterado, renomear o diretório
-    if (nomeAlterado) {
-      const nomeCursoNovoDir = nome
-        .toLowerCase()
-        .replace(/ /g, "-")
-        .replace(/[^\w-]+/g, "");
-      
-      const cursoNovoDir = `backend/uploads/cursos/${nomeCursoNovoDir}`;
-      
-      // Verificar se o diretório existe e renomear
-      if (fs.existsSync(cursoAtualDir)) {
-        fs.renameSync(cursoAtualDir, cursoNovoDir);
-        console.log(`Diretório renomeado de ${cursoAtualDir} para ${cursoNovoDir}`);
-        
-        // Atualizar o caminho do diretório no banco
-        curso.dir_path = cursoNovoDir;
-      } else {
-        // Se não existir, criar o novo diretório
-        if (!fs.existsSync(cursoNovoDir)) {
-          fs.mkdirSync(cursoNovoDir, { recursive: true });
-        }
-        curso.dir_path = cursoNovoDir;
-      }
-    }
-    
-    // Normalizar o caminho da imagem, se houver upload
-    let imagemUpload = null;
-    if (req.file) {
-      imagemUpload = req.file.path.replace(/\\/g, '/');
-    }
-    
-    // Atualizar campos
-    if (nome) curso.nome = nome;
-    if (descricao !== undefined) curso.descricao = descricao;
-    if (tipo) curso.tipo = tipo;
-    if (vagas !== undefined) curso.vagas = vagas;
-    if (data_inicio) curso.data_inicio = data_inicio;
-    if (data_fim) curso.data_fim = data_fim;
-    if (estado) curso.estado = estado;
-    if (ativo !== undefined) curso.ativo = ativo;
-    if (id_formador) curso.id_formador = id_formador;
-    if (id_area) curso.id_area = id_area;
-    if (id_categoria) curso.id_categoria = id_categoria;
-    if (imagemUpload) curso.imagem_path = imagemUpload;
-
-    await curso.save();
-
-    res.json({ message: "Curso atualizado com sucesso!", curso });
-  } catch (error) {
-    console.error("Erro ao atualizar curso:", error);
-    res.status(500).json({ message: "Erro no servidor ao atualizar curso." });
-  }
-};
 
 
 

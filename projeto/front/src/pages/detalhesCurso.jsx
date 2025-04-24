@@ -295,12 +295,11 @@ const DetalhesCurso = () => {
   };
 
   const getImageUrl = (curso) => {
-    if (!curso || !curso.nome) return '/placeholder-curso.jpg';
-    const nomeCursoSlug = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    return IMAGES.CURSO(nomeCursoSlug);
+    // Se não tiver curso ou a imagem não estiver definida, usar imagem padrão
+    if (!curso || !curso.imagem_path) return '/placeholder-curso.jpg';
+    
+    // Usar o caminho da imagem que veio do backend
+    return `${API_BASE}/${curso.imagem_path}`;
   };
 
   if (loading) {

@@ -48,14 +48,24 @@ export default function CursosPage() {
   };
 
   const getImageUrl = (curso) => {
-    if (!curso || !curso.nome) return '/placeholder-curso.jpg';
-    const nomeCursoSlug = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    return IMAGES.CURSO(nomeCursoSlug);
+    // Se o curso tiver um caminho de imagem definido, usá-lo diretamente
+    if (curso && curso.imagem_path) {
+      return `${API_BASE}/${curso.imagem_path}`;
+    }
+    
+    // Se não tiver imagem_path mas tiver nome, criar um slug do nome (compatibilidade)
+    if (curso && curso.nome) {
+      const nomeCursoSlug = curso.nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      return IMAGES.CURSO(nomeCursoSlug);
+    }
+    
+    // Fallback para imagem padrão
+    return '/placeholder-curso.jpg';
   };
-
+  
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Navbar toggleSidebar={toggleSidebar} />

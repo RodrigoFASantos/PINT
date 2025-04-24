@@ -24,6 +24,11 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+
+
+
+
+
 // Configuração do armazenamento de imagens do curso
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -31,37 +36,44 @@ const storage = multer.diskStorage({
       ? req.body.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
       : Date.now().toString();
 
-    // Usar path.join para criar caminhos de forma independente do SO
-    const cursoDir = path.join('backend', 'uploads', 'cursos', nomeCurso);
-
+    // Caminho para o diretório do curso
+    const cursoDir = path.join(__dirname, '..', '..', '..', 'uploads', 'cursos', nomeCurso);
+    
+    // Verificar e criar o diretório se não existir
     if (!fs.existsSync(cursoDir)) {
-      fs.mkdirSync(cursoDir, { recursive: true });
+      try {
+        fs.mkdirSync(cursoDir, { recursive: true });
+        console.log(`Diretório do curso criado: ${cursoDir}`);
+      } catch (error) {
+        console.error(`Erro ao criar diretório do curso: ${error.message}`);
+      }
     }
 
     cb(null, cursoDir);
   },
   filename: (req, file, cb) => {
-    const nomeCurso = req.body.nome
-      ? req.body.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
-      : Date.now().toString();
-
-    const filename = `capa.png`;
-    const cursoDir = path.join('backend', 'uploads', 'cursos', nomeCurso);
-    const filePath = path.join(cursoDir, filename);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    cb(null, filename);
+    // Sempre usar 'capa.png' como nome da imagem
+    cb(null, 'capa.png');
   }
 });
+
 
 // Middleware do multer
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter
 });
+
+
+
+
+
+
+
+
+
+
+
 
 // ========== ROTAS ==========
 

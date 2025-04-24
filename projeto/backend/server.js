@@ -6,7 +6,6 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
-
 // Carregar variáveis de ambiente
 require("dotenv").config();
 
@@ -147,8 +146,8 @@ carregarRota("./src/routes/users/users_route", "/api/users");
 
 
 // Servir arquivos estáticos
-app.use('/api/uploads', express.static('uploads'));
-app.use('/uploads', express.static('uploads'));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
+console.log(`Diretório de uploads configurado: ${path.join(__dirname, 'uploads')}`);
 
 // Rotas
 const rotas = [
