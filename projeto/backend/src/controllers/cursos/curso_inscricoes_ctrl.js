@@ -1,11 +1,11 @@
-const Inscricao_Curso = require("../database/models/Inscricao_Curso");
-const InscricaoCursoCancelada = require("../database/models/InscricaoCursoCancelada");
-const User = require("../database/models/User");
-const Curso = require("../database/models/Curso");
-const Categoria = require("../database/models/Categoria");
-const Area = require("../database/models/Area");
-const { sendEnrollmentEmail } = require("../utils/emailService");
-const { sequelize } = require("../../config/db");
+const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+const InscricaoCursoCancelada = require("../../database/models/InscricaoCursoCancelada");
+const User = require("../../database/models/User");
+const Curso = require("../../database/models/Curso");
+const Categoria = require("../../database/models/Categoria");
+const Area = require("../../database/models/Area");
+const { sendEnrollmentEmail } = require("../../utils/emailService");
+const { sequelize } = require("../../../config/db");
 
 // Obter todas as inscrições
 const getAllInscricoes = async (req, res) => {

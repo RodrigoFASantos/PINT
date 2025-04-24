@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const formadorController = require('../controllers/formador_ctrl');
+const formadorController = require('../../controllers/users/formador_ctrl');
 
 // Importar o middleware de autenticação existente
-const verificarToken = require('../middleware/auth');
+const verificarToken = require('../../middleware/auth');
 
 // Função de verificação de cargos baseada no middleware existente
 const verificarCargo = (cargosPermitidos) => {

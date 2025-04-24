@@ -142,8 +142,9 @@ diretoriosEssenciais.forEach(dir => {
 require('./src/database/associations');
 
 // Carregar as rotas principais
-carregarRota("./src/routes/auth", "/api/auth");
-carregarRota("./src/routes/users", "/api/users");
+carregarRota("./src/routes/users/auth_route", "/api/auth");
+carregarRota("./src/routes/users/users_route", "/api/users");
+
 
 // Servir arquivos estáticos
 app.use('/api/uploads', express.static('uploads'));
@@ -151,28 +152,27 @@ app.use('/uploads', express.static('uploads'));
 
 // Rotas
 const rotas = [
-  { caminho: "./src/routes/areas", prefixo: "/api/areas" },
-  { caminho: "./src/routes/avaliacoes", prefixo: "/api/avaliacoes" },
-  { caminho: "./src/routes/categorias", prefixo: "/api/categorias" },
-  { caminho: "./src/routes/comentarios", prefixo: "/api/comentarios" },
-  { caminho: "./src/routes/cursos", prefixo: "/api/cursos" },
-  { caminho: "./src/routes/inscricoes", prefixo: "/api/inscricoes" },
+  { caminho: "./src/routes/users/areas_route", prefixo: "/api/areas" },
+  { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" },
+  { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },
+  { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
+  { caminho: "./src/routes/cursos/cursos_route", prefixo: "/api/cursos" },
+  { caminho: "./src/routes/cursos/curso_inscricoes_route", prefixo: "/api/inscricoes" },
   // Conteúdos de cursos
-  { caminho: "./src/routes/topicos_curso", prefixo: "/api/topicos-curso" },
-  { caminho: "./src/routes/pastas_curso", prefixo: "/api/pastas-curso" },
-  { caminho: "./src/routes/conteudos_curso", prefixo: "/api/conteudos-curso" },
+  { caminho: "./src/routes/cursos/curso_topicos_route", prefixo: "/api/topicos-curso" },
+  { caminho: "./src/routes/cursos/curso_pastas_route", prefixo: "/api/pastas-curso" },
+  { caminho: "./src/routes/cursos/curso_conteudos_route", prefixo: "/api/conteudos-curso" },
   // Resto das Rotas
-  { caminho: "./src/routes/trabalhos", prefixo: "/api/trabalhos" },
-  { caminho: "./src/routes/certificados", prefixo: "/api/certificados" },
-  { caminho: "./src/routes/notificacoes", prefixo: "/api/notificacoes" },
-  { caminho: "./src/routes/quiz", prefixo: "/api/quiz" },
-  { caminho: "./src/routes/mailing", prefixo: "/api/mailing" },
-  { caminho: "./src/routes/ocorrencias", prefixo: "/api/ocorrencias" },
-  { caminho: "./src/routes/tipos_conteudo", prefixo: "/api/tipos-conteudo" },
-  { caminho: "./src/routes/chatRoutes", prefixo: "/api/chat" },
-  { caminho: "./src/routes/inscricaoCursoCancelada", prefixo: "/api/inscricoes-canceladas" },
-  
-  { caminho: "./src/routes/formadores", prefixo: "/api/formadores" },
+  { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
+  { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },
+  { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
+  { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
+  { caminho: "./src/routes/mailing/mailing_route", prefixo: "/api/mailing" },
+  { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
+  { caminho: "./src/routes/cursos/tipos_conteudo_route", prefixo: "/api/tipos-conteudo" },
+  { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
+  { caminho: "./src/routes/cursos/curso_inscricao_cancelada_route", prefixo: "/api/inscricoes-canceladas" },
+  { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" }
 ];
 
 rotas.forEach(rota => {

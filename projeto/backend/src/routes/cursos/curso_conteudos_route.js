@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const conteudoCursoController = require('../controllers/conteudos_curso_ctrl');
-const authMiddleware = require('../middleware/auth');
+const conteudoCursoController = require("../../controllers/cursos/curso_conteudos_ctrl");
+const authMiddleware = require('../../middleware/auth');
 
 // Middleware para verificar se o usuário é admin ou formador
 const permissionMiddleware = (req, res, next) => {

@@ -1,8 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const User = require("../database/models/User.js");
-const Cargo = require("../database/models/Cargo");
-const { sendRegistrationEmail } = require("../utils/emailService"); //email
+const User = require("../../database/models/User.js");
+const Cargo = require("../../database/models/Cargo");
+const { sendRegistrationEmail } = require("../../utils/emailService"); //email
 const fs = require("fs");
 const path = require("path");
 

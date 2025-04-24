@@ -6,8 +6,8 @@ const {
   cancelarInscricao,
   getInscricoesUtilizador,
   verificarInscricao
-} = require("../controllers/inscricoes_ctrl");
-const verificarToken = require('../middleware/auth');
+} = require("../../controllers/cursos/curso_inscricoes_ctrl");
+const verificarToken = require('../../middleware/auth');
 
 // Rota para buscar todas as inscrições (protegida para administradores)
 router.get("/", verificarToken, (req, res, next) => {

@@ -1,8 +1,8 @@
-const User = require("../database/models/User");
-const Curso = require("../database/models/Curso");
-const Avaliacao = require("../database/models/Avaliacao");
-const Inscricao_Curso = require("../database/models/Inscricao_Curso");
-const { generateCertificate } = require("../utils/certificateGenerator");
+const User = require("../../database/models/User");
+const Curso = require("../../database/models/Curso");
+const Avaliacao = require("../../database/models/Avaliacao");
+const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+const { generateCertificate } = require("../../utils/certificateGenerator");
 
 // Gerar certificado para um formando
 const gerarCertificado = async (req, res) => {

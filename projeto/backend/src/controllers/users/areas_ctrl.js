@@ -1,4 +1,4 @@
-const Area = require("../database/models/Area");
+const Area = require("../../database/models/Area");
 
 // Obter todas as áreas
 const getAllAreas = async (req, res) => {

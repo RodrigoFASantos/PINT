@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const inscricoesCanceladasController = require("../controllers/inscricaoCursoCancelada_ctrl");
+const inscricoesCanceladasController = require("../../controllers/cursos/curso_inscricao_cancelada_ctrl");
 // Corrigir o módulo de autenticação
-const verificarToken = require("../middleware/auth");
+const verificarToken = require("../../middleware/auth");
 
 // Middleware de autenticação para todas as rotas
 router.use(verificarToken);

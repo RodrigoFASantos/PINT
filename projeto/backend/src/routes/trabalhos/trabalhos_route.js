@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const verificarToken = require('../middleware/auth');
-const { getAllTrabalhos, createTrabalho } = require("../controllers/trabalhos_ctrl");
+const verificarToken = require('../../middleware/auth');
+const { getAllTrabalhos, createTrabalho } = require("../../controllers/trabalhos/trabalhos_ctrl");
+
 
 // Configuração do upload
 const storage = multer.diskStorage({

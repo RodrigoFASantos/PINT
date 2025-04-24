@@ -1,4 +1,4 @@
-const Cargo = require("../database/models/Cargo.js");
+const Cargo = require("../../database/models/Cargo.js");
 
 const getAllCargos = async (req, res) => {
     try {

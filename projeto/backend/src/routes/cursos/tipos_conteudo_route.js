@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const verificarToken = require('../middleware/auth');
-const autorizar = require('../middleware/autorizar');
+const verificarToken = require('../../middleware/auth');
+const autorizar = require('../../middleware/autorizar');
 const {
   getAllTiposConteudo,
   createTipoConteudo,
   updateTipoConteudo,
   deleteTipoConteudo
-} = require("../controllers/tipos_conteudo_ctrl");
+} = require("../../controllers/cursos/tipos_conteudo_ctrl");
 
 // Rota aberta para todos os usuários
 router.get("/", getAllTiposConteudo);

@@ -1,13 +1,13 @@
-const Curso = require("../database/models/Curso");
-const Area = require("../database/models/Area");
-const Categoria = require("../database/models/Categoria");
-const User = require("../database/models/User");
-const Conteudo = require("../database/models/ConteudoCurso");
-const TopicoCurso = require("../database/models/TopicoCurso");
-const PastaCurso = require("../database/models/PastaCurso");
-const Inscricao_Curso = require("../database/models/Inscricao_Curso");
-const { removerInscricoesDoCurso } = require("./inscricoes_ctrl");
-const { sequelize } = require("../../config/db");
+const Curso = require("../../database/models/Curso");
+const Area = require("../../database/models/Area");
+const Categoria = require("../../database/models/Categoria");
+const User = require("../../database/models/User");
+const Conteudo = require("../../database/models/ConteudoCurso");
+const TopicoCurso = require("../../database/models/TopicoCurso");
+const PastaCurso = require("../../database/models/PastaCurso");
+const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+const { removerInscricoesDoCurso } = require("./curso_inscricoes_ctrl");
+const { sequelize } = require("../../../config/db");
 const fs = require('fs');
 const path = require('path');
 

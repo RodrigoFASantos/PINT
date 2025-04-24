@@ -1,5 +1,5 @@
-const PushSubscription = require("../database/models/PushSubscription");
-const { sendPushNotification } = require("../utils/pushNotifications");
+const PushSubscription = require("../../database/models/PushSubscription");
+const { sendPushNotification } = require("../../utils/pushNotifications");
 
 // Registrar assinatura de notificação push
 const registerPushSubscription = async (req, res) => {

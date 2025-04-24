@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const verificarToken = require('../middleware/auth');
+const verificarToken = require('../../middleware/auth');
 const { 
   getAllUsers, 
   getFormadores, 
@@ -13,7 +13,7 @@ const {
   changePassword,
   uploadImagemPerfil,
   uploadImagemCapa
-} = require("../controllers/users/users_ctrl");
+} = require("../../controllers/users/users_ctrl");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");

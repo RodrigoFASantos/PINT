@@ -1,4 +1,4 @@
-const Avaliacao = require("../database/models/Avaliacao");
+const Avaliacao = require("../../database/models/Avaliacao");
 
 // Obter todas as avaliações
 const getAllAvaliacoes = async (req, res) => {

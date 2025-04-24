@@ -1,4 +1,4 @@
-const Comentario_Topico = require("../database/models/Comentario_Topico");
+const Comentario_Topico = require("../../database/models/Comentario_Topico");
 
 // Obter todos os comentários
 const getAllComentarios = async (req, res) => {

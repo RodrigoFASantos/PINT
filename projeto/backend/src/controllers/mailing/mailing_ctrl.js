@@ -1,7 +1,7 @@
-const User = require("../database/models/User");
-const Curso = require("../database/models/Curso");
-const Area = require("../database/models/Area");
-const { sendMailingList } = require("../utils/emailService");
+const User = require("../../database/models/User");
+const Curso = require("../../database/models/Curso");
+const Area = require("../../database/models/Area");
+const { sendMailingList } = require("../../utils/emailService");
 
 // Enviar divulgação de cursos para todos os usuários
 const enviarDivulgacaoGeral = async (req, res) => {

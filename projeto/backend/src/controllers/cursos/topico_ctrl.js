@@ -1,10 +1,10 @@
-const Topico = require('../models/Topico');
-const Categoria = require('../models/Categoria');
-const Area = require('../models/Area');
-const User = require('../models/User');
-const ChatMensagem = require('../models/ChatMensagem');
+const Topico = require('../../models/Topico');
+const Categoria = require('../../models/Categoria');
+const Area = require('../../models/Area');
+const User = require('../../models/User');
+const ChatMensagem = require('../../models/ChatMensagem');
 const { Op } = require('sequelize');
-const sequelize = require('../../config/db');
+const sequelize = require('../../../config/db');
 
 const topicoController = {
   // Listar todos os tópicos com filtros por categoria e área

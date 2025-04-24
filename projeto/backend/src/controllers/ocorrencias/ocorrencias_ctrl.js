@@ -1,6 +1,6 @@
-const OcorrenciaCurso = require("../database/models/OcorrenciaCurso");
-const Curso = require("../database/models/Curso");
-const sequelize = require("../../config/db");
+const OcorrenciaCurso = require("../../database/models/OcorrenciaCurso");
+const Curso = require("../../database/models/Curso");
+const sequelize = require("../../../config/db");
 
 // Criar nova ocorrência de curso
 const criarNovaOcorrencia = async (req, res) => {

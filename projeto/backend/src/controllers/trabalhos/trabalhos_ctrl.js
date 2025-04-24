@@ -1,4 +1,4 @@
-const Trabalho_Entregue = require("../database/models/Trabalho_Entregue");
+const Trabalho_Entregue = require("../../database/models/Trabalho_Entregue");
 
 // Obter todos os trabalhos entregues
 const getAllTrabalhos = async (req, res) => {

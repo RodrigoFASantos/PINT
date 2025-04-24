@@ -1,6 +1,6 @@
-const InscricaoCursoCancelada = require("../database/models/InscricaoCursoCancelada");
-const User = require("../database/models/User");
-const Curso = require("../database/models/Curso");
+const InscricaoCursoCancelada = require("../../database/models/InscricaoCursoCancelada");
+const User = require("../../database/models/User");
+const Curso = require("../../database/models/Curso");
 const { Op, sequelize } = require("sequelize");
 
 // Obter todas as inscrições canceladas

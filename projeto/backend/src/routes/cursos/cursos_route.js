@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const verificarToken = require('../middleware/auth');
-const autorizar = require('../middleware/autorizar');
+const verificarToken = require('../../middleware/auth');
+const autorizar = require('../../middleware/autorizar');
 
-const { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso } = require("../controllers/cursos_ctrl");
+const { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso } = require("../../controllers/cursos/cursos_ctrl");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");

@@ -1,7 +1,7 @@
-const TopicoCurso = require("../database/models/TopicoCurso");
-const PastaCurso = require("../database/models/PastaCurso");
-const ConteudoCurso = require("../database/models/ConteudoCurso");
-const Curso = require("../database/models/Curso");
+const TopicoCurso = require("../../database/models/TopicoCurso");
+const PastaCurso = require("../../database/models/PastaCurso");
+const ConteudoCurso = require("../../database/models/ConteudoCurso");
+const Curso = require("../../database/models/Curso");
 const fs = require('fs');
 const path = require('path');
 

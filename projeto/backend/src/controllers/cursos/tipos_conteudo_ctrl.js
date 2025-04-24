@@ -1,4 +1,4 @@
-const TipoConteudo = require("../database/models/TipoConteudo");
+const TipoConteudo = require("../../database/models/TipoConteudo");
 
 // Listar todos os tipos de conteúdo
 const getAllTiposConteudo = async (req, res) => {

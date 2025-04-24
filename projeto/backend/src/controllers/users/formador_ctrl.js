@@ -1,4 +1,4 @@
-const { User, Curso } = require('../database/associations');
+const { User, Curso } = require('../../database/associations');
 const { Op } = require('sequelize');
 
 // Obter todos os formadores com paginação

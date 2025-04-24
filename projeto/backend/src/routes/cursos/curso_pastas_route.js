@@ -1,15 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
-const verificarToken = require('../middleware/auth');
-const autorizar = require('../middleware/autorizar');
+const verificarToken = require('../../middleware/auth');
+const autorizar = require('../../middleware/autorizar');
 const { 
   createPasta, 
   getPastasByTopico, 
   getPastaById, 
   updatePasta, 
   deletePasta 
-} = require("../controllers/pastas_curso_ctrl");
+} = require("../../controllers/cursos/curso_pastas_ctrl");
 
 // Rota para obter todas as pastas de um tópico com seus conteúdos
 router.get("/topico/:id_topico", verificarToken, getPastasByTopico);

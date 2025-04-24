@@ -1,6 +1,6 @@
-const ChatMensagem = require('../database/models/ChatMensagem');
-const Topico = require('../database/models/Topico');
-const User = require('../database/models/User');
+const ChatMensagem = require('../../database/models/ChatMensagem');
+const Topico = require('../../database/models/Topico');
+const User = require('../../database/models/User');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -9,7 +9,7 @@ const multer = require('multer');
 // Configurar o multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../../uploads/chat');
+    const uploadDir = path.join(__dirname, '../../../uploads/chat');
     
     // Criar diretório se não existir
     if (!fs.existsSync(uploadDir)) {

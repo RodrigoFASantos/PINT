@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { getAllAreas, createArea } = require("../controllers/areas_ctrl");
+const { getAllAreas, createArea } = require("../../controllers/users/areas_ctrl");
 
-router.get("/", getAllAreas);    // Isso vai para /api/areas
-router.post("/", createArea);    // Isso vai para /api/areas
+router.get("/", getAllAreas);
+router.post("/", createArea);
 
 module.exports = router;

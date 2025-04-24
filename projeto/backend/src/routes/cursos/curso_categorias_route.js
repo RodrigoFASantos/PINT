@@ -1,8 +1,9 @@
 // routes/categorias.js
 const express = require("express");
 const router = express.Router();
-const verificarToken = require('../middleware/auth');
-const { getAllCategorias, getCategoriaById, createCategoria, updateCategoria, deleteCategoria } = require("../controllers/categorias_ctrl");
+const verificarToken = require('../../middleware/auth');
+const { getAllCategorias, getCategoriaById, createCategoria, updateCategoria, deleteCategoria } = require("../../controllers/cursos/curso_categorias_ctrl");
+
 
 router.get("/", getAllCategorias);
 router.get('/:id', getCategoriaById);

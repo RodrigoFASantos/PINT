@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const verificarToken = require('../middleware/auth');
-const autorizar = require('../middleware/autorizar');
+const verificarToken = require('../../middleware/auth');
+const autorizar = require('../../middleware/autorizar');
 const {
   getAllQuizzes,
   createQuiz,
@@ -9,7 +9,7 @@ const {
   iniciarQuiz,
   responderPergunta,
   finalizarQuiz
-} = require("../controllers/quiz_ctrl");
+} = require("../../controllers/quiz/quiz_ctrl");
 
 // Rotas abertas para todos usuários autenticados
 router.get("/", verificarToken, getAllQuizzes);

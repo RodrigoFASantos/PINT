@@ -1,7 +1,7 @@
-const User = require("../database/models/User");
-const Curso = require("../database/models/Curso");
-const Inscricao_Curso = require("../database/models/Inscricao_Curso");
-const Avaliacao = require("../database/models/Avaliacao");
+const User = require("../../database/models/User");
+const Curso = require("../../database/models/Curso");
+const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+const Avaliacao = require("../../database/models/Avaliacao");
 const { Op } = require("sequelize");
 
 // Estatísticas gerais

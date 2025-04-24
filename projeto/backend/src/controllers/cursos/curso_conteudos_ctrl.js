@@ -1,7 +1,7 @@
-const ConteudoCurso = require('../database/models/ConteudoCurso');
-const PastaCurso = require('../database/models/PastaCurso');
-const TopicoCurso = require('../database/models/TopicoCurso');
-const Curso = require('../database/models/Curso');
+const ConteudoCurso = require('../../database/models/ConteudoCurso');
+const PastaCurso = require('../../database/models/PastaCurso');
+const TopicoCurso = require('../../database/models/TopicoCurso');
+const Curso = require('../../database/models/Curso');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
