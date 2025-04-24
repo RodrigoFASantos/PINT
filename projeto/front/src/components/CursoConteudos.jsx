@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './css/cursoConteudos.css';
 import API_BASE from "../api";
 import CriarTopicoModal from './CriarTopicoModal';
+import Curso_Conteudo_ficheiro_Modal from "./Curso_Conteudo_ficheiro_Modal";
+import axios from "axios";
 
 const CursoConteudos = ({ cursoId }) => {
   const { id } = useParams();
@@ -30,6 +32,12 @@ const CursoConteudos = ({ cursoId }) => {
   const [showTopicoModal, setShowTopicoModal] = useState(false);
   const [categoriaAtual, setCategoriaAtual] = useState('');
   const [areaAtual, setAreaAtual] = useState('');
+
+
+  const [conteudoSelecionado, setConteudoSelecionado] = useState(null);
+const [mostrarModal, setMostrarModal] = useState(false);
+
+
 
   // Verificar permissões do usuário
   useEffect(() => {
@@ -635,6 +643,50 @@ const CursoConteudos = ({ cursoId }) => {
     }
   };
 
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   if (loading) {
     return (
       <div className="conteudos-loading">
@@ -785,7 +837,21 @@ const CursoConteudos = ({ cursoId }) => {
                             pasta.conteudos.map(conteudo => (
                               <div key={conteudo.id_conteudo} className="conteudo-item">
                                 {getConteudoIcon(conteudo.tipo)}
-                                <span className="conteudo-titulo">{conteudo.titulo}</span>
+
+                                <span
+  className="conteudo-titulo cursor-pointer"
+  onClick={() => {
+    if (conteudo.tipo === 'file') {
+      setConteudoSelecionado(conteudo);
+      setMostrarModal(true);
+    }
+  }}
+>
+  {conteudo.titulo}
+</span>
+
+
+
 
                                 {(userRole === 'admin' || userRole === 'formador') && (
                                   <div className="conteudo-actions">
@@ -824,6 +890,15 @@ const CursoConteudos = ({ cursoId }) => {
             )}
           </div>
         ))}
+
+        {mostrarModal && conteudoSelecionado && (
+  <Curso_Conteudo_ficheiro_Modal
+    conteudo={conteudoSelecionado}
+    onClose={() => setMostrarModal(false)}
+    API_BASE={API_BASE}
+  />
+)}
+
       </div>
 
       {/* Modais para adicionar/editar tópicos, pastas e conteúdos */}
