@@ -18,6 +18,7 @@ const GerenciarInscricoes = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedInscricao, setSelectedInscricao] = useState(null);
   const [removendo, setRemovendo] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -31,6 +32,13 @@ const GerenciarInscricoes = () => {
       if (!token) {
         navigate('/login');
         return;
+      }
+
+      // Obter informações do usuário logado
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userData = JSON.parse(userInfoStr);
+        setUserInfo(userData);
       }
 
       // Obter detalhes do curso
@@ -48,7 +56,7 @@ const GerenciarInscricoes = () => {
       setCurso(cursoData);
 
       // Obter inscrições do curso
-      const responseInscricoes = await fetch(`${API_BASE}/cursos/${id}/inscricoes`, {
+      const responseInscricoes = await fetch(`${API_BASE}/inscricoes/curso/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -65,7 +73,7 @@ const GerenciarInscricoes = () => {
         inscricao.estado === 'inscrito'
       );
       
-      setInscricoes(inscricoesAtivas);
+      setInscricoes(inscricoesAtivas); // Aqui usamos o filtro corretamente
       setLoading(false);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -78,46 +86,97 @@ const GerenciarInscricoes = () => {
     fetchData();
   }, [fetchData]);
 
+  // Verificar permissões
+  useEffect(() => {
+    if (curso && userInfo) {
+      const temPermissao = userInfo.id_cargo === 1 || userInfo.id_utilizador === curso.id_formador;
+      
+      if (!temPermissao) {
+        setError("Você não tem permissão para gerenciar inscrições neste curso.");
+      }
+    }
+  }, [curso, userInfo]);
+
   // Função para abrir modal de confirmação de cancelamento de inscrição
   const handleCancelarInscricao = (inscricao) => {
     setSelectedInscricao(inscricao);
     setShowConfirmation(true);
   };
 
-  // Função para confirmar cancelamento de inscrição
-  const confirmCancelarInscricao = async () => {
-    if (!selectedInscricao) return;
+
+
+
+
+// Função para confirmar o cancelamento da inscrição
+const confirmCancelarInscricao = async () => {
+  if (!selectedInscricao) return;
+  
+  try {
+    setRemovendo(true);
+    const token = localStorage.getItem('token');
     
-    try {
-      setRemovendo(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE}/inscricoes/${selectedInscricao.id_inscricao}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao cancelar inscrição');
+    // Enviar requisição para API com tratamento de erro adequado
+    const response = await fetch(`${API_BASE}/inscricoes/${selectedInscricao.id_inscricao}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
+    });
 
-      // Atualizar a lista de inscrições após o cancelamento
-      setInscricoes(prevInscricoes => 
-        prevInscricoes.filter(insc => insc.id_inscricao !== selectedInscricao.id_inscricao)
-      );
-      
-      toast.success('Inscrição cancelada com sucesso!');
-    } catch (error) {
-      console.error('Erro ao cancelar inscrição:', error);
-      toast.error('Erro ao cancelar inscrição. Tente novamente.');
-    } finally {
-      setShowConfirmation(false);
-      setSelectedInscricao(null);
-      setRemovendo(false);
+    // Tentar extrair os dados da resposta, se houver
+    let responseData = {};
+    try {
+      responseData = await response.json();
+    } catch (e) {
+      // Se não conseguir converter para JSON, continuar com objeto vazio
+      console.warn('Resposta não contém JSON válido:', e);
     }
-  };
+
+    // Log para depuração
+    console.log('Response status:', response.status);
+    console.log('Response data:', responseData);
+
+    // Verificar o status da resposta
+    if (!response.ok) {
+      // Se tivermos uma mensagem de erro específica na resposta, usá-la
+      const errorMessage = responseData.message || 'Erro ao cancelar inscrição';
+      throw new Error(errorMessage);
+    }
+
+    // Atualizar a lista de inscrições após o cancelamento bem-sucedido
+    setInscricoes(prevInscricoes => 
+      prevInscricoes.filter(insc => insc.id_inscricao !== selectedInscricao.id_inscricao)
+    );
+    
+    toast.success('Inscrição cancelada com sucesso!');
+
+  } catch (error) {
+    console.error('Erro ao cancelar inscrição:', error);
+    
+    // Verificar se é erro de conexão
+    if (error.message.includes('temporariamente indisponível') || 
+        error.message.includes('banco de dados')) {
+      toast.error('O serviço está temporariamente indisponível. Por favor, tente novamente mais tarde.');
+    } else {
+      // Mensagem genérica ou específica caso exista
+      toast.error(`Erro ao cancelar inscrição: ${error.message}`);
+    }
+    
+  } finally {
+    setShowConfirmation(false);
+    setSelectedInscricao(null);
+    setRemovendo(false);
+  }
+};
+
+
+
+
+
+
+
+
 
   if (loading) {
     return (
@@ -161,7 +220,7 @@ const GerenciarInscricoes = () => {
       </div>
     );
   }
-
+  console.log(selectedInscricao);
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar toggleSidebar={toggleSidebar} />

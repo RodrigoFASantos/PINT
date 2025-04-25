@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { 
   getAllInscricoes, 
+  getInscricoesPorCurso,
   createInscricao, 
   cancelarInscricao,
   getInscricoesUtilizador,
@@ -18,11 +19,18 @@ router.get("/", verificarToken, (req, res, next) => {
   }
 }, getAllInscricoes);
 
+
+
+
+
 // Rota para buscar inscrições do utilizador logado
 router.get("/minhas-inscricoes", verificarToken, getInscricoesUtilizador);
 
 // Rota para criar uma inscrição (requer autenticação)
 router.post("/", verificarToken, createInscricao);
+
+// Rota para buscar inscrições por curso (protegida para administradores)
+router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
 
 // Rota para cancelar uma inscrição
 router.delete("/:id", verificarToken, cancelarInscricao);

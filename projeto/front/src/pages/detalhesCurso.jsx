@@ -583,7 +583,7 @@ const DetalhesCurso = () => {
 
             {/* Conteúdos do curso - agora aparecem sempre, sem condição */}
             <div className="curso-conteudos-wrapper">
-              <CursoConteudos cursoId={id} />
+            <CursoConteudos cursoId={id} inscrito={inscrito} />
             </div>
           </div>
         </div>

@@ -418,6 +418,7 @@
 
 .conteudo-titulo {
   flex-grow: 1;
+  cursor: pointer;
 }
 
 .topico-empty, .pasta-empty {
@@ -428,4 +429,26 @@
   background-color: #f5f5f5;
   border-radius: 4px;
   margin: 5px 0;
+}
+
+
+.conteudo-bloqueado {
+  cursor: not-allowed;
+  color: #999;
+  position: relative;
+}
+
+.conteudo-bloqueado:hover {
+  text-decoration: none;
+  color: #999;
+}
+
+.conteudo-bloqueado .fa-lock {
+  font-size: 0.8em;
+  margin-left: 5px;
+  color: #d1af2b;
+}
+
+.conteudo-item:has(.conteudo-bloqueado) {
+  opacity: 0.8;
 }

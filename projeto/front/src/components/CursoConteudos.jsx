@@ -10,7 +10,7 @@ import AdicionarConteudoModal from '../components/AdicionarConteudoModal';
 
 
 
-const CursoConteudos = ({ cursoId }) => {
+const CursoConteudos = ({ cursoId, inscrito = false}) => {
   const { id } = useParams();
   const courseId = cursoId || id;
   const navigate = useNavigate();
@@ -865,16 +865,29 @@ const CursoConteudos = ({ cursoId }) => {
                                 {getConteudoIcon(conteudo.tipo)}
 
                                 <span
-                                  className="conteudo-titulo cursor-pointer"
-                                  onClick={() => {
-                                    if (conteudo.tipo === 'file') {
-                                      setConteudoSelecionado(conteudo);
-                                      setMostrarModal(true);
-                                    }
-                                  }}
-                                >
-                                  {conteudo.titulo}
-                                </span>
+  className={`conteudo-titulo ${!inscrito ? 'bloqueado' : ''}`}
+  onClick={() => {
+    if (!inscrito) {
+      // Se não estiver inscrito, mostrar alerta
+      alert("Você precisa estar inscrito no curso para acessar este conteúdo.");
+      return;
+    }
+    
+    if (conteudo.tipo === 'file') {
+      // For files, show the modal as before
+      setConteudoSelecionado(conteudo);
+      setMostrarModal(true);
+    } else if (conteudo.tipo === 'link' || conteudo.tipo === 'video') {
+      // For links and videos, open in a new tab
+      if (conteudo.url) {
+        window.open(conteudo.url, '_blank', 'noopener,noreferrer');
+      }
+    }
+  }}
+>
+  {conteudo.titulo}
+  {!inscrito && <i className="fas fa-lock ml-2" title="Conteúdo bloqueado"></i>}
+</span>
 
 
 
