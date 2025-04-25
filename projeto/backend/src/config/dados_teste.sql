@@ -693,120 +693,59 @@ WHERE u.email = 'joao@gmail.com' AND c.nome = 'Introdução a Investimentos';
 -- 10. INSCRIÇÕES CANCELADAS
 -- =============================================
 
--- Cancelamento da inscrição em Gestão de Equipas Ágeis
 DO $$
 DECLARE
-    inscricao_id INTEGER;
+    user_id INTEGER;
+    course_id INTEGER;
 BEGIN
-    -- Buscar ID da inscrição original
-    SELECT id_inscricao INTO inscricao_id
-    FROM inscricoes_cursos
-    WHERE id_utilizador = (SELECT id_utilizador FROM utilizadores WHERE email = 'b@gmail.com')
-      AND id_curso = (SELECT id_curso FROM curso WHERE nome = 'Gestão de Equipas Ágeis')
-    ORDER BY id_inscricao DESC
-    LIMIT 1;
+    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'exemplo@gmail.com';
+    SELECT id_curso INTO course_id FROM curso WHERE nome = 'Nome do Curso';
     
-    -- Se existir, criar o cancelamento
-    IF inscricao_id IS NOT NULL THEN
-        INSERT INTO inscricao_curso_cancelada (
-          id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-          estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
+    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
+        INSERT INTO inscricoes_cursos (
+            id_utilizador, 
+            id_curso, 
+            data_inscricao, 
+            estado, 
+            motivacao, 
+            expectativas
         )
-        SELECT
-          inscricao_id,
-          id_utilizador,
-          id_curso,
-          data_inscricao,
-          NOW(),
-          'cancelado',
-          'Motivo pessoal: indisponibilidade de horário.',
-          'Esperava um curso mais técnico.',
-          NULL,
-          FALSE,
-          3,
-          'Cancelado devido a conflitos de agenda.'
-        FROM inscricoes_cursos
+        VALUES (
+            user_id, 
+            course_id, 
+            NOW(), 
+            'inscrito',
+            'Motivação para fazer este curso...',
+            'Espero aprender e aplicar os conhecimentos...'
+        );
+        
+        UPDATE curso SET vagas = vagas - 1 
+        WHERE id_curso = course_id AND tipo = 'sincrono' AND vagas > 0;
+    END IF;
+END $$;
+
+
+-- Método para cancelar inscrição (PATCH)
+DO $$
+DECLARE
+    inscricao_id INTEGER := 17; -- ID da inscrição a cancelar
+    curso_id INTEGER;
+BEGIN
+    -- Verificar se a inscrição existe e obter o curso_id
+    SELECT id_curso INTO curso_id FROM inscricoes_cursos 
+    WHERE id_inscricao = inscricao_id AND estado = 'inscrito';
+    
+    IF curso_id IS NOT NULL THEN
+        -- Atualizar a inscrição para cancelada
+        UPDATE inscricoes_cursos 
+        SET estado = 'cancelado', 
+            data_cancelamento = NOW(),
+            motivo_cancelamento = 'Motivo do cancelamento'
         WHERE id_inscricao = inscricao_id;
-    END IF;
-END $$;
-
--- Criar inscrição que será cancelada para Meditação para o Dia a Dia
-DO $$
-DECLARE
-    user_id INTEGER;
-    course_id INTEGER;
-    inscricao_id INTEGER;
-BEGIN
-    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'sofia@gmail.com';
-    SELECT id_curso INTO course_id FROM curso WHERE nome = 'Meditação para o Dia a Dia';
-    
-    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
-        -- Inserir a inscrição
-        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
-        VALUES (user_id, course_id, NOW() - INTERVAL '10 days', 'inscrito')
-        RETURNING id_inscricao INTO inscricao_id;
         
-        -- Inserir o cancelamento se a inscrição foi criada com sucesso
-        IF inscricao_id IS NOT NULL THEN
-            INSERT INTO inscricao_curso_cancelada (
-              id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-              estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
-            )
-            VALUES (
-              inscricao_id,
-              user_id,
-              course_id,
-              NOW() - INTERVAL '10 days',
-              NOW(),
-              'cancelado',
-              'Inscrevi-me no curso errado.',
-              'Esperava um curso mais avançado.',
-              NULL,
-              FALSE,
-              0,
-              'Cancelado por engano na inscrição.'
-            );
-        END IF;
-    END IF;
-END $$;
-
--- Criar inscrição que será cancelada para SEO para Iniciantes
-DO $$
-DECLARE
-    user_id INTEGER;
-    course_id INTEGER;
-    inscricao_id INTEGER;
-BEGIN
-    SELECT id_utilizador INTO user_id FROM utilizadores WHERE email = 'luis@gmail.com';
-    SELECT id_curso INTO course_id FROM curso WHERE nome = 'SEO para Iniciantes';
-    
-    IF user_id IS NOT NULL AND course_id IS NOT NULL THEN
-        -- Inserir a inscrição
-        INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado)
-        VALUES (user_id, course_id, NOW() - INTERVAL '8 days', 'inscrito')
-        RETURNING id_inscricao INTO inscricao_id;
-        
-        -- Inserir o cancelamento se a inscrição foi criada com sucesso
-        IF inscricao_id IS NOT NULL THEN
-            INSERT INTO inscricao_curso_cancelada (
-              id_inscricao_original, id_utilizador, id_curso, data_inscricao, data_cancelamento,
-              estado, motivacao, expectativas, nota_final, certificado_gerado, horas_presenca, motivo_cancelamento
-            )
-            VALUES (
-              inscricao_id,
-              user_id,
-              course_id,
-              NOW() - INTERVAL '8 days',
-              NOW(),
-              'cancelado',
-              'Preciso me dedicar a outros cursos no momento.',
-              'Esperava aprender SEO para melhorar meu site pessoal.',
-              NULL,
-              FALSE,
-              2,
-              'Indisponibilidade de tempo para acompanhar o curso.'
-            );
-        END IF;
+        -- Incrementar vagas disponíveis no curso
+        UPDATE curso SET vagas = vagas + 1 
+        WHERE id_curso = curso_id AND tipo = 'sincrono';
     END IF;
 END $$;
 

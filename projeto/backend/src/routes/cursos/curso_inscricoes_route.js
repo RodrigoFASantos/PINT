@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { 
-  getAllInscricoes, 
+const {
+  getAllInscricoes,
   getInscricoesPorCurso,
-  createInscricao, 
+  createInscricao,
   cancelarInscricao,
   getInscricoesUtilizador,
   verificarInscricao
@@ -33,7 +33,8 @@ router.post("/", verificarToken, createInscricao);
 router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
 
 // Rota para cancelar uma inscrição
-router.delete("/:id", verificarToken, cancelarInscricao);
+router.patch("/cancelar-inscricao/:id", verificarToken, cancelarInscricao);
+
 
 // Rota para verificar se o utilizador está inscrito em um curso
 router.get("/verificar/:id_curso", verificarToken, verificarInscricao);

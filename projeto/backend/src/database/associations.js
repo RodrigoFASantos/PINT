@@ -7,7 +7,6 @@ const Comentario_Topico = require('./models/Comentario_Topico');
 const ConteudoCurso = require('./models/ConteudoCurso');
 const Curso = require('./models/Curso');
 const Inscricao_Curso = require('./models/Inscricao_Curso');
-const InscricaoCursoCancelada = require('./models/InscricaoCursoCancelada');
 const OcorrenciaCurso = require('./models/OcorrenciaCurso');
 const PastaCurso = require('./models/PastaCurso');
 const PushSubscription = require('./models/PushSubscription');
@@ -34,7 +33,6 @@ const models = {
   ConteudoCurso,
   Curso,
   Inscricao_Curso,
-  InscricaoCursoCancelada,
   OcorrenciaCurso,
   PastaCurso,
   PushSubscription,
@@ -76,10 +74,6 @@ User.belongsToMany(Curso, {
   as: "cursos"
 });
 
-User.hasMany(InscricaoCursoCancelada, {
-  foreignKey: "id_utilizador",
-  as: "inscricao_cancelada"
-});
 
 User.hasMany(ChatMensagem, {
   foreignKey: "id_usuario", // Mantido como está pois corresponde ao campo no modelo
@@ -152,10 +146,6 @@ Curso.belongsToMany(User, {
   as: "utilizadores"
 });
 
-Curso.hasMany(InscricaoCursoCancelada, {
-  foreignKey: "id_curso",
-  as: "inscricao_cancelada"
-});
 
 Curso.hasMany(Quiz, {
   foreignKey: "id_curso",
@@ -188,21 +178,6 @@ Inscricao_Curso.belongsTo(Curso, {
   as: "curso"
 });
 
-// === Associações InscricaoCursoCancelada ===
-InscricaoCursoCancelada.belongsTo(User, {
-  foreignKey: "id_utilizador",
-  as: "utilizador"
-});
-
-InscricaoCursoCancelada.belongsTo(Curso, {
-  foreignKey: "id_curso",
-  as: "curso"
-});
-
-InscricaoCursoCancelada.belongsTo(Inscricao_Curso, {
-  foreignKey: "id_inscricao_original",
-  as: "inscricao_original"
-});
 
 // === Associações Quiz e relacionados ===
 Quiz.belongsTo(Curso, {

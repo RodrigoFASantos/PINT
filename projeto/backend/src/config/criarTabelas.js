@@ -8,7 +8,7 @@ const createTablesInOrder = async () => {
       id_cargo SERIAL PRIMARY KEY,
       descricao VARCHAR(50) NOT NULL
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS utilizadores (
       id_utilizador SERIAL PRIMARY KEY,
       id_cargo INTEGER REFERENCES cargos(id_cargo),
@@ -23,13 +23,13 @@ const createTablesInOrder = async () => {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS categorias (
       id_categoria SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL UNIQUE,
       ativo BOOLEAN DEFAULT TRUE
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS areas (
       id_area SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL,
@@ -37,7 +37,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE,
       CONSTRAINT unique_area_nome_categoria UNIQUE (nome, id_categoria)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS curso (
       id_curso SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL UNIQUE,
@@ -54,7 +54,7 @@ const createTablesInOrder = async () => {
       imagem_path VARCHAR(500),
       dir_path VARCHAR(500)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS inscricoes_cursos (
       id_inscricao SERIAL PRIMARY KEY,
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
@@ -66,33 +66,19 @@ const createTablesInOrder = async () => {
       nota_final DECIMAL(4,2),
       certificado_gerado BOOLEAN DEFAULT FALSE,
       horas_presenca INTEGER DEFAULT 0,
+      motivo_cancelamento TEXT,
+      data_cancelamento TIMESTAMP WITH TIME ZONE,
       CONSTRAINT unique_user_curso UNIQUE (id_utilizador, id_curso)
     );`,
-    
-    `CREATE TABLE IF NOT EXISTS inscricao_curso_cancelada (
-      id_cancelamento SERIAL PRIMARY KEY,
-      id_inscricao_original INTEGER UNIQUE REFERENCES inscricoes_cursos(id_inscricao),
-      id_utilizador INTEGER NOT NULL,
-      id_curso INTEGER NOT NULL,
-      data_inscricao TIMESTAMP WITH TIME ZONE,
-      data_cancelamento TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      estado VARCHAR(20) DEFAULT 'cancelado',
-      motivacao TEXT,
-      expectativas TEXT,
-      nota_final DECIMAL(4,2),
-      certificado_gerado BOOLEAN DEFAULT FALSE,
-      horas_presenca INTEGER DEFAULT 0,
-      motivo_cancelamento TEXT
-    );`,
-    
-    `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
+
+      `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
       id_trabalho SERIAL PRIMARY KEY,
       id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao),
       ficheiro_path VARCHAR(500) NOT NULL,
       data_entrega TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       avaliacao TEXT
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS topicos_categorias (
       id_topico SERIAL PRIMARY KEY,
       id_categoria INTEGER REFERENCES categorias(id_categoria),
@@ -103,7 +89,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE,
       CONSTRAINT unique_topico_categoria_titulo UNIQUE (id_categoria, titulo)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS comentarios_topicos (
       id_comentario SERIAL PRIMARY KEY,
       id_topico INTEGER REFERENCES topicos_categorias(id_topico),
@@ -112,7 +98,7 @@ const createTablesInOrder = async () => {
       data_comentario TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       ativo BOOLEAN DEFAULT TRUE
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS quizzes (
       id_quiz SERIAL PRIMARY KEY,
       id_curso INTEGER REFERENCES curso(id_curso),
@@ -123,7 +109,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE,
       CONSTRAINT unique_quiz_titulo_curso UNIQUE (id_curso, titulo)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS quiz_perguntas (
       id_pergunta SERIAL PRIMARY KEY,
       id_quiz INTEGER REFERENCES quizzes(id_quiz) ON DELETE CASCADE,
@@ -133,7 +119,7 @@ const createTablesInOrder = async () => {
       ordem INTEGER DEFAULT 1,
       CONSTRAINT unique_quiz_pergunta UNIQUE (id_quiz, pergunta)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS quiz_opcoes (
       id_opcao SERIAL PRIMARY KEY,
       id_pergunta INTEGER REFERENCES quiz_perguntas(id_pergunta) ON DELETE CASCADE,
@@ -142,7 +128,7 @@ const createTablesInOrder = async () => {
       ordem INTEGER DEFAULT 1,
       CONSTRAINT unique_quiz_opcao UNIQUE (id_pergunta, texto)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS quiz_respostas (
       id_resposta SERIAL PRIMARY KEY,
       id_quiz INTEGER REFERENCES quizzes(id_quiz),
@@ -152,7 +138,7 @@ const createTablesInOrder = async () => {
       data_fim TIMESTAMP WITH TIME ZONE,
       tempo_gasto INTEGER DEFAULT 0
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS quiz_respostas_detalhes (
       id_detalhe SERIAL PRIMARY KEY,
       id_resposta INTEGER REFERENCES quiz_respostas(id_resposta) ON DELETE CASCADE,
@@ -162,7 +148,7 @@ const createTablesInOrder = async () => {
       correta BOOLEAN DEFAULT FALSE,
       pontos_ganhos INTEGER DEFAULT 0
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS tipos_conteudo (
       id_tipo SERIAL PRIMARY KEY,
       nome VARCHAR(50) NOT NULL,
@@ -171,7 +157,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE,
       CONSTRAINT unique_tipo_conteudo_nome UNIQUE (nome)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS push_subscriptions (
       id_subscription SERIAL PRIMARY KEY,
       id_utilizador INTEGER REFERENCES utilizadores(id_utilizador),
@@ -181,7 +167,7 @@ const createTablesInOrder = async () => {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       CONSTRAINT unique_push_subscription UNIQUE (id_utilizador, endpoint)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS avaliacoes (
       id_avaliacao SERIAL PRIMARY KEY,
       id_inscricao INTEGER UNIQUE REFERENCES inscricoes_cursos(id_inscricao) ON DELETE CASCADE,
@@ -189,7 +175,7 @@ const createTablesInOrder = async () => {
       comentario TEXT,
       data_avaliacao TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS ocorrencias_curso (
       id_ocorrencia SERIAL PRIMARY KEY,
       id_curso INTEGER REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -202,7 +188,7 @@ const createTablesInOrder = async () => {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
-    
+
     // Tabelas para conteúdos de cursos
     `CREATE TABLE IF NOT EXISTS curso_topico (
       id_topico SERIAL PRIMARY KEY,
@@ -214,7 +200,7 @@ const createTablesInOrder = async () => {
       dir_path VARCHAR(500),
       CONSTRAINT unique_topico_nome_curso UNIQUE (nome, id_curso)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS curso_topico_pasta (
       id_pasta SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
@@ -225,7 +211,7 @@ const createTablesInOrder = async () => {
       dir_path VARCHAR(500),
       CONSTRAINT unique_pasta_nome_topico UNIQUE (nome, id_topico)
     );`,
-    
+
     `CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
       id_conteudo SERIAL PRIMARY KEY,
       titulo VARCHAR(255) NOT NULL,
@@ -241,7 +227,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_conteudo_titulo_pasta UNIQUE (titulo, id_pasta)
     );`
   ];
-  
+
   // Executa a criação das tabelas em sequência
   for (const sql of createTablesSQL) {
     try {
@@ -252,7 +238,7 @@ const createTablesInOrder = async () => {
       // Continua mesmo com erro para tentar criar as outras tabelas
     }
   }
-  
+
   console.log("Tabelas criadas com sucesso!");
 };
 

@@ -53,6 +53,14 @@ const Inscricao_Curso = sequelize.define("Inscricao_Curso", {
   horas_presenca: {
     type: DataTypes.INTEGER,
     allowNull: true,
+  },
+  motivo_cancelamento: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  data_cancelamento: {
+    type: DataTypes.DATE,
+    allowNull: true,
   }
 }, {
   tableName: "inscricoes_cursos",
