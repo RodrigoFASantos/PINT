@@ -202,94 +202,79 @@ const createInscricao = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
 // Cancelar uma inscrição
 const cancelarInscricao = async (req, res) => {
   try {
     const { id } = req.params;
-    const { motivo_cancelamento } = req.body; // Opcional: motivo do cancelamento
+    const { motivo_cancelamento } = req.body;
     
+    // Buscar inscrição sem usar transação
     const inscricao = await Inscricao_Curso.findByPk(id);
 
     if (!inscricao) {
       return res.status(404).json({ message: "Inscrição não encontrada" });
     }
 
-    // Verificar se o usuário é o dono da inscrição ou um gestor
+    // Verificar permissões
     if (req.user.id_utilizador != inscricao.id_utilizador && req.user.id_cargo !== 1) {
       return res.status(403).json({ 
         message: "Você não tem permissão para cancelar esta inscrição" 
       });
     }
 
-    try {
-      // Iniciar transação para garantir a consistência dos dados
-      const t = await sequelize.transaction();
+    // Capturar dados antes de remover
+    const dadosInscricao = {
+      id_inscricao_original: inscricao.id_inscricao,
+      id_utilizador: inscricao.id_utilizador,
+      id_curso: inscricao.id_curso,
+      data_inscricao: inscricao.data_inscricao,
+      data_cancelamento: new Date(),
+      estado: "cancelado",
+      motivacao: inscricao.motivacao,
+      expectativas: inscricao.expectativas,
+      nota_final: inscricao.nota_final,
+      certificado_gerado: inscricao.certificado_gerado,
+      horas_presenca: inscricao.horas_presenca,
+      motivo_cancelamento: motivo_cancelamento || null
+    };
 
-      try {
-        // Criar entrada na tabela de inscrições canceladas
-        await InscricaoCursoCancelada.create({
-          // Não definimos id_cancelamento pois é autoincrement
-          id_inscricao_original: inscricao.id_inscricao,
-          id_utilizador: inscricao.id_utilizador,
-          id_curso: inscricao.id_curso,
-          data_inscricao: inscricao.data_inscricao,
-          data_cancelamento: new Date(),
-          estado: "cancelado",
-          motivacao: inscricao.motivacao,
-          expectativas: inscricao.expectativas,
-          nota_final: inscricao.nota_final,
-          certificado_gerado: inscricao.certificado_gerado,
-          horas_presenca: inscricao.horas_presenca,
-          motivo_cancelamento: motivo_cancelamento || null
-        }, { transaction: t });
+    // Executar as operações em uma sequência (sem transação)
+    
+    // 1. Criar registro na tabela de inscrições canceladas
+    await InscricaoCursoCancelada.create(dadosInscricao);
+    
+    // 2. Excluir a inscrição original
+    await inscricao.destroy();
+    
+    // 3. Atualizar vagas do curso (se necessário)
+    const curso = await Curso.findByPk(inscricao.id_curso);
+    if (curso && curso.vagas !== null) {
+      curso.vagas = curso.vagas + 1;
+      await curso.save();
+    }
 
-        // Excluir a inscrição original
-        await inscricao.destroy({ transaction: t });
-
-        // Commit da transação
-        await t.commit();
-
-        // Caso o curso tenha limite de vagas, notificar usuários em lista de espera
-        const curso = await Curso.findByPk(inscricao.id_curso);
-        if (curso && curso.vagas !== null) {
-          // Incrementar vaga disponível
-          curso.vagas = curso.vagas + 1;
-          await curso.save();
-        }
-
-        // Notificar o usuário via WebSocket (se disponível)
-        if (req.io) {
-          req.io.to(`user_${inscricao.id_utilizador}`).emit('inscricao_cancelada', {
-            message: `Sua inscrição no curso "${curso ? curso.nome : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
-            id_inscricao: id
-          });
-        }
-
-        res.json({ 
-          message: "Inscrição cancelada com sucesso",
-          inscricao_cancelada_id: id
-        });
-      } catch (error) {
-        // Em caso de erro, reverter a transação
-        await t.rollback();
-        throw error;
-      }
-    } catch (error) {
-      // Verificar erro de conexão com o banco de dados
-      if (error.name?.includes('SequelizeConnection')) {
-        return res.status(503).json({ 
-          message: "Serviço temporariamente indisponível. Problemas com o banco de dados.",
-          error: "Erro de conexão com o banco de dados"
-        });
-      }
-      
-      // Outros erros na transação
-      console.error("Erro na transação ao cancelar inscrição:", error);
-      res.status(500).json({ 
-        message: "Erro no servidor ao processar o cancelamento da inscrição",
-        error: error.message 
+    // 4. Notificar via WebSocket (se disponível)
+    if (req.io) {
+      req.io.to(`user_${inscricao.id_utilizador}`).emit('inscricao_cancelada', {
+        message: `Sua inscrição no curso "${curso ? curso.nome : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
+        id_inscricao: id
       });
     }
+
+    res.json({ 
+      message: "Inscrição cancelada com sucesso",
+      inscricao_cancelada_id: id
+    });
+    
   } catch (error) {
     console.error("Erro ao cancelar inscrição:", error);
     
@@ -307,6 +292,18 @@ const cancelarInscricao = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

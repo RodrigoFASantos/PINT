@@ -1,11 +1,10 @@
-// src/models/InscricaoCursoCancelada.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
 const InscricaoCursoCancelada = sequelize.define(
   "inscricao_curso_cancelada",
   {
-    id_inscricao_cancelada: {
+    id_cancelamento: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
