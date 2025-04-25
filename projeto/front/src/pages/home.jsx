@@ -13,33 +13,33 @@ export default function Home() {
   const [inscricoes, setInscricoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshCount, setRefreshCount] = useState(0); // Estado para rastrear refreshes
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const getImageUrl = (curso) => {
-    if (!curso || !curso.nomeCurso) return '/fallback-curso.jpg';
-    const nomeCursoSlug = curso.nomeCurso
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    return IMAGES.CURSO(nomeCursoSlug);
-  };
-
-  // Efeito para verificar se precisa recarregar após login
-  useEffect(() => {
-    const needsRefresh = sessionStorage.getItem('needsRefresh');
-
-    if (needsRefresh === 'true') {
-      // Remover o flag para evitar loops de recargas
-      sessionStorage.removeItem('needsRefresh');
-      // Recarregar a página uma vez
-      window.location.reload();
+  const getImageUrl = (inscricao) => {
+    // Se o curso tiver um caminho de imagem definido
+    if (inscricao && inscricao.imagem_path) {
+      return `${API_BASE}/${inscricao.imagem_path}`;
     }
-  }, []);
+  
+    // Se não tiver imagem_path mas tiver nome do curso, criar um slug do nome
+    if (inscricao && inscricao.nomeCurso) {
+      const nomeCursoSlug = inscricao.nomeCurso
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      return `${API_BASE}/uploads/cursos/${nomeCursoSlug}/capa.png`;
+    }
+  
+    // Fallback para imagem padrão
+    return '/fallback-curso.jpg';
+  };
 
   // Função para buscar as inscrições do usuário
   const buscarInscricoes = async () => {
     try {
+      console.log(`Buscando inscrições (contagem: ${refreshCount})`);
       setLoading(true);
       // Obter o token do localStorage
       const token = localStorage.getItem('token');
@@ -63,6 +63,8 @@ export default function Home() {
       // Atualizar o estado com as inscrições recebidas
       setInscricoes(response.data);
       setLoading(false);
+      // Incrementar o contador de refreshes para monitoramento
+      setRefreshCount(prev => prev + 1);
     } catch (err) {
       console.error('Erro ao buscar inscrições:', err);
       setError('Não foi possível carregar os cursos inscritos');
@@ -70,13 +72,27 @@ export default function Home() {
     }
   };
 
-  // Efeito para carregar as inscrições quando o componente montar
+  // Efeito combinado para verificar needsRefresh e carregar inscrições
   useEffect(() => {
+    console.log('Componente Home montado - verificando necessidade de refresh');
+    const needsRefresh = sessionStorage.getItem('needsRefresh');
+    
+    // Se tiver a flag needsRefresh, remove-la para evitar loops
+    if (needsRefresh === 'true') {
+      console.log('Flag needsRefresh detectada, removendo...');
+      sessionStorage.removeItem('needsRefresh');
+    }
+    
+    // Buscar inscrições apenas uma vez, independentemente da flag
     buscarInscricoes();
-  }, []);
+    
+    // Função de limpeza para evitar atualizações em componentes desmontados
+    return () => {
+      console.log('Componente Home desmontado');
+    };
+  }, []); // Array de dependências vazio significa que executa apenas na montagem
 
   // Função para redirecionar para a página de detalhes do curso
-  // CORREÇÃO: Caminho alterado para "/cursos/" em vez de "/curso/"
   const redirecionarParaDetalheCurso = (cursoId) => {
     console.log('Redirecionando para o curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
@@ -123,15 +139,17 @@ export default function Home() {
                   className="cartao-curso"
                   onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
                 >
-                  {/* Tentar usar a imagem do curso se disponível */}
-                  <img
-                    src={getImageUrl(inscricao)}
-                    alt={inscricao.nomeCurso} a
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/fallback-curso.jpg';
-                    }}
-                  />
+                  {/* Imagem do curso com tratamento adequado */}
+                  <div className="curso-imagem-container">
+                    <img
+                      src={getImageUrl(inscricao)}
+                      alt={inscricao.nomeCurso}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/fallback-curso.jpg';
+                      }}
+                    />
+                  </div>
                   <div className="curso-info">
                     <h3>{inscricao.nomeCurso}</h3>
                     <p className="curso-detalhe">Categoria: {inscricao.categoria}</p>
@@ -160,6 +178,17 @@ export default function Home() {
                 className="cartao-curso"
                 onClick={() => redirecionarParaDetalheCurso(curso.id)}
               >
+                {/* Sugestão: adicionar preview de imagem para cursos sugeridos */}
+                <div className="curso-imagem-container">
+                  <img
+                    src={`/placeholder-curso-${curso.id}.jpg`}
+                    alt={curso.nome}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/fallback-curso.jpg';
+                    }}
+                  />
+                </div>
                 <div className="curso-info">
                   <h3>{curso.nome}</h3>
                   <p className="curso-detalhe">Formador: {curso.formador}</p>

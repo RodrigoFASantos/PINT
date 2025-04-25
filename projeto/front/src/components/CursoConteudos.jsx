@@ -5,6 +5,10 @@ import API_BASE from "../api";
 import CriarTopicoModal from './CriarTopicoModal';
 import Curso_Conteudo_ficheiro_Modal from "./Curso_Conteudo_ficheiro_Modal";
 import axios from "axios";
+import AdicionarConteudoModal from '../components/AdicionarConteudoModal';
+
+
+
 
 const CursoConteudos = ({ cursoId }) => {
   const { id } = useParams();
@@ -35,7 +39,18 @@ const CursoConteudos = ({ cursoId }) => {
 
 
   const [conteudoSelecionado, setConteudoSelecionado] = useState(null);
-const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarModal, setMostrarModal] = useState(false);
+
+  const [showAdicionarConteudoModal, setShowAdicionarConteudoModal] = useState(false);
+  const [pastaAtual, setPastaAtual] = useState(null);
+
+
+
+
+
+
+
+
 
 
 
@@ -259,6 +274,17 @@ const [mostrarModal, setMostrarModal] = useState(false);
       fetchCursoInfo();
       return;
     }
+    if (type === 'conteudo') {
+      // Guarda a pasta atual para usar no modal
+      setPastaAtual({
+        id_pasta: pastaId,
+        id_curso: courseId
+      });
+      // Mostra o modal de adicionar conteúdo
+      setShowAdicionarConteudoModal(true);
+      return; // Importante para não executar o resto da função
+    }
+
 
     // Comportamento normal para outros casos
     setModalType(type);
@@ -654,7 +680,7 @@ const [mostrarModal, setMostrarModal] = useState(false);
 
 
 
-  
+
 
 
 
@@ -839,16 +865,16 @@ const [mostrarModal, setMostrarModal] = useState(false);
                                 {getConteudoIcon(conteudo.tipo)}
 
                                 <span
-  className="conteudo-titulo cursor-pointer"
-  onClick={() => {
-    if (conteudo.tipo === 'file') {
-      setConteudoSelecionado(conteudo);
-      setMostrarModal(true);
-    }
-  }}
->
-  {conteudo.titulo}
-</span>
+                                  className="conteudo-titulo cursor-pointer"
+                                  onClick={() => {
+                                    if (conteudo.tipo === 'file') {
+                                      setConteudoSelecionado(conteudo);
+                                      setMostrarModal(true);
+                                    }
+                                  }}
+                                >
+                                  {conteudo.titulo}
+                                </span>
 
 
 
@@ -892,12 +918,12 @@ const [mostrarModal, setMostrarModal] = useState(false);
         ))}
 
         {mostrarModal && conteudoSelecionado && (
-  <Curso_Conteudo_ficheiro_Modal
-    conteudo={conteudoSelecionado}
-    onClose={() => setMostrarModal(false)}
-    API_BASE={API_BASE}
-  />
-)}
+          <Curso_Conteudo_ficheiro_Modal
+            conteudo={conteudoSelecionado}
+            onClose={() => setMostrarModal(false)}
+            API_BASE={API_BASE}
+          />
+        )}
 
       </div>
 
@@ -1066,6 +1092,19 @@ const [mostrarModal, setMostrarModal] = useState(false);
           curso={{ id_curso: courseId, nome: "Curso postman" }}
           onClose={handleTopicoModalClose}
           onSuccess={handleTopicoCreated}
+        />
+      )}
+
+
+
+      {showAdicionarConteudoModal && (
+        <AdicionarConteudoModal
+          curso={pastaAtual}
+          onClose={() => setShowAdicionarConteudoModal(false)}
+          onSuccess={() => {
+            setShowAdicionarConteudoModal(false);
+            fetchTopicos(); // Recarrega a lista de tópicos
+          }}
         />
       )}
 

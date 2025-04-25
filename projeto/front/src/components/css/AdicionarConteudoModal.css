@@ -1,143 +1,191 @@
 .adicionar-conteudo-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1rem;
-    z-index: 1000;
-    overflow-y: auto;
-  }
-  
-  .adicionar-conteudo-modal {
-    background-color: #ffffff;
-    border-radius: 8px;
-    max-width: 600px;
-    width: 100%;
-    position: relative;
-    padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  
-  .close-btn {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    background: none;
-    font-size: 1.5rem;
-    color: #6c757d;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-  }
-  
-  .close-btn:hover {
-    background-color: #f1f1f1;
-    color: #000;
-  }
-  
-  .curso-info {
-    font-weight: 500;
-    color: #0062cc;
-    margin-bottom: 1.5rem;
-  }
-  
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #333;
-  }
-  
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-  
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus {
-    border-color: #0062cc;
-    box-shadow: 0 0 0 0.25rem rgba(0, 98, 204, 0.25);
-    outline: none;
-  }
-  
-  .file-info {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: #6c757d;
-  }
-  
-  .help-text {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: #6c757d;
-  }
-  
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-  }
-  
-  .cancelar-btn {
-    padding: 0.5rem 1rem;
-    background-color: #e9ecef;
-    color: #495057;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  
-  .cancelar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .confirmar-btn {
-    padding: 0.5rem 1rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  
-  .confirmar-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .confirmar-btn:disabled,
-  .cancelar-btn:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-  }
-  
-  .erro-message {
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.adicionar-conteudo-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 550px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.adicionar-conteudo-modal h2 {
+  margin: 0;
+  padding: 20px;
+  background-color: #4a69bd;
+  color: white;
+  font-size: 20px;
+  font-weight: normal;
+  border-radius: 8px 8px 0 0;
+}
+
+.curso-info {
+  margin: 0 0 20px;
+  padding: 0 20px;
+  color: #666;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.tipo-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.tipo-btn {
+  color: black;
+  display: flex;
+  align-items: center;
+  background-color: #f5f7fa;
+  border: 1px solid #dce0e6;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.tipo-btn:hover {
+  background-color: #e8edf5;
+  border-color: #c0c8d7;
+}
+
+.tipo-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.3);
+}
+
+.form-group {
+  margin-bottom: 16px;
+  padding: 0 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #444;
+}
+
+.form-group input[type="text"],
+.form-group input[type="url"],
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dce0e6;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="url"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4a69bd;
+  box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
+}
+
+.form-group input[type="file"] {
+  display: block;
+  margin: 8px 0;
+}
+
+.file-info {
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.erro-message {
+  color: #e74c3c;
+  background-color: #fdecea;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 20px;
+  font-size: 14px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #eaecef;
+  margin-top: 10px;
+}
+
+.voltar-btn, 
+.confirmar-btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.voltar-btn {
+  background-color: #f5f7fa;
+  border: 1px solid #dce0e6;
+  color: #444;
+}
+
+.voltar-btn:hover {
+  background-color: #e8edf5;
+}
+
+.confirmar-btn {
+  background-color: #4a69bd;
+  border: none;
+  color: white;
+}
+
+.confirmar-btn:hover {
+  background-color: #405aaa;
+}
+
+.confirmar-btn:disabled,
+.voltar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}

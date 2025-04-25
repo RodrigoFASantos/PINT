@@ -1,0 +1,11 @@
+O cursos.jsx é onde apareçem os cursos para escolher, e quando um é escolhido, é aberta a página detalhesCurso.jsx
+
+Essa página só serve para mostrar o cabeçalho e as ações para o curso, os conteúdos estão em componentes/CursoConteudos.jsx
+
+
+O CursoConteudos é o principal, é onde aparece tudo!
+
+Ele chama o Curso_Conteudo_ficheiro_Modal.jsx para tratar de descarregar ou visualizar ficheiros.
+
+Quando não existem tópicos num curso, chama o CriarTopicoModal.jsx
+
