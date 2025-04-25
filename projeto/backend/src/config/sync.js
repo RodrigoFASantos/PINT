@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { createTablesInOrder } = require('./criarTabelas');
 
-// Dados Teste (nova localização)
+// Dados Teste
 const sqlPath = path.join(__dirname, './dados_teste.sql');
 const dadosSQL = fs.readFileSync(sqlPath, 'utf-8');
 

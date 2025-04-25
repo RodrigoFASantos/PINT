@@ -23,7 +23,7 @@
     "mdb-react-ui-kit": "^9.0.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.10.1",
-    "pg": "^8.14.1",
+    "pg": "^8.15.5",
     "pg-hstore": "^2.3.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
