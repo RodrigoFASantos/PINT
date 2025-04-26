@@ -12,12 +12,14 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [primeiroLogin, setPrimeiroLogin] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userName = localStorage.getItem('userName');
+    const primeiroLoginStorage = localStorage.getItem('primeiroLogin');
     
-    console.log('Verificando token no refresh:', { token, userName });
+    console.log('Verificando token no refresh:', { token, userName, primeiroLogin: primeiroLoginStorage });
 
     if (token) {
       fetchUserData(token);
@@ -35,6 +37,16 @@ export const AuthProvider = ({ children }) => {
       console.log('Dados do usuário obtidos:', response.data);
       
       setCurrentUser(response.data);
+      
+      // Verificar e definir o status de primeiro login
+      if (response.data.primeiro_login === 1) {
+        localStorage.setItem('primeiroLogin', '1');
+        setPrimeiroLogin(true);
+      } else {
+        localStorage.setItem('primeiroLogin', '0');
+        setPrimeiroLogin(false);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
@@ -45,6 +57,7 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.removeItem('token');
       localStorage.removeItem('userName');
+      localStorage.removeItem('primeiroLogin');
       setCurrentUser(null);
       setLoading(false);
     }
@@ -60,9 +73,13 @@ export const AuthProvider = ({ children }) => {
       // Salvar token e nome de usuário
       localStorage.setItem('token', token);
       localStorage.setItem('userName', nome);
+      localStorage.setItem('primeiroLogin', primeiro_login.toString());
+      
+      // Definir estado de primeiro login
+      setPrimeiroLogin(primeiro_login === 1);
       
       setCurrentUser({
-        id: id_utilizador,
+        id_utilizador,
         nome,
         cargo,
         email: userEmail,
@@ -85,15 +102,49 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
+    localStorage.removeItem('primeiroLogin');
     setCurrentUser(null);
+    setPrimeiroLogin(false);
+  };
+  
+  // Função para atualizar o status de primeiro login
+  const updatePrimeiroLogin = (status) => {
+    localStorage.setItem('primeiroLogin', status ? '1' : '0');
+    setPrimeiroLogin(status);
+  };
+  
+  // Função para alterar senha
+  const changePassword = async (data) => {
+    try {
+      setError('');
+      
+      const response = await axios.put(`${API_BASE}/users/change-password`, data);
+      
+      // Atualizar o estado de primeiro login se a senha foi alterada com sucesso
+      if (response.data.message === "Senha alterada com sucesso") {
+        updatePrimeiroLogin(false);
+      }
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      setError(
+        error.response?.data?.message || 
+        'Erro ao alterar senha. Tente novamente.'
+      );
+      return { success: false, message: error.response?.data?.message };
+    }
   };
 
   const value = {
     currentUser,
     loading,
     error,
+    primeiroLogin,
     login,
-    logout
+    logout,
+    updatePrimeiroLogin,
+    changePassword
   };
 
   return (

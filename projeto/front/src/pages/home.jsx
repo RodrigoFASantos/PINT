@@ -7,6 +7,7 @@ import API_BASE from '../api';
 import axios from 'axios';
 import Cursos_Sugeridos from '../components/Cursos_Sugeridos';
 import fallbackCurso from '../images/default_image.png';
+import PasswordChangeModal from '../components/PasswordChangeModal'; // Importar o modal
 
 export default function Home() {
   const navigate = useNavigate();
@@ -15,12 +16,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [showPasswordModal, setShowPasswordModal] = useState(false); // Estado para controlar o modal
+  const [userId, setUserId] = useState(null); // Estado para armazenar o ID do usuário
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-
   const textRef = useRef(null); // REFERÊNCIA para o span
-
 
   const texts = [
     "Aprender aqui é mais fácil",
@@ -31,7 +32,33 @@ export default function Home() {
     "Aprender aqui é inovador"
   ];
 
+  // Verificar se é o primeiro login
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        // Decodificar o token para obter as informações do usuário
+        const decodedToken = JSON.parse(atob(token.split('.')[1]));
+        
+        // Verificar se há informações de primeiro login no localStorage
+        const primeiroLogin = localStorage.getItem('primeiroLogin');
+        setUserId(decodedToken.id_utilizador);
+        
+        // Se for o primeiro login, exibir o modal
+        if (primeiroLogin === '1') {
+          setShowPasswordModal(true);
+        }
+      } catch (error) {
+        console.error('Erro ao decodificar token:', error);
+      }
+    }
+  }, []);
 
+  // Fechar o modal e atualizar o localStorage
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+    localStorage.setItem('primeiroLogin', '0');
+  };
 
   useEffect(() => {
     let index = 0;
@@ -80,9 +107,6 @@ export default function Home() {
     };
   }, []);
   
-
-
-
   const getImageUrl = (inscricao) => {
     if (inscricao && inscricao.imagem_path) {
       return `${API_BASE}/${inscricao.imagem_path}`;
@@ -130,11 +154,36 @@ export default function Home() {
 
   useEffect(() => {
     const isFirstLoad = sessionStorage.getItem('homeVisited') !== 'true';
-
+    
     if (isFirstLoad) {
       console.log('Primeira visita à página Home - marcando como visitada');
       sessionStorage.setItem('homeVisited', 'true');
-      window.location.reload();
+      
+      // Obter e armazenar a informação de primeiro login
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const config = {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          };
+          
+          axios.get(`${API_BASE}/users/perfil`, config)
+            .then(response => {
+              if (response.data && response.data.primeiro_login) {
+                localStorage.setItem('primeiroLogin', response.data.primeiro_login.toString());
+                // Se for primeiro login, recarregar para exibir o modal
+                window.location.reload();
+              }
+            })
+            .catch(error => {
+              console.error('Erro ao buscar perfil:', error);
+            });
+        } catch (error) {
+          console.error('Erro ao configurar requisição:', error);
+        }
+      }
     } else {
       console.log('Componente Home montado - já visitado anteriormente');
       const needsRefresh = sessionStorage.getItem('needsRefresh');
@@ -149,13 +198,6 @@ export default function Home() {
       console.log('Componente Home desmontado');
     };
   }, []);
-
-
-
-
-
-
-
 
   const redirecionarParaDetalheCurso = (cursoId) => {
     console.log('Redirecionando para o curso:', cursoId);
@@ -175,17 +217,21 @@ export default function Home() {
     <div className="home-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
+      {/* Modal de alteração de senha para primeiro login */}
+      <PasswordChangeModal 
+        isOpen={showPasswordModal} 
+        onClose={handleClosePasswordModal} 
+        userId={userId}
+      />
+
       <div className="banner">
         <img src={banner} alt="banner" />
         <div className="overlay-text">
-
           <div className="text-animation">
             <h1><span ref={textRef}></span><span className="cursor"></span></h1>
           </div>
-
           <p>Não vale a pena estar a inventar a roda ou a descobrir a pólvora!</p>
         </div>
-
       </div>
 
       <div className="content-container">
@@ -248,17 +294,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -12,7 +12,9 @@ const {
   updatePerfilUser, 
   changePassword,
   uploadImagemPerfil,
-  uploadImagemCapa
+  uploadImagemCapa,
+  confirmAccount,
+  resendConfirmation
 } = require("../../controllers/users/users_ctrl");
 const multer = require("multer");
 const path = require("path");
@@ -73,7 +75,13 @@ router.get("/perfil", verificarToken, perfilUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
 router.put("/users/change-password", changePassword);
 
-// Rotas de upload de imagens - Agora usando as funções do controlador
+// Nova rota para confirmação de conta
+router.post("/confirm-account", confirmAccount);
+
+// Nova rota para reenvio de email de confirmação
+router.post("/resend-confirmation", resendConfirmation);
+
+// Rotas de upload de imagens
 router.post("/img/perfil", verificarToken, upload.single("imagem"), uploadImagemPerfil);
 router.post("/img/capa", verificarToken, upload.single("imagem"), uploadImagemCapa);
 

@@ -20,6 +20,8 @@ const ForumPartilha = () => {
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Removido o useEffect problemático que utilizava currentUser não definido
+
   // Carregar categorias e perfil do usuário
   useEffect(() => {
     const fetchData = async () => {
@@ -50,7 +52,7 @@ const ForumPartilha = () => {
         });
         
         // Armazenar o cargo do usuário
-        setUserRole(userResponse.data.cargo?.descricao || '');
+        setUserRole(userResponse.data.id_cargo || '');
         setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
@@ -62,29 +64,26 @@ const ForumPartilha = () => {
   }, []);
 
   // Função para expandir/colapsar categoria e carregar tópicos
-// Função para expandir/colapsar categoria e carregar tópicos
-const toggleCategoria = async (categoriaId) => {
-  console.log(`Categoria clicada: ${categoriaId}`);
-  console.log('Estado atual das categorias expandidas:', categoriasExpandidas);
-  
-  // Criar um novo objeto baseado no estado atual (para imutabilidade)
-  const novoEstado = { ...categoriasExpandidas };
-  
-  // Inverter o estado da categoria clicada (se estava true fica false, se estava false fica true)
-  novoEstado[categoriaId] = !categoriasExpandidas[categoriaId];
-  
-  console.log('Novo estado das categorias expandidas:', novoEstado);
-  
-  // Atualizar estado de expansão
-  setCategoriasExpandidas(novoEstado);
-  
-  // Se está expandindo e ainda não carregou os tópicos
-  if (novoEstado[categoriaId] && !categoriasTopicos[categoriaId]) {
-    await carregarTopicosCategoria(categoriaId);
-  }
-};
-
-
+  const toggleCategoria = async (categoriaId) => {
+    console.log(`Categoria clicada: ${categoriaId}`);
+    console.log('Estado atual das categorias expandidas:', categoriasExpandidas);
+    
+    // Criar um novo objeto baseado no estado atual (para imutabilidade)
+    const novoEstado = { ...categoriasExpandidas };
+    
+    // Inverter o estado da categoria clicada (se estava true fica false, se estava false fica true)
+    novoEstado[categoriaId] = !categoriasExpandidas[categoriaId];
+    
+    console.log('Novo estado das categorias expandidas:', novoEstado);
+    
+    // Atualizar estado de expansão
+    setCategoriasExpandidas(novoEstado);
+    
+    // Se está expandindo e ainda não carregou os tópicos
+    if (novoEstado[categoriaId] && !categoriasTopicos[categoriaId]) {
+      await carregarTopicosCategoria(categoriaId);
+    }
+  };
 
   // Função para carregar tópicos de uma categoria
   const carregarTopicosCategoria = async (categoriaId) => {
@@ -115,7 +114,7 @@ const toggleCategoria = async (categoriaId) => {
 
   // Função para abrir modal de criação de tópico
   const handleCriarTopico = (categoria) => {
-    if (userRole === 'Administrador' || userRole === 'Gestor') {
+    if (userRole === 1 || userRole === 2) {
       setCategoriaAtiva(categoria);
       setShowCriarTopico(true);
     } else {
@@ -195,7 +194,7 @@ const toggleCategoria = async (categoriaId) => {
                     className="criar-topico-btn"
                     onClick={() => handleCriarTopico(categoria)}
                   >
-                    {userRole === 'Administrador' || userRole === 'Gestor' ? 'Criar Tópico' : 'Solicitar Tópico'}
+                    {userRole === 1 || userRole === 2 ? 'Criar Tópico' : 'Solicitar Tópico'}
                   </button>
                 </div>
                 

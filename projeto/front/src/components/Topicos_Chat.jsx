@@ -314,14 +314,19 @@ const Topicos_Chat = () => {
   // Exibir conteúdo do anexo
   const renderAnexo = (mensagem) => {
     if (!mensagem.anexo_url) return null;
-
+  
+    // Corrigir o URL do anexo - garantir que não tenha caminho absoluto
+    const anexoUrl = mensagem.anexo_url.startsWith('/') 
+      ? `${API_BASE.split('/api')[0]}${mensagem.anexo_url}` 
+      : `${API_BASE.split('/api')[0]}/${mensagem.anexo_url}`;
+  
     if (mensagem.tipo_anexo === 'imagem') {
       return (
         <div className="anexo-imagem">
           <img 
-            src={`${API_BASE}/${mensagem.anexo_url}`} 
+            src={anexoUrl} 
             alt="Anexo" 
-            onClick={() => window.open(`${API_BASE}/${mensagem.anexo_url}`, '_blank')}
+            onClick={() => window.open(anexoUrl, '_blank')}
           />
         </div>
       );
@@ -329,14 +334,14 @@ const Topicos_Chat = () => {
       return (
         <div className="anexo-video">
           <video controls>
-            <source src={`${API_BASE}/${mensagem.anexo_url}`} type="video/mp4" />
+            <source src={anexoUrl} type="video/mp4" />
             Seu navegador não suporta vídeos.
           </video>
         </div>
       );
     } else {
       return (
-        <div className="anexo-arquivo" onClick={() => window.open(`${API_BASE}/${mensagem.anexo_url}`, '_blank')}>
+        <div className="anexo-arquivo" onClick={() => window.open(anexoUrl, '_blank')}>
           <i className="fas fa-file"></i>
           <span>{mensagem.anexo_nome || 'Arquivo'}</span>
         </div>

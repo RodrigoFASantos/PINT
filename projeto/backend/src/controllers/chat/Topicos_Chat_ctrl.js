@@ -3,10 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
 
-/**
- * Obter detalhes de um tópico
- */
-exports.getTopico = async (req, res) => {
+// Controlador para obter detalhes de um tópico específico
+const getTopico = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`Buscando tópico com ID: ${id}`);
@@ -50,14 +48,12 @@ exports.getTopico = async (req, res) => {
   }
 };
 
-/**
- * Obter mensagens de um tópico
- */
-exports.getMensagens = async (req, res) => {
+// Controlador para obter todas as mensagens de um tópico
+const getMensagens = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`Buscando mensagens para o tópico ID: ${id}`);
-    
+
     const mensagens = await Comentario_Topico.findAll({
       where: { id_topico: id },
       include: [
@@ -69,9 +65,9 @@ exports.getMensagens = async (req, res) => {
       ],
       order: [['data_criacao', 'ASC']]
     });
-    
+
     console.log(`Encontradas ${mensagens.length} mensagens para o tópico ${id}`);
-    
+
     res.status(200).json({
       success: true,
       data: mensagens
@@ -86,28 +82,27 @@ exports.getMensagens = async (req, res) => {
   }
 };
 
-/**
- * Enviar mensagem em um tópico
- */
-exports.enviarMensagem = async (req, res) => {
+// Controlador para enviar uma nova mensagem num tópico
+const enviarMensagem = async (req, res) => {
   try {
     const { id } = req.params;
     const { texto } = req.body;
     const userId = req.user.id;
-    
-    console.log(`Enviando mensagem para tópico ${id} pelo usuário ${userId}`);
+
+    console.log(`Enviando mensagem para tópico ${id} pelo utilizador ${userId}`);
     console.log(`Texto da mensagem: ${texto}`);
-    
-    // Verificar se o tópico existe
-    const topico = await Topico_Categoria.findByPk(id);
+
+    const topico = await Topico_Categoria.findByPk(id, {
+      include: [{ model: Categoria, as: 'categoria' }]
+    });
+
     if (!topico) {
       return res.status(404).json({
         success: false,
         message: 'Tópico não encontrado'
       });
     }
-    
-    // Dados da mensagem
+
     const mensagemData = {
       id_topico: id,
       id_utilizador: userId,
@@ -116,44 +111,42 @@ exports.enviarMensagem = async (req, res) => {
       likes: 0,
       dislikes: 0
     };
-    
-    // Se tiver arquivo anexo
+
     if (req.file) {
-      console.log('Arquivo detectado:', req.file.originalname);
-      
-      // Criar pasta para arquivos do chat se não existir
-      const uploadDir = path.join(__dirname, '../../../uploads/chat');
+      console.log('Ficheiro detectado:', req.file.originalname);
+
+      const categoriaNome = topico.categoria ?
+        topico.categoria.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'sem_categoria';
+      const topicoNome = topico.titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+      const uploadDir = path.join(__dirname, '../../../uploads/chat', categoriaNome, topicoNome);
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
-      
+
       const fileExtension = path.extname(req.file.originalname);
       const fileName = `${Date.now()}_${userId}${fileExtension}`;
       const filePath = path.join(uploadDir, fileName);
-      
-      // Salvar o arquivo
+
       fs.writeFileSync(filePath, req.file.buffer);
-      
-      // Adicionar informações do anexo à mensagem
-      mensagemData.anexo_url = `uploads/chat/${fileName}`;
+
+      const relativePath = path.join('/uploads/chat', categoriaNome, topicoNome, fileName);
+      mensagemData.anexo_url = relativePath.replace(/\\/g, '/');
       mensagemData.anexo_nome = req.file.originalname;
-      
-      // Determinar o tipo de anexo
+
       const mimeType = req.file.mimetype.split('/')[0];
       if (mimeType === 'image') {
         mensagemData.tipo_anexo = 'imagem';
       } else if (mimeType === 'video') {
         mensagemData.tipo_anexo = 'video';
       } else {
-        mensagemData.tipo_anexo = 'file';
+        mensagemData.tipo_anexo = 'ficheiro';
       }
     }
-    
-    // Criar a mensagem no banco de dados
+
     const novaMensagem = await Comentario_Topico.create(mensagemData);
     console.log(`Mensagem criada com ID: ${novaMensagem.id_comentario}`);
-    
-    // Buscar a mensagem com dados do usuário
+
     const mensagemCompleta = await Comentario_Topico.findOne({
       where: { id_comentario: novaMensagem.id_comentario },
       include: [
@@ -164,13 +157,12 @@ exports.enviarMensagem = async (req, res) => {
         }
       ]
     });
-    
-    // Emitir evento para o socket.io se disponível
+
     if (req.io) {
       console.log(`Emitindo evento 'novoComentario' para tópico ${id}`);
       req.io.to(`topico_${id}`).emit('novoComentario', mensagemCompleta);
     }
-    
+
     res.status(201).json({
       success: true,
       message: 'Mensagem enviada com sucesso',
@@ -186,25 +178,22 @@ exports.enviarMensagem = async (req, res) => {
   }
 };
 
-/**
- * Avaliar uma mensagem (curtir/descurtir)
- */
-exports.avaliarMensagem = async (req, res) => {
+// Controlador para avaliar um comentário (gostar/não gostar)
+const avaliarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
-    const { tipo } = req.body; // 'like' ou 'dislike'
+    const { tipo } = req.body;
     const userId = req.user.id;
-    
+
     console.log(`Avaliando comentário ${idComentario} como ${tipo}`);
-    
+
     if (!['like', 'dislike'].includes(tipo)) {
       return res.status(400).json({
         success: false,
         message: 'Tipo de avaliação inválido. Use "like" ou "dislike"'
       });
     }
-    
-    // Verificar se a mensagem existe
+
     const mensagem = await Comentario_Topico.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
@@ -212,17 +201,28 @@ exports.avaliarMensagem = async (req, res) => {
         message: 'Mensagem não encontrada'
       });
     }
-    
-    // Atualizar contadores de likes/dislikes
+
     if (tipo === 'like') {
       await mensagem.update({ likes: mensagem.likes + 1 });
     } else {
       await mensagem.update({ dislikes: mensagem.dislikes + 1 });
     }
-    
+
+    if (req.io) {
+      req.io.to(`topico_${mensagem.id_topico}`).emit('comentarioAvaliado', {
+        id_comentario: mensagem.id_comentario,
+        likes: mensagem.likes,
+        dislikes: mensagem.dislikes
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: `Mensagem ${tipo === 'like' ? 'curtida' : 'descurtida'} com sucesso`
+      message: `Mensagem ${tipo === 'like' ? 'gostada' : 'não gostada'} com sucesso`,
+      data: {
+        likes: mensagem.likes,
+        dislikes: mensagem.dislikes
+      }
     });
   } catch (error) {
     console.error('Erro ao avaliar mensagem:', error);
@@ -234,25 +234,22 @@ exports.avaliarMensagem = async (req, res) => {
   }
 };
 
-/**
- * Denunciar uma mensagem
- */
-exports.denunciarMensagem = async (req, res) => {
+// Controlador para denunciar uma mensagem
+const denunciarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
     const { motivo } = req.body;
     const userId = req.user.id;
-    
+
     console.log(`Denunciando comentário ${idComentario} por motivo: ${motivo}`);
-    
+
     if (!motivo) {
       return res.status(400).json({
         success: false,
         message: 'Motivo da denúncia é obrigatório'
       });
     }
-    
-    // Verificar se a mensagem existe
+
     const mensagem = await Comentario_Topico.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
@@ -260,17 +257,27 @@ exports.denunciarMensagem = async (req, res) => {
         message: 'Mensagem não encontrada'
       });
     }
-    
-    // Em uma implementação real, você salvaria a denúncia em uma tabela específica
-    // Por simplicidade, vamos apenas marcar a mensagem como denunciada
-    await mensagem.update({ 
-      denunciada: true,
+
+    await mensagem.update({
+      denuncias: mensagem.denuncias + 1,
       motivo_denuncia: motivo
     });
-    
+
+    if (req.io) {
+      req.io.to('admin_channel').emit('comentarioDenunciado', {
+        id_comentario: mensagem.id_comentario,
+        id_topico: mensagem.id_topico,
+        denuncias: mensagem.denuncias,
+        motivo
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Mensagem denunciada com sucesso'
+      message: 'Mensagem denunciada com sucesso',
+      data: {
+        denuncias: mensagem.denuncias
+      }
     });
   } catch (error) {
     console.error('Erro ao denunciar mensagem:', error);
@@ -280,4 +287,13 @@ exports.denunciarMensagem = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Exportar todas as funções no final do ficheiro
+module.exports = {
+  getTopico,
+  getMensagens,
+  enviarMensagem,
+  avaliarMensagem,
+  denunciarMensagem
 };

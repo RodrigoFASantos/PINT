@@ -21,6 +21,8 @@ const Topico_Categoria = require('./models/Topico_Categoria');
 const TopicoCurso = require('./models/TopicoCurso');
 const Trabalho_Entregue = require('./models/Trabalho_Entregue');
 const User = require('./models/User');
+const PendingUser = require('./models/PendingUser');
+
 
 // Coleção de todos os modelos para uso nas funções associate
 const models = {
@@ -46,10 +48,18 @@ const models = {
   Topico_Categoria,
   TopicoCurso,
   Trabalho_Entregue,
-  User
+  User,
+  PendingUser
 };
 
 // ========== DEFINIÇÃO DE TODAS AS ASSOCIAÇÕES ==========
+
+// === Associações PendingUser ===
+PendingUser.belongsTo(Cargo, {
+  foreignKey: "id_cargo",
+  as: "cargo",
+  constraints: false // Não criar constraint no banco
+});
 
 // === Associações User ===
 User.belongsTo(Cargo, {
@@ -76,7 +86,7 @@ User.belongsToMany(Curso, {
 
 
 User.hasMany(ChatMensagem, {
-  foreignKey: "id_usuario", // Mantido como está pois corresponde ao campo no modelo
+  foreignKey: "id_usuario",
   as: "mensagens_enviadas"
 });
 
@@ -95,6 +105,12 @@ Cargo.hasMany(User, {
 Categoria.hasMany(Area, {
   foreignKey: "id_categoria",
   as: "areas"
+});
+
+Cargo.hasMany(PendingUser, {
+  foreignKey: "id_cargo",
+  as: "utilizadores_pendentes",
+  constraints: false // Não criar constraint no banco
 });
 
 Categoria.hasMany(Curso, {

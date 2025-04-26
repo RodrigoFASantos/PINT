@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../../middleware/auth");
-const roleMiddleware = require("../../middleware/role_middleware");
+const autorizar = require("../../middleware/autorizar");
 const upload = require('../../middleware/upload_middleware');
 const {
   getAllTopicosCategoria,
@@ -28,24 +28,24 @@ router.get("/:id", getTopicoById);
 // Rota para obter tópicos por categoria
 router.get("/categoria/:id_categoria", getTopicosByCategoria);
 
-// Rota para criar um novo tópico (apenas gestores)
+// Rota para criar um novo tópico
 router.post(
   "/", 
-  roleMiddleware(['admin', 'gestor']), // Apenas gestores e admins podem criar tópicos
+  autorizar([1, 2]), 
   createTopico
 );
 
-// Rota para atualizar um tópico existente (apenas gestor que criou ou admin)
+// Rota para atualizar um tópico existente
 router.put(
   "/:id",
-  roleMiddleware(['admin', 'gestor']),
+  autorizar([1, 2]), 
   updateTopico
 );
 
-// Rota para excluir um tópico (apenas gestor que criou ou admin)
+// Rota para excluir um tópico
 router.delete(
   "/:id",
-  roleMiddleware(['admin', 'gestor']),
+  autorizar([1, 2]), 
   deleteTopico
 );
 

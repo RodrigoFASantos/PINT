@@ -42,8 +42,6 @@ const getAllTopicosCategoria = async (req, res) => {
   }
 };
 
-
-
 // Controller para obter um tópico específico por ID
 const getTopicoById = async (req, res) => {
   try {
@@ -133,15 +131,21 @@ const getTopicosByCategoria = async (req, res) => {
   }
 };
 
-
-
-
-
 // Controller para criar um novo tópico (apenas gestores e admins)
 const createTopico = async (req, res) => {
   try {
     const { id_categoria, titulo, descricao } = req.body;
-    const id_utilizador = req.user.id; // ID do usuário autenticado
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
+    
+    console.log('Dados recebidos para criar tópico:', {
+      id_categoria,
+      titulo,
+      descricao,
+      id_utilizador,
+      user: req.user // Log para debug - remover em produção
+    });
 
     // Verificar se a categoria existe
     const categoriaExiste = await Categoria.findByPk(id_categoria);
@@ -161,12 +165,16 @@ const createTopico = async (req, res) => {
       data_criacao: new Date()
     });
 
+    console.log('Tópico criado com sucesso:', novoTopico.toJSON());
+
     // Notificar os usuários conectados via Socket.IO
-    req.io.emit('novoTopico', {
-      id_topico: novoTopico.id_topico,
-      titulo: novoTopico.titulo,
-      id_categoria: novoTopico.id_categoria
-    });
+    if (req.io) {
+      req.io.emit('novoTopico', {
+        id_topico: novoTopico.id_topico,
+        titulo: novoTopico.titulo,
+        id_categoria: novoTopico.id_categoria
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -188,8 +196,10 @@ const updateTopico = async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, descricao } = req.body;
-    const id_utilizador = req.user.id; // ID do usuário autenticado
-
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
+    
     // Verificar se o tópico existe
     const topico = await Topico_Categoria.findByPk(id);
     if (!topico) {
@@ -199,8 +209,8 @@ const updateTopico = async (req, res) => {
       });
     }
 
-    // Verificar se o usuário é o criador do tópico ou admin
-    if (topico.criado_por !== id_utilizador && req.user.cargo !== 'admin') {
+    // Verificar se o usuário é o criador do tópico ou tem cargo 1 ou 2 (admin/gestor)
+    if (topico.criado_por !== id_utilizador && req.user.id_cargo !== 1 && req.user.id_cargo !== 2) {
       return res.status(403).json({
         success: false,
         message: 'Você não tem permissão para atualizar este tópico'
@@ -214,11 +224,13 @@ const updateTopico = async (req, res) => {
     });
 
     // Notificar os usuários conectados via Socket.IO
-    req.io.to(`topico_${id}`).emit('topicoAtualizado', {
-      id_topico: topico.id_topico,
-      titulo: topico.titulo,
-      descricao: topico.descricao
-    });
+    if (req.io) {
+      req.io.to(`topico_${id}`).emit('topicoAtualizado', {
+        id_topico: topico.id_topico,
+        titulo: topico.titulo,
+        descricao: topico.descricao
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -239,7 +251,9 @@ const updateTopico = async (req, res) => {
 const deleteTopico = async (req, res) => {
   try {
     const { id } = req.params;
-    const id_utilizador = req.user.id; // ID do usuário autenticado
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
 
     // Verificar se o tópico existe
     const topico = await Topico_Categoria.findByPk(id);
@@ -250,8 +264,8 @@ const deleteTopico = async (req, res) => {
       });
     }
 
-    // Verificar se o usuário é o criador do tópico ou admin
-    if (topico.criado_por !== id_utilizador && req.user.cargo !== 'admin') {
+    // Verificar se o usuário é o criador do tópico ou tem cargo 1 ou 2 (admin/gestor)
+    if (topico.criado_por !== id_utilizador && req.user.id_cargo !== 1 && req.user.id_cargo !== 2) {
       return res.status(403).json({
         success: false,
         message: 'Você não tem permissão para excluir este tópico'
@@ -282,9 +296,11 @@ const deleteTopico = async (req, res) => {
     await topico.destroy();
 
     // Notificar os usuários conectados via Socket.IO
-    req.io.emit('topicoExcluido', {
-      id_topico: id
-    });
+    if (req.io) {
+      req.io.emit('topicoExcluido', {
+        id_topico: id
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -350,15 +366,15 @@ const getComentariosByTopico = async (req, res) => {
   }
 };
 
-
-
 // Controller para criar um novo comentário em um tópico
-// Versão que mantém a funcionalidade e corrige o caminho dos arquivos
 const createComentario = async (req, res) => {
   try {
     const { id } = req.params; // ID do tópico
     const { texto } = req.body;
-    const id_utilizador = req.user.id_utilizador; // ID do usuário autenticado
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
+    
     let anexoUrl = null;
     let anexoNome = null;
     let tipoAnexo = null;
@@ -484,7 +500,9 @@ const createComentario = async (req, res) => {
     });
 
     // Notificar os usuários conectados via Socket.IO
-    req.io.to(`topico_${id}`).emit('novoComentario', comentarioComUsuario);
+    if (req.io) {
+      req.io.to(`topico_${id}`).emit('novoComentario', comentarioComUsuario);
+    }
 
     res.status(201).json({
       success: true,
@@ -501,27 +519,14 @@ const createComentario = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Controller para avaliar um comentário (curtir/descurtir)
 const avaliarComentario = async (req, res) => {
   try {
     const { id_topico, id_comentario } = req.params;
     const { tipo } = req.body; // 'like' ou 'dislike'
-    const id_utilizador = req.user.id;
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
 
     // Verificar se o tipo é válido
     if (tipo !== 'like' && tipo !== 'dislike') {
@@ -561,11 +566,13 @@ const avaliarComentario = async (req, res) => {
     }
 
     // Notificar os usuários conectados via Socket.IO
-    req.io.to(`topico_${id_topico}`).emit('comentarioAvaliado', {
-      id_comentario,
-      likes: comentario.likes,
-      dislikes: comentario.dislikes
-    });
+    if (req.io) {
+      req.io.to(`topico_${id_topico}`).emit('comentarioAvaliado', {
+        id_comentario,
+        likes: comentario.likes,
+        dislikes: comentario.dislikes
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -590,7 +597,9 @@ const denunciarComentario = async (req, res) => {
   try {
     const { id_topico, id_comentario } = req.params;
     const { motivo } = req.body;
-    const id_utilizador = req.user.id;
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
 
     // Verificar se o comentário existe
     const comentario = await Comentario_Topico.findOne({
@@ -612,21 +621,15 @@ const denunciarComentario = async (req, res) => {
       denuncias: comentario.denuncias + 1
     });
 
-    // Se implementar uma tabela para armazenar denúncias com detalhes:
-    // await Denuncia.create({
-    //   id_comentario,
-    //   id_utilizador,
-    //   motivo,
-    //   data_denuncia: new Date()
-    // });
-
     // Notificar administradores via Socket.IO (canal privado de admins)
-    req.io.to('admin_channel').emit('comentarioDenunciado', {
-      id_comentario,
-      id_topico,
-      denuncias: comentario.denuncias,
-      motivo
-    });
+    if (req.io) {
+      req.io.to('admin_channel').emit('comentarioDenunciado', {
+        id_comentario,
+        id_topico,
+        denuncias: comentario.denuncias,
+        motivo
+      });
+    }
 
     res.status(200).json({
       success: true,

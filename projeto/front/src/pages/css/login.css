@@ -1,84 +1,165 @@
 .body123 {
-    background-color: #1a1a1a;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
-  
-  .container {
-    background-color: #1a1a1a;
-    border: 2px solid #ff8000;
-    border-radius: 15px;
-    padding: 30px 20px;
-    width: 400px;
-    text-align: center;
-    box-shadow: 0 0 10px rgba(255, 128, 0, 0.8);
-  }
-  
-  .logo {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0;
-  }
-  
-  .logo img {
-    width: 100%;
-    height: auto;
-  }
-  
-  .input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-    border: none;
-    outline: none;
-  }
-  
-  .checkbox-container {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 20px;
-    color: #fff;
-    font-size: 14px;
-    max-width: 80px;
-  }
-  
-  
-  
-  .button {
-    width: 100%;
-    padding: 10px;
-    background-color: #ff8000;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-    margin-bottom: 15px;
-  }
-  
-  .button:hover {
-    background-color: #e67300;
-  }
-  
-  .a {
-    color: #ff8000;
-    text-decoration: none;
-    display: block;
-    margin-top: 5px;
-  }
-  
-  .a:hover {
-    text-decoration: underline;
-  }
-  
-  .message {
-    color: #ff4d4d;
-    margin-bottom: 10px;
-  }
-  
+  background-color: #1a1a1a;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* Container com efeito 3D */
+.login-container {
+  perspective: 1000px;
+  width: 400px;
+  height: 600px; /* Altura aumentada para acomodar o formulário de registro */
+}
+
+/* Cartão que vai girar */
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+/* Efeito de rotação quando estiver com a classe flipped */
+.login-container.flipped .card {
+  transform: rotateY(180deg);
+}
+
+/* Estilos comuns para frente e verso */
+.front, .back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden; /* Safari */
+}
+
+/* Face frontal */
+.front {
+  z-index: 2;
+}
+
+/* Face traseira (inicialmente rotacionada) */
+.back {
+  transform: rotateY(180deg);
+}
+
+.container {
+  background-color: #1a1a1a;
+  border: 2px solid #ff8000;
+  border-radius: 15px;
+  padding: 30px 20px;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  box-sizing: border-box;
+  box-shadow: 0 0 10px rgba(255, 128, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 20px 0;
+}
+
+.logo img {
+  width: 80%;
+  height: auto;
+}
+
+.input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  border: none;
+  outline: none;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 14px;
+  max-width: 80px;
+}
+
+.button {
+  width: 100%;
+  padding: 10px;
+  background-color: #ff8000;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 15px;
+  transition: background-color 0.3s;
+}
+
+.button:hover {
+  background-color: #e67300;
+}
+
+.button:disabled {
+  background-color: #996633;
+  cursor: not-allowed;
+}
+
+.a {
+  color: #ff8000;
+  text-decoration: none;
+  display: block;
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.a:hover {
+  text-decoration: underline;
+}
+
+.message {
+  color: #ff4d4d;
+  margin-bottom: 10px;
+}
+
+/* Estilos para mensagem de sucesso */
+.success-message {
+  color: #4CAF50;
+  padding: 20px;
+  text-align: center;
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Loader para mensagem de sucesso */
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ff8000;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

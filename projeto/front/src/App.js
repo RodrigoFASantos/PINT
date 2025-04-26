@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // Páginas
 import Login from './pages/login';
+import ConfirmAccount from './pages/confirmAccount'; // Nova página
 import Home from './pages/home';
 import Cursos from './pages/cursos';
 import CriarCurso from './pages/criarCurso';
@@ -44,6 +45,13 @@ const App = () => {
             <Route path="/login" element={
               <React.Fragment>
                 <Login />
+              </React.Fragment>
+            } />
+            
+            {/* Rota de confirmação de conta */}
+            <Route path="/confirm-account" element={
+              <React.Fragment>
+                <ConfirmAccount />
               </React.Fragment>
             } />
 
@@ -204,8 +212,8 @@ const App = () => {
               }
             />
             
-        <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute adminOnly><EditarCurso /></ProtectedRoute>} />
-        <Route path="/admin/cursos/:id/inscricoes" element={<ProtectedRoute adminOnly><GerenciarInscricoes /></ProtectedRoute>} />
+            <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute adminOnly><EditarCurso /></ProtectedRoute>} />
+            <Route path="/admin/cursos/:id/inscricoes" element={<ProtectedRoute adminOnly><GerenciarInscricoes /></ProtectedRoute>} />
 
             {/* Redirecionar para a página inicial por padrão */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -34,13 +34,28 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await axios.post(`${API_BASE}/topicos-categoria`, {
-        id_categoria: categoria.id,
+      // Usar id_categoria se disponível, caso contrário usar id
+      const categoriaId = categoria.id_categoria || categoria.id;
+      
+      console.log('Categoria completa:', categoria);
+      console.log('Enviando request com ID da categoria:', categoriaId);
+      
+      const dadosEnvio = {
+        id_categoria: categoriaId,
         titulo: formData.titulo,
         descricao: formData.descricao
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      };
+      
+      console.log('Payload completo sendo enviado:', dadosEnvio);
+      
+      const response = await axios.post(`${API_BASE}/topicos-categoria`, dadosEnvio, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('Resposta da API:', response.data);
       
       // Chamar callback de sucesso e passar o novo tópico
       if (onSuccess) {
@@ -48,10 +63,23 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       }
     } catch (error) {
       console.error('Erro ao criar tópico:', error);
-      setErro(
-        error.response?.data?.message || 
-        'Ocorreu um erro ao criar o tópico. Tente novamente.'
-      );
+      
+      if (error.response) {
+        console.error('Resposta de erro:', error.response.data);
+        console.error('Status do erro:', error.response.status);
+        
+        let mensagemErro = error.response.data.message || 'Ocorreu um erro ao criar o tópico. Tente novamente.';
+        
+        // Mensagem específica para erro de permissão
+        if (error.response.status === 403) {
+          mensagemErro = 'Você não tem permissão para criar tópicos. Entre em contato com um administrador.';
+        }
+        
+        setErro(mensagemErro);
+      } else {
+        setErro('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+      
       setLoading(false);
     }
   };

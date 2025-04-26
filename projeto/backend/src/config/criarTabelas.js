@@ -9,6 +9,20 @@ const createTablesInOrder = async () => {
       descricao VARCHAR(50) NOT NULL
     );`,
 
+    `CREATE TABLE IF NOT EXISTS pending_users (
+      id SERIAL PRIMARY KEY,
+      id_cargo INTEGER NOT NULL,
+      nome VARCHAR(100) NOT NULL,
+      idade INTEGER NOT NULL,
+      email VARCHAR(100) UNIQUE NOT NULL,
+      telefone VARCHAR(20) NOT NULL,
+      password VARCHAR(100) NOT NULL,
+      token VARCHAR(500) NOT NULL,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );`,
+
     `CREATE TABLE IF NOT EXISTS utilizadores (
       id_utilizador SERIAL PRIMARY KEY,
       id_cargo INTEGER REFERENCES cargos(id_cargo),
