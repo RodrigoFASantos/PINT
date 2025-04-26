@@ -181,6 +181,19 @@ VALUES
    'uploads/cursos/nutricao-funcional');
 
 
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Inteligência Artificial', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Robótica Avançada', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Marketing Digital', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Desenvolvimento Web', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Cibersegurança', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Engenharia de Software', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Gestão de Projetos', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Machine Learning', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Big Data', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Realidade Virtual', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Engenharia Mecânica', '2025-06-01', '2025-09-01');
+INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso Extra 50', '2025-06-01', '2025-09-01');
+
 -- =============================================
 -- 6. TÓPICOS DOS CURSOS
 -- =============================================
