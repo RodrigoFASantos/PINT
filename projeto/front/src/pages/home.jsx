@@ -6,6 +6,7 @@ import './css/home.css';
 import API_BASE from '../api';
 import axios from 'axios';
 import Cursos_Sugeridos from '../components/Cursos_Sugeridos';
+import fallbackCurso from '../images/default_image.png';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export default function Home() {
       return `${API_BASE}/uploads/cursos/${nomeCursoSlug}/capa.png`;
     }
 
-    return '/fallback-curso.jpg';
+    return fallbackCurso;
   };
 
   const buscarInscricoes = async () => {
@@ -208,7 +209,7 @@ export default function Home() {
                       alt={inscricao.nomeCurso}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = '/fallback-curso.jpg';
+                        e.target.src = fallbackCurso;
                       }}
                     />
                   </div>
