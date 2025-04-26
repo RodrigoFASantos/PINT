@@ -4,9 +4,6 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import './css/Topicos_Chat.css';
 
-// CORREÇÃO: Importando a URL base da API corretamente e imprimindo no console para debug
-// Componentes
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
 // IMPORTANTE: Definindo a URL base correta manualmente
@@ -351,7 +348,6 @@ const Topicos_Chat = () => {
   if (erro && !loading) {
     return (
       <div className="chat-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="main-content">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="erro-container">
@@ -373,7 +369,6 @@ const Topicos_Chat = () => {
   if (loading) {
     return (
       <div className="chat-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="main-content">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="loading-container">
@@ -386,7 +381,6 @@ const Topicos_Chat = () => {
 
   return (
     <div className="chat-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="chat-content">

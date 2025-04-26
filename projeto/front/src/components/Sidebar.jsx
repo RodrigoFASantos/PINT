@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Navbar from './Navbar';
 import './css/Sidebar.css';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [userRole, setUserRole] = useState('');
-  const [sidebarFinishedOpening, setSidebarFinishedOpening] = useState(false);
+  const [overlayActive, setOverlayActive] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -16,30 +17,29 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setSidebarFinishedOpening(false);
+    if (isOpen) {
+      setTimeout(() => {
+        setOverlayActive(true);
+      }, 10);
+    } else {
+      setOverlayActive(false);
     }
   }, [isOpen]);
 
   const isActive = (path) => {
-    return location.pathname === path || 
+    return location.pathname === path ||
            (path !== '/' && location.pathname.startsWith(path));
-  };
-
-  const handleTransitionEnd = () => {
-    if (isOpen) {
-      setSidebarFinishedOpening(true);
-    }
   };
 
   return (
     <>
-      <div className={`sidebar ${isOpen ? 'open' : ''}`} onTransitionEnd={handleTransitionEnd}>
-        <div className="sidebar-content">
-          <button onClick={toggleSidebar} className="close-btn">
-            &times;
-          </button>
+      {/* Navbar integrada */}
+      <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isOpen} />
 
+      {/* Sidebar */}
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-content">
+          <button onClick={toggleSidebar} className="close-btn">&times;</button>
 
           {/* Links comuns para todos */}
           <div className="sidebar-section">
@@ -73,7 +73,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </ul>
           </div>
 
-          {/* Links para formandos */}
+          {/* Links para Formandos */}
           {userRole === 3 && (
             <div className="sidebar-section">
               <h3>Formando</h3>
@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </div>
           )}
 
-          {/* Links para formadores */}
+          {/* Links para Formadores */}
           {userRole === 2 && (
             <div className="sidebar-section">
               <h3>Formador</h3>
@@ -106,7 +106,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </div>
           )}
 
-          {/* Links para administração */}
+          {/* Links para Administração */}
           {userRole === 1 && (
             <div className="sidebar-section">
               <h3>Administração</h3>
@@ -152,7 +152,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               <li>
                 <a href="#" onClick={(e) => {
                   e.preventDefault();
-                  // lógica de ajuda
                   toggleSidebar();
                 }}>
                   <i className="fas fa-question-circle"></i> Ajuda
@@ -161,12 +160,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </ul>
           </div>
 
-
         </div>
       </div>
 
-      {/* Overlay com blur apenas depois da sidebar abrir */}
-      <div className={`overlay ${isOpen ? 'active' : ''} ${sidebarFinishedOpening ? 'blur' : ''}`} onClick={toggleSidebar}></div>
+      {/* Overlay */}
+      <div className={`overlay ${overlayActive ? 'active' : ''}`} onClick={toggleSidebar}></div>
     </>
   );
 }

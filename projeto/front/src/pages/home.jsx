@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -13,17 +13,80 @@ export default function Home() {
   const [inscricoes, setInscricoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshCount, setRefreshCount] = useState(0); // Estado para rastrear refreshes
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+
+  const textRef = useRef(null); // REFERÊNCIA para o span
+
+
+  const texts = [
+    "Aprender aqui é mais fácil",
+    "Aprender aqui é uma experiência nova",
+    "Aprender aqui é simples",
+    "Aprender aqui é eficaz",
+    "Aprender aqui é divertido",
+    "Aprender aqui é inovador"
+  ];
+
+
+
+  useEffect(() => {
+    let index = 0;
+    let charIndex = 0;
+    let state = "typing"; // typing, waitingAfterTyping, deleting
+  
+    function animateText() {
+      const current = texts[index];
+  
+      if (!textRef.current) return;
+  
+      if (state === "typing") {
+        textRef.current.textContent = current.substring(0, charIndex + 1);
+        charIndex++;
+  
+        if (charIndex === current.length) {
+          state = "waitingAfterTyping";
+          setTimeout(animateText, 1500); // espera antes de apagar
+        } else {
+          setTimeout(animateText, 100); // escrever
+        }
+      } 
+      else if (state === "waitingAfterTyping") {
+        state = "deleting";
+        setTimeout(animateText, 100);
+      } 
+      else if (state === "deleting") {
+        textRef.current.textContent = current.substring(0, charIndex - 1);
+        charIndex--;
+  
+        if (charIndex === 0) {
+          index = (index + 1) % texts.length;
+          state = "typing";
+          setTimeout(animateText, 300); // pequena pausa antes de escrever nova
+        } else {
+          setTimeout(animateText, 50); // apagar
+        }
+      }
+    }
+  
+    animateText();
+  
+    return () => {
+      // Cleanup se o componente desmontar
+      clearTimeout();
+    };
+  }, []);
+  
+
+
+
   const getImageUrl = (inscricao) => {
-    // Se o curso tiver um caminho de imagem definido
     if (inscricao && inscricao.imagem_path) {
       return `${API_BASE}/${inscricao.imagem_path}`;
     }
-  
-    // Se não tiver imagem_path mas tiver nome do curso, criar um slug do nome
+
     if (inscricao && inscricao.nomeCurso) {
       const nomeCursoSlug = inscricao.nomeCurso
         .toLowerCase()
@@ -31,17 +94,14 @@ export default function Home() {
         .replace(/[^\w-]+/g, "");
       return `${API_BASE}/uploads/cursos/${nomeCursoSlug}/capa.png`;
     }
-  
-    // Fallback para imagem padrão
+
     return '/fallback-curso.jpg';
   };
 
-  // Função para buscar as inscrições do usuário
   const buscarInscricoes = async () => {
     try {
       console.log(`Buscando inscrições (contagem: ${refreshCount})`);
       setLoading(true);
-      // Obter o token do localStorage
       const token = localStorage.getItem('token');
 
       if (!token) {
@@ -50,20 +110,15 @@ export default function Home() {
         return;
       }
 
-      // Configurar o header com o token
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       };
 
-      // Fazer a requisição para a API
       const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, config);
-
-      // Atualizar o estado com as inscrições recebidas
       setInscricoes(response.data);
       setLoading(false);
-      // Incrementar o contador de refreshes para monitoramento
       setRefreshCount(prev => prev + 1);
     } catch (err) {
       console.error('Erro ao buscar inscrições:', err);
@@ -72,45 +127,40 @@ export default function Home() {
     }
   };
 
-  // Efeito para fazer o refresh completo da página quando o componente é montado
   useEffect(() => {
-    // Verificar se estamos em uma navegação interna ou primeira carga da página
     const isFirstLoad = sessionStorage.getItem('homeVisited') !== 'true';
-    
-    // Se for a primeira visita à página home nesta sessão
+
     if (isFirstLoad) {
       console.log('Primeira visita à página Home - marcando como visitada');
-      // Marcar que a página home já foi visitada nesta sessão
       sessionStorage.setItem('homeVisited', 'true');
-      
-      // Fazer o refresh completo da página
       window.location.reload();
     } else {
       console.log('Componente Home montado - já visitado anteriormente');
-      // Verificar e limpar flag de needsRefresh
       const needsRefresh = sessionStorage.getItem('needsRefresh');
       if (needsRefresh === 'true') {
         console.log('Flag needsRefresh detectada, removendo...');
         sessionStorage.removeItem('needsRefresh');
       }
-      
-      // Buscar as inscrições
       buscarInscricoes();
     }
-    
-    // Função de limpeza para evitar atualizações em componentes desmontados
+
     return () => {
       console.log('Componente Home desmontado');
     };
-  }, []); // Array de dependências vazio significa que executa apenas na montagem
+  }, []);
 
-  // Função para redirecionar para a página de detalhes do curso
+
+
+
+
+
+
+
   const redirecionarParaDetalheCurso = (cursoId) => {
     console.log('Redirecionando para o curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
   };
 
-  // Cursos para serem exibidos caso não haja inscrições ou o usuário não esteja logado
   const cursosSugeridos = [
     { id: 1, nome: "React Avançado", formador: "João Silva" },
     { id: 2, nome: "Node.js Essentials", formador: "Maria Costa" },
@@ -125,20 +175,22 @@ export default function Home() {
       <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      {/* Banner com overlay */}
       <div className="banner">
         <img src={banner} alt="banner" />
         <div className="overlay-text">
-          <h1>Aprender aqui é mais fácil</h1>
+
+          <div className="text-animation">
+            <h1><span ref={textRef}></span><span className="cursor"></span></h1>
+          </div>
+
           <p>Não vale a pena estar a inventar a roda ou a descobrir a pólvora!</p>
         </div>
+
       </div>
 
       <div className="content-container">
-        {/* Seção de cursos inscritos */}
         <section className="cursos-section">
           <h2 className="section-title">Meus Cursos Inscritos</h2>
-
           {loading ? (
             <div className="loading">Carregando cursos...</div>
           ) : error ? (
@@ -151,7 +203,6 @@ export default function Home() {
                   className="cartao-curso"
                   onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
                 >
-                  {/* Imagem do curso com tratamento adequado */}
                   <div className="curso-imagem-container">
                     <img
                       src={getImageUrl(inscricao)}
@@ -180,7 +231,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* Seção de cursos sugeridos (sempre exibida) */}
         <section className="cursos-section">
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
@@ -190,7 +240,6 @@ export default function Home() {
                 className="cartao-curso"
                 onClick={() => redirecionarParaDetalheCurso(curso.id)}
               >
-                {/* Sugestão: adicionar preview de imagem para cursos sugeridos */}
                 <div className="curso-imagem-container">
                   <img
                     src={`/placeholder-curso-${curso.id}.jpg`}
@@ -210,11 +259,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Seção de Tópicos */}
         <section className="topicos-section">
           <h2 className="section-title">Tópicos</h2>
           <div className="topicos-grid">
-            {/* Conteúdo da seção de tópicos */}
             <p className="info-message">Nenhum tópico disponível no momento.</p>
           </div>
         </section>
@@ -222,3 +269,17 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
