@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/percursoFormativo.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import CertificadoModal from '../components/CertificadoModal';
 
@@ -63,7 +62,6 @@ const PercursoFormativo = () => {
 
   return (
     <div className="percurso-formativo-container">
-      <Navbar />
       <div className="main-content">
         <Sidebar />
         <div className="percurso-content">

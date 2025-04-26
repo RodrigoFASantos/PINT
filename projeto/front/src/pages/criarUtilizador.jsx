@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import "./css/criarUtilizador.css";
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
@@ -68,7 +67,6 @@ function CriarUser() {
 
   return (
     <div className="register-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <form className='form-register' onSubmit={handleSubmit} encType="multipart/form-data">

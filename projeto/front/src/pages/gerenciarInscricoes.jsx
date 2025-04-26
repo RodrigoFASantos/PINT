@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './css/gerenciarInscricoes.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import API_BASE from "../api";
 import { ToastContainer, toast } from 'react-toastify';
@@ -181,7 +180,6 @@ const confirmCancelarInscricao = async () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -196,7 +194,6 @@ const confirmCancelarInscricao = async () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -223,7 +220,6 @@ const confirmCancelarInscricao = async () => {
   console.log(selectedInscricao);
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/gerenciarUsuarios.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import EditarUsuarioModal from '../components/EditarUsuarioModal';
 import API_BASE from '../api';
@@ -138,7 +137,6 @@ const GerenciarUtilizadores = () => {
 
   return (
     <div className="gerenciar-usuarios-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="usuarios-content">

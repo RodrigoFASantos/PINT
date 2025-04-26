@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
 import "./css/cursos.css";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 
 export default function CursosPage() {
   const [cursos, setCursos] = useState([]);
@@ -68,7 +67,6 @@ export default function CursosPage() {
   
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Paginação */}

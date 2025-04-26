@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import './css/detalheTopico.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import NovoComentarioForm from '../components/NovoComentarioForm';
 
@@ -154,7 +153,6 @@ const DetalheTopico = () => {
 
   return (
     <div className="detalhe-topico-container">
-      <Navbar />
       <div className="main-content">
         <Sidebar />
         <div className="topico-content">

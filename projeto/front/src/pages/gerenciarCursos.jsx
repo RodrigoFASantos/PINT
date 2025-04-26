@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/gerenciarCursos.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import EditarCursoModal from '../components/EditarCursoModal';
 
@@ -146,7 +145,6 @@ const GerenciarCursos = () => {
 
   return (
     <div className="gerenciar-cursos-container">
-      <Navbar />
       <div className="main-content">
         <Sidebar />
         <div className="cursos-content">

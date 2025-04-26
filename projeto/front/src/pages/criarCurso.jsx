@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import './css/criarCurso.css';
 // Importar FontAwesome para o ícone de informação
@@ -183,7 +182,6 @@ const CriarCurso = () => {
 
   return (
     <div className="form-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">

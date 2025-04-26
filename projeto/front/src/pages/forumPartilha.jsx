@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/forumPartilha.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import CriarTopicoModal from '../components/CriarTopicoModal';
 import API_BASE from '../api';
@@ -158,7 +157,6 @@ const toggleCategoria = async (categoriaId) => {
   if (loading) {
     return (
       <div className="forum-partilha-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="main-content">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="loading-container">
@@ -171,7 +169,6 @@ const toggleCategoria = async (categoriaId) => {
 
   return (
     <div className="forum-partilha-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         

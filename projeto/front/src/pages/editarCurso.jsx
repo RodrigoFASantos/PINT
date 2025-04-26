@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import './css/criarCurso.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -209,7 +208,6 @@ const EditarCurso = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -223,7 +221,6 @@ const EditarCurso = () => {
 
   return (
     <div className="form-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">

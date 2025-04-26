@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import banner from '../images/banner.jpg';
 import './css/home.css';
-import API_BASE, { IMAGES } from '../api';
+import API_BASE from '../api';
 import axios from 'axios';
+import Cursos_Sugeridos from '../components/Cursos_Sugeridos';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -172,7 +172,6 @@ export default function Home() {
 
   return (
     <div className="home-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <div className="banner">
@@ -190,7 +189,7 @@ export default function Home() {
 
       <div className="content-container">
         <section className="cursos-section">
-          <h2 className="section-title">Meus Cursos Inscritos</h2>
+          <h2 className="section-title">Cursos Inscrito</h2>
           {loading ? (
             <div className="loading">Carregando cursos...</div>
           ) : error ? (
@@ -214,7 +213,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="curso-info">
-                    <h3>{inscricao.nomeCurso}</h3>
+                    <p className="curso-titulo">{inscricao.nomeCurso}</p>
                     <p className="curso-detalhe">Categoria: {inscricao.categoria}</p>
                     <p className="curso-detalhe">Área: {inscricao.area}</p>
                     <div className={`status-badge status-${inscricao.status.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -234,28 +233,7 @@ export default function Home() {
         <section className="cursos-section">
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
-            {cursosSugeridos.map((curso) => (
-              <div
-                key={curso.id}
-                className="cartao-curso"
-                onClick={() => redirecionarParaDetalheCurso(curso.id)}
-              >
-                <div className="curso-imagem-container">
-                  <img
-                    src={`/placeholder-curso-${curso.id}.jpg`}
-                    alt={curso.nome}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/fallback-curso.jpg';
-                    }}
-                  />
-                </div>
-                <div className="curso-info">
-                  <h3>{curso.nome}</h3>
-                  <p className="curso-detalhe">Formador: {curso.formador}</p>
-                </div>
-              </div>
-            ))}
+          <Cursos_Sugeridos />
           </div>
         </section>
 

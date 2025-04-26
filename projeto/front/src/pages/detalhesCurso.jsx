@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './css/detalhesCurso.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import CursoConteudos from '../components/CursoConteudos';
 import API_BASE, { IMAGES } from "../api";
@@ -306,7 +305,6 @@ const DetalhesCurso = () => {
   if (loading) {
     return (
       <div className="main-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -321,7 +319,6 @@ const DetalhesCurso = () => {
   if (error) {
     return (
       <div className="main-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -349,7 +346,6 @@ const DetalhesCurso = () => {
   if (!curso) {
     return (
       <div className="main-container">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -373,7 +369,6 @@ const DetalhesCurso = () => {
 
   return (
     <div className="main-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 

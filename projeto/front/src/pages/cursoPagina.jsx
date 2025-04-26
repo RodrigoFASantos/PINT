@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import API_BASE from "../api";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 
 export default function CursoPagina() {
   const { cursoId } = useParams();

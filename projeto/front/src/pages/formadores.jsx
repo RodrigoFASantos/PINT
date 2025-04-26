@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
 import "./css/cursos.css";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 
 export default function FormadoresPage() {
   const [formadores, setFormadores] = useState([]);
@@ -98,7 +97,6 @@ export default function FormadoresPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-white p-6">
-        <Navbar toggleSidebar={toggleSidebar} />
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -113,7 +111,6 @@ export default function FormadoresPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col bg-white p-6">
-        <Navbar toggleSidebar={toggleSidebar} />
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -132,7 +129,6 @@ export default function FormadoresPage() {
 
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
-      <Navbar toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
 

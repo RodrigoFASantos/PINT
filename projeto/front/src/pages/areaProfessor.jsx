@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import './css/areaProfessor.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import AdicionarConteudoModal from '../components/AdicionarConteudoModal';
 import AvaliacaoModal from '../components/AvaliacaoModal';
@@ -93,7 +92,6 @@ export default function AreaProfessor() {
 
   return (
     <div className="area-professor-container">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="professor-content">

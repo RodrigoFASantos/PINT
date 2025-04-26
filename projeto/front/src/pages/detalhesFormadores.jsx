@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 import "./css/detalhesFormadores.css";
 
 const DetalhesFormadores = () => {
@@ -119,7 +118,6 @@ const DetalhesFormadores = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -134,7 +132,6 @@ const DetalhesFormadores = () => {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -158,7 +155,6 @@ const DetalhesFormadores = () => {
   if (!formador) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
-        <Navbar toggleSidebar={toggleSidebar} />
         <div className="flex flex-1">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="flex-1 flex justify-center items-center">
@@ -180,7 +176,6 @@ const DetalhesFormadores = () => {
   
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 fade-in">

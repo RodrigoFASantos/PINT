@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/adminDashboard.css';
-import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Chart from 'chart.js/auto'; // Adicionando a importação correta
 
@@ -213,7 +212,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
       <div className="main-content">
         <Sidebar />
         <div className="dashboard-content">

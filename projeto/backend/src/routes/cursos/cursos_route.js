@@ -8,7 +8,8 @@ const {
   getCursoById,
   getInscricoesCurso,
   updateCurso,
-  deleteCurso
+  deleteCurso,
+  getCursosSugeridos
 } = require("../../controllers/cursos/cursos_ctrl");
 
 const multer = require("multer");
@@ -77,11 +78,16 @@ const upload = multer({
 
 // ========== ROTAS ==========
 
+
 // Criar curso (com upload de imagem)
 router.post("/", verificarToken, autorizar([1, 2]), upload.single("imagem"), createCurso);
 
 // Listar todos os cursos
 router.get("/", getAllCursos);
+
+
+// Buscar cursos sugeridos
+router.get("/sugeridos", verificarToken, getCursosSugeridos);
 
 // Obter curso por ID
 router.get("/:id", getCursoById);
@@ -94,5 +100,6 @@ router.delete("/:id", verificarToken, autorizar([1]), deleteCurso);
 
 // Listar inscrições do curso
 router.get("/:id/inscricoes", verificarToken, getInscricoesCurso);
+
 
 module.exports = router;
