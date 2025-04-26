@@ -72,19 +72,31 @@ export default function Home() {
     }
   };
 
-  // Efeito combinado para verificar needsRefresh e carregar inscrições
+  // Efeito para fazer o refresh completo da página quando o componente é montado
   useEffect(() => {
-    console.log('Componente Home montado - verificando necessidade de refresh');
-    const needsRefresh = sessionStorage.getItem('needsRefresh');
+    // Verificar se estamos em uma navegação interna ou primeira carga da página
+    const isFirstLoad = sessionStorage.getItem('homeVisited') !== 'true';
     
-    // Se tiver a flag needsRefresh, remove-la para evitar loops
-    if (needsRefresh === 'true') {
-      console.log('Flag needsRefresh detectada, removendo...');
-      sessionStorage.removeItem('needsRefresh');
+    // Se for a primeira visita à página home nesta sessão
+    if (isFirstLoad) {
+      console.log('Primeira visita à página Home - marcando como visitada');
+      // Marcar que a página home já foi visitada nesta sessão
+      sessionStorage.setItem('homeVisited', 'true');
+      
+      // Fazer o refresh completo da página
+      window.location.reload();
+    } else {
+      console.log('Componente Home montado - já visitado anteriormente');
+      // Verificar e limpar flag de needsRefresh
+      const needsRefresh = sessionStorage.getItem('needsRefresh');
+      if (needsRefresh === 'true') {
+        console.log('Flag needsRefresh detectada, removendo...');
+        sessionStorage.removeItem('needsRefresh');
+      }
+      
+      // Buscar as inscrições
+      buscarInscricoes();
     }
-    
-    // Buscar inscrições apenas uma vez, independentemente da flag
-    buscarInscricoes();
     
     // Função de limpeza para evitar atualizações em componentes desmontados
     return () => {

@@ -21,76 +21,51 @@
 .forum-content h1 {
   margin-bottom: 20px;
   color: #333;
+  font-size: 28px;
 }
 
-.forum-navigation {
+/* Estilos para o acordeão de categorias */
+.categorias-accordion {
   display: flex;
-  margin-bottom: 20px;
-  gap: 20px;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.categoria-item {
   background-color: white;
   border-radius: 8px;
-  padding: 20px;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.categoria-list,
-.area-list {
-  flex: 1;
-}
-
-.categoria-list h2,
-.area-list h2 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #5181b8;
-}
-
-.categoria-list ul,
-.area-list ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.categoria-list li,
-.area-list li {
-  padding: 10px 15px;
-  border-radius: 6px;
-  margin-bottom: 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.categoria-list li:hover,
-.area-list li:hover {
-  background-color: #f2f6fc;
-}
-
-.categoria-list li.selected,
-.area-list li.selected {
-  background-color: #e3effd;
-  color: #3b6999;
-  font-weight: 600;
-}
-
-.topicos-section {
-  background-color: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
-}
-
-.topicos-header {
+.categoria-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  padding: 15px 20px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
 }
 
-.topicos-header h2 {
+.categoria-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
+}
+
+.categoria-title i {
+  color: #5181b8;
+  margin-right: 10px;
+  transition: transform 0.3s ease;
+}
+
+.categoria-title h3 {
+  margin: 0;
   font-size: 18px;
   color: #333;
-  margin: 0;
 }
 
 .criar-topico-btn {
@@ -101,19 +76,22 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
 }
 
 .criar-topico-btn:hover {
   background-color: #3b6999;
 }
 
-.no-topicos {
-  text-align: center;
-  color: #888;
-  padding: 30px;
-  font-style: italic;
+.categoria-content {
+  padding: 15px 20px;
+  background-color: #f8fafd;
+  max-height: 800px;
+  overflow-y: auto;
 }
 
+/* Estilos para a lista de tópicos */
 .topicos-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -121,7 +99,7 @@
 }
 
 .topico-card {
-  background-color: #f8fafd;
+  background-color: white;
   border-radius: 8px;
   padding: 15px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
@@ -163,6 +141,13 @@
   font-weight: 500;
 }
 
+.no-topicos {
+  text-align: center;
+  color: #888;
+  padding: 30px;
+  font-style: italic;
+}
+
 .loading-container {
   display: flex;
   justify-content: center;
@@ -180,12 +165,20 @@
 }
 
 @media (max-width: 768px) {
-  .forum-navigation {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
   .topicos-list {
     grid-template-columns: 1fr;
+  }
+  
+  .criar-topico-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .categoria-header {
+    padding: 12px 15px;
+  }
+  
+  .categoria-content {
+    padding: 12px;
   }
 }

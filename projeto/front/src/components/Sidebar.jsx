@@ -7,6 +7,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [userRole, setUserRole] = useState('');
+  const [sidebarFinishedOpening, setSidebarFinishedOpening] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -14,25 +15,33 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     }
   }, [currentUser]);
 
-  // Função modificada para verificar se o link está ativo
+  useEffect(() => {
+    if (!isOpen) {
+      setSidebarFinishedOpening(false);
+    }
+  }, [isOpen]);
+
   const isActive = (path) => {
-    // Verifica se o path é exatamente igual OU se é um subpath
     return location.pathname === path || 
            (path !== '/' && location.pathname.startsWith(path));
   };
 
+  const handleTransitionEnd = () => {
+    if (isOpen) {
+      setSidebarFinishedOpening(true);
+    }
+  };
+
   return (
     <>
-      {/* Overlay com blur */}
-      {isOpen && <div className="overlay" onClick={toggleSidebar}></div>}
-
-      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`} onTransitionEnd={handleTransitionEnd}>
         <div className="sidebar-content">
           <button onClick={toggleSidebar} className="close-btn">
             &times;
           </button>
 
-          {/* Links comuns para todos os perfis */}
+
+          {/* Links comuns para todos */}
           <div className="sidebar-section">
             <h3>Geral</h3>
             <ul>
@@ -83,13 +92,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             <div className="sidebar-section">
               <h3>Formador</h3>
               <ul>
-                
-              <li className={isActive('/criarCurso') ? 'active' : ''}>
-                <Link to="/criarCurso" onClick={toggleSidebar}>
-                  <i className="fas fa-book"></i> Criar Cursos
-                </Link>
-              </li>
-
+                <li className={isActive('/criarCurso') ? 'active' : ''}>
+                  <Link to="/criarCurso" onClick={toggleSidebar}>
+                    <i className="fas fa-book"></i> Criar Cursos
+                  </Link>
+                </li>
                 <li className={isActive('/area-professor') ? 'active' : ''}>
                   <Link to="/area-professor" onClick={toggleSidebar}>
                     <i className="fas fa-chalkboard-teacher"></i> Meus Cursos
@@ -99,7 +106,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </div>
           )}
 
-          {/* Links para gestores/administradores */}
+          {/* Links para administração */}
           {userRole === 1 && (
             <div className="sidebar-section">
               <h3>Administração</h3>
@@ -133,7 +140,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </div>
           )}
 
-          {/* Configurações e ajuda */}
+          {/* Configurações */}
           <div className="sidebar-section">
             <h3>Configurações</h3>
             <ul>
@@ -145,7 +152,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               <li>
                 <a href="#" onClick={(e) => {
                   e.preventDefault();
-                  // Lógica para abrir modal de ajuda ou redirecionar para página de ajuda
+                  // lógica de ajuda
                   toggleSidebar();
                 }}>
                   <i className="fas fa-question-circle"></i> Ajuda
@@ -153,8 +160,13 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               </li>
             </ul>
           </div>
+
+
         </div>
       </div>
+
+      {/* Overlay com blur apenas depois da sidebar abrir */}
+      <div className={`overlay ${isOpen ? 'active' : ''} ${sidebarFinishedOpening ? 'blur' : ''}`} onClick={toggleSidebar}></div>
     </>
   );
 }

@@ -10,83 +10,114 @@ import API_BASE from '../api';
 const ForumPartilha = () => {
   const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
-  const [areaSelecionada, setAreaSelecionada] = useState(null);
-  const [topicos, setTopicos] = useState([]);
+  const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
+  const [categoriasTopicos, setCategoriasTopicos] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingTopicos, setLoadingTopicos] = useState({});
   const [showCriarTopico, setShowCriarTopico] = useState(false);
+  const [categoriaAtiva, setCategoriaAtiva] = useState(null);
   const [userRole, setUserRole] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Carregar categorias e perfil do usuário
   useEffect(() => {
-    const fetchCategorias = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_BASE}/categorias`, {
+        
+        // Obter categorias
+        const categoriasResponse = await axios.get(`${API_BASE}/categorias`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        setCategorias(response.data);
+        console.log("Categorias recebidas da API:", categoriasResponse.data);
+        
+        setCategorias(categoriasResponse.data);
+        
+        // Inicializar o estado de todas as categorias como contraídas
+        const estadoInicial = {};
+        categoriasResponse.data.forEach(cat => {
+          // Usar o campo id_categoria se existir, caso contrário usar id
+          const catId = cat.id_categoria || cat.id;
+          estadoInicial[catId] = false;
+        });
+        setCategoriasExpandidas(estadoInicial);
         
         // Obter perfil do usuário
-        const userResponse = await axios.get(`${API_BASE}/users/profile`, {
+        const userResponse = await axios.get(`${API_BASE}/users/perfil`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        setUserRole(userResponse.data.role);
+        // Armazenar o cargo do usuário
+        setUserRole(userResponse.data.cargo?.descricao || '');
         setLoading(false);
       } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
+        console.error('Erro ao carregar dados iniciais:', error);
         setLoading(false);
       }
     };
 
-    fetchCategorias();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    // Carregar tópicos quando uma área for selecionada
-    const fetchTopicos = async () => {
-      if (categoriaSelecionada && areaSelecionada) {
-        setLoading(true);
-        try {
-          const token = localStorage.getItem('token');
-          const response = await axios.get(`${API_BASE}/topicos`, {
-            params: {
-              categoria: categoriaSelecionada,
-              area: areaSelecionada
-            },
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          setTopicos(response.data);
-          setLoading(false);
-        } catch (error) {
-          console.error('Erro ao carregar tópicos:', error);
-          setLoading(false);
-        }
-      }
-    };
+  // Função para expandir/colapsar categoria e carregar tópicos
+// Função para expandir/colapsar categoria e carregar tópicos
+const toggleCategoria = async (categoriaId) => {
+  console.log(`Categoria clicada: ${categoriaId}`);
+  console.log('Estado atual das categorias expandidas:', categoriasExpandidas);
+  
+  // Criar um novo objeto baseado no estado atual (para imutabilidade)
+  const novoEstado = { ...categoriasExpandidas };
+  
+  // Inverter o estado da categoria clicada (se estava true fica false, se estava false fica true)
+  novoEstado[categoriaId] = !categoriasExpandidas[categoriaId];
+  
+  console.log('Novo estado das categorias expandidas:', novoEstado);
+  
+  // Atualizar estado de expansão
+  setCategoriasExpandidas(novoEstado);
+  
+  // Se está expandindo e ainda não carregou os tópicos
+  if (novoEstado[categoriaId] && !categoriasTopicos[categoriaId]) {
+    await carregarTopicosCategoria(categoriaId);
+  }
+};
 
-    fetchTopicos();
-  }, [categoriaSelecionada, areaSelecionada]);
 
-  const handleSelecionarCategoria = (categoriaId, categoriaNome) => {
-    setCategoriaSelecionada({ id: categoriaId, nome: categoriaNome });
-    setAreaSelecionada(null);
+
+  // Função para carregar tópicos de uma categoria
+  const carregarTopicosCategoria = async (categoriaId) => {
+    try {
+      setLoadingTopicos(prev => ({ ...prev, [categoriaId]: true }));
+      
+      const token = localStorage.getItem('token');
+      console.log(`Carregando tópicos para categoria: ${categoriaId}`);
+      
+      const response = await axios.get(`${API_BASE}/topicos-categoria/categoria/${categoriaId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log(`Resposta da API para categoria ${categoriaId}:`, response.data);
+      
+      // Atualizar a lista de tópicos por categoria
+      setCategoriasTopicos(prev => ({
+        ...prev,
+        [categoriaId]: response.data.data
+      }));
+      
+      setLoadingTopicos(prev => ({ ...prev, [categoriaId]: false }));
+    } catch (error) {
+      console.error(`Erro ao carregar tópicos da categoria ${categoriaId}:`, error);
+      setLoadingTopicos(prev => ({ ...prev, [categoriaId]: false }));
+    }
   };
 
-  const handleSelecionarArea = (areaId, areaNome) => {
-    setAreaSelecionada({ id: areaId, nome: areaNome });
-  };
-
-  const handleVerTopico = (id) => {
-    navigate(`/forum/topico/${id}`);
-  };
-
-  const handleCriarTopico = () => {
-    if (userRole === 1 || userRole === 2) { // Admin ou Gestor
+  // Função para abrir modal de criação de tópico
+  const handleCriarTopico = (categoria) => {
+    if (userRole === 'Administrador' || userRole === 'Gestor') {
+      setCategoriaAtiva(categoria);
       setShowCriarTopico(true);
     } else {
       // Para outros perfis, exibe mensagem de solicitar ao gestor
@@ -94,17 +125,42 @@ const ForumPartilha = () => {
     }
   };
 
+  // Função para navegar para o chat do tópico
+  const handleVerTopico = (id) => {
+    console.log(`Ir para o tópico ID: ${id}`);
+    navigate(`/forum/topico/${id}`);
+  };
+
+  // Formatar data para exibição
   const formatarData = (dataString) => {
     const data = new Date(dataString);
     return data.toLocaleDateString('pt-BR');
   };
 
-  if (loading && !categorias.length) {
+  // Função chamada após sucesso na criação de um tópico
+  const handleTopicoCreated = async (novoTopico) => {
+    setShowCriarTopico(false);
+    
+    // Recarregar os tópicos da categoria que teve um novo tópico adicionado
+    await carregarTopicosCategoria(novoTopico.id_categoria);
+    
+    // Criar um novo objeto de estado com todas as categorias contraídas
+    const novoEstado = {};
+    categorias.forEach(cat => {
+      const catId = cat.id_categoria || cat.id;
+      novoEstado[catId] = catId === novoTopico.id_categoria;
+    });
+    
+    // Garantir que a categoria esteja expandida
+    setCategoriasExpandidas(novoEstado);
+  };
+
+  if (loading) {
     return (
       <div className="forum-partilha-container">
-        <Navbar />
+        <Navbar toggleSidebar={toggleSidebar} />
         <div className="main-content">
-          <Sidebar />
+          <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="loading-container">
             <div className="loading">Carregando fórum de partilha...</div>
           </div>
@@ -118,120 +174,78 @@ const ForumPartilha = () => {
       <Navbar toggleSidebar={toggleSidebar} />
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        
         <div className="forum-content">
           <h1>Fórum de Partilha de Conhecimento</h1>
           
-          <div className="forum-navigation">
-            <div className="categoria-list">
-              <h2>Categorias</h2>
-              <ul>
-                {categorias.map(categoria => (
-                  <li 
-                    key={categoria.id} 
-                    className={categoriaSelecionada?.id === categoria.id ? 'selected' : ''}
-                    onClick={() => handleSelecionarCategoria(categoria.id, categoria.nome)}
-                  >
-                    {categoria.nome}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            {categoriaSelecionada && (
-              <div className="area-list">
-                <h2>Áreas</h2>
-                <ul>
-                  {categorias
-                    .find(cat => cat.id === categoriaSelecionada.id)
-                    .areas.map(area => (
-                      <li 
-                        key={area.id} 
-                        className={areaSelecionada?.id === area.id ? 'selected' : ''}
-                        onClick={() => handleSelecionarArea(area.id, area.nome)}
-                      >
-                        {area.nome}
-                      </li>
-                    ))
-                  }
-                </ul>
-              </div>
-            )}
-          </div>
-          
-          {categoriaSelecionada && areaSelecionada && (
-            <div className="topicos-section">
-              <div className="topicos-header">
-                <h2>Tópicos em {areaSelecionada.nome}</h2>
-                <button 
-                  className="criar-topico-btn"
-                  onClick={handleCriarTopico}
-                >
-                  {userRole === 1 || userRole === 2 ? 'Criar Tópico' : 'Solicitar Tópico'}
-                </button>
-              </div>
+          <div className="categorias-accordion">
+            {categorias.map(categoria => {
+              // Identificar a chave correta do ID para esta categoria
+              const categoriaId = categoria.id_categoria || categoria.id;
               
-              {loading ? (
-                <div className="loading">Carregando tópicos...</div>
-              ) : (
-                <>
-                  {topicos.length === 0 ? (
-                    <p className="no-topicos">Não há tópicos nesta área ainda.</p>
-                  ) : (
-                    <div className="topicos-list">
-                      {topicos.map(topico => (
-                        <div 
-                          key={topico.id} 
-                          className="topico-card"
-                          onClick={() => handleVerTopico(topico.id)}
-                        >
-                          <h3>{topico.titulo}</h3>
-                          <p className="topico-desc">{topico.descricao || 'Sem descrição'}</p>
-                          <div className="topico-meta">
-                            <span className="autor">Por: {topico.criador?.nome || 'Usuário'}</span>
-                            <span className="data">
-                              {formatarData(topico.dataCriacao)}
-                            </span>
-                            <span className="comentarios">
-                              {topico.comentarios || 0} comentário(s)
-                            </span>
+              return (
+              <div key={categoriaId} className="categoria-item">
+                <div className="categoria-header">
+                  <div 
+                    className="categoria-title"
+                    onClick={() => toggleCategoria(categoriaId)}
+                  >
+                    <i className={`fas fa-chevron-${categoriasExpandidas[categoriaId] ? 'down' : 'right'}`}></i>
+                    <h3>{categoria.nome}</h3>
+                  </div>
+                  
+                  <button 
+                    className="criar-topico-btn"
+                    onClick={() => handleCriarTopico(categoria)}
+                  >
+                    {userRole === 'Administrador' || userRole === 'Gestor' ? 'Criar Tópico' : 'Solicitar Tópico'}
+                  </button>
+                </div>
+                
+                {categoriasExpandidas[categoriaId] && (
+                  <div className="categoria-content">
+                    {loadingTopicos[categoriaId] ? (
+                      <div className="loading">Carregando tópicos...</div>
+                    ) : (
+                      <>
+                        {!categoriasTopicos[categoriaId] || categoriasTopicos[categoriaId].length === 0 ? (
+                          <p className="no-topicos">Não há tópicos nesta categoria ainda.</p>
+                        ) : (
+                          <div className="topicos-list">
+                            {categoriasTopicos[categoriaId] && categoriasTopicos[categoriaId].map(topico => (
+                              <div 
+                                key={topico.id_topico} 
+                                className="topico-card"
+                                onClick={() => handleVerTopico(topico.id_topico)}
+                              >
+                                <h3>{topico.titulo}</h3>
+                                <p className="topico-desc">{topico.descricao || 'Sem descrição'}</p>
+                                <div className="topico-meta">
+                                  <span className="autor">Por: {topico.criador?.nome || 'Usuário'}</span>
+                                  <span className="data">
+                                    {formatarData(topico.data_criacao)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )})}
+
+          </div>
         </div>
       </div>
       
       {showCriarTopico && (
         <CriarTopicoModal 
-          categoria={categoriaSelecionada}
-          area={areaSelecionada}
+          categoria={categoriaAtiva}
           onClose={() => setShowCriarTopico(false)}
-          onSuccess={() => {
-            setShowCriarTopico(false);
-            // Recarregar tópicos
-            const fetchTopicos = async () => {
-              try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(`${API_BASE}/topicos`, {
-                  params: {
-                    categoria: categoriaSelecionada.id,
-                    area: areaSelecionada.id
-                  },
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                setTopicos(response.data);
-              } catch (error) {
-                console.error('Erro ao recarregar tópicos:', error);
-              }
-            };
-            fetchTopicos();
-          }}
+          onSuccess={handleTopicoCreated}
         />
       )}
     </div>

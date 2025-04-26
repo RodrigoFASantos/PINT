@@ -90,13 +90,18 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_topico_categoria_titulo UNIQUE (id_categoria, titulo)
     );`,
 
-    `CREATE TABLE IF NOT EXISTS comentarios_topicos (
+    `CREATE TABLE IF NOT EXISTS comentarios_topico (
       id_comentario SERIAL PRIMARY KEY,
-      id_topico INTEGER REFERENCES topicos_categorias(id_topico),
-      id_utilizador INTEGER REFERENCES utilizadores(id_utilizador),
-      comentario TEXT NOT NULL,
-      data_comentario TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      ativo BOOLEAN DEFAULT TRUE
+      id_topico INTEGER NOT NULL REFERENCES topicos_categorias(id_topico) ON DELETE CASCADE,
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
+      texto TEXT,
+      anexo_url VARCHAR(255),
+      anexo_nome VARCHAR(100),
+      tipo_anexo VARCHAR(10) CHECK (tipo_anexo IN ('imagem', 'video', 'file')),
+      data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      likes INTEGER NOT NULL DEFAULT 0,
+      dislikes INTEGER NOT NULL DEFAULT 0,
+      denuncias INTEGER NOT NULL DEFAULT 0
     );`,
 
     `CREATE TABLE IF NOT EXISTS quizzes (

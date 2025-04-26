@@ -167,10 +167,14 @@ const rotas = [
   { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
   { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
   { caminho: "./src/routes/mailing/mailing_route", prefixo: "/api/mailing" },
-  { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/cursos/tipos_conteudo_route", prefixo: "/api/tipos-conteudo" },
+  { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" },
+
+  // Rotas de chat
+  { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
-  { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" }
+  { caminho: "./src/routes/chat/topico_categoria_route", prefixo: "/api/topicos-categoria" },
+  { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" } 
 ];
 
 rotas.forEach(rota => {

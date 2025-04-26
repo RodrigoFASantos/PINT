@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const Comentario_Topico = sequelize.define("comentarios_topicos", {
+const Comentario_Topico = sequelize.define("comentarios_topico", {
   id_comentario: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -23,17 +23,55 @@ const Comentario_Topico = sequelize.define("comentarios_topicos", {
       key: "id_utilizador",
     },
   },
-  comentario: {
+  texto: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true, // Permite comentários apenas com anexo
   },
-  data_comentario: {
+  anexo_url: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  anexo_nome: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  tipo_anexo: {
+    type: DataTypes.ENUM('imagem', 'video', 'file'),
+    allowNull: true,
+  },
+  data_criacao: {
     type: DataTypes.DATE,
+    allowNull: false,
     defaultValue: DataTypes.NOW,
+  },
+  likes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  dislikes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  denuncias: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
   }
 }, {
-  tableName: "comentarios_topicos",
+  tableName: "comentarios_topico",
   timestamps: false,
+  indexes: [
+    {
+      name: "idx_comentarios_topico",
+      fields: ["id_topico"]
+    },
+    {
+      name: "idx_comentarios_utilizador",
+      fields: ["id_utilizador"]
+    }
+  ]
 });
 
 module.exports = Comentario_Topico;

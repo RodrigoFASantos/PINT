@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import CursoConteudos from '../components/CursoConteudos';
 import API_BASE, { IMAGES } from "../api";
+import Avaliacao_curso from '../components/Avaliacao_curso';
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -113,9 +114,9 @@ const DetalhesCurso = () => {
 
         const cursoData = await response.json();
         console.log('Dados do curso recebidos da API:', JSON.stringify(cursoData, null, 2));
-        
+
         setCurso(cursoData);
-        
+
         // Se temos id_categoria, buscar os detalhes da categoria
         if (cursoData.id_categoria) {
           getCategoriaById(cursoData.id_categoria);
@@ -222,7 +223,7 @@ const DetalhesCurso = () => {
 
       // Obter a resposta da API para atualizar o número de vagas 
       const responseData = await response.json();
-      
+
       // Atualizar o estado do curso com o novo número de vagas se disponível
       if (responseData.vagasRestantes !== undefined && curso) {
         setCurso(prevCurso => ({
@@ -297,7 +298,7 @@ const DetalhesCurso = () => {
   const getImageUrl = (curso) => {
     // Se não tiver curso ou a imagem não estiver definida, usar imagem padrão
     if (!curso || !curso.imagem_path) return '/placeholder-curso.jpg';
-    
+
     // Usar o caminho da imagem que veio do backend
     return `${API_BASE}/${curso.imagem_path}`;
   };
@@ -455,7 +456,7 @@ const DetalhesCurso = () => {
                     <i className='fas fa-info'></i>
                   )}
                 </button>
-                
+
                 {/* Removido o botão de toggle para conteúdos */}
               </div>
             </div>
@@ -473,7 +474,7 @@ const DetalhesCurso = () => {
                       </div>
                     </div>
                     <div className="form-campo estado-inscricao">
-                      <div 
+                      <div
                         className={`inscricao-status ${inscrito ? 'inscrito' : 'nao-inscrito'}`}
                         onClick={!inscrito ? handleInscricao : undefined}
                       >
@@ -493,8 +494,8 @@ const DetalhesCurso = () => {
                     <div className="form-campo vagas">
                       <label>Vagas</label>
                       <div className="campo-valor">
-                        {curso.tipo === 'sincrono' && curso.vagas !== null 
-                          ? `${curso.vagas}` 
+                        {curso.tipo === 'sincrono' && curso.vagas !== null
+                          ? `${curso.vagas}`
                           : 'Sem limite'}
                       </div>
                     </div>
@@ -532,9 +533,9 @@ const DetalhesCurso = () => {
                     </div>
                     <div className="form-campo categoria">
                       <label>Categoria</label>
-                      <div className="campo-valor"> 
-                        {carregandoCategoria 
-                          ? "Carregando..." 
+                      <div className="campo-valor">
+                        {carregandoCategoria
+                          ? "Carregando..."
                           : (categoria?.nome || "Não atribuída")}
                       </div>
                     </div>
@@ -583,8 +584,17 @@ const DetalhesCurso = () => {
 
             {/* Conteúdos do curso - agora aparecem sempre, sem condição */}
             <div className="curso-conteudos-wrapper">
-            <CursoConteudos cursoId={id} inscrito={inscrito} />
+              <CursoConteudos cursoId={id} inscrito={inscrito} />
             </div>
+
+
+            <Avaliacao_curso
+              cursoId={id}
+              userRole={userRole}
+              formadorId={curso.id_formador}
+            />
+
+
           </div>
         </div>
       </div>

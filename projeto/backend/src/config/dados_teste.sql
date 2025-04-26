@@ -1012,7 +1012,7 @@ BEGIN
     LIMIT 1;
     
     IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
-        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        INSERT INTO comentarios_topico (id_topico, id_utilizador, texto, data_criacao)
         VALUES (topico_id, user_id, 'Essa é uma ótima questão! Para começar com React, recomendo a documentação oficial e alguns tutoriais.', NOW());
     END IF;
 END $$;
@@ -1029,7 +1029,7 @@ BEGIN
     LIMIT 1;
     
     IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
-        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        INSERT INTO comentarios_topico (id_topico, id_utilizador, texto, data_criacao)
         VALUES (topico_id, user_id, 'Obrigado pelas dicas! Vou começar a estudar hoje mesmo.', NOW() + INTERVAL '1 hour');
     END IF;
 END $$;
@@ -1046,7 +1046,7 @@ BEGIN
     LIMIT 1;
     
     IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
-        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        INSERT INTO comentarios_topico (id_topico, id_utilizador, texto, data_criacao)
         VALUES (topico_id, user_id, 'Estou tendo dificuldades para entender os hooks no React. Alguém poderia explicar de forma mais simples?', NOW() - INTERVAL '3 DAY');
     END IF;
 END $$;
@@ -1064,7 +1064,7 @@ BEGIN
     LIMIT 1;
     
     IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
-        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        INSERT INTO comentarios_topico (id_topico, id_utilizador, texto, data_criacao)
         VALUES (topico_id, user_id, 'Como vocês praticam empatia no ambiente de trabalho remoto? Tenho achado desafiador sem a interação presencial.', NOW() - INTERVAL '5 DAY');
     END IF;
 END $$;
@@ -1081,7 +1081,7 @@ BEGIN
     LIMIT 1;
     
     IF topico_id IS NOT NULL AND user_id IS NOT NULL THEN
-        INSERT INTO comentarios_topicos (id_topico, id_utilizador, comentario, data_comentario)
+        INSERT INTO comentarios_topico (id_topico, id_utilizador, texto, data_criacao)
         VALUES (topico_id, user_id, 'Uma técnica que uso é fazer check-ins emocionais no início das reuniões. Perguntar como as pessoas estão se sentindo realmente, não só profissionalmente.', NOW() - INTERVAL '4 DAY');
     END IF;
 END $$;

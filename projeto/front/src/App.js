@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Páginas
 import Login from './pages/login';
@@ -12,7 +12,6 @@ import PerfilUser from './pages/perfilUser';
 import PercursoFormativo from './pages/percursoFormativo';
 import AreaProfessor from './pages/areaProfessor';
 import ForumPartilha from './pages/forumPartilha';
-import DetalheTopico from './pages/detalheTopico';
 import CriarUtilizador from './pages/criarUtilizador';
 import AdminDashboard from './pages/adminDashboard';
 import GerenciarUtilizadores from './pages/gerenciarUtilizadores';
@@ -22,10 +21,10 @@ import Formadores from './pages/formadores';
 import EditarCurso from './pages/editarCurso';
 import GerenciarInscricoes from './pages/gerenciarInscricoes';
 import DetalhesFormadores from './pages/detalhesFormadores';
+import Topicos_Chat from './components/Topicos_Chat'; 
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
-import Categoria_Chat from './components/Categoria_Chat';
 
 const App = () => {
 
@@ -122,19 +121,10 @@ const App = () => {
             />
 
             <Route
-              path="/forum/topico/:id"
+              path="/forum/topico/:topicoId"
               element={
                 <ProtectedRoute>
-                  <DetalheTopico />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/chat/:topicoId"
-              element={
-                <ProtectedRoute>
-                  <Categoria_Chat />
+                  <Topicos_Chat />
                 </ProtectedRoute>
               }
             />

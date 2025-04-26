@@ -15,7 +15,10 @@ function Login() {
     const token = localStorage.getItem("token");
     
     if (token) {
-      navigate("/home");
+      // Redirecionar para home usando uma abordagem de refresh completo
+      // Limpar qualquer flag de visita anterior para garantir que o home.jsx fará refresh
+      sessionStorage.removeItem('homeVisited');
+      window.location.href = "/home";
     }
   }, [navigate]);
   
@@ -24,9 +27,12 @@ function Login() {
 
     const success = await login(email, password);
     if (success) {
-      // Definir flag de login bem-sucedido antes de navegar
+      // Definir flag de login bem-sucedido
       sessionStorage.setItem('needsRefresh', 'true');
-      navigate("/home");
+      // Limpar qualquer flag de visita anterior para garantir que o home.jsx fará refresh
+      sessionStorage.removeItem('homeVisited');
+      // Usar window.location.href em vez de navigate para garantir um refresh completo
+      window.location.href = "/home";
     }
   };
 

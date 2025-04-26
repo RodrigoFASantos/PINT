@@ -1,127 +1,123 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import './css/CriarTopicoModal.css';
 import API_BASE from '../api';
 
-const CriarTopicoModal = ({ curso, onClose, onSuccess }) => {
-  const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState('');
+const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descricao: ''
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [erro, setErro] = useState('');
 
-  // Debug logs para mostrar os dados do curso
-  useEffect(() => {
-    console.log('Dados do curso recebidos no modal:', curso);
-    console.log('ID do curso extraído:', curso?.id_curso);
-  }, [curso]);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validação básica
-    if (!nome.trim()) {
-      setError('Por favor, insira um nome para o tópico');
-      return;
-    }
-    
-    // Obter id_curso diretamente do objeto curso
-    const id_curso = curso?.id_curso;
-    
-    if (!id_curso) {
-      setError('ID do curso não fornecido');
+    if (!formData.titulo.trim()) {
+      setErro('O título do tópico é obrigatório');
       return;
     }
     
     setLoading(true);
-    setError('');
+    setErro('');
     
     try {
       const token = localStorage.getItem('token');
       
-      console.log('Enviando requisição para criar tópico:', {
-        nome,
-        descricao,
-        id_curso
-      });
-      
-      // Criar tópico com os campos corretos
-      await axios.post(`${API_BASE}/topicos-curso`, {
-        nome,
-        descricao,
-        id_curso
+      const response = await axios.post(`${API_BASE}/topicos-categoria`, {
+        id_categoria: categoria.id,
+        titulo: formData.titulo,
+        descricao: formData.descricao
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Sucesso
-      setLoading(false);
-      onSuccess();
+      // Chamar callback de sucesso e passar o novo tópico
+      if (onSuccess) {
+        onSuccess(response.data.data);
+      }
     } catch (error) {
       console.error('Erro ao criar tópico:', error);
-      setError(error.response?.data?.message || 'Não foi possível criar o tópico. Tente novamente.');
+      setErro(
+        error.response?.data?.message || 
+        'Ocorreu um erro ao criar o tópico. Tente novamente.'
+      );
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay criar-topico-modal-overlay">
-      <div className="modal-container">
+    <div className="modal-overlay">
+      <div className="criar-topico-modal">
         <div className="modal-header">
-          <h3>Criar Novo Tópico</h3>
-          <button className="btn-fechar" onClick={onClose}>×</button>
+          <h2>Criar Novo Tópico</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
         </div>
         
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nome do Tópico:</label>
-            <input 
-              type="text" 
-              value={nome} 
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Insira um nome descritivo"
-              maxLength={100}
-              required
-            />
+        <div className="modal-body">
+          <div className="categoria-info">
+            <span>Categoria:</span> {categoria.nome}
           </div>
           
-          <div className="form-group">
-            <label>Descrição:</label>
-            <textarea 
-              value={descricao} 
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Descreva o objetivo deste tópico..."
-              rows={4}
-            />
-          </div>
+          {erro && <div className="error-message">{erro}</div>}
           
-          {curso && (
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Curso:</label>
-              <input type="text" value={curso.nome || ''} disabled />
-              <input type="hidden" value={curso.id_curso || ''} />
+              <label htmlFor="titulo">Título do Tópico</label>
+              <input
+                type="text"
+                id="titulo"
+                name="titulo"
+                value={formData.titulo}
+                onChange={handleChange}
+                placeholder="Digite um título para o tópico"
+                maxLength="100"
+                disabled={loading}
+              />
             </div>
-          )}
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="btn-cancelar" 
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              className="btn-salvar" 
-              disabled={loading || !curso?.id_curso}
-            >
-              {loading ? 'Criando...' : 'Criar Tópico'}
-            </button>
-          </div>
-        </form>
+            
+            <div className="form-group">
+              <label htmlFor="descricao">Descrição</label>
+              <textarea
+                id="descricao"
+                name="descricao"
+                value={formData.descricao}
+                onChange={handleChange}
+                placeholder="Descreva o objetivo deste tópico (opcional)"
+                rows="4"
+                disabled={loading}
+              ></textarea>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="cancel-btn"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="submit-btn"
+                disabled={loading}
+              >
+                {loading ? 'Criando...' : 'Criar Tópico'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
