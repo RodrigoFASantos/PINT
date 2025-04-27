@@ -172,6 +172,115 @@ VALUES
    (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
    'uploads/cursos/meditacao-para-o-dia-a-dia/capa.png',
    'uploads/cursos/meditacao-para-o-dia-a-dia'),
+   
+
+
+
+
+
+
+
+
+
+
+INSERT INTO cursos (nome, descricao, tipo, carga_horaria, data_inicio, data_fim, estado, ativo, id_utilizador, id_area, id_categoria, capa_path, dir_path)
+VALUES
+  ('Curso de Inteligência Artificial', 'Introdução às principais técnicas e aplicações da Inteligência Artificial.', 'sincrono', 30, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   'uploads/cursos/curso-de-inteligencia-artificial/capa.png',
+   'uploads/cursos/curso-de-inteligencia-artificial'),
+
+  ('Curso de Robótica Avançada', 'Aprenda a construir e programar sistemas robóticos complexos.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   'uploads/cursos/curso-de-robotica-avancada/capa.png',
+   'uploads/cursos/curso-de-robotica-avancada'),
+
+  ('Curso de Marketing Digital', 'Domine as estratégias de marketing para o mundo digital.', 'sincrono', 25, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Marketing de Conteúdo' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   'uploads/cursos/curso-de-marketing-digital/capa.png',
+   'uploads/cursos/curso-de-marketing-digital'),
+
+  ('Curso de Desenvolvimento Web', 'Construa websites modernos e responsivos.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   'uploads/cursos/curso-de-desenvolvimento-web/capa.png',
+   'uploads/cursos/curso-de-desenvolvimento-web'),
+
+  ('Curso de Cibersegurança', 'Proteja sistemas e redes contra ameaças digitais.', 'sincrono', 20, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'SEO' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   'uploads/cursos/curso-de-ciberseguranca/capa.png',
+   'uploads/cursos/curso-de-ciberseguranca'),
+
+  ('Curso de Engenharia de Software', 'Aprenda a desenvolver e gerir grandes projetos de software.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   'uploads/cursos/curso-de-engenharia-de-software/capa.png',
+   'uploads/cursos/curso-de-engenharia-de-software'),
+
+  ('Curso de Gestão de Projetos', 'Planeamento, execução e entrega de projetos eficazes.', 'sincrono', 18, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1),
+   'uploads/cursos/curso-de-gestao-de-projetos/capa.png',
+   'uploads/cursos/curso-de-gestao-de-projetos'),
+
+  ('Curso de Machine Learning', 'Descubra como ensinar máquinas a aprenderem com dados.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   'uploads/cursos/curso-de-machine-learning/capa.png',
+   'uploads/cursos/curso-de-machine-learning'),
+
+  ('Curso de Big Data', 'Análise de grandes volumes de dados para tomada de decisões.', 'sincrono', 22, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   'uploads/cursos/curso-de-big-data/capa.png',
+   'uploads/cursos/curso-de-big-data'),
+
+  ('Curso de Realidade Virtual', 'Criação de experiências imersivas em realidade virtual.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
+   'uploads/cursos/curso-de-realidade-virtual/capa.png',
+   'uploads/cursos/curso-de-realidade-virtual'),
+
+  ('Curso de Engenharia Mecânica', 'Fundamentos e aplicações práticas da engenharia mecânica.', 'sincrono', 35, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   'uploads/cursos/curso-de-engenharia-mecanica/capa.png',
+   'uploads/cursos/curso-de-engenharia-mecanica'),
+
+  ('Curso Extra 50', 'Curso adicional para reforçar conhecimentos técnicos variados.', 'assincrono', NULL, '2025-06-01', '2025-09-01', 'planeado', true,
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
+   (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
+   (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
+   'uploads/cursos/curso-extra-50/capa.png',
+   'uploads/cursos/curso-extra-50'),
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   ('Nutrição Funcional', 'Princípios da nutrição funcional para uma vida mais saudável.', 'assincrono', NULL, '2025-07-01', '2025-10-01', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rareura' LIMIT 1),
@@ -181,18 +290,7 @@ VALUES
    'uploads/cursos/nutricao-funcional');
 
 
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Inteligência Artificial', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Robótica Avançada', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Marketing Digital', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Desenvolvimento Web', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Cibersegurança', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Engenharia de Software', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Gestão de Projetos', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Machine Learning', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Big Data', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Realidade Virtual', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso de Engenharia Mecânica', '2025-06-01', '2025-09-01');
-INSERT INTO cursos (nome, data_inicio, data_fim) VALUES ('Curso Extra 50', '2025-06-01', '2025-09-01');
+
 
 -- =============================================
 -- 6. TÓPICOS DOS CURSOS
