@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import './css/areaProfessor.css';
 import Sidebar from '../components/Sidebar';
-import AdicionarConteudoModal from '../components/AdicionarConteudoModal';
-import AvaliacaoModal from '../components/AvaliacaoModal';
+import CriarConteudoModal from '../components/CriarConteudoModal';
+import CriarAvaliacaoModal from '../components/CriarAvaliacaoModal';
 import API_BASE from '../api';
 
 export default function AreaProfessor() {
@@ -170,7 +170,7 @@ export default function AreaProfessor() {
       </div>
       
       {showAddConteudo && cursoSelecionado && (
-        <AdicionarConteudoModal 
+        <CriarConteudoModal 
           curso={cursoSelecionado} 
           onClose={() => setShowAddConteudo(false)}
           onSuccess={() => {
@@ -192,7 +192,7 @@ export default function AreaProfessor() {
       )}
       
       {showAvaliacao && cursoSelecionado && alunoSelecionado && (
-        <AvaliacaoModal 
+        <CriarAvaliacaoModal 
           curso={cursoSelecionado}
           aluno={alunoSelecionado}
           onClose={() => setShowAvaliacao(false)}

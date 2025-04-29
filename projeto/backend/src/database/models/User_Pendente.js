@@ -2,7 +2,7 @@
 
 
 /*
-Modelo para a tabela de usuários pendentes
+Modelo para a tabela de utilizadores pendentes
 Este modelo é utilizado para armazenar informações de usuários que estão em processo de registro, mas ainda não foram confirmados, ou seja, ainda não clicaram no botão de confirmar registo no email.
 */
 
@@ -13,7 +13,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 const bcrypt = require('bcrypt');
 
-const PendingUser = sequelize.define('pending_user', {
+const User_Pendente = sequelize.define('pending_user', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -61,11 +61,11 @@ const PendingUser = sequelize.define('pending_user', {
 });
 
 // Hook para hashear a senha antes de salvar
-PendingUser.beforeCreate(async (pendingUser) => {
-  if (pendingUser.password) {
+User_Pendente.beforeCreate(async (User_Pendente) => {
+  if (User_Pendente.password) {
     const salt = await bcrypt.genSalt(10);
-    pendingUser.password = await bcrypt.hash(pendingUser.password, salt);
+    User_Pendente.password = await bcrypt.hash(User_Pendente.password, salt);
   }
 });
 
-module.exports = PendingUser;
+module.exports = User_Pendente;

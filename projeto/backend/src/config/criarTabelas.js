@@ -9,7 +9,7 @@ const createTablesInOrder = async () => {
       descricao VARCHAR(50) NOT NULL
     );`,
 
-    `CREATE TABLE IF NOT EXISTS pending_users (
+    `CREATE TABLE IF NOT EXISTS User_Pendente (
       id SERIAL PRIMARY KEY,
       id_cargo INTEGER NOT NULL,
       nome VARCHAR(100) NOT NULL,

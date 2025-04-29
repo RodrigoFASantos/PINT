@@ -3,7 +3,7 @@ import axios from 'axios';
 import './css/CriarTopicoModal.css';
 import API_BASE from '../api';
 
-const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
+const CriarTopicoModal = ({ curso, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: ''
@@ -34,21 +34,22 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
     try {
       const token = localStorage.getItem('token');
       
-      // Usar id_categoria se disponível, caso contrário usar id
-      const categoriaId = categoria.id_categoria || categoria.id;
+      // Usar o ID do curso
+      const cursoId = curso.id_curso;
       
-      console.log('Categoria completa:', categoria);
-      console.log('Enviando request com ID da categoria:', categoriaId);
+      console.log('Curso completo:', curso);
+      console.log('Enviando request com ID do curso:', cursoId);
       
       const dadosEnvio = {
-        id_categoria: categoriaId,
-        titulo: formData.titulo,
-        descricao: formData.descricao
+        nome: formData.titulo,
+        id_curso: cursoId,
+        descricao: formData.descricao,
+        ordem: 1
       };
       
       console.log('Payload completo sendo enviado:', dadosEnvio);
       
-      const response = await axios.post(`${API_BASE}/topicos-categoria`, dadosEnvio, {
+      const response = await axios.post(`${API_BASE}/topicos-curso`, dadosEnvio, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -59,7 +60,7 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       
       // Chamar callback de sucesso e passar o novo tópico
       if (onSuccess) {
-        onSuccess(response.data.data);
+        onSuccess(response.data.topico);
       }
     } catch (error) {
       console.error('Erro ao criar tópico:', error);
@@ -94,7 +95,7 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
         
         <div className="modal-body">
           <div className="categoria-info">
-            <span>Categoria:</span> {categoria.nome}
+            <span>Curso:</span> {curso.nome || "Novo Curso"}
           </div>
           
           {erro && <div className="error-message">{erro}</div>}

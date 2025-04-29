@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../../database/models/User.js");
-const PendingUser = require("../../database/models/PendingUser.js");
+const User_Pendente = require("../../database/models/User_Pendente.js");
 const Cargo = require("../../database/models/Cargo");
 const { sendRegistrationEmail } = require("../../utils/emailService"); //email
 const fs = require("fs");
@@ -24,11 +24,11 @@ const verifyAndSendEmail = async (userData) => {
     }
 
     // Verificar se há um registro pendente com este email
-    const pendingUser = await PendingUser.findOne({ where: { email: userData.email } });
-    if (pendingUser) {
+    const User_Pendente = await User_Pendente.findOne({ where: { email: userData.email } });
+    if (User_Pendente) {
       // Se o registro estiver expirado, podemos removê-lo e permitir um novo
-      if (new Date() > new Date(pendingUser.expires_at)) {
-        await pendingUser.destroy();
+      if (new Date() > new Date(User_Pendente.expires_at)) {
+        await User_Pendente.destroy();
       } else {
         return {
           success: false,
@@ -102,7 +102,7 @@ const createUser = async (req, res) => {
     expires_at.setHours(expires_at.getHours() + 24);
 
     // Criar usuário pendente
-    const pendingUser = await PendingUser.create({
+    const User_Pendente = await User_Pendente.create({
       id_cargo,
       nome,
       idade,
@@ -117,10 +117,10 @@ const createUser = async (req, res) => {
     try {
       // Adaptar o usuário pendente para o formato esperado por sendRegistrationEmail
       const userForEmail = {
-        id_utilizador: pendingUser.id,
-        nome: pendingUser.nome,
-        email: pendingUser.email,
-        token: pendingUser.token // Adicionar o token para usar no email
+        id_utilizador: User_Pendente.id,
+        nome: User_Pendente.nome,
+        email: User_Pendente.email,
+        token: User_Pendente.token // Adicionar o token para usar no email
       };
       
       await sendRegistrationEmail(userForEmail);
@@ -128,7 +128,7 @@ const createUser = async (req, res) => {
     } catch (emailError) {
       console.error("Erro ao enviar email:", emailError);
       // Remover o usuário pendente se falhar o envio de email
-      await pendingUser.destroy();
+      await User_Pendente.destroy();
       return res.status(500).json({ 
         message: "Não foi possível enviar o email de confirmação. O registro foi cancelado." 
       });
@@ -137,7 +137,7 @@ const createUser = async (req, res) => {
     // Tudo deu certo!
     res.status(201).json({ 
       message: "Pré-registro realizado com sucesso! Verifique seu email para confirmar o registro.", 
-      email: pendingUser.email
+      email: User_Pendente.email
     });
   } catch (error) {
     console.error("Erro ao criar registro pendente:", error);
@@ -172,38 +172,38 @@ const confirmAccount = async (req, res) => {
     }
 
     // Buscar o registro pendente
-    const pendingUser = await PendingUser.findOne({ 
+    const User_Pendente = await User_Pendente.findOne({ 
       where: { 
         email: decoded.email,
         token: token
       } 
     });
 
-    if (!pendingUser) {
+    if (!User_Pendente) {
       return res.status(404).json({ message: "Registro pendente não encontrado" });
     }
 
     // Verificar se o token não expirou (dupla verificação)
-    if (new Date() > new Date(pendingUser.expires_at)) {
-      await pendingUser.destroy();
+    if (new Date() > new Date(User_Pendente.expires_at)) {
+      await User_Pendente.destroy();
       return res.status(401).json({ message: "Link de confirmação expirado. Por favor, registre-se novamente." });
     }
 
     // Criar o usuário definitivo
     const newUser = await User.create({
-      id_cargo: pendingUser.id_cargo,
-      nome: pendingUser.nome,
-      idade: pendingUser.idade,
-      email: pendingUser.email,
-      telefone: pendingUser.telefone,
-      password: pendingUser.password, // Já está hasheada
+      id_cargo: User_Pendente.id_cargo,
+      nome: User_Pendente.nome,
+      idade: User_Pendente.idade,
+      email: User_Pendente.email,
+      telefone: User_Pendente.telefone,
+      password: User_Pendente.password, // Já está hasheada
       primeiro_login: 1,
       foto_perfil: "AVATAR.png",
       foto_capa: "CAPA.png"
     });
 
     // Remover o registro pendente
-    await pendingUser.destroy();
+    await User_Pendente.destroy();
 
     // Gerar um token de autenticação para login automático
     const authToken = jwt.sign(
@@ -331,16 +331,16 @@ const resendConfirmation = async (req, res) => {
     }
 
     // Buscar registro pendente
-    const pendingUser = await PendingUser.findOne({ where: { email } });
+    const User_Pendente = await User_Pendente.findOne({ where: { email } });
     
-    if (!pendingUser) {
+    if (!User_Pendente) {
       return res.status(404).json({ message: "Registro pendente não encontrado para este email" });
     }
 
     // Verificar se o usuário já está registrado
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      await pendingUser.destroy(); // Remover registro pendente obsoleto
+      await User_Pendente.destroy(); // Remover registro pendente obsoleto
       return res.status(400).json({ 
         message: "Este email já está registrado como usuário ativo. Por favor, faça login ou recupere sua senha." 
       });
@@ -348,7 +348,7 @@ const resendConfirmation = async (req, res) => {
 
     // Gerar novo token
     const token = jwt.sign(
-      { email: pendingUser.email, nome: pendingUser.nome },
+      { email: User_Pendente.email, nome: User_Pendente.nome },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
@@ -357,7 +357,7 @@ const resendConfirmation = async (req, res) => {
     const expires_at = new Date();
     expires_at.setHours(expires_at.getHours() + 24);
     
-    await pendingUser.update({
+    await User_Pendente.update({
       token,
       expires_at
     });
@@ -365,10 +365,10 @@ const resendConfirmation = async (req, res) => {
     // Enviar novo email
     try {
       const userForEmail = {
-        id_utilizador: pendingUser.id,
-        nome: pendingUser.nome,
-        email: pendingUser.email,
-        token: pendingUser.token
+        id_utilizador: User_Pendente.id,
+        nome: User_Pendente.nome,
+        email: User_Pendente.email,
+        token: User_Pendente.token
       };
       
       await sendRegistrationEmail(userForEmail);

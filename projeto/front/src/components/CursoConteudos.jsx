@@ -3,14 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './css/cursoConteudos.css';
 import API_BASE from "../api";
 import CriarTopicoModal from './CriarTopicoModal';
+import CriarPastaModal from './CriarPastaModal';
+import CriarConteudoModal from './CriarConteudoModal';
 import Curso_Conteudo_ficheiro_Modal from "./Curso_Conteudo_ficheiro_Modal";
 import axios from "axios";
-import AdicionarConteudoModal from '../components/AdicionarConteudoModal';
 
-
-
-
-const CursoConteudos = ({ cursoId, inscrito = false}) => {
+const CursoConteudos = ({ cursoId, inscrito = false }) => {
   const { id } = useParams();
   const courseId = cursoId || id;
   const navigate = useNavigate();
@@ -19,40 +17,23 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState('user');
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState('');
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalInputValue, setModalInputValue] = useState('');
-  const [currentTopicoId, setCurrentTopicoId] = useState(null);
-  const [currentPastaId, setCurrentPastaId] = useState(null);
-  const [conteudoType, setConteudoType] = useState('file');
-  const [fileToUpload, setFileToUpload] = useState(null);
+
+  // Estados para modais de confirmação
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Estado para controlar o modal de tópico
+  // Estados para os modais específicos
   const [showTopicoModal, setShowTopicoModal] = useState(false);
-  const [categoriaAtual, setCategoriaAtual] = useState('');
-  const [areaAtual, setAreaAtual] = useState('');
+  const [showPastaModal, setShowPastaModal] = useState(false);
+  const [showConteudoModal, setShowConteudoModal] = useState(false);
 
-
+  // Estados para armazenar itens selecionados
+  const [topicoSelecionado, setTopicoSelecionado] = useState(null);
+  const [pastaSelecionada, setPastaSelecionada] = useState(null);
   const [conteudoSelecionado, setConteudoSelecionado] = useState(null);
-  const [mostrarModal, setMostrarModal] = useState(false);
-
-  const [showAdicionarConteudoModal, setShowAdicionarConteudoModal] = useState(false);
-  const [pastaAtual, setPastaAtual] = useState(null);
-
-
-
-
-
-
-
-
-
-
+  const [mostrarConteudoModal, setMostrarConteudoModal] = useState(false);
 
   // Verificar permissões do usuário
   useEffect(() => {
@@ -110,13 +91,13 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
       const data = await response.json();
 
       if (Array.isArray(data)) {
-        // Alterar para definir todos os tópicos e pastas como fechados por padrão
+        // Definir todos os tópicos e pastas como fechados por padrão
         const collapsedTopicos = data.map(topico => ({
           ...topico,
-          expanded: false, // Alterado de true para false
+          expanded: false,
           pastas: topico.pastas ? topico.pastas.map(pasta => ({
             ...pasta,
-            expanded: false // Alterado de true para false
+            expanded: false
           })) : []
         }));
 
@@ -132,11 +113,6 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
       setLoading(false);
     }
   }, [courseId, navigate]);
-
-  // Efeito para monitorar o estado do showTopicoModal (NOVO)
-  useEffect(() => {
-    console.log("Estado do modal CriarTopicoModal mudou:", showTopicoModal);
-  }, [showTopicoModal]);
 
   useEffect(() => {
     if (courseId) {
@@ -190,347 +166,74 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
     }
   };
 
-  // Abrir modal para adicionar/editar tópico, pasta ou conteúdo
-  const openModal = (type, title, topicoId = null, pastaId = null, contentType = null) => {
-    console.log("Abrindo modal:", type, title);
+  // ===== Handlers para abrir modais =====
 
-    // Caso especial para adicionar tópico quando não existem tópicos
-    if (type === 'topico' && topicos.length === 0) {
-      // Buscar informações de categoria e área do curso
+  // Abrir modal para criar tópico
+  const handleCreateTopico = () => {
+    console.log("Abrindo modal para criar tópico");
+
+    // Se não existem tópicos, buscar informações do curso
+    if (topicos.length === 0) {
       const fetchCursoInfo = async () => {
         try {
           const token = localStorage.getItem('token');
-
-          // Verificamos primeiro se o token existe
           if (!token) {
             console.error('Token não encontrado');
             return;
           }
 
-          console.log("Buscando informações do curso:", courseId);
-
           const response = await fetch(`${API_BASE}/cursos/${courseId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
 
-          // Registramos o status da resposta para debug
-          console.log("Status da resposta:", response.status);
-
           if (response.ok) {
             const cursoData = await response.json();
-
-            // Registramos os dados recebidos para debug
-            console.log("Dados do curso recebidos:", cursoData);
-
-            // Definimos valores padrão caso os dados não estejam disponíveis
-            let categoriaValue = 'Geral';
-            let areaValue = 'Geral';
-
-            // Tentamos extrair valores do objeto área se existir
-            if (cursoData.area && cursoData.area.nome) {
-              areaValue = cursoData.area.nome;
-            }
-
-            // Para categoria, pode ser um objeto ou apenas o nome
-            if (cursoData.categoria) {
-              if (typeof cursoData.categoria === 'object' && cursoData.categoria.nome) {
-                categoriaValue = cursoData.categoria.nome;
-              } else if (typeof cursoData.categoria === 'string') {
-                categoriaValue = cursoData.categoria;
-              }
-            }
-
-            console.log("Categoria definida:", categoriaValue);
-            console.log("Área definida:", areaValue);
-
-            setCategoriaAtual(categoriaValue);
-            setAreaAtual(areaValue);
-
-            // Agora ativamos o modal com um pequeno delay para garantir que os estados foram atualizados
-            setTimeout(() => {
-              setShowTopicoModal(true);
-              console.log("Modal CriarTopicoModal ativado");
-            }, 100);
+            setShowTopicoModal(true);
           } else {
             console.error('Erro ao buscar dados do curso:', response.statusText);
-            // Mesmo em caso de erro, podemos mostrar o modal com valores padrão
-            setCategoriaAtual('Geral');
-            setAreaAtual('Geral');
-            setTimeout(() => {
-              setShowTopicoModal(true);
-            }, 100);
+            setShowTopicoModal(true);
           }
         } catch (error) {
           console.error('Erro ao buscar informações do curso:', error);
-          // Mesmo com erro, exibimos o modal com valores padrão
-          setCategoriaAtual('Geral');
-          setAreaAtual('Geral');
-          setTimeout(() => {
-            setShowTopicoModal(true);
-          }, 100);
+          setShowTopicoModal(true);
         }
       };
 
       fetchCursoInfo();
-      return;
-    }
-    if (type === 'conteudo') {
-      // Guarda a pasta atual para usar no modal
-      setPastaAtual({
-        id_pasta: pastaId,
-        id_curso: courseId
-      });
-      // Mostra o modal de adicionar conteúdo
-      setShowAdicionarConteudoModal(true);
-      return; // Importante para não executar o resto da função
-    }
-
-
-    // Comportamento normal para outros casos
-    setModalType(type);
-    setModalTitle(title);
-    setModalInputValue('');
-    setCurrentTopicoId(topicoId);
-    setCurrentPastaId(pastaId);
-    if (contentType) setConteudoType(contentType);
-    setShowModal(true);
-  };
-
-  useEffect(() => {
-    console.log("Estado do modal mudou:", showModal);
-  }, [showModal]);
-
-  const handleTopicoModalClose = () => {
-    console.log("Fechando CriarTopicoModal");
-    setShowTopicoModal(false);
-  };
-
-  const handleTopicoCreated = () => {
-    console.log("Tópico criado com sucesso!");
-    setShowTopicoModal(false);
-    // Recarregar a lista de tópicos
-    fetchTopicos();
-  };
-
-  // Fechar o modal
-  const closeModal = () => {
-    setShowModal(false);
-    setModalInputValue('');
-    setFileToUpload(null);
-  };
-
-  // Adicionar novo tópico
-  const handleAddTopico = async () => {
-    if (!modalInputValue.trim()) {
-      alert('Por favor, insira um nome para o tópico.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/topicos-curso`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          nome: modalInputValue,
-          id_curso: courseId,
-          ordem: topicos.length + 1
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar tópico');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao adicionar tópico:', error);
-      alert(`Erro: ${error.message}`);
+    } else {
+      setShowTopicoModal(true);
     }
   };
 
-  // Adicionar nova pasta
-  const handleAddPasta = async () => {
-    if (!modalInputValue.trim()) {
-      alert('Por favor, insira um nome para a pasta.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/pastas-curso`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          nome: modalInputValue,
-          id_topico: currentTopicoId,
-          ordem: topicos.find(t => t.id_topico === currentTopicoId)?.pastas?.length + 1 || 1
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar pasta');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao adicionar pasta:', error);
-      alert(`Erro: ${error.message}`);
-    }
+  // Abrir modal para criar pasta
+  const handleCreatePasta = (topico) => {
+    setTopicoSelecionado(topico);
+    setShowPastaModal(true);
   };
 
-  // Adicionar novo conteúdo
-  const handleAddConteudo = async () => {
-    if (conteudoType !== 'file' && !modalInputValue.trim()) {
-      alert('Por favor, insira um link válido.');
-      return;
-    }
-
-    if (conteudoType === 'file' && !fileToUpload) {
-      alert('Por favor, selecione um arquivo.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-
-      // Dados comuns para todos os tipos de conteúdo
-      formData.append('id_curso', courseId);
-      formData.append('id_pasta', currentPastaId);
-      formData.append('tipo', conteudoType);
-      formData.append('titulo', modalInputValue || fileToUpload?.name || 'Arquivo');
-
-      // Dependendo do tipo, adicionar dados específicos
-      if (conteudoType === 'file') {
-        formData.append('arquivo', fileToUpload);
-      } else {
-        formData.append('url', modalInputValue);
-      }
-
-      const response = await fetch(`${API_BASE}/conteudos-curso`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao adicionar conteúdo');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao adicionar conteúdo:', error);
-      alert(`Erro: ${error.message}`);
-    }
+  // Abrir modal para criar conteúdo
+  const handleCreateConteudo = (pasta) => {
+    setPastaSelecionada({
+      id_pasta: pasta.id_pasta,
+      id_curso: courseId,
+      nome: pasta.nome
+    });
+    setShowConteudoModal(true);
   };
+
+  // ===== Handlers para edição =====
 
   // Editar nome do tópico
   const handleEditTopico = async (topicoId, currentName) => {
-    setCurrentTopicoId(topicoId);
-    setModalInputValue(currentName);
-    setModalType('edit-topico');
-    setModalTitle('Editar Tópico');
-    setShowModal(true);
+    // Lógica para editar tópico
   };
 
   // Editar nome da pasta
   const handleEditPasta = async (pastaId, currentName) => {
-    setCurrentPastaId(pastaId);
-    setModalInputValue(currentName);
-    setModalType('edit-pasta');
-    setModalTitle('Editar Pasta');
-    setShowModal(true);
+    // Lógica para editar pasta
   };
 
-  // Salvar edição de tópico
-  const handleSaveEditTopico = async () => {
-    if (!modalInputValue.trim()) {
-      alert('Por favor, insira um nome para o tópico.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/topicos-curso/${currentTopicoId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          nome: modalInputValue
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao atualizar tópico');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao editar tópico:', error);
-      alert(`Erro: ${error.message}`);
-    }
-  };
-
-  // Salvar edição de pasta
-  const handleSaveEditPasta = async () => {
-    if (!modalInputValue.trim()) {
-      alert('Por favor, insira um nome para a pasta.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/pastas-curso/${currentPastaId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          nome: modalInputValue
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao atualizar pasta');
-      }
-
-      // Atualizar lista de tópicos
-      fetchTopicos();
-      setShowModal(false);
-
-    } catch (error) {
-      console.error('Erro ao editar pasta:', error);
-      alert(`Erro: ${error.message}`);
-    }
-  };
+  // ===== Handlers para confirmação de exclusão =====
 
   // Mostrar modal de confirmação para remover tópico
   const confirmRemoveTopico = (topicoId) => {
@@ -558,7 +261,6 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
 
       // Atualizar lista de tópicos
       fetchTopicos();
-
     } catch (error) {
       console.error('Erro ao remover tópico:', error);
       alert(`Erro: ${error.message}`);
@@ -591,7 +293,6 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
 
       // Atualizar lista de tópicos
       fetchTopicos();
-
     } catch (error) {
       console.error('Erro ao remover pasta:', error);
       alert(`Erro: ${error.message}`);
@@ -624,7 +325,6 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
 
       // Atualizar lista de tópicos
       fetchTopicos();
-
     } catch (error) {
       console.error('Erro ao remover conteúdo:', error);
       alert(`Erro: ${error.message}`);
@@ -643,76 +343,30 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
     setShowConfirmModal(false);
   };
 
-  // Lidar com o envio do formulário do modal
-  const handleModalSubmit = (e) => {
-    e.preventDefault();
+  // ===== Handlers para callbacks dos modais =====
 
-    switch (modalType) {
-      case 'topico':
-        console.log("Processando adição de tópico");
-        handleAddTopico();
-        break;
-      case 'pasta':
-        handleAddPasta();
-        break;
-      case 'conteudo':
-        handleAddConteudo();
-        break;
-      case 'edit-topico':
-        handleSaveEditTopico();
-        break;
-      case 'edit-pasta':
-        handleSaveEditPasta();
-        break;
-      default:
-        closeModal();
-    }
+  // Callback quando o tópico é criado com sucesso
+  const handleTopicoCreated = () => {
+    console.log("Tópico criado com sucesso!");
+    setShowTopicoModal(false);
+    fetchTopicos();
   };
 
+  // Callback quando a pasta é criada com sucesso
+  const handlePastaCreated = () => {
+    console.log("Pasta criada com sucesso!");
+    setShowPastaModal(false);
+    fetchTopicos();
+  };
 
+  // Callback quando o conteúdo é criado com sucesso
+  const handleConteudoCreated = () => {
+    console.log("Conteúdo adicionado com sucesso!");
+    setShowConteudoModal(false);
+    fetchTopicos();
+  };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  // Renderização condicional para estados de loading/erro
   if (loading) {
     return (
       <div className="conteudos-loading">
@@ -733,48 +387,48 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
     );
   }
 
+  // Caso não tenha tópicos
   if (topicos.length === 0) {
     return (
       <div className="no-conteudos">
         <p>Nenhum conteúdo disponível para este curso.</p>
         {(userRole === 'admin' || userRole === 'formador') && (
           <button
-            onClick={() => {
-              console.log("Clicou em adicionar primeiro tópico");
-              openModal('topico', 'Adicionar Tópico');
-            }}
+            onClick={handleCreateTopico}
             className="btn-add-first"
           >
             Adicionar primeiro tópico
           </button>
         )}
 
-        {/* Renderizando o modal com uma classe diferente para evitar conflitos de CSS */}
         {showTopicoModal && (
-          <div className="topico-modal-wrapper" style={{ position: 'relative', zIndex: 1050 }}>
-            <CriarTopicoModal
-              curso={{ id_curso: courseId, nome: "Curso postman" }}
-              onClose={handleTopicoModalClose}
-              onSuccess={handleTopicoCreated}
-            />
-          </div>
+          <CriarTopicoModal
+            curso={{ id_curso: courseId, nome: "Curso" }}
+            onClose={() => setShowTopicoModal(false)}
+            onSuccess={handleTopicoCreated}
+          />
         )}
       </div>
     );
   }
 
+  // Renderização principal
   return (
     <div className="curso-conteudos-container">
       <div className="conteudos-header">
         {(userRole === 'admin' || userRole === 'formador') && (
           <button
             className="btn-add-topico"
-            onClick={() => openModal('topico', 'Adicionar Tópico')}
+            onClick={handleCreateTopico}
           >
             <i className="fas fa-plus"></i> Adicionar Tópico
           </button>
         )}
       </div>
+
+
+
+      
 
       <div className="conteudo-list-estruturada">
         {topicos.map((topico) => (
@@ -793,7 +447,7 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
                   <button
                     className="btn-add"
                     title="Adicionar pasta"
-                    onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
+                    onClick={() => handleCreatePasta(topico)}
                   >
                     <i className="fas fa-plus"></i>
                   </button>
@@ -835,7 +489,7 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
                             <button
                               className="btn-add"
                               title="Adicionar conteúdo"
-                              onClick={() => openModal('conteudo', 'Adicionar Conteúdo', topico.id_topico, pasta.id_pasta)}
+                              onClick={() => handleCreateConteudo(pasta)}
                             >
                               <i className="fas fa-plus"></i>
                             </button>
@@ -865,32 +519,26 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
                                 {getConteudoIcon(conteudo.tipo)}
 
                                 <span
-  className={`conteudo-titulo ${!inscrito ? 'bloqueado' : ''}`}
-  onClick={() => {
-    if (!inscrito) {
-      // Se não estiver inscrito, mostrar alerta
-      alert("Você precisa estar inscrito no curso para acessar este conteúdo.");
-      return;
-    }
-    
-    if (conteudo.tipo === 'file') {
-      // For files, show the modal as before
-      setConteudoSelecionado(conteudo);
-      setMostrarModal(true);
-    } else if (conteudo.tipo === 'link' || conteudo.tipo === 'video') {
-      // For links and videos, open in a new tab
-      if (conteudo.url) {
-        window.open(conteudo.url, '_blank', 'noopener,noreferrer');
-      }
-    }
-  }}
->
-  {conteudo.titulo}
-  {!inscrito && <i className="fas fa-lock ml-2" title="Conteúdo bloqueado"></i>}
-</span>
+                                  className={`conteudo-titulo ${!inscrito ? 'bloqueado' : ''}`}
+                                  onClick={() => {
+                                    if (!inscrito) {
+                                      alert("Você precisa estar inscrito no curso para acessar este conteúdo.");
+                                      return;
+                                    }
 
-
-
+                                    if (conteudo.tipo === 'file') {
+                                      setConteudoSelecionado(conteudo);
+                                      setMostrarConteudoModal(true);
+                                    } else if (conteudo.tipo === 'link' || conteudo.tipo === 'video') {
+                                      if (conteudo.url) {
+                                        window.open(conteudo.url, '_blank', 'noopener,noreferrer');
+                                      }
+                                    }
+                                  }}
+                                >
+                                  {conteudo.titulo}
+                                  {!inscrito && <i className="fas fa-lock ml-2" title="Conteúdo bloqueado"></i>}
+                                </span>
 
                                 {(userRole === 'admin' || userRole === 'formador') && (
                                   <div className="conteudo-actions">
@@ -917,7 +565,7 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
                     <p>Sem pastas neste tópico</p>
                     {(userRole === 'admin' || userRole === 'formador') && (
                       <button
-                        onClick={() => openModal('pasta', 'Adicionar Pasta', topico.id_topico)}
+                        onClick={() => handleCreatePasta(topico)}
                         className="btn-add-pasta"
                       >
                         <i className="fas fa-folder-plus"></i> Adicionar pasta
@@ -929,141 +577,15 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
             )}
           </div>
         ))}
-
-        {mostrarModal && conteudoSelecionado && (
-          <Curso_Conteudo_ficheiro_Modal
-            conteudo={conteudoSelecionado}
-            onClose={() => setMostrarModal(false)}
-            API_BASE={API_BASE}
-          />
-        )}
-
       </div>
 
-      {/* Modais para adicionar/editar tópicos, pastas e conteúdos */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{modalTitle}</h3>
-              <button className="modal-close" onClick={closeModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-
-            <form onSubmit={handleModalSubmit}>
-              {modalType === 'conteudo' ? (
-                <>
-                  <div className="form-group">
-                    <label>Tipo de Conteúdo:</label>
-                    <div className="content-type-options">
-                      <div className="content-type-option">
-                        <input
-                          type="radio"
-                          id="type-file"
-                          name="conteudoType"
-                          value="file"
-                          checked={conteudoType === 'file'}
-                          onChange={() => setConteudoType('file')}
-                        />
-                        <label htmlFor="type-file">Arquivo</label>
-                      </div>
-                      <div className="content-type-option">
-                        <input
-                          type="radio"
-                          id="type-link"
-                          name="conteudoType"
-                          value="link"
-                          checked={conteudoType === 'link'}
-                          onChange={() => setConteudoType('link')}
-                        />
-                        <label htmlFor="type-link">Link</label>
-                      </div>
-                      <div className="content-type-option">
-                        <input
-                          type="radio"
-                          id="type-video"
-                          name="conteudoType"
-                          value="video"
-                          checked={conteudoType === 'video'}
-                          onChange={() => setConteudoType('video')}
-                        />
-                        <label htmlFor="type-video">Vídeo</label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {conteudoType === 'file' ? (
-                    <div className="form-group">
-                      <label>Arquivo:</label>
-                      <input
-                        type="file"
-                        onChange={(e) => setFileToUpload(e.target.files[0])}
-                        required
-                      />
-                      <div className="form-group">
-                        <label>Título (opcional):</label>
-                        <input
-                          type="text"
-                          value={modalInputValue}
-                          onChange={(e) => setModalInputValue(e.target.value)}
-                          placeholder="Título do arquivo"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="form-group">
-                      <label>{conteudoType === 'link' ? 'URL do Link:' : 'URL do Vídeo:'}</label>
-                      <input
-                        type="text"
-                        value={modalInputValue}
-                        onChange={(e) => setModalInputValue(e.target.value)}
-                        placeholder={conteudoType === 'link' ? 'https://exemplo.com' : 'https://youtube.com/watch?v=...'}
-                        required
-                      />
-                      <div className="form-group">
-                        <label>Título:</label>
-                        <input
-                          type="text"
-                          value={modalInputValue}
-                          onChange={(e) => setModalInputValue(e.target.value)}
-                          placeholder="Título do conteúdo"
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="form-group">
-                  <label>
-                    {modalType === 'topico' || modalType === 'edit-topico'
-                      ? 'Nome do Tópico:'
-                      : 'Nome da Pasta:'}
-                  </label>
-                  <input
-                    type="text"
-                    value={modalInputValue}
-                    onChange={(e) => setModalInputValue(e.target.value)}
-                    placeholder={modalType === 'topico' || modalType === 'edit-topico'
-                      ? 'Ex: Introdução'
-                      : 'Ex: Instalação'}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={closeModal}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-confirm">
-                  {modalType.startsWith('edit') ? 'Salvar' : 'Adicionar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Modal para visualizar conteúdo */}
+      {mostrarConteudoModal && conteudoSelecionado && (
+        <Curso_Conteudo_ficheiro_Modal
+          conteudo={conteudoSelecionado}
+          onClose={() => setMostrarConteudoModal(false)}
+          API_BASE={API_BASE}
+        />
       )}
 
       {/* Modal de confirmação para exclusão */}
@@ -1099,29 +621,30 @@ const CursoConteudos = ({ cursoId, inscrito = false}) => {
         </div>
       )}
 
-
+      {/* Modais para criar tópicos, pastas e conteúdos */}
       {showTopicoModal && (
         <CriarTopicoModal
-          curso={{ id_curso: courseId, nome: "Curso postman" }}
-          onClose={handleTopicoModalClose}
+          curso={{ id_curso: courseId, nome: "Curso" }}
+          onClose={() => setShowTopicoModal(false)}
           onSuccess={handleTopicoCreated}
         />
       )}
 
-
-
-      {showAdicionarConteudoModal && (
-        <AdicionarConteudoModal
-          curso={pastaAtual}
-          onClose={() => setShowAdicionarConteudoModal(false)}
-          onSuccess={() => {
-            setShowAdicionarConteudoModal(false);
-            fetchTopicos(); // Recarrega a lista de tópicos
-          }}
+      {showPastaModal && topicoSelecionado && (
+        <CriarPastaModal
+          topico={topicoSelecionado}
+          onClose={() => setShowPastaModal(false)}
+          onSuccess={handlePastaCreated}
         />
       )}
 
-
+      {showConteudoModal && pastaSelecionada && (
+        <CriarConteudoModal
+          pasta={pastaSelecionada}
+          onClose={() => setShowConteudoModal(false)}
+          onSuccess={handleConteudoCreated}
+        />
+      )}
     </div>
   );
 };

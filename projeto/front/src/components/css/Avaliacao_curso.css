@@ -14,6 +14,15 @@
   margin-bottom: 15px;
 }
 
+/* Estilo atualizado para o cabeçalho da avaliação */
+.conteudos-header-avaliacao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
 .avaliacao-titulo {
   font-size: 24px;
   font-weight: 700;

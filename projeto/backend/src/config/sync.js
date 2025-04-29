@@ -2,6 +2,7 @@ const sequelize = require("../config/db");
 const fs = require('fs');
 const path = require('path');
 const { createTablesInOrder } = require('./criarTabelas');
+const { criarPastasCompletas } = require('./criar_pastas_completas');
 
 // Dados Teste
 const sqlPath = path.join(__dirname, './dados_teste.sql');
@@ -79,27 +80,6 @@ const prepareSQLStatements = (sqlScript) => {
   }
   
   return statements;
-};
-
-// Função para criar estrutura de diretórios necessária
-const createDirectoryStructure = () => {
-  console.log("Criando estrutura de diretórios para cursos...");
-  const baseDir = 'uploads/cursos';
-
-  // Garantir que o diretório base existe
-  if (!fs.existsSync(baseDir)) {
-    fs.mkdirSync(baseDir, { recursive: true });
-    console.log(`Diretório criado: ${baseDir}`);
-  }
-
-  // Criar diretório temporário para uploads intermediários
-  const tempDir = 'uploads/temp';
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-    console.log(`Diretório temporário criado: ${tempDir}`);
-  }
-
-  console.log("Estrutura de diretórios base criada!");
 };
 
 // Função para apagar todas as tabelas do banco de dados
@@ -189,8 +169,9 @@ const dropAllTables = async () => {
       process.exit(1);
     }
 
-    // Criar estrutura de diretórios necessária
-    createDirectoryStructure();
+    // Etapa 0: Recriar estrutura de diretórios
+    console.log("\n===== ETAPA 0: RECRIANDO ESTRUTURA DE DIRETÓRIOS =====");
+    await criarPastasCompletas();
 
     // Etapa 1: Apagar todas as tabelas existentes
     console.log("\n===== ETAPA 1: APAGANDO TODAS AS TABELAS =====");

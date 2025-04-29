@@ -173,18 +173,6 @@ VALUES
    'uploads/cursos/meditacao-para-o-dia-a-dia/capa.png',
    'uploads/cursos/meditacao-para-o-dia-a-dia'),
    
-
-
-
-
-
-
-
-
-
-
-INSERT INTO cursos (nome, descricao, tipo, carga_horaria, data_inicio, data_fim, estado, ativo, id_utilizador, id_area, id_categoria, capa_path, dir_path)
-VALUES
   ('Curso de Inteligência Artificial', 'Introdução às principais técnicas e aplicações da Inteligência Artificial.', 'sincrono', 30, '2025-06-01', '2025-09-01', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
@@ -268,19 +256,6 @@ VALUES
    (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
    'uploads/cursos/curso-extra-50/capa.png',
    'uploads/cursos/curso-extra-50'),
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   ('Nutrição Funcional', 'Princípios da nutrição funcional para uma vida mais saudável.', 'assincrono', NULL, '2025-07-01', '2025-10-01', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rareura' LIMIT 1),

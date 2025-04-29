@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './css/AvaliacaoModal.css';
+import './css/CriarConteudoModal.css';
 
-const AvaliacaoModal = ({ curso, aluno, onClose, onSuccess }) => {
+const CriarConteudoModal = ({ curso, aluno, onClose, onSuccess }) => {
   const [nota, setNota] = useState('');
   const [feedback, setFeedback] = useState('');
   const [horasPresenca, setHorasPresenca] = useState('');
@@ -167,4 +167,4 @@ const AvaliacaoModal = ({ curso, aluno, onClose, onSuccess }) => {
   );
 };
 
-export default AvaliacaoModal;
+export default CriarConteudoModal;

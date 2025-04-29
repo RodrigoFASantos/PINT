@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './css/AdicionarConteudoModal.css';
+import './css/CriarConteudoModal.css';
 import API_BASE from "../api";
 
 // Modal inicial de seleção de tipo que é chamado de CursoConteudos.jsx
-const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
+const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
   // Estado para gerenciar os modais
   const [modalAtual, setModalAtual] = useState('selecao-tipo');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
@@ -27,13 +27,13 @@ const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="adicionar-conteudo-overlay">
+    <div className="criar-conteudo-overlay">
       {modalAtual === 'selecao-tipo' && (
-        <div className="adicionar-conteudo-modal">
+        <div className="criar-conteudo-modal">
           <button className="close-btn" onClick={fecharTodosModais} type="button">×</button>
           
           <h2>Adicionar Conteúdo</h2>
-          {curso && curso.titulo && <p className="curso-info">{curso.titulo}</p>}
+          {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
           
           <div className="tipo-botoes">
             <button 
@@ -63,10 +63,10 @@ const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
         </div>
       )}
 
-{modalAtual === 'url-link-modal' && (
+      {modalAtual === 'url-link-modal' && (
         <UrlLinkModal 
           tipo={tipoSelecionado}
-          curso={curso}
+          pasta={pasta}
           API_BASE={API_BASE}
           onClose={fecharTodosModais}
           onVoltar={() => setModalAtual('selecao-tipo')}
@@ -76,7 +76,7 @@ const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
 
       {modalAtual === 'arquivo-modal' && (
         <ArquivoModal 
-          curso={curso}
+          pasta={pasta}
           API_BASE={API_BASE}
           onClose={fecharTodosModais}
           onVoltar={() => setModalAtual('selecao-tipo')}
@@ -88,7 +88,7 @@ const AdicionarConteudoModal = ({ curso, onClose, onSuccess }) => {
 };
 
 // Modal para URL (Link ou YouTube)
-const UrlLinkModal = ({ tipo, curso, onClose, onVoltar, onSuccess }) => {
+const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess }) => {
   const [titulo, setTitulo] = useState('');
   const [url, setUrl] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -121,9 +121,9 @@ const UrlLinkModal = ({ tipo, curso, onClose, onVoltar, onSuccess }) => {
       const formData = new FormData();
       formData.append('tipo', tipo);
       formData.append('titulo', titulo.trim());
-      formData.append('descricao', ''); // Não há campo de descrição neste modal
-      formData.append('id_pasta', curso.id_pasta);
-      formData.append('id_curso', curso.id_curso);
+      formData.append('descricao', '');
+      formData.append('id_pasta', pasta.id_pasta);
+      formData.append('id_curso', pasta.id_curso);
       formData.append('url', url.trim());
       
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
@@ -144,11 +144,11 @@ const UrlLinkModal = ({ tipo, curso, onClose, onVoltar, onSuccess }) => {
   };
 
   return (
-    <div className="adicionar-conteudo-modal">
+    <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
       
       <h2>Adicionar {tipo === 'link' ? 'Link' : 'Vídeo'}</h2>
-      {curso && curso.titulo && <p className="curso-info">{curso.titulo}</p>}
+      {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -205,10 +205,11 @@ const UrlLinkModal = ({ tipo, curso, onClose, onVoltar, onSuccess }) => {
   );
 };
 
-// Modal para Arquivo (sem campo de título)
-const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
+// Modal para Arquivo
+const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess }) => {
   const [arquivo, setArquivo] = useState(null);
   const [arquivoNome, setArquivoNome] = useState('');
+  const [titulo, setTitulo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -217,6 +218,7 @@ const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
     if (selectedFile) {
       setArquivo(selectedFile);
       setArquivoNome(selectedFile.name);
+      setTitulo(selectedFile.name); // Preenche o título com o nome do arquivo por padrão
       setErro('');
     } else {
       setArquivo(null);
@@ -240,10 +242,10 @@ const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
       
       const formData = new FormData();
       formData.append('tipo', 'file');
-      formData.append('titulo', arquivo.name); // Usamos o nome do arquivo como título
+      formData.append('titulo', titulo || arquivo.name); // Usa o título personalizado ou o nome do arquivo
       formData.append('descricao', '');
-      formData.append('id_pasta', curso.id_pasta);
-      formData.append('id_curso', curso.id_curso);
+      formData.append('id_pasta', pasta.id_pasta);
+      formData.append('id_curso', pasta.id_curso);
       formData.append('arquivo', arquivo);
       
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
@@ -264,11 +266,11 @@ const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
   };
 
   return (
-    <div className="adicionar-conteudo-modal">
+    <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
       
       <h2>Adicionar Arquivo</h2>
-      {curso && curso.titulo && <p className="curso-info">{curso.titulo}</p>}
+      {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -283,6 +285,18 @@ const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
           <p className="file-info">
             {arquivo ? `Arquivo selecionado: ${arquivoNome}` : 'Nenhum arquivo selecionado'}
           </p>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="titulo">Título (opcional):</label>
+          <input
+            type="text"
+            id="titulo"
+            name="titulo"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Deixe em branco para usar o nome do arquivo"
+          />
         </div>
         
         {erro && <p className="erro-message">{erro}</p>}
@@ -310,4 +324,4 @@ const ArquivoModal = ({ curso, onClose, onVoltar, onSuccess }) => {
   );
 };
 
-export default AdicionarConteudoModal;
+export default CriarConteudoModal;
