@@ -8,7 +8,7 @@ export default function CursosPage() {
   const [cursos, setCursos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const cursosPerPage = 10;
+  const cursosPerPage = 12;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
@@ -70,34 +70,31 @@ export default function CursosPage() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Paginação */}
-      <div className="flex justify-center items-center my-6">
+      <div className="flex justify-center items-center my-6 pagination-container">
         <button
           onClick={goToPreviousPage}
           disabled={currentPage === 1}
-          className={`px-4 py-2 ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
+          className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
+          aria-label="Página anterior"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <span className="pagination-icon">&#10094;</span>
         </button>
 
-        <span className="mx-4 text-lg font-medium">{currentPage}/{totalPages}</span>
+        <span className="mx-4 text-lg font-medium pagination-info">{currentPage}/{totalPages}</span>
 
         <button
           onClick={goToNextPage}
           disabled={currentPage === totalPages}
-          className={`px-4 py-2 ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
+          className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
+          aria-label="Próxima página"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <span className="pagination-icon">&#10095;</span>
         </button>
       </div>
 
       {/* Lista de cursos */}
       <div className="grid">
         {cursos.map((curso) => {
-          /*console.log(getImageUrl(curso));*/
           return (
             <div
               key={curso.id_curso}
@@ -118,7 +115,6 @@ export default function CursosPage() {
             </div>
           );
         })}
-
       </div>
 
       {/* Mensagem para quando não há cursos */}

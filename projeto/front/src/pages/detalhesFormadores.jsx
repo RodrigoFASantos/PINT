@@ -309,7 +309,7 @@ const DetalhesFormadores = () => {
                   ))
                 ) : (
                   <div className="empty-cursos">
-                    Este formador é atrasado.
+                    Este formador não tem nenhum curso ativo.
                   </div>
                 )}
               </div>

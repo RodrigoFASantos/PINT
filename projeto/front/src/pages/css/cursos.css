@@ -14,7 +14,7 @@
 }
 
 /* Paginação fixa no fundo da página */
-.flex.justify-center.items-center.my-6 {
+.pagination-container {
   position: fixed;
   bottom: 0;
   left: 50%;
@@ -25,24 +25,96 @@
   padding: 0.5rem 1rem;
   border-radius: 1rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* Estilo dos botões de paginação */
+.pagination-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.pagination-active {
+  color: #3182ce;
+  background-color: rgba(49, 130, 206, 0.1);
+}
+
+.pagination-active:hover {
+  background-color: rgba(49, 130, 206, 0.2);
+  transform: translateY(-2px);
+}
+
+.pagination-disabled {
+  color: #CBD5E0;
+  cursor: not-allowed;
+}
+
+/* Botões de paginação */
+.pagination-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50px;
+  border: 1.5px solid #3182ce;
+  color: #3182ce;
+  font-weight: bold;
+  font-size: 16px;
+  background-color: white;
+  transition: all 0.2s ease;
+  padding: 0 12px;
+}
+
+.pagination-active {
+  color: #3182ce;
+  border-color: #3182ce;
+  background-color: white;
+}
+
+.pagination-active:hover {
+  background-color: rgba(49, 130, 206, 0.1);
+}
+
+.pagination-disabled {
+  color: #CBD5E0;
+  border-color: #E2E8F0;
+  background-color: #F7FAFC;
+  cursor: not-allowed;
+}
+
+/* Informação de página */
+.pagination-info {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #4A5568;
+}
 
 /* Grid de cursos com 3 colunas */
 .grid {
   display: grid;
   gap: 1.5rem;
 }
+
 @media (min-width: 640px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
 @media (min-width: 768px) {
   .grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
 @media (min-width: 1024px) {
   .grid {
     grid-template-columns: repeat(3, 1fr);
@@ -77,6 +149,7 @@
   align-items: center;
   justify-content: center;
 }
+
 .grid > div > div h3 {
   color: #fff;
   font-size: 1.25rem;
@@ -84,16 +157,12 @@
   text-align: center;
   padding: 0 1rem;
 }
+
 .grid > div > div p {
   color: #fff;
   font-size: 0.875rem;
   margin-top: 0.5rem;
   text-align: center;
-}
-
-/* Botão de paginação desativado */
-button:disabled {
-  cursor: not-allowed;
 }
 
 /* Mensagem de nenhum curso */
