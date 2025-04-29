@@ -8,6 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FormadorModal from '../components/formadorModal';
 import API_BASE from "../api";
+import { useNavigate } from "react-router-dom";
 
 const CriarCurso = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,6 +20,7 @@ const CriarCurso = () => {
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -120,28 +122,19 @@ const CriarCurso = () => {
     }
   };
 
+  const handleFormadorSelection = (formadorId) => {
+    // Se formadorId estiver vazio, isso significa que o usuário removeu a seleção
+    setFormData({ ...formData, id_formador: formadorId });
+    console.log(`Formador ${formadorId ? 'selecionado' : 'removido'}: ${formadorId}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validar formador para cursos síncronos
-    {
-      formData.tipo === 'sincrono' && (
-        <>
-          <button
-            type="button"
-            className="select-formador-button"
-            onClick={() => {
-              console.log("Abrindo modal de formadores");
-              setModalAberto(true);
-            }}
-          >
-            <i className="fas fa-user-plus"></i>
-            {formData.id_formador
-              ? `Formador selecionado (ID: ${formData.id_formador})`
-              : "Selecionar Formador"}
-          </button>
-        </>
-      )
+    if (formData.tipo === 'sincrono' && !formData.id_formador) {
+      toast.error("Selecione um formador para o curso síncrono");
+      return;
     }
 
     const data = new FormData();
@@ -179,6 +172,21 @@ const CriarCurso = () => {
       toast.error('Erro ao criar curso: ' + (error.response?.data?.message || 'Erro desconhecido'));
     }
   };
+
+  // Encontrar o formador atual pelos dados
+  const getFormadorNome = () => {
+    if (!formData.id_formador || !formadores.length) return null;
+    
+    const formador = formadores.find(f => 
+      f.id_utilizador == formData.id_formador || f.id_user == formData.id_formador
+    );
+    
+    return formador ? formador.nome : `ID: ${formData.id_formador}`;
+  };
+
+  
+
+  const formadorNome = getFormadorNome();
 
   return (
     <div className="form-container">
@@ -267,13 +275,11 @@ const CriarCurso = () => {
               <button
                 type="button"
                 className="select-formador-button"
-                onClick={() => {
-                  console.log("Abrindo modal de formadores");
-                  setModalAberto(true);
-                }}
+                onClick={() => setModalAberto(true)}
               >
-                {formData.id_formador
-                  ? `Formador selecionado (ID: ${formData.id_formador})`
+                <i className="fas fa-user-plus"></i> 
+                {formData.id_formador 
+                  ? `Formador: ${formadorNome} (Clique para alterar)`
                   : "Selecionar Formador"}
               </button>
             )}
@@ -335,8 +341,9 @@ const CriarCurso = () => {
       <FormadorModal
         isOpen={modalAberto}
         onClose={() => setModalAberto(false)}
-        setFormador={(id) => setFormData({ ...formData, id_formador: id })}
+        setFormador={handleFormadorSelection}
         users={formadores}
+        currentFormadorId={formData.id_formador}
       />
 
       <ToastContainer />

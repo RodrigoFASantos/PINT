@@ -138,24 +138,6 @@ button[type="submit"]:hover {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* Adicione estas regras ao seu arquivo criarCurso.css para estilizar o botão de seleção de formador */
 
 .select-formador-button {
@@ -258,3 +240,4 @@ button[type="submit"]:hover {
 .remove-formador:hover {
   background-color: #fee2e2;
 }
+
