@@ -16,48 +16,7 @@ const {
   confirmAccount,
   resendConfirmation
 } = require("../../controllers/users/users_ctrl");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
-// Configuração do upload para imagens de usuários
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Assegura que o diretório existe
-    const dir = "uploads/users/";
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    // Determinar o tipo de imagem (CAPA ou AVATAR)
-    const tipoImagem = req.body.tipo === "capa" ? "CAPA" : "AVATAR";
-    
-    // Armazenar temporariamente o tipo no request para uso posterior
-    req.tipoImagem = tipoImagem;
-    
-    // Criar um nome de arquivo temporário com timestamp
-    // Será renomeado após a obtenção dos dados do usuário
-    const tempFilename = `temp_${Date.now()}_${tipoImagem}.png`;
-    
-    cb(null, tempFilename);
-  }
-});
-
-// Filtro para aceitar apenas imagens PNG
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'image/png') {
-    cb(null, true);
-  } else {
-    cb(new Error('Apenas imagens PNG são permitidas!'), false);
-  }
-};
-
-const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter
-});
+const uploadUtils = require('../../middleware/upload');
 
 // Rota para debug - verificar se o servidor está a responder
 router.get("/", (req, res) => {
@@ -75,14 +34,12 @@ router.get("/perfil", verificarToken, perfilUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
 router.put("/users/change-password", changePassword);
 
-// Nova rota para confirmação de conta
+// Rotas de confirmação de conta
 router.post("/confirm-account", confirmAccount);
-
-// Nova rota para reenvio de email de confirmação
 router.post("/resend-confirmation", resendConfirmation);
 
-// Rotas de upload de imagens
-router.post("/img/perfil", verificarToken, upload.single("imagem"), uploadImagemPerfil);
-router.post("/img/capa", verificarToken, upload.single("imagem"), uploadImagemCapa);
+// Rotas de upload de imagens - usando uploadUtils diretamente
+router.post("/img/perfil", verificarToken, uploadUtils.uploadUser.single("imagem"), uploadImagemPerfil);
+router.post("/img/capa", verificarToken, uploadUtils.uploadUser.single("imagem"), uploadImagemCapa);
 
 module.exports = router;

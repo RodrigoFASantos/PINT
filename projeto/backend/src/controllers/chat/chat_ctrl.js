@@ -5,24 +5,27 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
+const CAMINHO_PASTA_UPLOADS = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS);
 
 // Configurar o multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../../../uploads/chat');
-    
-    // Criar diretório se não existir
+    const uploadDir = path.join(BASE_UPLOAD_DIR, 'chat');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Garantir nome único usando UUID
     const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
     cb(null, uniqueFilename);
   }
+});
+
+// Configuração para upload
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
 });
 
 // Função para obter o tipo de anexo
@@ -32,11 +35,7 @@ const getFileType = (mimetype) => {
   return 'file';
 };
 
-// Configuração para upload
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
-});
+
 
 // Controlador do chat
 const chatController = {
@@ -87,7 +86,7 @@ const chatController = {
       
       // Processar anexo, se existir
       if (req.file) {
-        anexoUrl = `/uploads/chat/${req.file.filename}`;
+        anexoUrl = `/${CAMINHO_PASTA_UPLOADS}/chat/${req.file.filename}`;
         anexoNome = req.file.originalname;
         tipoAnexo = getFileType(req.file.mimetype);
       }
@@ -142,7 +141,7 @@ const chatController = {
       
       // Se tiver anexo, remover o arquivo
       if (mensagem.anexoUrl) {
-        const filePath = path.join(__dirname, '../../', mensagem.anexoUrl);
+        const filePath = path.join(process.cwd(), mensagem.anexoUrl.replace(/^\//, ''));
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }

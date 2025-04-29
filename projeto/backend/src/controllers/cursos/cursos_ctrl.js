@@ -2,13 +2,12 @@ const Curso = require("../../database/models/Curso");
 const Area = require("../../database/models/Area");
 const Categoria = require("../../database/models/Categoria");
 const User = require("../../database/models/User");
-const Conteudo = require("../../database/models/ConteudoCurso");
+const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const TopicoCurso = require("../../database/models/TopicoCurso");
 const PastaCurso = require("../../database/models/PastaCurso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
-const { removerInscricoesDoCurso } = require("./curso_inscricoes_ctrl");
-
-const { sequelize } = require("../../../config/db");
+const uploadUtils = require('../../middleware/upload');
+const { sequelize } = require("../../config/db");
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
@@ -37,22 +36,6 @@ const getAllCursos = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Função para criar um novo curso
 const createCurso = async (req, res) => {
   try {
@@ -63,20 +46,24 @@ const createCurso = async (req, res) => {
     }
 
     // Criar nome do diretório para o curso
-    const nomeCursoDir = nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
+    const cursoSlug = uploadUtils.normalizarNome(nome);
+    const cursoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
 
-    // Caminho para o banco de dados (sem o 'backend/')
-    const dirPath = `uploads/cursos/${nomeCursoDir}`;
+    // Garantir que o diretório exista
+    uploadUtils.ensureDir(cursoDir);
+
+    // Caminho para o banco de dados
+    const dirPath = `uploads/cursos/${cursoSlug}`;
 
     // Verificar se foi enviada uma imagem
     let imagemPath = null;
     if (req.file) {
       // Configurar o caminho da imagem para o banco de dados
-      imagemPath = `uploads/cursos/${nomeCursoDir}/capa.png`;
+      imagemPath = `${dirPath}/capa.png`;
       console.log(`Caminho da imagem salvo no BD: ${imagemPath}`);
+
+      // A imagem já estará no local correto graças ao middleware de upload
+      // Não é necessário fazer nada adicional aqui
     }
 
     const novoCurso = await Curso.create({
@@ -90,7 +77,8 @@ const createCurso = async (req, res) => {
       id_area,
       id_categoria,
       imagem_path: imagemPath,
-      dir_path: dirPath
+      dir_path: dirPath,
+      ativo: true
     });
 
     res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso });
@@ -99,16 +87,6 @@ const createCurso = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao criar curso." });
   }
 };
-
-
-
-
-
-
-
-
-
-
 
 // Função updateCurso corrigida
 const updateCurso = async (req, res) => {
@@ -126,30 +104,25 @@ const updateCurso = async (req, res) => {
     const nomeAlterado = nome && nome !== curso.nome;
 
     // Diretório atual do curso
-    const nomeCursoAtualDir = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
+    const cursoSlugAtual = uploadUtils.normalizarNome(curso.nome);
+    const dirAtual = `uploads/cursos/${cursoSlugAtual}`;
+    const dirAbsolutoAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, cursoSlugAtual);
 
-    // Caminhos para bancos de dados (sem o 'backend/')
-    const dirAtual = `uploads/cursos/${nomeCursoAtualDir}`;
+    // Novo diretório se o nome do curso mudou
+    let dirNovo = dirAtual;
+    let dirAbsolutoNovo = dirAbsolutoAtual;
 
-    // Caminhos absolutos para o sistema de arquivos
-    const dirAbsolutoAtual = path.join(__dirname, '..', '..', '..', dirAtual);
-
-    // Se o nome foi alterado, renomear o diretório
+    // Se o nome foi alterado, atualizar diretórios
     if (nomeAlterado) {
-      const nomeCursoNovoDir = nome
-        .toLowerCase()
-        .replace(/ /g, "-")
-        .replace(/[^\w-]+/g, "");
-
-      const dirNovo = `uploads/cursos/${nomeCursoNovoDir}`;
-      const dirAbsolutoNovo = path.join(__dirname, '..', '..', '..', dirNovo);
+      const cursoSlugNovo = uploadUtils.normalizarNome(nome);
+      dirNovo = `uploads/cursos/${cursoSlugNovo}`;
+      dirAbsolutoNovo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugNovo);
 
       // Verificar se o diretório existe e renomear
       if (fs.existsSync(dirAbsolutoAtual)) {
         try {
+          // Garantir que o diretório pai exista
+          uploadUtils.ensureDir(path.dirname(dirAbsolutoNovo));
           fs.renameSync(dirAbsolutoAtual, dirAbsolutoNovo);
           console.log(`Diretório renomeado de ${dirAbsolutoAtual} para ${dirAbsolutoNovo}`);
 
@@ -158,35 +131,33 @@ const updateCurso = async (req, res) => {
 
           // Atualizar caminho da imagem se existir
           if (curso.imagem_path) {
-            curso.imagem_path = `uploads/cursos/${nomeCursoNovoDir}/capa.png`;
+            curso.imagem_path = `${dirNovo}/capa.png`;
           }
         } catch (error) {
           console.error(`Erro ao renomear diretório: ${error.message}`);
 
           // Se não conseguir renomear, criar o novo diretório
-          if (!fs.existsSync(dirAbsolutoNovo)) {
-            fs.mkdirSync(dirAbsolutoNovo, { recursive: true });
-          }
+          uploadUtils.ensureDir(dirAbsolutoNovo);
           curso.dir_path = dirNovo;
         }
       } else {
         // Se o diretório atual não existir, criar o novo
-        if (!fs.existsSync(dirAbsolutoNovo)) {
-          fs.mkdirSync(dirAbsolutoNovo, { recursive: true });
-          console.log(`Novo diretório criado: ${dirAbsolutoNovo}`);
-        }
+        uploadUtils.ensureDir(dirAbsolutoNovo);
         curso.dir_path = dirNovo;
       }
     }
 
     // Processar imagem do upload (se houver)
     if (req.file) {
-      const nomeDirCurso = nomeAlterado
-        ? nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
-        : nomeCursoAtualDir;
+      const nomeDirCurso = nomeAlterado ? uploadUtils.normalizarNome(nome) : cursoSlugAtual;
 
-      curso.imagem_path = `uploads/cursos/${nomeDirCurso}/capa.png`;
+      // Caminho da imagem para o banco de dados
+      const imagemPath = `uploads/cursos/${nomeDirCurso}/capa.png`;
+      curso.imagem_path = imagemPath;
       console.log(`Caminho da imagem atualizado: ${curso.imagem_path}`);
+
+      // A imagem já estará no local correto graças ao middleware de upload
+      // Não é necessário fazer nada adicional aqui
     }
 
     // Atualizar campos
@@ -204,43 +175,16 @@ const updateCurso = async (req, res) => {
 
     await curso.save();
 
-    res.json({ message: "Curso atualizado com sucesso!", curso });
+    res.json({
+      message: "Curso atualizado com sucesso!",
+      curso,
+      aviso: nomeAlterado ? "O nome do curso foi alterado e a estrutura de diretórios foi atualizada." : null
+    });
   } catch (error) {
     console.error("Erro ao atualizar curso:", error);
     res.status(500).json({ message: "Erro no servidor ao atualizar curso." });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Buscar curso por ID com detalhes
 const getCursoById = async (req, res) => {
@@ -258,6 +202,10 @@ const getCursoById = async (req, res) => {
         {
           model: Area,
           as: "area"
+        },
+        {
+          model: Categoria,
+          as: "categoria"
         }
       ]
     });
@@ -267,7 +215,7 @@ const getCursoById = async (req, res) => {
     }
 
     // Crie uma cópia do curso para modificar
-    const cursoComInscritos = JSON.parse(JSON.stringify(curso));
+    const cursoComInscritos = curso.toJSON();
 
     try {
       // Tente contar as inscrições em um bloco try/catch separado
@@ -330,23 +278,6 @@ const getInscricoesCurso = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Função para deletar curso com remoção da imagem e diretórios
 const deleteCurso = async (req, res) => {
   try {
@@ -367,8 +298,9 @@ const deleteCurso = async (req, res) => {
     }
 
     // Guardar o caminho do diretório do curso
-    const cursoDir = curso.dir_path ||
-      `uploads/cursos/${curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")}`;
+    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const cursoDir = curso.dir_path || `uploads/cursos/${cursoSlug}`;
+    const cursoDirAbs = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
 
     try {
       // Excluir diretamente as inscrições
@@ -378,20 +310,54 @@ const deleteCurso = async (req, res) => {
 
       console.log(`Removidas ${numInscricoesRemovidas} inscrições do curso ${id}`);
 
-      // Excluir os conteúdos do curso
-      await Conteudo.destroy({
+      // Encontrar todas as pastas do curso através dos tópicos
+      const topicos = await TopicoCurso.findAll({
         where: { id_curso: id }
       });
 
-      console.log(`Removidos conteúdos do curso ${id}`);
+      const topicoIds = topicos.map(topico => topico.id_topico);
+      
+      // Buscar todas as pastas dos tópicos
+      const pastas = await PastaCurso.findAll({
+        where: { id_topico: { [Op.in]: topicoIds } }
+      });
+      
+      const pastaIds = pastas.map(pasta => pasta.id_pasta);
+
+      // Excluir os conteúdos das pastas
+      if (pastaIds.length > 0) {
+        await ConteudoCurso.destroy({
+          where: { id_pasta: { [Op.in]: pastaIds } }
+        });
+        console.log(`Removidos conteúdos das pastas do curso ${id}`);
+      }
+
+      // Excluir as pastas
+      if (topicoIds.length > 0) {
+        await PastaCurso.destroy({
+          where: { id_topico: { [Op.in]: topicoIds } }
+        });
+        console.log(`Removidas pastas dos tópicos do curso ${id}`);
+      }
+
+      // Excluir os tópicos
+      await TopicoCurso.destroy({
+        where: { id_curso: id }
+      });
+      console.log(`Removidos tópicos do curso ${id}`);
+
+      // Excluir quaisquer conteúdos diretamente associados ao curso
+      await ConteudoCurso.destroy({
+        where: { id_curso: id }
+      });
+      console.log(`Removidos conteúdos diretos do curso ${id}`);
 
       // Excluir o curso
       await curso.destroy();
-
       console.log(`Curso ${id} excluído com sucesso`);
 
       // Remover o diretório do curso e todos os seus conteúdos
-      if (fs.existsSync(cursoDir)) {
+      if (fs.existsSync(cursoDirAbs)) {
         // Função recursiva para remover diretórios e arquivos
         const removerDiretorioRecursivo = (dir) => {
           if (fs.existsSync(dir)) {
@@ -410,10 +376,10 @@ const deleteCurso = async (req, res) => {
           }
         };
 
-        removerDiretorioRecursivo(cursoDir);
-        console.log(`Diretório do curso removido: ${cursoDir}`);
+        removerDiretorioRecursivo(cursoDirAbs);
+        console.log(`Diretório do curso removido: ${cursoDirAbs}`);
       } else {
-        console.log(`Diretório não encontrado no caminho: ${cursoDir}`);
+        console.log(`Diretório não encontrado no caminho: ${cursoDirAbs}`);
       }
 
       // Retornar resposta de sucesso
@@ -431,29 +397,12 @@ const deleteCurso = async (req, res) => {
     }
   } catch (error) {
     console.error("Erro geral ao excluir curso:", error);
-
-    // Verificar se é um erro de conexão
-    if (error.name === 'SequelizeConnectionError' ||
-      error.name === 'SequelizeConnectionRefusedError' ||
-      error.name === 'SequelizeHostNotFoundError' ||
-      error.name === 'SequelizeConnectionTimedOutError') {
-      return res.status(503).json({
-        message: "Serviço temporariamente indisponível. Problemas com o banco de dados.",
-        error: "Erro de conexão com o banco de dados"
-      });
-    }
-
     return res.status(500).json({
       message: "Erro no servidor ao excluir curso.",
       error: error.message
     });
   }
 };
-
-
-
-
-
 
 // Buscar cursos sugeridos para o utilizador
 const getCursosSugeridos = async (req, res) => {
@@ -512,9 +461,12 @@ const getCursosSugeridos = async (req, res) => {
   }
 };
 
-
-
-
-
-
-module.exports = { getAllCursos, createCurso, getCursoById, getInscricoesCurso, updateCurso, deleteCurso, getCursosSugeridos };
+module.exports = { 
+  getAllCursos, 
+  createCurso, 
+  getCursoById, 
+  getInscricoesCurso, 
+  updateCurso, 
+  deleteCurso, 
+  getCursosSugeridos 
+};

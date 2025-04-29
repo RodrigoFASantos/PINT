@@ -5,7 +5,7 @@ const Categoria = require('../../database/models/Categoria');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
-const sequelize = require('../../config/db');
+const uploadUtils = require('../../middleware/upload');
 
 // Controller para obter todos os tópicos de categoria
 const getAllTopicosCategoria = async (req, res) => {
@@ -88,7 +88,7 @@ const getTopicoById = async (req, res) => {
 const getTopicosByCategoria = async (req, res) => {
   try {
     const { id_categoria } = req.params;
-    
+
     console.log(`Buscando tópicos para categoria ID: ${id_categoria}`);
 
     // Primeiro, verificamos se a categoria existe
@@ -113,7 +113,7 @@ const getTopicosByCategoria = async (req, res) => {
       ],
       order: [['data_criacao', 'DESC']]
     });
-    
+
     console.log(`Encontrados ${topicos.length} tópicos para a categoria ID ${id_categoria}`);
 
     res.status(200).json({
@@ -135,10 +135,10 @@ const getTopicosByCategoria = async (req, res) => {
 const createTopico = async (req, res) => {
   try {
     const { id_categoria, titulo, descricao } = req.body;
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
-    
+
     console.log('Dados recebidos para criar tópico:', {
       id_categoria,
       titulo,
@@ -196,10 +196,10 @@ const updateTopico = async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, descricao } = req.body;
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
-    
+
     // Verificar se o tópico existe
     const topico = await Topico_Categoria.findByPk(id);
     if (!topico) {
@@ -251,7 +251,7 @@ const updateTopico = async (req, res) => {
 const deleteTopico = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
 
@@ -280,9 +280,14 @@ const deleteTopico = async (req, res) => {
     // Remover anexos dos comentários
     for (const comentario of comentarios) {
       if (comentario.anexo_url) {
-        const filePath = path.join(__dirname, '../../../', comentario.anexo_url);
+        const filePath = path.join(uploadUtils.BASE_UPLOAD_DIR, comentario.anexo_url.replace(/^\/?(uploads|backend\/uploads)\//, ''));
         if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+          try {
+            fs.unlinkSync(filePath);
+            console.log(`Arquivo anexo removido: ${filePath}`);
+          } catch (err) {
+            console.error(`Erro ao remover anexo: ${err.message}`);
+          }
         }
       }
     }
@@ -371,10 +376,10 @@ const createComentario = async (req, res) => {
   try {
     const { id } = req.params; // ID do tópico
     const { texto } = req.body;
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
-    
+
     let anexoUrl = null;
     let anexoNome = null;
     let tipoAnexo = null;
@@ -393,7 +398,7 @@ const createComentario = async (req, res) => {
         }
       ]
     });
-    
+
     if (!topico) {
       return res.status(404).json({
         success: false,
@@ -411,66 +416,46 @@ const createComentario = async (req, res) => {
 
     // Processar anexo, se existir
     if (req.file) {
-      // Obter nome da categoria e do tópico
-      const nomeCategoria = (topico.categoria?.nome || 'sem_categoria')
-        .replace(/[^a-zA-Z0-9]/g, '_')
-        .toLowerCase();
-        
-      const nomeTopico = (topico.titulo || 'sem_titulo')
-        .replace(/[^a-zA-Z0-9]/g, '_')
-        .toLowerCase();
+      console.log('Arquivo anexo recebido:', req.file);
+      
+      // Obter nomes para categorias e tópicos
+      const categoriaNome = topico.categoria?.nome || 'sem_categoria';
+      const topicoNome = topico.titulo || 'sem_titulo';
 
-      // Criar diretórios necessários
-      const baseDir = path.join(__dirname, '../../../uploads/chat');
-      const categoriaDir = path.join(baseDir, nomeCategoria);
-      const topicoDir = path.join(categoriaDir, nomeTopico);
-      
-      // Criar estrutura de pastas
-      if (!fs.existsSync(categoriaDir)) {
-        fs.mkdirSync(categoriaDir, { recursive: true });
-      }
-      
-      if (!fs.existsSync(topicoDir)) {
-        fs.mkdirSync(topicoDir, { recursive: true });
-      }
-      
+      // Usar as funções do uploadUtils para criar diretórios
+      const categoriaSlug = uploadUtils.normalizarNome(categoriaNome);
+      const topicoSlug = uploadUtils.normalizarNome(topicoNome);
+
+      // Criar estrutura de diretórios para o chat
+      const { dirPath, conteudosPath } = uploadUtils.criarDiretoriosChat(categoriaNome, topicoNome);
+
       // Detalhes do arquivo
       anexoNome = req.file.originalname;
       const fileExtension = path.extname(anexoNome);
       const newFileName = `${Date.now()}_${id_utilizador}${fileExtension}`;
-      
+
       // Origem (onde o middleware salvou) e destino (onde queremos salvar)
-      const sourceFile = path.join(__dirname, '../../../', req.file.path);
-      const targetFile = path.join(topicoDir, newFileName);
-      
-      // Se o arquivo original existir, mover para o novo local
-      if (fs.existsSync(sourceFile)) {
-        // Ler o arquivo original
-        const fileContent = fs.readFileSync(sourceFile);
-        
-        // Escrever no novo local
-        fs.writeFileSync(targetFile, fileContent);
-        
-        // Remover arquivo original
-        fs.unlinkSync(sourceFile);
-        
-        // Definir o novo caminho para o banco de dados
-        anexoUrl = `uploads/chat/${nomeCategoria}/${nomeTopico}/${newFileName}`;
-      } else {
-        // Se não conseguirmos mover, usar o caminho original
-        console.log('Arquivo original não encontrado, mantendo caminho original');
-        anexoUrl = req.file.path;
+      const sourceFile = req.file.path;
+      const targetFile = path.join(dirPath, 'conteudos', newFileName);
+
+      // Mover o arquivo para o local correto
+      const movido = uploadUtils.moverArquivo(sourceFile, targetFile);
+      if (!movido) {
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao mover o arquivo anexado'
+        });
       }
-      
+
+      // Definir o caminho do anexo para o banco de dados
+      anexoUrl = `${conteudosPath}/${newFileName}`;
+
       // Determinar o tipo do anexo
       const mimeType = req.file.mimetype;
-      if (mimeType.startsWith('image/')) {
-        tipoAnexo = 'imagem';
-      } else if (mimeType.startsWith('video/')) {
-        tipoAnexo = 'video';
-      } else {
-        tipoAnexo = 'file';
-      }
+      tipoAnexo = uploadUtils.getFileType(mimeType);
+      
+      console.log(`Arquivo movido com sucesso para ${targetFile}`);
+      console.log(`Caminho salvo no BD: ${anexoUrl}`);
     }
 
     // Criar o comentário
@@ -524,7 +509,7 @@ const avaliarComentario = async (req, res) => {
   try {
     const { id_topico, id_comentario } = req.params;
     const { tipo } = req.body; // 'like' ou 'dislike'
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
 
@@ -538,7 +523,7 @@ const avaliarComentario = async (req, res) => {
 
     // Verificar se o comentário existe
     const comentario = await Comentario_Topico.findOne({
-      where: { 
+      where: {
         id_comentario,
         id_topico
       }
@@ -597,13 +582,13 @@ const denunciarComentario = async (req, res) => {
   try {
     const { id_topico, id_comentario } = req.params;
     const { motivo } = req.body;
-    
+
     // Usar id_utilizador se disponível, caso contrário usar id
     const id_utilizador = req.user.id_utilizador || req.user.id;
 
     // Verificar se o comentário existe
     const comentario = await Comentario_Topico.findOne({
-      where: { 
+      where: {
         id_comentario,
         id_topico
       }

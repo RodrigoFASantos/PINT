@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { loginUser, verifyToken, confirmAccount, changePassword } = require("../../controllers/users/users_ctrl");
 
+
 // Rota para login
 router.post("/login", loginUser);
 

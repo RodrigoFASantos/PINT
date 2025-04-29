@@ -1,8 +1,154 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
-// Configuração do armazenamento
-const storage = multer.memoryStorage(); // Armazena temporariamente na memória
+// Configuração do caminho base para uploads
+const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS || 'uploads');
+
+// Garantir que a estrutura de diretórios base existe
+const ensureBaseDirs = () => {
+  const baseDirs = [
+    BASE_UPLOAD_DIR,
+    path.join(BASE_UPLOAD_DIR, 'users'),
+    path.join(BASE_UPLOAD_DIR, 'cursos'),
+    path.join(BASE_UPLOAD_DIR, 'chat'),
+    path.join(BASE_UPLOAD_DIR, 'temp'),
+  ];
+
+  baseDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+
+  // Garantir que os arquivos base existam
+  const avatarPath = path.join(BASE_UPLOAD_DIR, 'AVATAR.png');
+  const capaPath = path.join(BASE_UPLOAD_DIR, 'CAPA.png');
+
+  if (!fs.existsSync(avatarPath)) {
+    fs.writeFileSync(
+      avatarPath,
+      'Este é um placeholder para AVATAR.png. Substitua por uma imagem real.'
+    );
+  }
+
+  if (!fs.existsSync(capaPath)) {
+    fs.writeFileSync(
+      capaPath,
+      'Este é um placeholder para CAPA.png. Substitua por uma imagem real.'
+    );
+  }
+};
+
+// Chamar a função para garantir que os diretórios existam
+ensureBaseDirs();
+
+// Funções auxiliares para normalização de nomes de arquivos
+const normalizarNome = (nome) => {
+  if (!nome) return '';
+  return nome
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9]+/g, '-')     // Substitui caracteres não alfanuméricos por hífens
+    .replace(/^-+|-+$/g, '');        // Remove hífens no início ou fim
+};
+
+// Função para garantir que um diretório exista
+const ensureDir = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    return true;
+  }
+  return false;
+};
+
+// Função para determinar o tipo de arquivo
+const getFileType = (mimetype) => {
+  if (mimetype.startsWith('image/')) return 'imagem';
+  if (mimetype.startsWith('video/')) return 'video';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (mimetype.startsWith('application/pdf')) return 'pdf';
+  if (mimetype.startsWith('application/') || mimetype.startsWith('text/')) return 'documento';
+  return 'arquivo';
+};
+
+// Função para gerar nome de arquivo único
+const gerarNomeUnico = (originalname) => {
+  const timestamp = Date.now();
+  const randomString = crypto.randomBytes(8).toString('hex');
+  const extension = path.extname(originalname);
+  return `${timestamp}-${randomString}${extension}`;
+};
+
+// Configuração do armazenamento de usuários
+const userStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!req.user || !req.user.email) {
+      return cb(new Error('Usuário não identificado'), null);
+    }
+    
+    const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
+    
+    ensureDir(userDir);
+    cb(null, userDir);
+  },
+  filename: (req, file, cb) => {
+    if (!req.user || !req.user.email) {
+      return cb(new Error('Usuário não identificado'), null);
+    }
+    
+    const tipoArquivo = req.body.tipo || 'AVATAR'; // AVATAR ou CAPA
+    const fileName = `${req.user.email}_${tipoArquivo}.png`;
+    cb(null, fileName);
+  }
+});
+
+// Configuração do armazenamento de cursos
+const cursoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const { nome } = req.body;
+    if (!nome) {
+      return cb(new Error('Nome do curso não fornecido'), null);
+    }
+    
+    const cursoSlug = normalizarNome(nome);
+    const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+    
+    ensureDir(cursoDir);
+    cb(null, cursoDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, 'capa.png');
+  }
+});
+
+// Configuração do armazenamento de conteúdos do curso
+const conteudoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Salvar temporariamente e mover mais tarde
+    const tempDir = path.join(BASE_UPLOAD_DIR, 'temp');
+    ensureDir(tempDir);
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, gerarNomeUnico(file.originalname));
+  }
+});
+
+// Configuração do armazenamento de chat
+const chatStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tempDir = path.join(BASE_UPLOAD_DIR, 'temp');
+    ensureDir(tempDir);
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, gerarNomeUnico(file.originalname));
+  }
+});
 
 // Limites de upload
 const limits = {
@@ -14,7 +160,7 @@ const fileFilter = (req, file, cb) => {
   // Lista de mimetypes permitidos
   const allowedMimeTypes = [
     // Imagens
-    'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml',
+    'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp',
     // Documentos
     'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -38,11 +184,156 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configuração do Multer
+// Configuração principal do Multer para uso temporário
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(), // Usar armazenamento em memória para flexibilidade
   limits,
   fileFilter
 });
 
-module.exports = upload;
+// Configurações específicas para diferentes tipos de upload
+const uploadUser = multer({
+  storage: userStorage,
+  limits,
+  fileFilter
+});
+
+const uploadCurso = multer({
+  storage: cursoStorage, 
+  limits,
+  fileFilter
+});
+
+const uploadConteudo = multer({
+  storage: conteudoStorage,
+  limits, 
+  fileFilter
+});
+
+const uploadChat = multer({
+  storage: chatStorage,
+  limits,
+  fileFilter
+});
+
+// Middleware para garantir que o diretório de destino do upload exista
+const ensureDestDir = (dirPath) => (req, res, next) => {
+  try {
+    ensureDir(dirPath);
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Função para criar estrutura de diretórios para um curso
+const criarDiretorosCurso = (curso) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+  ensureDir(cursoDir);
+  
+  return {
+    dirPath: cursoDir,
+    urlPath: `uploads/cursos/${cursoSlug}`
+  };
+};
+
+// Função para criar estrutura de diretórios para um tópico
+const criarDiretoriosTopico = (curso, topico) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const topicoSlug = normalizarNome(topico.nome);
+  const topicoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
+  ensureDir(topicoDir);
+  
+  return {
+    dirPath: topicoDir,
+    urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}`
+  };
+};
+
+// Função para criar estrutura de diretórios para uma pasta
+const criarDiretoriosPasta = (curso, topico, pasta) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const topicoSlug = normalizarNome(topico.nome);
+  const pastaSlug = normalizarNome(pasta.nome);
+  const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
+  
+  // Criar diretório principal da pasta
+  ensureDir(pastaDir);
+  
+  // Criar diretórios para conteúdos e quizes
+  const conteudosDir = path.join(pastaDir, 'conteudos');
+  const quizesDir = path.join(pastaDir, 'quizes');
+  
+  ensureDir(conteudosDir);
+  ensureDir(quizesDir);
+  
+  return {
+    dirPath: pastaDir,
+    conteudosPath: conteudosDir,
+    quizesPath: quizesDir,
+    urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`,
+    conteudosUrlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/conteudos`,
+    quizesUrlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/quizes`
+  };
+};
+
+// Função para criar estrutura de diretórios para mensagens de chat
+const criarDiretoriosChat = (categoria, topico) => {
+  const categoriaSlug = normalizarNome(categoria);
+  const topicoSlug = normalizarNome(topico);
+  
+  const chatDir = path.join(BASE_UPLOAD_DIR, 'chat', categoriaSlug, topicoSlug);
+  const conteudosDir = path.join(chatDir, 'conteudos');
+  
+  ensureDir(chatDir);
+  ensureDir(conteudosDir);
+  
+  return {
+    dirPath: chatDir,
+    conteudosPath: conteudosDir,
+    urlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}`,
+    conteudosUrlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}/conteudos`
+  };
+};
+
+// Função para mover arquivo temporário para o destino final
+const moverArquivo = (origem, destino) => {
+  try {
+    // Garantir que o diretório de destino exista
+    const destDir = path.dirname(destino);
+    ensureDir(destDir);
+    
+    // Se o arquivo de origem existir, copiá-lo e depois removê-lo
+    if (fs.existsSync(origem)) {
+      fs.copyFileSync(origem, destino);
+      fs.unlinkSync(origem);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Erro ao mover arquivo:', error);
+    return false;
+  }
+};
+
+// Exportações
+module.exports = {
+  BASE_UPLOAD_DIR,
+  upload,
+  uploadUser,
+  uploadCurso,
+  uploadConteudo,
+  uploadChat,
+  ensureBaseDirs,
+  ensureDir,
+  ensureDestDir,
+  normalizarNome,
+  getFileType,
+  gerarNomeUnico,
+  criarDiretorosCurso,
+  criarDiretoriosTopico,
+  criarDiretoriosPasta,
+  criarDiretoriosChat,
+  moverArquivo
+};

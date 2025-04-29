@@ -1,0 +1,3 @@
+Este é um placeholder para o vídeo: Introdução ao Jupyter Notebook
+URL: https://www.youtube.com/watch?v=exemplo-jupyter
+Substitua este arquivo por um vídeo real ou mantenha a URL.

@@ -1,0 +1,3 @@
+Este é um placeholder para o vídeo: Variáveis e Tipos de Dados
+URL: https://www.youtube.com/watch?v=exemplo-variaveis-python
+Substitua este arquivo por um vídeo real ou mantenha a URL.

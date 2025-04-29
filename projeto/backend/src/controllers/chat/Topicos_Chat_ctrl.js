@@ -1,7 +1,29 @@
 const { Topico_Categoria, Comentario_Topico, User, Categoria } = require('../../database/associations');
-const fs = require('fs');
 const path = require('path');
-const { Op } = require('sequelize');
+const uploadUtils = require('../../middleware/upload');
+
+// Função para criar estrutura de diretórios para chat
+const createChatDirectoryStructure = (categoriaNome, topicoNome) => {
+  try {
+    const categoriaSlug = uploadUtils.normalizarNome(categoriaNome);
+    const topicoSlug = uploadUtils.normalizarNome(topicoNome);
+    
+    return uploadUtils.criarDiretoriosChat(categoriaSlug, topicoSlug);
+  } catch (error) {
+    console.error('Erro ao criar estrutura de diretórios:', error);
+    return null;
+  }
+};
+
+// Função para mover arquivo
+const moveFile = (origem, destino) => {
+  return uploadUtils.moverArquivo(origem, destino);
+};
+
+// Função para obter o tipo de arquivo
+const getFileType = (mimetype) => {
+  return uploadUtils.getFileType(mimetype);
+};
 
 // Controlador para obter detalhes de um tópico específico
 const getTopico = async (req, res) => {
@@ -15,7 +37,7 @@ const getTopico = async (req, res) => {
         {
           model: User,
           as: 'criador',
-          attributes: ['id', 'nome', 'email', 'foto_perfil']
+          attributes: ['id_utilizador', 'nome', 'email', 'foto_perfil']
         },
         {
           model: Categoria,
@@ -60,7 +82,7 @@ const getMensagens = async (req, res) => {
         {
           model: User,
           as: 'utilizador',
-          attributes: ['id', 'nome', 'email', 'foto_perfil']
+          attributes: ['id_utilizador', 'nome', 'email', 'foto_perfil']
         }
       ],
       order: [['data_criacao', 'ASC']]
@@ -87,7 +109,7 @@ const enviarMensagem = async (req, res) => {
   try {
     const { id } = req.params;
     const { texto } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id_utilizador || req.user.id;
 
     console.log(`Enviando mensagem para tópico ${id} pelo utilizador ${userId}`);
     console.log(`Texto da mensagem: ${texto}`);
@@ -109,39 +131,48 @@ const enviarMensagem = async (req, res) => {
       texto: texto || '',
       data_criacao: new Date(),
       likes: 0,
-      dislikes: 0
+      dislikes: 0,
+      denuncias: 0
     };
 
     if (req.file) {
       console.log('Ficheiro detectado:', req.file.originalname);
-
-      const categoriaNome = topico.categoria ?
-        topico.categoria.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'sem_categoria';
-      const topicoNome = topico.titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-
-      const uploadDir = path.join(__dirname, '../../../uploads/chat', categoriaNome, topicoNome);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      
+      // Obter nomes para diretórios
+      const categoriaNome = topico.categoria ? topico.categoria.nome : 'sem_categoria';
+      const topicoNome = topico.titulo;
+      
+      // Criar estrutura de diretórios para o chat
+      const chatPaths = createChatDirectoryStructure(categoriaNome, topicoNome);
+      
+      if (!chatPaths) {
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao criar estrutura de diretórios para o chat'
+        });
       }
 
+      // Gerar nome único para o arquivo
       const fileExtension = path.extname(req.file.originalname);
       const fileName = `${Date.now()}_${userId}${fileExtension}`;
-      const filePath = path.join(uploadDir, fileName);
-
-      fs.writeFileSync(filePath, req.file.buffer);
-
-      const relativePath = path.join('/uploads/chat', categoriaNome, topicoNome, fileName);
-      mensagemData.anexo_url = relativePath.replace(/\\/g, '/');
-      mensagemData.anexo_nome = req.file.originalname;
-
-      const mimeType = req.file.mimetype.split('/')[0];
-      if (mimeType === 'image') {
-        mensagemData.tipo_anexo = 'imagem';
-      } else if (mimeType === 'video') {
-        mensagemData.tipo_anexo = 'video';
-      } else {
-        mensagemData.tipo_anexo = 'ficheiro';
+      
+      // Mover o arquivo para o destino
+      const sourceFile = req.file.path;
+      const targetFile = path.join(chatPaths.conteudosPath, fileName);
+      
+      const moveSuccessful = moveFile(sourceFile, targetFile);
+      
+      if (!moveSuccessful) {
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao mover o arquivo anexado'
+        });
       }
+      
+      // Adicionar informações do arquivo à mensagem
+      mensagemData.anexo_url = `${chatPaths.conteudosUrlPath}/${fileName}`;
+      mensagemData.anexo_nome = req.file.originalname;
+      mensagemData.tipo_anexo = getFileType(req.file.mimetype);
     }
 
     const novaMensagem = await Comentario_Topico.create(mensagemData);
@@ -153,7 +184,7 @@ const enviarMensagem = async (req, res) => {
         {
           model: User,
           as: 'utilizador',
-          attributes: ['id', 'nome', 'email', 'foto_perfil']
+          attributes: ['id_utilizador', 'nome', 'email', 'foto_perfil']
         }
       ]
     });
@@ -183,7 +214,7 @@ const avaliarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
     const { tipo } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id_utilizador || req.user.id;
 
     console.log(`Avaliando comentário ${idComentario} como ${tipo}`);
 
@@ -239,7 +270,7 @@ const denunciarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
     const { motivo } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id_utilizador || req.user.id;
 
     console.log(`Denunciando comentário ${idComentario} por motivo: ${motivo}`);
 

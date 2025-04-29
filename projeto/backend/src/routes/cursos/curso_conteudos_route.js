@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const conteudoCursoController = require("../../controllers/cursos/curso_conteudos_ctrl");
 const authMiddleware = require('../../middleware/auth');
+const uploadMiddleware = require('../../middleware/upload_middleware');
 
 // Middleware para verificar se o usuário é admin ou formador
 const permissionMiddleware = (req, res, next) => {
@@ -31,7 +32,7 @@ router.get('/curso/:cursoId', authMiddleware, conteudoCursoController.getConteud
 router.post('/', 
   authMiddleware, 
   permissionMiddleware,
-  conteudoCursoController.uploadMiddleware,
+  uploadMiddleware.uploadCursoConteudo,
   conteudoCursoController.createConteudo
 );
 
@@ -39,7 +40,7 @@ router.post('/',
 router.put('/:id', 
   authMiddleware, 
   permissionMiddleware, 
-  conteudoCursoController.uploadMiddleware,
+  uploadMiddleware.uploadCursoConteudo,
   conteudoCursoController.updateConteudo
 );
 

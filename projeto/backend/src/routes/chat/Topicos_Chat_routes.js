@@ -1,24 +1,47 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const topicosChatCtrl = require('../../controllers/chat/Topicos_Chat_ctrl');
-const authMiddleware = require('../../middleware/auth');
-const upload = require('../../middleware/upload');
+const authMiddleware = require("../../middleware/auth");
+const autorizar = require("../../middleware/autorizar");
+const { uploadChatFile } = require('../../middleware/upload_middleware');
 
-// Middleware de autenticação para todas as rotas
+const {
+  getAllTopicosCategoria,
+  getTopicoById,
+  getTopicosByCategoria,
+  createTopico,
+  updateTopico,
+  deleteTopico,
+  getComentariosByTopico,
+  createComentario,
+  avaliarComentario,
+  denunciarComentario
+} = require("../../controllers/chat/topico_categoria_ctrl");
+
+// Middleware para verificar autenticação
 router.use(authMiddleware);
 
-// Rota para obter detalhes de um tópico
-router.get('/topico/:id', topicosChatCtrl.getTopico);
+// Rotas para tópicos
+router.get("/", getAllTopicosCategoria);
+router.get("/:id", getTopicoById);
+router.get("/categoria/:id_categoria", getTopicosByCategoria);
 
-// Rota para obter mensagens de um tópico
-router.get('/topico/:id/comentarios', topicosChatCtrl.getMensagens);
+// Rota para criar um novo tópico
+router.post("/", autorizar([1, 2]), createTopico);
+router.put("/:id", autorizar([1, 2]), updateTopico);
+router.delete("/:id", autorizar([1, 2]), deleteTopico);
 
-// Rota para enviar mensagem (com ou sem anexo)
-router.post('/topico/:id/comentarios', upload.single('anexo'), topicosChatCtrl.enviarMensagem);
+// Rota para obter todos os comentários de um tópico
+router.get("/:id/comentarios", getComentariosByTopico);
 
-// Rotas para avaliar/denunciar mensagens
-router.post('/topico/:id/comentarios/:idComentario/avaliar', topicosChatCtrl.avaliarMensagem);
-router.post('/topico/:id/comentarios/:idComentario/denunciar', topicosChatCtrl.denunciarMensagem);
+// Rota para criar um novo comentário em um tópico com upload de arquivo
+router.post(
+  "/:id/comentarios",
+  uploadChatFile,
+  createComentario
+);
 
+// Rotas para Comentários
+router.post("/:id_topico/comentarios/:id_comentario/avaliar", avaliarComentario);
+router.post("/:id_topico/comentarios/:id_comentario/denunciar", denunciarComentario);
 
 module.exports = router;

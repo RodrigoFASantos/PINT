@@ -6,6 +6,7 @@ const Cargo = require("../../database/models/Cargo");
 const { sendRegistrationEmail } = require("../../utils/emailService"); //email
 const fs = require("fs");
 const path = require("path");
+const uploadUtils = require("../../middleware/upload");
 
 /**
  * Função para verificar email e enviar confirmação
@@ -17,18 +18,18 @@ const verifyAndSendEmail = async (userData) => {
     // Verificar se o email já existe em usuários ativos
     const existingUser = await User.findOne({ where: { email: userData.email } });
     if (existingUser) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: "Este email já está registrado. Por favor, use outro email ou recupere sua senha."
       };
     }
 
     // Verificar se há um registro pendente com este email
-    const User_Pendente = await User_Pendente.findOne({ where: { email: userData.email } });
-    if (User_Pendente) {
+    const pendingUser = await User_Pendente.findOne({ where: { email: userData.email } });
+    if (pendingUser) {
       // Se o registro estiver expirado, podemos removê-lo e permitir um novo
-      if (new Date() > new Date(User_Pendente.expires_at)) {
-        await User_Pendente.destroy();
+      if (new Date() > new Date(pendingUser.expires_at)) {
+        await pendingUser.destroy();
       } else {
         return {
           success: false,
@@ -53,20 +54,20 @@ const verifyAndSendEmail = async (userData) => {
       if (!emailRegex.test(userData.email)) {
         throw new Error("Endereço de email inválido");
       }
-      
+
       console.log('Validação de email passou!');
       return { success: true };
     } catch (emailError) {
       console.error("Erro ao verificar email:", emailError);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: "Não foi possível validar o endereço de email. Verifique se o endereço está correto."
       };
     }
   } catch (error) {
     console.error("Erro ao verificar email:", error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: "Erro ao verificar disponibilidade do email."
     };
   }
@@ -102,7 +103,7 @@ const createUser = async (req, res) => {
     expires_at.setHours(expires_at.getHours() + 24);
 
     // Criar usuário pendente
-    const User_Pendente = await User_Pendente.create({
+    const pendingUser = await User_Pendente.create({
       id_cargo,
       nome,
       idade,
@@ -117,37 +118,37 @@ const createUser = async (req, res) => {
     try {
       // Adaptar o usuário pendente para o formato esperado por sendRegistrationEmail
       const userForEmail = {
-        id_utilizador: User_Pendente.id,
-        nome: User_Pendente.nome,
-        email: User_Pendente.email,
-        token: User_Pendente.token // Adicionar o token para usar no email
+        id_utilizador: pendingUser.id,
+        nome: pendingUser.nome,
+        email: pendingUser.email,
+        token: pendingUser.token // Adicionar o token para usar no email
       };
-      
+
       await sendRegistrationEmail(userForEmail);
       console.log('Email de confirmação enviado com sucesso!');
     } catch (emailError) {
       console.error("Erro ao enviar email:", emailError);
       // Remover o usuário pendente se falhar o envio de email
-      await User_Pendente.destroy();
-      return res.status(500).json({ 
-        message: "Não foi possível enviar o email de confirmação. O registro foi cancelado." 
+      await pendingUser.destroy();
+      return res.status(500).json({
+        message: "Não foi possível enviar o email de confirmação. O registro foi cancelado."
       });
     }
 
     // Tudo deu certo!
-    res.status(201).json({ 
-      message: "Pré-registro realizado com sucesso! Verifique seu email para confirmar o registro.", 
-      email: User_Pendente.email
+    res.status(201).json({
+      message: "Pré-registro realizado com sucesso! Verifique seu email para confirmar o registro.",
+      email: pendingUser.email
     });
   } catch (error) {
     console.error("Erro ao criar registro pendente:", error);
-    
+
     if (error.name === 'SequelizeUniqueConstraintError' && error.errors[0].path === 'email') {
-      return res.status(400).json({ 
-        message: "Este email já está registrado. Por favor, use outro email ou recupere sua senha." 
+      return res.status(400).json({
+        message: "Este email já está registrado. Por favor, use outro email ou recupere sua senha."
       });
     }
-    
+
     res.status(500).json({ message: "Erro no servidor ao processar o registro." });
   }
 };
@@ -172,38 +173,38 @@ const confirmAccount = async (req, res) => {
     }
 
     // Buscar o registro pendente
-    const User_Pendente = await User_Pendente.findOne({ 
-      where: { 
+    const pendingUser = await User_Pendente.findOne({
+      where: {
         email: decoded.email,
         token: token
-      } 
+      }
     });
 
-    if (!User_Pendente) {
+    if (!pendingUser) {
       return res.status(404).json({ message: "Registro pendente não encontrado" });
     }
 
     // Verificar se o token não expirou (dupla verificação)
-    if (new Date() > new Date(User_Pendente.expires_at)) {
-      await User_Pendente.destroy();
+    if (new Date() > new Date(pendingUser.expires_at)) {
+      await pendingUser.destroy();
       return res.status(401).json({ message: "Link de confirmação expirado. Por favor, registre-se novamente." });
     }
 
     // Criar o usuário definitivo
     const newUser = await User.create({
-      id_cargo: User_Pendente.id_cargo,
-      nome: User_Pendente.nome,
-      idade: User_Pendente.idade,
-      email: User_Pendente.email,
-      telefone: User_Pendente.telefone,
-      password: User_Pendente.password, // Já está hasheada
+      id_cargo: pendingUser.id_cargo,
+      nome: pendingUser.nome,
+      idade: pendingUser.idade,
+      email: pendingUser.email,
+      telefone: pendingUser.telefone,
+      password: pendingUser.password, // Já está hasheada
       primeiro_login: 1,
       foto_perfil: "AVATAR.png",
       foto_capa: "CAPA.png"
     });
 
     // Remover o registro pendente
-    await User_Pendente.destroy();
+    await pendingUser.destroy();
 
     // Gerar um token de autenticação para login automático
     const authToken = jwt.sign(
@@ -216,8 +217,8 @@ const confirmAccount = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.status(200).json({ 
-      message: "Conta confirmada com sucesso!", 
+    res.status(200).json({
+      message: "Conta confirmada com sucesso!",
       token: authToken,
       user: {
         id_utilizador: newUser.id_utilizador,
@@ -331,24 +332,24 @@ const resendConfirmation = async (req, res) => {
     }
 
     // Buscar registro pendente
-    const User_Pendente = await User_Pendente.findOne({ where: { email } });
-    
-    if (!User_Pendente) {
+    const pendingUser = await User_Pendente.findOne({ where: { email } });
+
+    if (!pendingUser) {
       return res.status(404).json({ message: "Registro pendente não encontrado para este email" });
     }
 
     // Verificar se o usuário já está registrado
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      await User_Pendente.destroy(); // Remover registro pendente obsoleto
-      return res.status(400).json({ 
-        message: "Este email já está registrado como usuário ativo. Por favor, faça login ou recupere sua senha." 
+      await pendingUser.destroy(); // Remover registro pendente obsoleto
+      return res.status(400).json({
+        message: "Este email já está registrado como usuário ativo. Por favor, faça login ou recupere sua senha."
       });
     }
 
     // Gerar novo token
     const token = jwt.sign(
-      { email: User_Pendente.email, nome: User_Pendente.nome },
+      { email: pendingUser.email, nome: pendingUser.nome },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
@@ -356,8 +357,8 @@ const resendConfirmation = async (req, res) => {
     // Atualizar token e data de expiração
     const expires_at = new Date();
     expires_at.setHours(expires_at.getHours() + 24);
-    
-    await User_Pendente.update({
+
+    await pendingUser.update({
       token,
       expires_at
     });
@@ -365,15 +366,15 @@ const resendConfirmation = async (req, res) => {
     // Enviar novo email
     try {
       const userForEmail = {
-        id_utilizador: User_Pendente.id,
-        nome: User_Pendente.nome,
-        email: User_Pendente.email,
-        token: User_Pendente.token
+        id_utilizador: pendingUser.id,
+        nome: pendingUser.nome,
+        email: pendingUser.email,
+        token: token
       };
-      
+
       await sendRegistrationEmail(userForEmail);
       console.log('Email de confirmação reenviado com sucesso!');
-      
+
       res.json({ message: "Email de confirmação reenviado com sucesso!" });
     } catch (emailError) {
       console.error("Erro ao reenviar email:", emailError);
@@ -404,25 +405,25 @@ const changePassword = async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, salt);
 
       await User.update(
-        { 
+        {
           password: hashedPassword,
           primeiro_login: 0 // Marcar como não sendo mais o primeiro login
-        }, 
+        },
         { where: { id_utilizador: userId } }
       );
 
       return res.json({ message: "Senha alterada com sucesso" });
-    } 
-    
+    }
+
     // Se não for fornecido token, verificar ID do usuário e senha atual
     const { id_utilizador, senha_atual, nova_senha } = req.body;
-    
+
     if (!id_utilizador) {
       return res.status(400).json({ message: "ID do usuário é obrigatório" });
     }
 
     const user = await User.findByPk(id_utilizador);
-    
+
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado" });
     }
@@ -439,10 +440,10 @@ const changePassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(nova_senha || password, salt);
 
     await User.update(
-      { 
+      {
         password: hashedPassword,
         primeiro_login: 0 // Marcar como não sendo mais o primeiro login
-      }, 
+      },
       { where: { id_utilizador } }
     );
 
@@ -456,7 +457,7 @@ const changePassword = async (req, res) => {
 const perfilUser = async (req, res) => {
   try {
     console.log('Usuário autenticado:', req.user);
-    
+
     const userId = req.user.id_utilizador;
     console.log('ID do usuário:', userId);
 
@@ -520,45 +521,56 @@ const uploadImagemPerfil = async (req, res) => {
       console.log('Nenhuma imagem enviada');
       return res.status(400).json({ message: "Nenhuma imagem enviada" });
     }
-    
+
     // Buscar informações do usuário
     const userId = req.user.id_utilizador;
     console.log('ID do usuário:', userId);
     const user = await User.findByPk(userId);
-    
+
     if (!user || !user.email) {
-      console.log('Usuário não encontrado ou sem email:', user ? 'Tem user mas sem email' : 'User não encontrado');
+      console.log('Usuário não encontrado ou sem email');
       // Remover arquivo temporário
-      fs.unlinkSync(path.join("uploads/users/", req.file.filename));
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
     }
-    
+
     console.log('Email do usuário:', user.email);
-    
-    // Criar o nome do arquivo final usando o email do usuário - sempre AVATAR para perfil
-    const tipoImagem = "AVATAR";
-    const finalFilename = `${user.email}_${tipoImagem}.png`;
-    const tempPath = path.join("uploads/users/", req.file.filename);
-    const finalPath = path.join("uploads/users/", finalFilename);
-    
+
+    // Criar diretório do usuário
+    const userSlug = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+    uploadUtils.ensureDir(userDir);
+
+    // Criar o nome do arquivo final
+    const finalFilename = `${user.email}_AVATAR.png`;
+    const tempPath = req.file.path;
+    const finalPath = path.join(userDir, finalFilename);
+
     console.log('Arquivo temporário:', tempPath);
     console.log('Arquivo final:', finalPath);
-    
-    // Remover arquivo existente com mesmo nome, se houver
+
+    // Remover arquivo existente se houver
     if (fs.existsSync(finalPath)) {
       console.log('Removendo arquivo existente');
       fs.unlinkSync(finalPath);
     }
-    
-    // Renomear o arquivo
-    console.log('Renomeando arquivo');
-    fs.renameSync(tempPath, finalPath);
-    
+
+    // Mover o arquivo para o diretório do usuário
+    const movido = uploadUtils.moverArquivo(tempPath, finalPath);
+    if (!movido) {
+      return res.status(500).json({ message: "Erro ao mover o arquivo de imagem" });
+    }
+
+    // Caminho relativo para salvar no banco de dados
+    const dbPath = `uploads/users/${userSlug}/${finalFilename}`;
+
     // Atualizar o banco de dados
-    console.log('Atualizando banco de dados com nome do arquivo:', finalFilename);
+    console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
     try {
       const updateResult = await User.update(
-        { foto_perfil: finalFilename },
+        { foto_perfil: dbPath },
         { where: { id_utilizador: userId } }
       );
       console.log('Resultado da atualização:', updateResult);
@@ -566,14 +578,14 @@ const uploadImagemPerfil = async (req, res) => {
       console.error('Erro ao atualizar banco de dados:', dbError);
       throw dbError;
     }
-    
+
     // Verificar se a atualização foi bem-sucedida
     const updatedUser = await User.findByPk(userId);
     console.log('Campo foto_perfil após atualização:', updatedUser.foto_perfil);
-    
-    res.json({ 
+
+    res.json({
       message: "Imagem de perfil atualizada com sucesso",
-      path: `/uploads/users/${finalFilename}`
+      path: dbPath
     });
   } catch (error) {
     console.error("Erro ao fazer upload de imagem de perfil:", error);
@@ -588,45 +600,56 @@ const uploadImagemCapa = async (req, res) => {
       console.log('Nenhuma imagem enviada');
       return res.status(400).json({ message: "Nenhuma imagem enviada" });
     }
-    
+
     // Buscar informações do usuário
     const userId = req.user.id_utilizador;
     console.log('ID do usuário:', userId);
     const user = await User.findByPk(userId);
-    
+
     if (!user || !user.email) {
-      console.log('Usuário não encontrado ou sem email:', user ? 'Tem user mas sem email' : 'User não encontrado');
+      console.log('Usuário não encontrado ou sem email');
       // Remover arquivo temporário
-      fs.unlinkSync(path.join("uploads/users/", req.file.filename));
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
     }
-    
+
     console.log('Email do usuário:', user.email);
-    
-    // Criar o nome do arquivo final usando o email do usuário - sempre CAPA para capa
-    const tipoImagem = "CAPA";
-    const finalFilename = `${user.email}_${tipoImagem}.png`;
-    const tempPath = path.join("uploads/users/", req.file.filename);
-    const finalPath = path.join("uploads/users/", finalFilename);
-    
+
+    // Criar diretório do usuário
+    const userSlug = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+    uploadUtils.ensureDir(userDir);
+
+    // Criar o nome do arquivo final
+    const finalFilename = `${user.email}_CAPA.png`;
+    const tempPath = req.file.path;
+    const finalPath = path.join(userDir, finalFilename);
+
     console.log('Arquivo temporário:', tempPath);
     console.log('Arquivo final:', finalPath);
-    
-    // Remover arquivo existente com mesmo nome, se houver
+
+    // Remover arquivo existente se houver
     if (fs.existsSync(finalPath)) {
       console.log('Removendo arquivo existente');
       fs.unlinkSync(finalPath);
     }
-    
-    // Renomear o arquivo
-    console.log('Renomeando arquivo');
-    fs.renameSync(tempPath, finalPath);
-    
+
+    // Mover o arquivo para o diretório do usuário
+    const movido = uploadUtils.moverArquivo(tempPath, finalPath);
+    if (!movido) {
+      return res.status(500).json({ message: "Erro ao mover o arquivo de imagem" });
+    }
+
+    // Caminho relativo para salvar no banco de dados
+    const dbPath = `uploads/users/${userSlug}/${finalFilename}`;
+
     // Atualizar o banco de dados
-    console.log('Atualizando banco de dados com nome do arquivo:', finalFilename);
+    console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
     try {
       const updateResult = await User.update(
-        { foto_capa: finalFilename },
+        { foto_capa: dbPath },
         { where: { id_utilizador: userId } }
       );
       console.log('Resultado da atualização:', updateResult);
@@ -634,14 +657,14 @@ const uploadImagemCapa = async (req, res) => {
       console.error('Erro ao atualizar banco de dados:', dbError);
       throw dbError;
     }
-    
+
     // Verificar se a atualização foi bem-sucedida
     const updatedUser = await User.findByPk(userId);
     console.log('Campo foto_capa após atualização:', updatedUser.foto_capa);
-    
-    res.json({ 
+
+    res.json({
       message: "Imagem de capa atualizada com sucesso",
-      path: `/uploads/users/${finalFilename}`
+      path: dbPath
     });
   } catch (error) {
     console.error("Erro ao fazer upload de imagem de capa:", error);
@@ -649,18 +672,19 @@ const uploadImagemCapa = async (req, res) => {
   }
 };
 
-module.exports = { 
-  getAllUsers, 
+
+module.exports = {
+  getAllUsers,
   verifyToken,
-  getFormadores, 
-  getFormandos, 
-  getGestores, 
-  createUser, 
-  loginUser, 
+  getFormadores,
+  getFormandos,
+  getGestores,
+  createUser,
+  loginUser,
   confirmAccount,
   resendConfirmation,
-  perfilUser, 
-  changePassword, 
+  perfilUser,
+  changePassword,
   updatePerfilUser,
   uploadImagemPerfil,
   uploadImagemCapa

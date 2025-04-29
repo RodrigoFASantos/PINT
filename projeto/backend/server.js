@@ -1,3 +1,7 @@
+// Carregar variáveis de ambiente
+require("dotenv").config();
+
+// Imports principais
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -6,13 +10,20 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
-// Carregar variáveis de ambiente
-require("dotenv").config();
-
+// Inicializar Express
 const app = express();
 
 // Criar servidor HTTP
 const server = http.createServer(app);
+
+// Garantir que a variável de ambiente CAMINHO_PASTA_UPLOADS está definida
+if (!process.env.CAMINHO_PASTA_UPLOADS) {
+  process.env.CAMINHO_PASTA_UPLOADS = 'uploads';
+  console.log('⚠️ CAMINHO_PASTA_UPLOADS não definido. Usando o valor padrão: "uploads"');
+}
+
+// Importar utilitários de upload
+const uploadUtils = require("./src/middleware/upload");
 
 // Configurar Socket.IO
 const io = socketIo(server, {
@@ -20,19 +31,16 @@ const io = socketIo(server, {
     origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
-  path: '/socket.io'
+  path: "/socket.io",
 });
 
-// Middleware para autenticação de socket
+// Middleware de autenticação do Socket.IO
 io.use((socket, next) => {
   const token = socket.handshake.query.token;
-  
-  if (!token) {
-    return next(new Error("Autenticação necessária"));
-  }
-  
+  if (!token) return next(new Error("Autenticação necessária"));
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
@@ -42,174 +50,167 @@ io.use((socket, next) => {
   }
 });
 
-// Gerenciar conexões Socket.IO
+// Eventos do socket
 io.on("connection", (socket) => {
-  console.log(`Usuário conectado: ${socket.user.id}`);
-  
-  // Juntar-se a uma sala de tópico específico
+  const userId = socket.user ? socket.user.id_utilizador || socket.user.id : 'anônimo';
+  console.log(`⚡ Utilizador conectado: ${userId}`);
+
   socket.on("joinTopic", (topicoId) => {
     socket.join(`topico_${topicoId}`);
-    console.log(`Usuário ${socket.user.id} entrou no tópico ${topicoId}`);
+    console.log(`➕ ${userId} entrou no tópico ${topicoId}`);
   });
-  
-  // Sair de uma sala de tópico
+
   socket.on("leaveTopic", (topicoId) => {
     socket.leave(`topico_${topicoId}`);
-    console.log(`Usuário ${socket.user.id} saiu do tópico ${topicoId}`);
+    console.log(`➖ ${userId} saiu do tópico ${topicoId}`);
   });
-  
-  // Lidar com desconexão
+
   socket.on("disconnect", () => {
-    console.log(`Usuário desconectado: ${socket.user.id}`);
+    console.log(`❌ Utilizador desconectado: ${userId}`);
   });
 });
 
-// Middleware para adicionar io ao req em cada requisição
+// Middlewares globais
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+app.use(express.json());
+
+// Middleware para adicionar io a todas as requisições
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Middleware para logging de requests
+// Middleware para logar todas as requisições
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-// Configuração CORS
-app.use(cors({
-  origin: true,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Verificar e criar diretórios essenciais
+uploadUtils.ensureBaseDirs();
 
-app.use(express.json());
+// Carregar associações da base de dados
+require("./src/database/associations");
 
-// Função para carregar rotas com tratamento de erro
+// Função utilitária para carregar rotas com segurança
 function carregarRota(caminho, prefixo) {
   try {
-    console.log(`Tentando carregar rota: ${caminho} -> ${prefixo}`);
-    const rota = require(caminho);
+    const rotaPath = path.resolve(caminho);
     
-    // Validar se o módulo exportado é um router do Express
-    if (!rota || typeof rota !== 'function' || !rota.stack) {
-      console.warn(`⚠️ Módulo em ${caminho} não parece ser um router Express válido`);
-      app.use(prefixo, (req, res) => {
-        res.status(503).json({
-          message: "Serviço temporariamente indisponível",
-          details: "Módulo de rota inválido"
-        });
-      });
+    if (!fs.existsSync(`${rotaPath}.js`)) {
+      console.warn(`⚠️ Arquivo não encontrado: ${rotaPath}.js`);
+      app.use(prefixo, (req, res) =>
+        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Arquivo de rota não encontrado" })
+      );
+      return false;
+    }
+    
+    const rota = require(rotaPath);
+    
+    if (!rota || typeof rota !== "function" || !rota.stack) {
+      console.warn(`⚠️ Módulo de rota inválido: ${prefixo}`);
+      app.use(prefixo, (req, res) =>
+        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Módulo de rota inválido" })
+      );
       return false;
     }
     
     app.use(prefixo, rota);
-    console.log(`✅ Rota carregada: ${prefixo}`);
+    console.log(`✅ Rota carregada: ${prefixo} (${rotaPath})`);
     return true;
   } catch (error) {
-    console.warn(`⚠️ Não foi possível carregar a rota ${prefixo}:`, error.message);
-    app.use(prefixo, (req, res) => {
-      res.status(503).json({
-        message: "Serviço temporariamente indisponível",
-        details: `Não foi possível carregar o módulo: ${error.message}`
-      });
-    });
+    console.warn(`⚠️ Erro ao carregar rota ${prefixo}: ${error.message}`);
+    app.use(prefixo, (req, res) =>
+      res.status(503).json({ message: "Erro ao carregar rota", details: error.message })
+    );
     return false;
   }
 }
 
-// Verificar e criar diretórios essenciais
-const diretoriosEssenciais = [
-  "./uploads",
-  "./uploads/cursos",
-  "./uploads/users",
-  "./uploads/chat", // Adicionar diretório para arquivos do chat
-  "./public",
-  "./public/fonts",
-  "./config"
-];
-
-diretoriosEssenciais.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    console.log(`Criar diretório: ${dir}`);
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-// Carregar associações do banco de dados
-require('./src/database/associations');
-
-// Carregar as rotas principais
-carregarRota("./src/routes/users/auth_route", "/api/auth");
-carregarRota("./src/routes/users/users_route", "/api/users");
-
-
-// Servir arquivos estáticos
-app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
-console.log(`Diretório de uploads configurado: ${path.join(__dirname, 'uploads')}`);
-
-// Rotas
+// Carregar rotas
 const rotas = [
+  // Users
+  { caminho: "./src/routes/users/auth_route", prefixo: "/api/auth" },
+  { caminho: "./src/routes/users/users_route", prefixo: "/api/users" },
   { caminho: "./src/routes/users/areas_route", prefixo: "/api/areas" },
-  { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" },
+  { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" },
+
+  // Cursos
   { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },
-  { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
   { caminho: "./src/routes/cursos/cursos_route", prefixo: "/api/cursos" },
-  { caminho: "./src/routes/cursos/curso_inscricoes_route", prefixo: "/api/inscricoes" },
-  // Conteúdos de cursos
   { caminho: "./src/routes/cursos/curso_topicos_route", prefixo: "/api/topicos-curso" },
   { caminho: "./src/routes/cursos/curso_pastas_route", prefixo: "/api/pastas-curso" },
   { caminho: "./src/routes/cursos/curso_conteudos_route", prefixo: "/api/conteudos-curso" },
-  // Resto das Rotas
-  { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
-  { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },
-  { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
-  { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
-  { caminho: "./src/routes/mailing/mailing_route", prefixo: "/api/mailing" },
+  { caminho: "./src/routes/cursos/curso_inscricoes_route", prefixo: "/api/inscricoes" },
   { caminho: "./src/routes/cursos/tipos_conteudo_route", prefixo: "/api/tipos-conteudo" },
-  { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" },
+  { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
+  { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
 
-  // Rotas de chat
+  // Chat
   { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
   { caminho: "./src/routes/chat/topico_categoria_route", prefixo: "/api/topicos-categoria" },
-  { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" } 
+  { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" },
+  { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
+
+  // Resto das Rotas
+  { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },
+  { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
+  { caminho: "./src/routes/mailing/mailing_route", prefixo: "/api/mailing" },
+  { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" }
 ];
 
-rotas.forEach(rota => {
-  carregarRota(rota.caminho, rota.prefixo);
-});
+// Carregar cada rota
+const rotasCarregadas = rotas.filter(({ caminho, prefixo }) => carregarRota(caminho, prefixo));
+console.log(`\nRotas carregadas: ${rotasCarregadas.length}/${rotas.length}`);
 
-// Rota raiz para verificar se o servidor está respondendo
+// Servir ficheiros estáticos
+app.use("/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
+app.use("/api/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
+
+// Rota raiz
 app.get("/api", (req, res) => {
-  res.json({ message: "API está funcionando!" });
+  res.json({ 
+    message: "API está funcionando!",
+    version: "1.0.0",
+    date: new Date().toISOString()
+  });
 });
 
-// Tentar iniciar agendamentos, se disponível
+// Iniciar agendamentos, se existirem
 try {
-  const { iniciarAgendamentos } = require("./src/utils/schedulers");
-  iniciarAgendamentos();
-  console.log("✅ Agendamentos iniciados com sucesso!");
+  if (fs.existsSync(path.join(__dirname, "src/utils/schedulers.js"))) {
+    const { iniciarAgendamentos } = require("./src/utils/schedulers");
+    iniciarAgendamentos();
+    console.log("✅ Agendamentos iniciados");
+  } else {
+    console.log("⚠️ Módulo de agendamentos não encontrado");
+  }
 } catch (error) {
-  console.warn("⚠️ Não foi possível iniciar agendamentos:", error.message);
+  console.warn(`⚠️ Falha ao iniciar agendamentos: ${error.message}`);
 }
 
-// Middleware para tratar erros
+// Middleware global de erro
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("❗ Erro interno:", err.stack);
   res.status(500).json({ message: "Erro interno do servidor", error: err.message });
 });
 
-// Iniciar o servidor usando o server HTTP para Socket.IO
+// Iniciar servidor
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`
 ===========================================
 🚀 Servidor iniciado com sucesso!
 📡 Porta: ${PORT}
-🌐 URL: http://localhost:${PORT}/api
+🌐 API: http://localhost:${PORT}/api
 🔌 Socket.IO ativo
+📂 Diretório de uploads: ${process.env.CAMINHO_PASTA_UPLOADS}
 ===========================================
   `);
 });

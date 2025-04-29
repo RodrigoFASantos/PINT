@@ -4,6 +4,7 @@ const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const Curso = require("../../database/models/Curso");
 const fs = require('fs');
 const path = require('path');
+const uploadUtils = require('../../middleware/upload');
 
 // Obter todos os tópicos de um curso com suas pastas e conteúdos
 const getTopicosByCurso = async (req, res) => {
@@ -41,7 +42,7 @@ const getTopicosByCurso = async (req, res) => {
       
       for (const pasta of pastas) {
         const pastaObj = pasta.toJSON();
-        pastaObj.expanded = false; // inicialmente fechada
+        pastaObj.expanded = false; // inicialmente fechada 
         
         // Buscar conteúdos para esta pasta
         const conteudos = await ConteudoCurso.findAll({
@@ -83,29 +84,23 @@ const createTopico = async (req, res) => {
     }
 
     // Criar o caminho do diretório para o tópico
-    const nomeCursoDir = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
+    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const topicoSlug = uploadUtils.normalizarNome(nome);
     
-    const nomeTopicoDir = nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const topicoDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}`; // Adicionado "backend/"
+    // Criar caminho completo para o diretório
+    const topicoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
+    const topicoUrlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}`;
     
     // Criar o diretório se não existir
-    if (!fs.existsSync(topicoDir)) {
-      fs.mkdirSync(topicoDir, { recursive: true });
-    }
+    uploadUtils.ensureDir(topicoDir);
 
     const novoTopico = await TopicoCurso.create({
       nome,
       id_curso,
       ordem: ordem || 1,
-      dir_path: topicoDir, // Salvar o caminho do diretório
-      arquivo_path: topicoDir // Adicionar arquivo_path também
+      dir_path: topicoUrlPath, // Salvar o caminho relativo para o banco de dados
+      arquivo_path: topicoUrlPath, // Mesma coisa para manter consistência
+      ativo: true
     });
 
     res.status(201).json({ 
@@ -117,17 +112,6 @@ const createTopico = async (req, res) => {
     res.status(500).json({ message: "Erro ao criar tópico" });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
 
 // Obter um tópico específico
 const getTopicoById = async (req, res) => {
@@ -197,37 +181,29 @@ const updateTopico = async (req, res) => {
       // Buscar o curso para obter o caminho completo
       const curso = await Curso.findByPk(topico.id_curso);
       if (curso) {
-        const nomeCursoDir = curso.nome
-          .toLowerCase()
-          .replace(/ /g, "-")
-          .replace(/[^\w-]+/g, "");
+        const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+        const topicoSlugAntigo = uploadUtils.normalizarNome(topico.nome);
+        const topicoSlugNovo = uploadUtils.normalizarNome(nome);
         
-        const nomeTopicoAntigoDir = topico.nome
-          .toLowerCase()
-          .replace(/ /g, "-")
-          .replace(/[^\w-]+/g, "");
+        // Caminhos com base no diretório uploads
+        const topicoAntigoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugAntigo);
+        const topicoNovoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugNovo);
         
-        const nomeTopicoNovoDir = nome
-          .toLowerCase()
-          .replace(/ /g, "-")
-          .replace(/[^\w-]+/g, "");
-        
-        const topicoAntigoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoAntigoDir}`; // Adicionado "backend/"
-        const topicoNovoDir = `backend/uploads/cursos/${nomeCursoDir}/${nomeTopicoNovoDir}`; // Adicionado "backend/"
+        // Caminhos relativos para o banco de dados
+        const topicoAntigoPath = `uploads/cursos/${cursoSlug}/${topicoSlugAntigo}`;
+        const topicoNovoPath = `uploads/cursos/${cursoSlug}/${topicoSlugNovo}`;
         
         // Se o diretório antigo existir, renomear para o novo nome
         if (fs.existsSync(topicoAntigoDir)) {
           fs.renameSync(topicoAntigoDir, topicoNovoDir);
         } else {
           // Se não existir, criar o novo diretório
-          if (!fs.existsSync(topicoNovoDir)) {
-            fs.mkdirSync(topicoNovoDir, { recursive: true });
-          }
+          uploadUtils.ensureDir(topicoNovoDir);
         }
         
-        // Atualizar o caminho do diretório no banco de dados
-        topico.dir_path = topicoNovoDir;
-        topico.arquivo_path = topicoNovoDir; // Atualizar arquivo_path também
+        // Atualizar os caminhos no banco de dados
+        topico.dir_path = topicoNovoPath;
+        topico.arquivo_path = topicoNovoPath;
       }
     }
 
@@ -244,11 +220,6 @@ const updateTopico = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar tópico" });
   }
 };
-
-
-
-
-
 
 // Excluir um tópico (soft delete)
 const deleteTopico = async (req, res) => {

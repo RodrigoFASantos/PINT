@@ -4,6 +4,7 @@ const Curso = require("../../database/models/Curso");
 const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const fs = require('fs');
 const path = require('path');
+const uploadUtils = require('../../middleware/upload');
 
 // Criar uma nova pasta
 const createPasta = async (req, res) => {
@@ -26,34 +27,32 @@ const createPasta = async (req, res) => {
     }
 
     // Criar caminho para o diretório da pasta
-    const nomeCursoDir = curso.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
+    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const topicoSlug = uploadUtils.normalizarNome(topico.nome);
+    const pastaSlug = uploadUtils.normalizarNome(nome);
     
-    const nomeTopicoDir = topico.nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const nomePastaDir = nome
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
-    
-    const pastaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaDir}`; // Adicionado "backend/"
+    // Caminho completo do diretório
+    const pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
+    // Caminho relativo para o banco de dados
+    const pastaUrlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`;
     
     // Criar diretório se não existir
-    if (!fs.existsSync(pastaDir)) {
-      fs.mkdirSync(pastaDir, { recursive: true });
-    }
+    uploadUtils.ensureDir(pastaDir);
+    
+    // Criar subdiretórios para conteúdos e quizes
+    const conteudosDir = path.join(pastaDir, 'conteudos');
+    const quizesDir = path.join(pastaDir, 'quizes');
+    
+    uploadUtils.ensureDir(conteudosDir);
+    uploadUtils.ensureDir(quizesDir);
 
     const novaPasta = await PastaCurso.create({
       nome,
       id_topico,
       ordem: ordem || 1,
-      dir_path: pastaDir, // Salvar o caminho do diretório
-      arquivo_path: pastaDir // Adicionar arquivo_path também
+      dir_path: pastaUrlPath, // Salvar o caminho relativo no banco de dados
+      arquivo_path: pastaUrlPath, // Mesmo caminho para manter consistência
+      ativo: true
     });
 
     res.status(201).json({ message: "Pasta criada com sucesso", pasta: novaPasta });
@@ -62,9 +61,6 @@ const createPasta = async (req, res) => {
     res.status(500).json({ message: "Erro ao criar pasta" });
   }
 };
-
-
-
 
 // Obter todas as pastas de um tópico com seus conteúdos
 const getPastasByTopico = async (req, res) => {
@@ -76,28 +72,31 @@ const getPastasByTopico = async (req, res) => {
         id_topico,
         ativo: true 
       },
-      order: [
-        ['ordem', 'ASC'],
-        [{ model: ConteudoCurso, as: 'conteudos' }, 'ordem', 'ASC']
-      ],
-      include: [
-        {
-          model: ConteudoCurso,
-          as: 'conteudos',
-          where: { ativo: true },
-          required: false
-        }
-      ]
+      order: [['ordem', 'ASC']]
     });
 
-    // Adicionar propriedade expanded para cada pasta (para frontend)
-    const pastasFormatadas = pastas.map(pasta => {
+    // Array para armazenar pastas com seus conteúdos
+    const pastasComConteudos = [];
+    
+    // Para cada pasta, buscar seus conteúdos
+    for (const pasta of pastas) {
       const pastaObj = pasta.toJSON();
       pastaObj.expanded = false; // inicialmente fechado
-      return pastaObj;
-    });
+      
+      // Buscar conteúdos desta pasta
+      const conteudos = await ConteudoCurso.findAll({
+        where: { 
+          id_pasta: pasta.id_pasta,
+          ativo: true 
+        },
+        order: [['ordem', 'ASC']]
+      });
+      
+      pastaObj.conteudos = conteudos;
+      pastasComConteudos.push(pastaObj);
+    }
 
-    res.json(pastasFormatadas);
+    res.json(pastasComConteudos);
   } catch (error) {
     console.error("Erro ao buscar pastas do tópico:", error);
     res.status(500).json({ message: "Erro ao buscar pastas" });
@@ -109,22 +108,26 @@ const getPastaById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const pasta = await PastaCurso.findByPk(id, {
-      include: [
-        {
-          model: ConteudoCurso,
-          as: 'conteudos',
-          where: { ativo: true },
-          required: false
-        }
-      ]
-    });
+    const pasta = await PastaCurso.findByPk(id);
 
     if (!pasta) {
       return res.status(404).json({ message: "Pasta não encontrada" });
     }
 
-    res.json(pasta);
+    const pastaObj = pasta.toJSON();
+    
+    // Buscar conteúdos desta pasta
+    const conteudos = await ConteudoCurso.findAll({
+      where: { 
+        id_pasta: id,
+        ativo: true 
+      },
+      order: [['ordem', 'ASC']]
+    });
+    
+    pastaObj.conteudos = conteudos;
+
+    res.json(pastaObj);
   } catch (error) {
     console.error("Erro ao buscar pasta:", error);
     res.status(500).json({ message: "Erro ao buscar pasta" });
@@ -150,42 +153,32 @@ const updatePasta = async (req, res) => {
       if (topico) {
         const curso = await Curso.findByPk(topico.id_curso);
         if (curso) {
-          const nomeCursoDir = curso.nome
-            .toLowerCase()
-            .replace(/ /g, "-")
-            .replace(/[^\w-]+/g, "");
+          const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+          const topicoSlug = uploadUtils.normalizarNome(topico.nome);
+          const pastaSlugAntigo = uploadUtils.normalizarNome(pasta.nome);
+          const pastaSlugNovo = uploadUtils.normalizarNome(nome);
           
-          const nomeTopicoDir = topico.nome
-            .toLowerCase()
-            .replace(/ /g, "-")
-            .replace(/[^\w-]+/g, "");
+          // Caminhos completos para os diretórios
+          const pastaAntigaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlugAntigo);
+          const pastaNovaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlugNovo);
           
-          const nomePastaAntigaDir = pasta.nome
-            .toLowerCase()
-            .replace(/ /g, "-")
-            .replace(/[^\w-]+/g, "");
-          
-          const nomePastaNovaDir = nome
-            .toLowerCase()
-            .replace(/ /g, "-")
-            .replace(/[^\w-]+/g, "");
-          
-          const pastaAntigaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaAntigaDir}`; // Adicionado "backend/"
-          const pastaNovaDir = `uploads/cursos/${nomeCursoDir}/${nomeTopicoDir}/${nomePastaNovaDir}`; // Adicionado "backend/"
+          // Caminhos relativos para o banco de dados
+          const pastaAntigaPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlugAntigo}`;
+          const pastaNovaPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlugNovo}`;
           
           // Se o diretório antigo existir, renomear para o novo nome
           if (fs.existsSync(pastaAntigaDir)) {
             fs.renameSync(pastaAntigaDir, pastaNovaDir);
           } else {
-            // Se não existir, criar o novo diretório
-            if (!fs.existsSync(pastaNovaDir)) {
-              fs.mkdirSync(pastaNovaDir, { recursive: true });
-            }
+            // Se não existir, criar o novo diretório e seus subdiretórios
+            uploadUtils.ensureDir(pastaNovaDir);
+            uploadUtils.ensureDir(path.join(pastaNovaDir, 'conteudos'));
+            uploadUtils.ensureDir(path.join(pastaNovaDir, 'quizes'));
           }
           
-          // Atualizar o caminho do diretório no banco de dados
-          pasta.dir_path = pastaNovaDir;
-          pasta.arquivo_path = pastaNovaDir; // Atualizar arquivo_path também
+          // Atualizar caminhos no banco de dados
+          pasta.dir_path = pastaNovaPath;
+          pasta.arquivo_path = pastaNovaPath;
         }
       }
     }
@@ -203,8 +196,6 @@ const updatePasta = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar pasta" });
   }
 };
-
-
 
 // Excluir uma pasta (soft delete)
 const deletePasta = async (req, res) => {

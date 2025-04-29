@@ -1,0 +1,3 @@
+Este é um placeholder para o link: Documentação Oficial
+URL: https://vuejs.org/guide/introduction.html
+Substitua este arquivo por um link real ou mantenha a URL.
