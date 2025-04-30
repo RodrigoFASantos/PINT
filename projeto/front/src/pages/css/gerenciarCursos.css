@@ -1,269 +1,390 @@
+/* gerenciarCursos.css */
+
 .gerenciar-cursos-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 16rem; /* Ajustar conforme a largura da sidebar */
+  transition: margin-left 0.3s ease;
+}
+
+/* Cabeçalho */
+.cursos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.cursos-header h1 {
+  color: #333;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.criar-curso-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.criar-curso-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Seção de filtros */
+.filtros-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.filtro {
+  display: flex;
+  flex-direction: column;
+}
+
+.filtro label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.filtro input, .filtro select {
+  padding: 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: #f9fafb;
+  font-size: 0.875rem;
+}
+
+.filtro input:focus, .filtro select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  ring: 2px;
+  ring-color: rgba(59, 130, 246, 0.5);
+}
+
+.filtro-acoes {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  grid-column: 1 / -1;
+}
+
+.btn-aplicar, .btn-limpar {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-aplicar {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-aplicar:hover {
+  background-color: #2563eb;
+}
+
+.btn-limpar {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-limpar:hover {
+  background-color: #e5e7eb;
+}
+
+/* Tabela de cursos */
+.cursos-table-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.cursos-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cursos-table th {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.cursos-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.cursos-table tr {
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.cursos-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.cursos-table tr.inativo {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.curso-nome {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.formador-cell {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.agendado {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.em-curso {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.terminado {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.status-badge.inativo {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.acoes {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.btn-editar, .btn-excluir {
+  padding: 0.375rem 0.75rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-editar {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.btn-editar:hover {
+  background-color: #bfdbfe;
+}
+
+.btn-excluir {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-excluir:hover {
+  background-color: #fecaca;
+}
+
+/* Paginação */
+.paginacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+  gap: 1rem;
+}
+
+.btn-pagina {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #4b5563;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pagina:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagina-atual {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+/* Estado sem cursos */
+.no-cursos {
+  padding: 3rem 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #3b82f6;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  
+}
+
+/* Modal de confirmação */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h3 {
+  color: #b91c1c;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.modal-content p {
+  color: #4b5563;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-cancelar, .btn-confirmar {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-cancelar {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-confirmar {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-cancelar:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-confirmar:hover {
+  background-color: #dc2626;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
   .main-content {
-    display: flex;
-    flex: 1;
-  }
-  
-  .cursos-content {
-    flex: 1;
-    padding: 1.5rem;
-  }
-  
-  .cursos-content h1 {
-    font-size: 1.8rem;
-    color: #212529;
-    margin-bottom: 1.5rem;
+    margin-left: 0;
+    padding: 1rem;
   }
   
   .filtros-container {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-end;
+    grid-template-columns: 1fr;
   }
-  
-  .filtro {
-    flex: 1;
-    min-width: 200px;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-closed .main-content {
+    margin-left: 4rem;
   }
-  
-  .filtro label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #212529;
-    font-size: 0.875rem;
-  }
-  
-  .filtro select, 
-  .filtro input {
-    width: 100%;
-    padding: 0.625rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.875rem;
-  }
-  
-  .filtro-acoes {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .filtrar-btn {
-    padding: 0.625rem 1rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .filtrar-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .limpar-btn {
-    padding: 0.625rem 1rem;
-    background-color: #e9ecef;
-    color: #495057;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .limpar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .cursos-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-  
-  .cursos-header h2 {
-    font-size: 1.5rem;
-    color: #212529;
-  }
-  
-  .criar-curso-btn {
-    padding: 0.625rem 1rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .criar-curso-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .cursos-table-container {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-  
-  .cursos-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .cursos-table th,
-  .cursos-table td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e9ecef;
-  }
-  
-  .cursos-table th {
-    background-color: #f8f9fa;
-    font-weight: 500;
-    color: #495057;
-  }
-  
-  .cursos-table tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .cursos-table tr.inativo {
-    background-color: #f8f9fa;
-    color: #6c757d;
-  }
-  
-  .status {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-  
-  .status.agendado {
-    background-color: #fff3cd;
-    color: #856404;
-  }
-  
-  .status.em-curso {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  
-  .status.terminado {
-    background-color: #e2e3e5;
-    color: #383d41;
-  }
-  
-  .status.inativo {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-  
-  .acoes {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .editar-btn,
-  .inscritos-btn,
-  .ativar-btn,
-  .desativar-btn {
-    padding: 0.375rem 0.625rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  
-  .editar-btn {
-    background-color: #e9ecef;
-    color: #495057;
-  }
-  
-  .editar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .inscritos-btn {
-    background-color: #0062cc;
-    color: #ffffff;
-  }
-  
-  .inscritos-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .ativar-btn {
-    background-color: #28a745;
-    color: #ffffff;
-  }
-  
-  .ativar-btn:hover {
-    background-color: #218838;
-  }
-  
-  .desativar-btn {
-    background-color: #dc3545;
-    color: #ffffff;
-  }
-  
-  .desativar-btn:hover {
-    background-color: #c82333;
-  }
-  
-  .no-cursos {
-    text-align: center;
-    padding: 3rem;
-    color: #6c757d;
-    font-style: italic;
-  }
-  
-  @media (max-width: 992px) {
-    .acoes {
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .main-content {
-      flex-direction: column;
-    }
-    
-    .filtros-container {
-      flex-direction: column;
-    }
-    
-    .cursos-table {
-      display: block;
-      overflow-x: auto;
-    }
-    
-    .cursos-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-    }
-  }
+}
