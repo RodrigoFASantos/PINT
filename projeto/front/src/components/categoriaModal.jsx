@@ -39,6 +39,37 @@ const CategoriaModal = ({ isOpen, onClose, categorias, categoriasSelecionadas, o
 
   if (!isOpen) return null;
 
+  // Toggle seleção da categoria (se clicar na mesma, desseleciona)
+  const handleToggleCategoria = (categoria) => {
+    if (selectedCategoria && selectedCategoria.id_categoria === categoria.id_categoria) {
+      setSelectedCategoria(null);
+    } else {
+      setSelectedCategoria(categoria);
+    }
+  };
+
+  // Selecionar categoria e fechar modal
+  const handleSelectCategoria = () => {
+    if (selectedCategoria) {
+      setCategoria(selectedCategoria.id_categoria);
+      onClose();
+    } else {
+      setCategoria('');
+      onClose();
+    }
+  };
+
+  // Alternar exibição dos filtros
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  // Função auxiliar para verificar se uma categoria está selecionada
+  const isCategoriaSelected = (categoria) => {
+    if (!selectedCategoria) return false;
+    return selectedCategoria.id_categoria === categoria.id_categoria;
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-container">
