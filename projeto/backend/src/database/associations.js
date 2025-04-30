@@ -6,6 +6,8 @@ const ChatMensagem = require('./models/ChatMensagem');
 const Comentario_Topico = require('./models/Comentario_Topico');
 const ConteudoCurso = require('./models/ConteudoCurso');
 const Curso = require('./models/Curso');
+const FormadorCategoria = require('./models/Formador_Categoria');
+const FormadorArea = require('./models/Formador_Area');
 const Inscricao_Curso = require('./models/Inscricao_Curso');
 const OcorrenciaCurso = require('./models/OcorrenciaCurso');
 const PastaCurso = require('./models/PastaCurso');
@@ -34,6 +36,8 @@ const models = {
   Comentario_Topico,
   ConteudoCurso,
   Curso,
+  FormadorCategoria,
+  FormadorArea,
   Inscricao_Curso,
   OcorrenciaCurso,
   PastaCurso,
@@ -84,6 +88,20 @@ User.belongsToMany(Curso, {
   as: "cursos"
 });
 
+// Novas associações para formadores com categorias e áreas
+User.belongsToMany(Categoria, {
+  through: FormadorCategoria,
+  foreignKey: "id_formador",
+  otherKey: "id_categoria",
+  as: "categorias_formador"
+});
+
+User.belongsToMany(Area, {
+  through: FormadorArea,
+  foreignKey: "id_formador",
+  otherKey: "id_area",
+  as: "areas_formador"
+});
 
 User.hasMany(ChatMensagem, {
   foreignKey: "id_usuario",
@@ -123,6 +141,14 @@ Categoria.hasMany(Topico, {
   as: "topicos"
 });
 
+// Nova associação de Categoria com Formadores
+Categoria.belongsToMany(User, {
+  through: FormadorCategoria,
+  foreignKey: "id_categoria",
+  otherKey: "id_formador",
+  as: "formadores"
+});
+
 // === Associações Area ===
 Area.belongsTo(Categoria, {
   foreignKey: "id_categoria",
@@ -137,6 +163,14 @@ Area.hasMany(Curso, {
 Area.hasMany(Topico, {
   foreignKey: "id_area",
   as: "topicos"
+});
+
+// Nova associação de Area com Formadores
+Area.belongsToMany(User, {
+  through: FormadorArea,
+  foreignKey: "id_area",
+  otherKey: "id_formador",
+  as: "formadores"
 });
 
 // === Associações Curso ===
@@ -181,6 +215,28 @@ Curso.hasMany(TopicoCurso, {
 Curso.hasMany(ConteudoCurso, {
   foreignKey: "id_curso",
   as: "conteudos"
+});
+
+// === Associações FormadorCategoria ===
+FormadorCategoria.belongsTo(User, {
+  foreignKey: "id_formador",
+  as: "formador"
+});
+
+FormadorCategoria.belongsTo(Categoria, {
+  foreignKey: "id_categoria",
+  as: "categoria"
+});
+
+// === Associações FormadorArea ===
+FormadorArea.belongsTo(User, {
+  foreignKey: "id_formador",
+  as: "formador"
+});
+
+FormadorArea.belongsTo(Area, {
+  foreignKey: "id_area",
+  as: "area"
 });
 
 // === Associações Inscricao_Curso ===

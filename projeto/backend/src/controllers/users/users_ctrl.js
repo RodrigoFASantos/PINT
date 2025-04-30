@@ -181,112 +181,81 @@ const generateRandomPassword = (length = 10) => {
     .join('');
 };
 
+/**
+ * Criar um novo usuário
+ * @param {object} req - Objeto de requisição
+ * @param {object} res - Objeto de resposta
+ */
 const createUser = async (req, res) => {
   try {
-    const {
-      id_cargo,
-      nome,
-      idade,
-      email,
-      telefone,
-      morada,
-      codigo_postal,
-      password // Senha opcional - se não for fornecida, será gerada aleatoriamente
-    } = req.body;
-
+    console.log("🔍 Iniciando criação de usuário");
+    const { nome, email, password, idade, telefone, morada, codigo_postal, cargo } = req.body;
+    
     // Validar campos obrigatórios
-    if (!id_cargo || !nome || !idade || !email || !telefone) {
-      return res.status(400).json({ message: "Campos obrigatórios: id_cargo, nome, idade, email, telefone" });
+    if (!nome || !email || !password) {
+      return res.status(400).json({ message: "Campos obrigatórios: nome, email e password" });
     }
-
-    // Buscar descrição do cargo
-    let cargo_descricao = "";
-    try {
-      const cargo = await Cargo.findByPk(id_cargo);
-      if (cargo) {
-        cargo_descricao = cargo.descricao;
-      }
-    } catch (cargoError) {
-      console.error("Erro ao buscar cargo:", cargoError);
+    
+    // Verificar se o e-mail já está em uso
+    const emailExistente = await User.findOne({ where: { email } });
+    if (emailExistente) {
+      return res.status(400).json({ message: "Este e-mail já está em uso" });
     }
-
-    // Primeiro verificar se podemos usar este email
-    const emailCheck = await verifyAndSendEmail({ nome, email, telefone });
-    if (!emailCheck.success) {
-      return res.status(400).json({ message: emailCheck.error });
+    
+    // Determinar o cargo padrão (3 = formando)
+    const cargoId = cargo === 'formador' ? 2 : 3;
+    
+    // Hash da senha
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Caminho da imagem (se existir)
+    let imagemPath = null;
+    if (req.file) {
+      // Usar email como parte do nome do arquivo para evitar conflitos
+      const userSlug = email.replace(/@/g, '_at_').replace(/\./g, '_');
+      imagemPath = `uploads/users/${userSlug}/${email}_AVATAR.png`;
+      
+      // Criar diretório do usuário se ainda não existir
+      const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+      uploadUtils.ensureDir(userDir);
+      
+      console.log(`✅ Imagem salva em: ${imagemPath}`);
     }
-
-    // Gerar senha aleatória se não for fornecida
-    const senha_temporaria = password || generateRandomPassword(12);
-    console.log(`Senha gerada para ${email}: ${senha_temporaria}`);
-
-    // Criar token de confirmação
-    const token = jwt.sign(
-      { email, nome },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" } // Token expira em 24 horas
-    );
-
-    // Calcular data de expiração (24 horas a partir de agora)
-    const expires_at = new Date();
-    expires_at.setHours(expires_at.getHours() + 24);
-
-    // Criar usuário pendente
-    const pendingUser = await User_Pendente.create({
-      id_cargo,
+    
+    // Criar o usuário no banco de dados
+    const novoUsuario = await User.create({
       nome,
-      idade,
       email,
-      telefone,
-      morada: morada || "",
-      codigo_postal: codigo_postal || "",
-      password: senha_temporaria, // Será hasheada pelo hook beforeCreate
-      token,
-      expires_at
+      password: hashedPassword,
+      idade: idade || null,
+      telefone: telefone || null,
+      morada: morada || null,
+      codigo_postal: codigo_postal || null,
+      id_cargo: cargoId,
+      foto_perfil: imagemPath,
+      ativo: true,
+      data_registo: new Date()
     });
-
-    // Enviar email de confirmação com o token
-    try {
-      // Adaptar o usuário pendente para o formato esperado por sendRegistrationEmail
-      const userForEmail = {
-        id_utilizador: pendingUser.id,
-        nome: pendingUser.nome,
-        email: pendingUser.email,
-        token: pendingUser.token,
-        idade: pendingUser.idade,
-        telefone: pendingUser.telefone,
-        morada: pendingUser.morada,
-        codigo_postal: pendingUser.codigo_postal,
-        cargo_descricao: cargo_descricao,
-        senha_temporaria: senha_temporaria // Importante! Passar a senha temporária para o email
-      };
-
-      await sendRegistrationEmail(userForEmail);
-      console.log('Email de confirmação enviado com sucesso!');
-    } catch (emailError) {
-      console.error("Erro ao enviar email:", emailError);
-      // Remover o usuário pendente se falhar o envio de email
-      await pendingUser.destroy();
-      return res.status(500).json({
-        message: "Não foi possível enviar o email de confirmação. O registro foi cancelado."
-      });
-    }
-
-    // Tudo deu certo!
-    res.status(201).json({
-      message: "Pré-registro realizado com sucesso! Verifique seu email para confirmar o registro.",
-      email: pendingUser.email
+    
+    // Remover a senha da resposta
+    const usuarioSemSenha = { ...novoUsuario.toJSON() };
+    delete usuarioSemSenha.password;
+    
+    console.log(`✅ Usuário criado com sucesso: ${novoUsuario.id_utilizador}`);
+    
+    return res.status(201).json({
+      message: `Usuário ${cargo === 'formador' ? 'formador' : ''} criado com sucesso!`,
+      ...usuarioSemSenha
     });
+    
   } catch (error) {
-    console.error("Erro ao criar registro pendente:", error);
-
-    if (error.name === 'SequelizeUniqueConstraintError' && error.errors[0].path === 'email') {
-      return res.status(400).json({
-        message: "Este email já está registrado. Por favor, use outro email ou recupere sua senha."
-      });
-    }
-
-    res.status(500).json({ message: "Erro no servidor ao processar o registro." });
+    console.error("❌ Erro ao criar usuário:", error);
+    return res.status(500).json({ 
+      message: "Erro ao criar usuário", 
+      error: error.message,
+      detalhes: error.stack 
+    });
   }
 };
 

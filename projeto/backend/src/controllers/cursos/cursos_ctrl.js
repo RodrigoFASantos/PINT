@@ -18,21 +18,107 @@ const getAllCursos = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    
+    // Parâmetros de filtro opcionais
+    const { categoria, area, formador, search } = req.query;
+    
+    // Construir condições de filtro
+    const where = {};
+    
+    if (categoria) {
+      where.id_categoria = categoria;
+    }
+    
+    if (area) {
+      where.id_area = area;
+    }
+    
+    if (formador) {
+      where.id_formador = formador;
+    }
+    
+    if (search) {
+      where.nome = { [Op.iLike]: `%${search}%` };
+    }
 
     const { count, rows } = await Curso.findAndCountAll({
+      where,
       offset,
       limit,
-      order: [['data_inicio', 'DESC']] // ordena por data de início (opcional)
+      order: [['data_inicio', 'DESC']], // ordena por data de início (opcional)
+      include: [
+        {
+          model: User,
+          as: "formador",
+          attributes: ['id_utilizador', 'nome', 'email']
+        },
+        {
+          model: Area,
+          as: "area"
+        },
+        {
+          model: Categoria,
+          as: "categoria"
+        }
+      ]
     });
 
     res.json({
       cursos: rows,
       total: count,
-      totalPages: Math.ceil(count / limit)
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
     });
   } catch (error) {
     console.error("Erro ao buscar cursos:", error);
     res.status(500).json({ message: "Erro ao buscar cursos" });
+  }
+};
+
+// Função para obter cursos filtrados por categorias (para associação com formador)
+const getCursosByCategoria = async (req, res) => {
+  try {
+    const { categorias } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    
+    if (!categorias) {
+      return res.status(400).json({ message: "É necessário fornecer pelo menos uma categoria" });
+    }
+    
+    // Converter a string de categorias em um array de IDs
+    const categoriaIds = categorias.split(',').map(id => parseInt(id.trim()));
+    
+    // Buscar cursos que pertencem a essas categorias
+    const { count, rows } = await Curso.findAndCountAll({
+      where: {
+        id_categoria: { [Op.in]: categoriaIds }
+      },
+      include: [
+        {
+          model: Categoria,
+          as: "categoria"
+        },
+        {
+          model: Area,
+          as: "area"
+        }
+      ],
+      offset,
+      limit,
+      order: [['nome', 'ASC']]
+    });
+    
+    res.json({
+      cursos: rows,
+      total: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Erro ao buscar cursos por categoria:", error);
+    res.status(500).json({ message: "Erro ao buscar cursos por categoria" });
   }
 };
 
@@ -255,6 +341,62 @@ const getCursoById = async (req, res) => {
   }
 };
 
+// Nova função: Associar formador a um curso
+const associarFormadorCurso = async (req, res) => {
+  try {
+    const { id_curso, id_formador } = req.body;
+    
+    if (!id_curso || !id_formador) {
+      return res.status(400).json({ message: "É necessário fornecer o ID do curso e do formador" });
+    }
+    
+    // Verificar se o curso existe
+    const curso = await Curso.findByPk(id_curso);
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado" });
+    }
+    
+    // Verificar se o usuário é realmente um formador
+    const formador = await User.findByPk(id_formador);
+    if (!formador || formador.id_cargo !== 2) {
+      return res.status(400).json({ message: "O usuário especificado não é um formador" });
+    }
+    
+    // Verificar se o formador tem acesso à categoria/área do curso
+    const categoriaDoFormador = await sequelize.query(
+      `SELECT COUNT(*) as count FROM formador_categoria 
+       WHERE id_formador = :id_formador AND id_categoria = :id_categoria`,
+      {
+        replacements: { id_formador, id_categoria: curso.id_categoria },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+    
+    if (categoriaDoFormador[0].count === '0') {
+      return res.status(400).json({ 
+        message: "O formador não está associado à categoria deste curso", 
+        categoriaId: curso.id_categoria 
+      });
+    }
+    
+    // Atualizar o curso com o novo formador
+    curso.id_formador = id_formador;
+    await curso.save();
+    
+    res.json({ 
+      message: "Formador associado ao curso com sucesso",
+      curso: {
+        id_curso: curso.id_curso,
+        nome: curso.nome,
+        id_formador: curso.id_formador
+      }
+    });
+  } catch (error) {
+    console.error("Erro ao associar formador ao curso:", error);
+    res.status(500).json({ message: "Erro ao associar formador ao curso", error: error.message });
+  }
+};
+
 // Listar inscrições de um curso
 const getInscricoesCurso = async (req, res) => {
   try {
@@ -462,11 +604,13 @@ const getCursosSugeridos = async (req, res) => {
 };
 
 module.exports = { 
-  getAllCursos, 
+  getAllCursos,
+  getCursosByCategoria, 
   createCurso, 
   getCursoById, 
   getInscricoesCurso, 
   updateCurso, 
   deleteCurso, 
-  getCursosSugeridos 
+  getCursosSugeridos,
+  associarFormadorCurso
 };

@@ -33,6 +33,7 @@ VALUES
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Mariana Lopes', 27, 'mariana@gmail.com', '913456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/mariana@gmail.com_AVATAR.png', 'uploads/users/mariana@gmail.com_CAPA.png'),
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Luís Rodrigues', 33, 'luis@gmail.com', '913456788', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/luis@gmail.com_AVATAR.png', 'uploads/users/luis@gmail.com_CAPA.png');
 
+
 -- =============================================
 -- 3. CATEGORIAS
 -- =============================================
@@ -82,6 +83,149 @@ VALUES
   -- Saúde e Bem-estar
   ('Meditação', (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1)),
   ('Nutrição', (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1));
+
+
+
+
+
+
+
+
+
+
+-- =============================================
+-- ASSOCIAÇÕES FORMADORES COM CATEGORIAS
+-- =============================================
+
+-- Associar Formador (id_cargo=2) com Categorias
+INSERT INTO formador_categoria (id_formador, id_categoria, data_associacao)
+VALUES
+  -- Formador padrão com Tecnologia, Programação e Design
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
+   NOW()),
+   
+  -- Carla Pereira com Marketing Digital e Soft Skills
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
+   NOW()),
+   
+  -- Miguel Santos com Programação, Finanças e Gestão
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Finanças' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1),
+   NOW()),
+   
+  -- Sara Oliveira com Programação, Saúde e Bem-estar e Tecnologia
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   NOW());
+
+-- =============================================
+-- ASSOCIAÇÕES FORMADORES COM ÁREAS
+-- =============================================
+
+-- Associar Formador (id_cargo=2) com Áreas
+INSERT INTO formador_area (id_formador, id_area, data_associacao)
+VALUES
+  -- Formador padrão com Desenvolvimento Web, JavaScript e UI/UX Design
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
+   NOW()),
+   
+  -- Carla Pereira com Marketing de Conteúdo, Redes Sociais, SEO e Comunicação Interpessoal
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Marketing de Conteúdo' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Redes Sociais' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'SEO' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
+   NOW()),
+   
+  -- Miguel Santos com JavaScript, React Native, Investimentos e Liderança e Gestão de Equipas
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'React Native' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Investimentos' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
+   NOW()),
+   
+  -- Sara Oliveira com Python, React Native, Meditação e Nutrição
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'React Native' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Meditação' LIMIT 1),
+   NOW()),
+   
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
+   (SELECT id_area FROM areas WHERE nome = 'Nutrição' LIMIT 1),
+   NOW());
+
+
+
+
+
+
+
+
 
 
 -- =============================================

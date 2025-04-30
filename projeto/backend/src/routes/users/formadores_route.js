@@ -40,8 +40,20 @@ router.get('/', formadorController.getAllFormadores);
 router.get('/:id', formadorController.getFormadorById);
 router.get('/:id/cursos', formadorController.getCursosFormador);
 
-// Rotas protegidas - apenas administradores podem criar/atualizar/excluir formadores
-router.post('/', verificarToken, verificarCargo(['admin']), formadorController.createFormador);
+// Permitir a criação de formadores sem autenticação para registro
+router.post('/', formadorController.createFormador);
+
+// Rotas para gerenciar categorias de formadores
+router.get('/:id/categorias', formadorController.getCategoriasFormador);
+router.post('/:id/categorias', verificarToken, verificarCargo(['admin', 'formador']), formadorController.addCategoriasFormador);
+router.delete('/:id/categorias/:categoriaId', verificarToken, verificarCargo(['admin', 'formador']), formadorController.removeFormadorCategoria);
+
+// Rotas para gerenciar áreas de formadores
+router.get('/:id/areas', formadorController.getAreasFormador);
+router.post('/:id/areas', verificarToken, verificarCargo(['admin', 'formador']), formadorController.addAreasFormador);
+router.delete('/:id/areas/:areaId', verificarToken, verificarCargo(['admin', 'formador']), formadorController.removeFormadorArea);
+
+// Rotas protegidas - apenas administradores podem atualizar/excluir formadores
 router.put('/:id', verificarToken, verificarCargo(['admin']), formadorController.updateFormador);
 router.delete('/:id', verificarToken, verificarCargo(['admin']), formadorController.deleteFormador);
 

@@ -4,12 +4,14 @@ const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
 const {
   getAllCursos,
+  getCursosByCategoria,
   createCurso,
   getCursoById,
   getInscricoesCurso,
   updateCurso,
   deleteCurso,
-  getCursosSugeridos
+  getCursosSugeridos,
+  associarFormadorCurso
 } = require("../../controllers/cursos/cursos_ctrl");
 const uploadUtils = require('../../middleware/upload');
 
@@ -19,8 +21,14 @@ router.post("/", verificarToken, autorizar([1, 2]), uploadUtils.uploadCurso.sing
 // Listar todos os cursos
 router.get("/", getAllCursos);
 
+// Listar cursos filtrados por categoria (para seleção ao criar formador)
+router.get("/por-categoria", getCursosByCategoria);
+
 // Buscar cursos sugeridos
 router.get("/sugeridos", verificarToken, getCursosSugeridos);
+
+// Associar formador a um curso
+router.post("/associar-formador", verificarToken, autorizar([1, 2]), associarFormadorCurso);
 
 // Obter curso por ID
 router.get("/:id", getCursoById);

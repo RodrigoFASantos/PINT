@@ -404,9 +404,24 @@ async function criarPastasParaUsuarios() {
  * Função para carregar os dados de teste do arquivo SQL
  */
 function carregarDadosTeste() {
-  const sqlPath = path.join(__dirname, './dados_teste.sql');
   try {
-    return fs.readFileSync(sqlPath, 'utf-8');
+    // Primeiro carregar o arquivo dados_teste.sql principal
+    const sqlPath = path.join(__dirname, './dados_teste.sql');
+    const dadosPrincipais = fs.readFileSync(sqlPath, 'utf-8');
+    
+    // Tentar também carregar dados específicos para formadores
+    try {
+      const formadoresPath = path.join(__dirname, './dados_teste_formadores_categorias_areas.sql');
+      if (fs.existsSync(formadoresPath)) {
+        console.log('✅ Encontrado arquivo de dados para associações de formadores');
+        const dadosFormadores = fs.readFileSync(formadoresPath, 'utf-8');
+        return dadosPrincipais + '\n\n' + dadosFormadores;
+      }
+    } catch (formadoresError) {
+      console.log('⚠️ Arquivo de dados para formadores não encontrado, usando apenas dados principais');
+    }
+    
+    return dadosPrincipais;
   } catch (error) {
     console.error(`❌ Erro ao carregar dados de teste: ${error.message}`);
     console.log('Continuando sem dados de teste...');

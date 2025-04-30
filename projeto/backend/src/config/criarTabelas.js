@@ -52,6 +52,22 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_area_nome_categoria UNIQUE (nome, id_categoria)
     );`,
 
+    `CREATE TABLE IF NOT EXISTS formador_categoria (
+      id SERIAL PRIMARY KEY,
+      id_formador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
+      id_categoria INTEGER NOT NULL REFERENCES categorias(id_categoria) ON DELETE CASCADE,
+      data_associacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      CONSTRAINT unique_formador_categoria UNIQUE (id_formador, id_categoria)
+    );`,
+
+    `CREATE TABLE IF NOT EXISTS formador_area (
+      id SERIAL PRIMARY KEY,
+      id_formador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
+      id_area INTEGER NOT NULL REFERENCES areas(id_area) ON DELETE CASCADE,
+      data_associacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      CONSTRAINT unique_formador_area UNIQUE (id_formador, id_area)
+    );`,
+
     `CREATE TABLE IF NOT EXISTS curso (
       id_curso SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL UNIQUE,
