@@ -42,27 +42,17 @@ router.put("/change-password", verificarToken, changePassword);
 router.post("/confirm-account", confirmAccount);
 router.post("/resend-confirmation", resendConfirmation);
 
-// Rotas de upload de imagens - usando o middleware verificarTokenComEmail da pasta utils
-router.post("/img/perfil", verificarTokenComEmail, (req, res, next) => {
-  // Middleware de pré-processamento
-  console.log('Middleware de pré-processamento para upload de imagem de perfil');
-  
-  // Definir tipo como AVATAR
-  req.body.tipo = 'AVATAR';
-  
-  console.log('Dados do usuário após processamento:', req.user);
-  next();
-}, uploadUtils.uploadUser.single("imagem"), uploadImagemPerfil);
 
-router.post("/img/capa", verificarTokenComEmail, (req, res, next) => {
-  // Middleware de pré-processamento
-  console.log('Middleware de pré-processamento para upload de imagem de capa');
-  
-  // Definir tipo como CAPA
-  req.body.tipo = 'CAPA';
-  
-  console.log('Dados do usuário após processamento:', req.user);
-  next();
-}, uploadUtils.uploadUser.single("imagem"), uploadImagemCapa);
+
+
+router.post("/img/perfil", verificarTokenComEmail, uploadUtils.ensureUserDir, uploadUtils.uploadTemp.single("imagem"), uploadImagemPerfil);
+
+router.post("/img/capa", verificarTokenComEmail, uploadUtils.ensureUserDir, uploadUtils.uploadTemp.single("imagem"), uploadImagemCapa);
+
+
+
+
+
+
 
 module.exports = router;

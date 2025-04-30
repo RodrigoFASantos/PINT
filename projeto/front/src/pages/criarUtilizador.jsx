@@ -8,8 +8,8 @@ import imagePreview from '../images/user.png';
 import API_BASE from "../api";
 
 // Componentes de Modal
-import CategoriaModal from '../components/CategoriaModal';
-import AreaModal from '../components/AreaModal';
+import CategoriaModal from '../components/categoriaModal'; // Corrigido para corresponder ao nome do arquivo no disco
+import AreaModal from '../components/areaModal';
 import CursosModal from '../components/CursosModal';
 
 function CriarUser() {

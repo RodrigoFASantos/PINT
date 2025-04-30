@@ -4,6 +4,8 @@ import "./css/Modal.css";
 const CategoriaModal = ({ isOpen, onClose, categorias, categoriasSelecionadas, onSelect }) => {
   const [localCategoriasSelecionadas, setLocalCategoriasSelecionadas] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  // Removendo estados não utilizados ou adicionando os que faltam
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     // Inicializar selecionadas locais com as que vieram como prop
@@ -39,35 +41,9 @@ const CategoriaModal = ({ isOpen, onClose, categorias, categoriasSelecionadas, o
 
   if (!isOpen) return null;
 
-  // Toggle seleção da categoria (se clicar na mesma, desseleciona)
-  const handleToggleCategoria = (categoria) => {
-    if (selectedCategoria && selectedCategoria.id_categoria === categoria.id_categoria) {
-      setSelectedCategoria(null);
-    } else {
-      setSelectedCategoria(categoria);
-    }
-  };
-
-  // Selecionar categoria e fechar modal
-  const handleSelectCategoria = () => {
-    if (selectedCategoria) {
-      setCategoria(selectedCategoria.id_categoria);
-      onClose();
-    } else {
-      setCategoria('');
-      onClose();
-    }
-  };
-
   // Alternar exibição dos filtros
   const toggleFilters = () => {
     setShowFilters(!showFilters);
-  };
-
-  // Função auxiliar para verificar se uma categoria está selecionada
-  const isCategoriaSelected = (categoria) => {
-    if (!selectedCategoria) return false;
-    return selectedCategoria.id_categoria === categoria.id_categoria;
   };
 
   return (

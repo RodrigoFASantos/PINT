@@ -300,14 +300,42 @@ const criarDiretoriosChat = (categoria, topico) => {
 // Função para mover arquivo temporário para o destino final
 const moverArquivo = (origem, destino) => {
   try {
+    // Normalizar caminhos para comparação
+    const origemPath = path.resolve(origem);
+    const destinoPath = path.resolve(destino);
+    
+    // Se origem e destino são iguais, não precisamos fazer nada
+    if (origemPath === destinoPath) {
+      console.log('Origem e destino são iguais, não é necessário mover');
+      return true;
+    }
+    
     // Garantir que o diretório de destino exista
     const destDir = path.dirname(destino);
     ensureDir(destDir);
     
     // Se o arquivo de origem existir, copiá-lo e depois removê-lo
     if (fs.existsSync(origem)) {
+      // Se o arquivo de destino já existir, remover primeiro
+      if (fs.existsSync(destino)) {
+        try {
+          fs.unlinkSync(destino);
+        } catch (deleteError) {
+          console.error('Erro ao remover arquivo existente:', deleteError);
+          // Continuar mesmo com erro ao remover
+        }
+      }
+      
       fs.copyFileSync(origem, destino);
-      fs.unlinkSync(origem);
+      
+      // Tentar remover o arquivo de origem
+      try {
+        fs.unlinkSync(origem);
+      } catch (unlinkError) {
+        console.error('Erro ao remover arquivo de origem:', unlinkError);
+        // Não falhar a operação se não conseguir remover o arquivo de origem
+      }
+      
       return true;
     }
     return false;
@@ -316,6 +344,129 @@ const moverArquivo = (origem, destino) => {
     return false;
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+const userStorageModificado = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!req.user || !req.user.email) {
+      return cb(new Error('Usuário não identificado'), null);
+    }
+    
+    const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
+    
+    console.log(`Storage: Salvando em ${userDir}`);
+    ensureDir(userDir);
+    cb(null, userDir);
+  },
+  filename: (req, file, cb) => {
+    if (!req.user || !req.user.email) {
+      return cb(new Error('Usuário não identificado'), null);
+    }
+    
+    // Usar req.tipoImagem em vez de req.body.tipo
+    // Adicionar timestamp para evitar conflitos de cache
+    const tipoArquivo = req.tipoImagem || 'UNKNOWN';
+    const timestamp = Date.now();
+    const fileName = `${req.user.email}_${tipoArquivo}_${timestamp}.png`;
+    
+    console.log(`Storage: Gerando nome de arquivo ${fileName} (tipo: ${tipoArquivo})`);
+    cb(null, fileName);
+  }
+});
+
+
+
+const uploadUserModificado = multer({
+  storage: userStorageModificado,
+  limits,
+  fileFilter
+});
+
+
+
+const uploadTemporario = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Sempre salvar na pasta temp primeiro
+    const tempDir = path.join(BASE_UPLOAD_DIR, 'temp');
+    console.log(`⏱️ UPLOAD TEMP: Salvando temporariamente em ${tempDir}`);
+    ensureDir(tempDir);
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    // Gerar um nome único com timestamp para evitar colisões
+    const timestamp = Date.now();
+    const randomString = crypto.randomBytes(4).toString('hex');
+    
+    // Detectar tipo de upload baseado na rota
+    let tipoArquivo = 'temp';
+    if (req.path.includes('/img/perfil')) {
+      tipoArquivo = 'AVATAR';
+    } else if (req.path.includes('/img/capa')) {
+      tipoArquivo = 'CAPA';
+    }
+    
+    const fileName = `${timestamp}_${randomString}_${tipoArquivo}.png`;
+    console.log(`⏱️ UPLOAD TEMP: Gerando nome temporário: ${fileName}`);
+    cb(null, fileName);
+  }
+});
+
+// Configuração principal do Multer para upload temporário
+const uploadTemp = multer({
+  storage: uploadTemporario,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Verificar o tipo MIME
+    if (file.mimetype.startsWith('image/')) {
+      console.log(`⏱️ UPLOAD TEMP: Tipo de arquivo válido: ${file.mimetype}`);
+      cb(null, true);
+    } else {
+      console.log(`⏱️ UPLOAD TEMP: Tipo de arquivo inválido: ${file.mimetype}`);
+      cb(new Error('Apenas imagens são permitidas'), false);
+    }
+  }
+});
+
+// Middleware para garantir diretórios dos usuários
+const ensureUserDir = (req, res, next) => {
+  if (!req.user || !req.user.email) {
+    return res.status(401).json({ message: "Usuário não autenticado" });
+  }
+  
+  const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+  const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
+  
+  ensureDir(userDir);
+  
+  // Adicionar informações ao request para uso nos controladores
+  req.userDir = userDir;
+  req.userSlug = userSlug;
+  
+  next();
+};
+
+
+
+
+
+
+
+
+
 
 // Exportações
 module.exports = {
@@ -335,5 +486,9 @@ module.exports = {
   criarDiretoriosTopico,
   criarDiretoriosPasta,
   criarDiretoriosChat,
-  moverArquivo
+  moverArquivo,
+  uploadUserModificado,
+  uploadTemp,
+  userStorageModificado,	
+  ensureUserDir
 };

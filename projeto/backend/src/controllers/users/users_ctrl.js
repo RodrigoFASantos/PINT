@@ -190,39 +190,39 @@ const createUser = async (req, res) => {
   try {
     console.log("🔍 Iniciando criação de usuário");
     const { nome, email, password, idade, telefone, morada, codigo_postal, cargo } = req.body;
-    
+
     // Validar campos obrigatórios
     if (!nome || !email || !password) {
       return res.status(400).json({ message: "Campos obrigatórios: nome, email e password" });
     }
-    
+
     // Verificar se o e-mail já está em uso
     const emailExistente = await User.findOne({ where: { email } });
     if (emailExistente) {
       return res.status(400).json({ message: "Este e-mail já está em uso" });
     }
-    
+
     // Determinar o cargo padrão (3 = formando)
     const cargoId = cargo === 'formador' ? 2 : 3;
-    
+
     // Hash da senha
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     // Caminho da imagem (se existir)
     let imagemPath = null;
     if (req.file) {
       // Usar email como parte do nome do arquivo para evitar conflitos
       const userSlug = email.replace(/@/g, '_at_').replace(/\./g, '_');
       imagemPath = `uploads/users/${userSlug}/${email}_AVATAR.png`;
-      
+
       // Criar diretório do usuário se ainda não existir
       const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
       uploadUtils.ensureDir(userDir);
-      
+
       console.log(`✅ Imagem salva em: ${imagemPath}`);
     }
-    
+
     // Criar o usuário no banco de dados
     const novoUsuario = await User.create({
       nome,
@@ -237,24 +237,24 @@ const createUser = async (req, res) => {
       ativo: true,
       data_registo: new Date()
     });
-    
+
     // Remover a senha da resposta
     const usuarioSemSenha = { ...novoUsuario.toJSON() };
     delete usuarioSemSenha.password;
-    
+
     console.log(`✅ Usuário criado com sucesso: ${novoUsuario.id_utilizador}`);
-    
+
     return res.status(201).json({
       message: `Usuário ${cargo === 'formador' ? 'formador' : ''} criado com sucesso!`,
       ...usuarioSemSenha
     });
-    
+
   } catch (error) {
     console.error("❌ Erro ao criar usuário:", error);
-    return res.status(500).json({ 
-      message: "Erro ao criar usuário", 
+    return res.status(500).json({
+      message: "Erro ao criar usuário",
       error: error.message,
-      detalhes: error.stack 
+      detalhes: error.stack
     });
   }
 };
@@ -678,148 +678,352 @@ const changePassword = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao alterar senha" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * FUNÇÕES DE UPLOAD DE IMAGENS
  */
+
+
+
+/**
+ * Função auxiliar para migrar e limpar arquivos de imagem do usuário
+ * Esta função garante que apenas os arquivos mais recentes permaneçam
+ * @param {string} userDir - Diretório do usuário
+ * @param {string} userEmail - Email do usuário
+ * @param {string} tipo - Tipo de imagem (AVATAR ou CAPA)
+ * @returns {Object} Informações sobre o arquivo mais recente
+ */
+const migrarELimparArquivosImagem = async (userDir, userEmail, tipo) => {
+  console.log(`🧹 LIMPEZA: Iniciando migração/limpeza de arquivos ${tipo} para ${userEmail}`);
+  
+  try {
+    // Garantir que o diretório exista
+    if (!fs.existsSync(userDir)) {
+      console.log(`🧹 LIMPEZA: Diretório ${userDir} não existe, criando...`);
+      fs.mkdirSync(userDir, { recursive: true });
+      return null;
+    }
+    
+    // Ler todos os arquivos no diretório
+    const files = fs.readdirSync(userDir);
+    
+    // Filtrar arquivos pelo tipo (AVATAR ou CAPA)
+    const tipoFiles = files.filter(file => 
+      file.includes(`${userEmail}_${tipo}`) || 
+      file.startsWith(`${userEmail}_${tipo}_`)
+    );
+    
+    console.log(`🧹 LIMPEZA: Encontrados ${tipoFiles.length} arquivos de ${tipo}`);
+    
+    if (tipoFiles.length === 0) {
+      console.log(`🧹 LIMPEZA: Nenhum arquivo de ${tipo} encontrado`);
+      return null;
+    }
+    
+    // Obter informações dos arquivos
+    const fileInfos = tipoFiles.map(file => {
+      const filePath = path.join(userDir, file);
+      const stats = fs.statSync(filePath);
+      
+      // Extrair timestamp do nome ou usar a data de modificação
+      let timestamp;
+      const tsMatch = file.match(/_${tipo}_(\d+)\.png$/);
+      if (tsMatch) {
+        timestamp = parseInt(tsMatch[1]);
+      } else {
+        timestamp = stats.mtimeMs;
+      }
+      
+      return {
+        file,
+        path: filePath,
+        size: stats.size,
+        timestamp,
+        modified: stats.mtime
+      };
+    });
+    
+    // Ordenar por timestamp (mais recente primeiro)
+    fileInfos.sort((a, b) => b.timestamp - a.timestamp);
+    
+    const newestFile = fileInfos[0];
+    
+    // Se temos mais de um arquivo, manter apenas o mais recente
+    if (fileInfos.length > 1) {
+      console.log(`🧹 LIMPEZA: Migrando para novo formato e mantendo apenas o arquivo mais recente (${newestFile.file})`);
+      
+      // Se o arquivo mais recente não estiver no formato com timestamp, migrar
+      if (!newestFile.file.match(/_${tipo}_\d+\.png$/)) {
+        const timestamp = Date.now();
+        const newFilename = `${userEmail}_${tipo}_${timestamp}.png`;
+        const newFilePath = path.join(userDir, newFilename);
+        
+        console.log(`🧹 LIMPEZA: Migrando arquivo ${newestFile.file} para novo formato: ${newFilename}`);
+        fs.copyFileSync(newestFile.path, newFilePath);
+        
+        // Atualizar a referência para o novo arquivo
+        newestFile.file = newFilename;
+        newestFile.path = newFilePath;
+        newestFile.timestamp = timestamp;
+      }
+      
+      // Remover os arquivos mais antigos
+      for (let i = 1; i < fileInfos.length; i++) {
+        console.log(`🧹 LIMPEZA: Removendo arquivo antigo: ${fileInfos[i].file}`);
+        fs.unlinkSync(fileInfos[i].path);
+      }
+    }
+    
+    // Garantir que o arquivo tenha conteúdo válido
+    if (newestFile.size === 0) {
+      console.log(`🧹 LIMPEZA: Arquivo vazio detectado (${newestFile.file}), removendo...`);
+      fs.unlinkSync(newestFile.path);
+      return null;
+    }
+    
+    console.log(`🧹 LIMPEZA: Arquivo final de ${tipo}: ${newestFile.file} (${formatBytes(newestFile.size)})`);
+    
+    // Retornar informações do arquivo mais recente
+    return {
+      filename: newestFile.file,
+      path: newestFile.path,
+      size: newestFile.size,
+      timestamp: newestFile.timestamp,
+      dbPath: `uploads/users/${userEmail.replace(/@/g, '_at_').replace(/\./g, '_')}/${newestFile.file}`
+    };
+    
+  } catch (error) {
+    console.error(`🔴 LIMPEZA: Erro ao migrar/limpar arquivos ${tipo}:`, error);
+    return null;
+  }
+};
+
+// Função auxiliar para formatar bytes
+const formatBytes = (bytes, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+
+
 const uploadImagemPerfil = async (req, res) => {
   try {
-    console.log('Iniciando upload de imagem de perfil');
-
+    // 1. Verificar se a imagem foi enviada
     if (!req.file) {
-      console.log('Nenhuma imagem enviada');
-      return res.status(400).json({ message: "Nenhuma imagem enviada" });
+      return res.status(400).json({ success: false, message: "Nenhuma imagem enviada" });
     }
 
+    // 2. Verificar se o usuário existe
     const userId = req.user.id_utilizador;
-    console.log('ID do usuário:', userId);
+    const userEmail = req.user.email;
+    
+    if (!userId || !userEmail) {
+      return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
+    }
 
-    // Usar a função auxiliar para preparar a pasta
-    let userInfo;
-    try {
-      userInfo = await prepararPastaUsuario(userId);
-    } catch (error) {
-      // Remover arquivo temporário
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+    // 3. Buscar o usuário para garantir que existe
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Usuário não encontrado" });
+    }
+
+    // 4. Preparar o diretório e caminho do arquivo
+    const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+    
+    // Garantir que o diretório exista
+    uploadUtils.ensureDir(userDir);
+    
+    // Nome fixo do arquivo (sem timestamp)
+    const fileName = `${userEmail}_AVATAR.png`;
+    const filePath = path.join(userDir, fileName);
+    
+    // Caminho relativo para o banco de dados
+    const dbPath = `uploads/users/${userSlug}/${fileName}`;
+
+    // 5. Remover qualquer arquivo existente com mesmo nome base
+    const files = fs.readdirSync(userDir);
+    files.forEach(file => {
+      // Encontrar TODOS os arquivos que correspondem ao padrão email_AVATAR*.png
+      if (file.startsWith(`${userEmail}_AVATAR`) && file.endsWith('.png')) {
+        const oldFilePath = path.join(userDir, file);
+        try {
+          fs.unlinkSync(oldFilePath);
+          console.log(`Arquivo antigo removido: ${oldFilePath}`);
+        } catch (err) {
+          console.error(`Erro ao remover arquivo antigo: ${oldFilePath}`, err);
+        }
       }
-      return res.status(404).json({ message: error.message });
+    });
+
+    // 6. Mover o arquivo temporário para o destino final
+    fs.copyFileSync(req.file.path, filePath);
+    
+    // Remover o arquivo temporário
+    if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
     }
 
-    // Criar o nome do arquivo final
-    const finalFilename = `${userInfo.user.email}_AVATAR.png`;
-    const tempPath = req.file.path;
-    const finalPath = path.join(userInfo.userDir, finalFilename);
+    // 7. Atualizar o caminho no banco de dados
+    await User.update(
+      { foto_perfil: dbPath },
+      { where: { id_utilizador: userId } }
+    );
 
-    console.log('Arquivo temporário:', tempPath);
-    console.log('Arquivo final:', finalPath);
-
-    // Remover arquivo existente se houver
-    if (fs.existsSync(finalPath)) {
-      console.log('Removendo arquivo existente');
-      fs.unlinkSync(finalPath);
-    }
-
-    // Mover o arquivo para o diretório do usuário
-    const movido = uploadUtils.moverArquivo(tempPath, finalPath);
-    if (!movido) {
-      return res.status(500).json({ message: "Erro ao mover o arquivo de imagem" });
-    }
-
-    // Caminho relativo para salvar no banco de dados
-    const dbPath = `${userInfo.dbPathBase}/${finalFilename}`;
-
-    // Atualizar o banco de dados
-    console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
-    try {
-      const updateResult = await User.update(
-        { foto_perfil: dbPath },
-        { where: { id_utilizador: userId } }
-      );
-      console.log('Resultado da atualização:', updateResult);
-    } catch (dbError) {
-      console.error('Erro ao atualizar banco de dados:', dbError);
-      throw dbError;
-    }
-
-    res.json({
+    // 8. Responder com sucesso
+    return res.status(200).json({
+      success: true,
       message: "Imagem de perfil atualizada com sucesso",
       path: dbPath
     });
+    
   } catch (error) {
-    console.error("Erro ao fazer upload de imagem de perfil:", error);
-    res.status(500).json({ message: "Erro ao processar imagem" });
+    console.error("Erro ao processar upload de imagem de perfil:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao processar a imagem de perfil",
+      error: error.message
+    });
   }
 };
 
+/**
+ * Upload de imagem de capa - versão simplificada com nome fixo
+ */
 const uploadImagemCapa = async (req, res) => {
   try {
-    console.log('Iniciando upload de imagem de capa');
-
+    // 1. Verificar se a imagem foi enviada
     if (!req.file) {
-      console.log('Nenhuma imagem enviada');
-      return res.status(400).json({ message: "Nenhuma imagem enviada" });
+      return res.status(400).json({ success: false, message: "Nenhuma imagem enviada" });
     }
 
+    // 2. Verificar se o usuário existe
     const userId = req.user.id_utilizador;
-    console.log('ID do usuário:', userId);
+    const userEmail = req.user.email;
+    
+    if (!userId || !userEmail) {
+      return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
+    }
 
-    // Usar a função auxiliar para preparar a pasta
-    let userInfo;
-    try {
-      userInfo = await prepararPastaUsuario(userId);
-    } catch (error) {
-      // Remover arquivo temporário
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+    // 3. Buscar o usuário para garantir que existe
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Usuário não encontrado" });
+    }
+
+    // 4. Preparar o diretório e caminho do arquivo
+    const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+    
+    // Garantir que o diretório exista
+    uploadUtils.ensureDir(userDir);
+    
+    // Nome fixo do arquivo (sem timestamp)
+    const fileName = `${userEmail}_CAPA.png`;
+    const filePath = path.join(userDir, fileName);
+    
+    // Caminho relativo para o banco de dados
+    const dbPath = `uploads/users/${userSlug}/${fileName}`;
+
+    // 5. Remover qualquer arquivo existente com mesmo nome base
+    const files = fs.readdirSync(userDir);
+    files.forEach(file => {
+      // Encontrar TODOS os arquivos que correspondem ao padrão email_CAPA*.png
+      if (file.startsWith(`${userEmail}_CAPA`) && file.endsWith('.png')) {
+        const oldFilePath = path.join(userDir, file);
+        try {
+          fs.unlinkSync(oldFilePath);
+          console.log(`Arquivo antigo removido: ${oldFilePath}`);
+        } catch (err) {
+          console.error(`Erro ao remover arquivo antigo: ${oldFilePath}`, err);
+        }
       }
-      return res.status(404).json({ message: error.message });
+    });
+
+    // 6. Mover o arquivo temporário para o destino final
+    fs.copyFileSync(req.file.path, filePath);
+    
+    // Remover o arquivo temporário
+    if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
     }
 
-    // Criar o nome do arquivo final
-    const finalFilename = `${userInfo.user.email}_CAPA.png`;
-    const tempPath = req.file.path;
-    const finalPath = path.join(userInfo.userDir, finalFilename);
+    // 7. Atualizar o caminho no banco de dados
+    await User.update(
+      { foto_capa: dbPath },
+      { where: { id_utilizador: userId } }
+    );
 
-    console.log('Arquivo temporário:', tempPath);
-    console.log('Arquivo final:', finalPath);
-
-    // Remover arquivo existente se houver
-    if (fs.existsSync(finalPath)) {
-      console.log('Removendo arquivo existente');
-      fs.unlinkSync(finalPath);
-    }
-
-    // Mover o arquivo para o diretório do usuário
-    const movido = uploadUtils.moverArquivo(tempPath, finalPath);
-    if (!movido) {
-      return res.status(500).json({ message: "Erro ao mover o arquivo de imagem" });
-    }
-
-    // Caminho relativo para salvar no banco de dados
-    const dbPath = `${userInfo.dbPathBase}/${finalFilename}`;
-
-    // Atualizar o banco de dados
-    console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
-    try {
-      const updateResult = await User.update(
-        { foto_capa: dbPath },
-        { where: { id_utilizador: userId } }
-      );
-      console.log('Resultado da atualização:', updateResult);
-    } catch (dbError) {
-      console.error('Erro ao atualizar banco de dados:', dbError);
-      throw dbError;
-    }
-
-    res.json({
+    // 8. Responder com sucesso
+    return res.status(200).json({
+      success: true,
       message: "Imagem de capa atualizada com sucesso",
       path: dbPath
     });
+    
   } catch (error) {
-    console.error("Erro ao fazer upload de imagem de capa:", error);
-    res.status(500).json({ message: "Erro ao processar imagem" });
+    console.error("Erro ao processar upload de imagem de capa:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao processar a imagem de capa",
+      error: error.message
+    });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
