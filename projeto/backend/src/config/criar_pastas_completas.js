@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS);
+// Adiciona um valor padrão 'uploads' caso a variável de ambiente não esteja definida
+const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS || 'uploads');
 
 function apagarDiretorio(diretorio) {
   if (fs.existsSync(diretorio)) {
@@ -22,6 +23,7 @@ function apagarDiretorio(diretorio) {
 
 function criarPastasCompletas() {
   console.log("\n===== APAGANDO E RECRIANDO ESTRUTURA DE DIRETÓRIOS =====");
+  console.log(`Diretório base: ${BASE_UPLOAD_DIR}`);
 
   const directories = [
     path.join(BASE_UPLOAD_DIR, 'cursos'),
@@ -32,7 +34,7 @@ function criarPastasCompletas() {
 
   if (!fs.existsSync(BASE_UPLOAD_DIR)) {
     fs.mkdirSync(BASE_UPLOAD_DIR, { recursive: true });
-    console.log(`✅ Diretório base criado: uploads`);
+    console.log(`✅ Diretório base criado: ${BASE_UPLOAD_DIR}`);
   }
 
   directories.forEach(dir => {
@@ -65,6 +67,7 @@ function criarPastasCompletas() {
   }
 
   console.log("\n🎉 Estrutura de diretórios recriada com sucesso!");
+  return true;
 }
 
 if (require.main === module) {

@@ -5,6 +5,8 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FormadorModal from '../components/formadorModal';
+import CategoriaModal from '../components/categoriaModal';
+import AreaModal from '../components/areaModal';
 import imagePreview from '../images/user.png';
 
 function CriarUser() {
@@ -13,6 +15,7 @@ function CriarUser() {
 
   const [modalAberto, setModalAberto] = useState(false);
   const [users, setUsers] = useState([]);
+  const [categorias, setCategorias] = useState([]);
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -132,11 +135,11 @@ function CriarUser() {
           <button type="submit">Criar Conta</button>
         </div>
       </form>
-      <FormadorModal
+      <CategoriaModal
         isOpen={modalAberto}
         onClose={() => setModalAberto(false)}
-        setFormador={(id) => setFormData({ ...formData, id_formador: id })}
-        users={users}
+        setCategoria={(id) => setFormData({ ...formData, idcategoria: id })}
+        categorias={categorias}
       />
 
       {message && <p>{message}</p>}

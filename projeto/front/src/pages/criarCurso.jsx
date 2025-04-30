@@ -20,6 +20,7 @@ const CriarCurso = () => {
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -29,14 +30,17 @@ const CriarCurso = () => {
     vagas: '',
     data_inicio: '',
     data_fim: '',
-    id_formador: '', // Mudado para id_formador para corresponder ao backend
+    id_formador: '',
     id_area: '',
     id_categoria: '',
     imagem: null,
   });
 
   useEffect(() => {
-    // Carregar formadores - usar rota correta
+    // Definir loading state
+    setIsLoading(true);
+    
+    // Carregar formadores
     axios.get(`${API_BASE}/users/formadores`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -74,19 +78,55 @@ const CriarCurso = () => {
     })
       .then(res => {
         console.log("Áreas carregadas:", res.data);
+        
+        // Verificar a estrutura dos dados para debugging
+        if (res.data && res.data.length > 0) {
+          console.log("Exemplo de área:", res.data[0]);
+          console.log("Propriedades da área:", Object.keys(res.data[0]));
+        }
+        
         setAreas(res.data);
+        setIsLoading(false);
       })
       .catch(err => {
         console.error("Erro ao carregar áreas:", err);
         toast.error("Erro ao carregar áreas");
+        setIsLoading(false);
       });
   }, []);
+
+  // Função para verificar os diferentes campos possíveis de id_categoria
+  const getCategoriaId = (area) => {
+    // Tentar diferentes formatos de propriedade
+    if (area.id_categoria !== undefined) return area.id_categoria;
+    if (area.categoria_id !== undefined) return area.categoria_id;
+    if (area.idCategoria !== undefined) return area.idCategoria;
+    if (area.categoriaId !== undefined) return area.categoriaId;
+    
+    // Se não encontrar, procurar qualquer chave que contenha "categoria" e "id"
+    const categoriaKey = Object.keys(area).find(k => 
+      k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
+    );
+    
+    return categoriaKey ? area[categoriaKey] : null;
+  };
 
   // Filtrar áreas com base na categoria selecionada
   useEffect(() => {
     if (formData.id_categoria) {
-      const areasFiltered = areas.filter(area => area.id_categoria == formData.id_categoria);
+      // Converter para string para garantir comparação consistente
+      const categoriaId = String(formData.id_categoria);
+      
+      // Filtragem mais flexível para lidar com diferentes estruturas de dados
+      const areasFiltered = areas.filter(area => {
+        const areaCategoriaId = getCategoriaId(area);
+        return areaCategoriaId !== null && String(areaCategoriaId) === categoriaId;
+      });
+      
+      console.log("Categoria selecionada:", categoriaId);
+      console.log("Áreas filtradas:", areasFiltered);
       setAreasFiltradas(areasFiltered);
+      
       // Limpar área selecionada se a categoria mudar
       setFormData(prev => ({ ...prev, id_area: '' }));
     } else {
@@ -117,6 +157,10 @@ const CriarCurso = () => {
       } else {
         setFormData({ ...formData, [name]: value });
       }
+    } else if (name === 'id_categoria') {
+      // Quando a categoria muda, limpar o campo de área e atualizar a categoria
+      console.log("Categoria alterada para:", value);
+      setFormData({ ...formData, [name]: value, id_area: '' });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -128,12 +172,41 @@ const CriarCurso = () => {
     console.log(`Formador ${formadorId ? 'selecionado' : 'removido'}: ${formadorId}`);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const validateForm = () => {
+    // Validar datas
+    const dataInicio = new Date(formData.data_inicio);
+    const dataFim = new Date(formData.data_fim);
+    const hoje = new Date();
+    
+    if (dataInicio < hoje) {
+      toast.error("A data de início não pode ser anterior à data atual");
+      return false;
+    }
+    
+    if (dataFim <= dataInicio) {
+      toast.error("A data de fim deve ser posterior à data de início");
+      return false;
+    }
+    
     // Validar formador para cursos síncronos
     if (formData.tipo === 'sincrono' && !formData.id_formador) {
       toast.error("Selecione um formador para o curso síncrono");
+      return false;
+    }
+    
+    // Validar número de vagas para cursos síncronos
+    if (formData.tipo === 'sincrono' && (!formData.vagas || parseInt(formData.vagas) <= 0)) {
+      toast.error("Defina um número válido de vagas para o curso síncrono");
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -144,15 +217,19 @@ const CriarCurso = () => {
       }
     }
 
+    setIsLoading(true);
     try {
       // Usar a variável API_BASE em vez de hardcoded URL
-      await axios.post(`${API_BASE}/cursos`, data, {
+      const response = await axios.post(`${API_BASE}/cursos`, data, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
       });
+      
       toast.success('Curso criado com sucesso!');
+      console.log("Resposta da API:", response.data);
+      
       // Limpar o formulário após envio bem-sucedido
       setFormData({
         nome: '',
@@ -167,9 +244,15 @@ const CriarCurso = () => {
         imagem: null,
       });
       setPreviewImage(null);
+      
+      // Opcional: redirecionar para a lista de cursos após sucesso
+      // navigate('/cursos');
     } catch (error) {
       console.error('Erro ao criar curso:', error);
-      toast.error('Erro ao criar curso: ' + (error.response?.data?.message || 'Erro desconhecido'));
+      const errorMessage = error.response?.data?.message || 'Erro desconhecido';
+      toast.error('Erro ao criar curso: ' + errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -177,16 +260,23 @@ const CriarCurso = () => {
   const getFormadorNome = () => {
     if (!formData.id_formador || !formadores.length) return null;
     
-    const formador = formadores.find(f => 
-      f.id_utilizador == formData.id_formador || f.id_user == formData.id_formador
-    );
+    const formador = formadores.find(f => {
+      // Verificar diferentes propriedades possíveis para o ID
+      const formadorId = f.id_utilizador || f.id_user || f.id || f.idUser || f.userId;
+      return String(formadorId) === String(formData.id_formador);
+    });
     
-    return formador ? formador.nome : `ID: ${formData.id_formador}`;
+    // Verificar diferentes propriedades possíveis para o nome
+    return formador ? (formador.nome || formador.name || formador.fullName || `ID: ${formData.id_formador}`) : `ID: ${formData.id_formador}`;
   };
 
-  
-
   const formadorNome = getFormadorNome();
+  
+  // Determinar a data mínima para os campos de data (hoje)
+  const getMinDate = () => {
+    const hoje = new Date();
+    return hoje.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  };
 
   return (
     <div className="form-container">
@@ -226,6 +316,7 @@ const CriarCurso = () => {
               value={formData.nome}
               onChange={handleChange}
               required
+              maxLength={100}
             />
             <select
               name="tipo"
@@ -259,14 +350,27 @@ const CriarCurso = () => {
               value={formData.id_area}
               onChange={handleChange}
               required
-              disabled={!formData.id_categoria}
+              disabled={!formData.id_categoria || isLoading}
             >
               <option value="">Selecione a Área</option>
-              {areasFiltradas.map(area => (
-                <option key={area.id_area} value={area.id_area}>
-                  {area.nome}
-                </option>
-              ))}
+              {isLoading ? (
+                <option value="" disabled>Carregando áreas...</option>
+              ) : areasFiltradas.length > 0 ? (
+                areasFiltradas.map(area => {
+                  // Obter ID da área de maneira flexível
+                  const areaId = area.id_area || area.id || area.idArea || area.area_id;
+                  // Obter nome da área de maneira flexível
+                  const areaNome = area.nome || area.name || area.descricao || area.description;
+                  
+                  return (
+                    <option key={areaId} value={areaId}>
+                      {areaNome}
+                    </option>
+                  );
+                })
+              ) : (
+                <option value="" disabled>Nenhuma área disponível para esta categoria</option>
+              )}
             </select>
           </div>
 
@@ -299,6 +403,7 @@ const CriarCurso = () => {
               onChange={handleChange}
               disabled={formData.tipo === 'assincrono'}
               required={formData.tipo === 'sincrono'}
+              min="1"
             />
           </div>
 
@@ -310,6 +415,7 @@ const CriarCurso = () => {
                 name="data_inicio"
                 value={formData.data_inicio}
                 onChange={handleChange}
+                min={getMinDate()}
                 required
               />
             </div>
@@ -321,6 +427,7 @@ const CriarCurso = () => {
                 name="data_fim"
                 value={formData.data_fim}
                 onChange={handleChange}
+                min={formData.data_inicio || getMinDate()}
                 required
               />
             </div>
@@ -332,9 +439,17 @@ const CriarCurso = () => {
             value={formData.descricao}
             onChange={handleChange}
             rows="4"
+            maxLength={500}
+            required
           ></textarea>
 
-          <button type="submit" className="submit-button">Criar Curso</button>
+          <button 
+            type="submit" 
+            className="submit-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Criando...' : 'Criar Curso'}
+          </button>
         </div>
       </form>
 
