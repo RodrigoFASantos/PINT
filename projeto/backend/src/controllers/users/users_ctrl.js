@@ -3,10 +3,14 @@ const jwt = require("jsonwebtoken");
 const User = require("../../database/models/User.js");
 const User_Pendente = require("../../database/models/User_Pendente.js");
 const Cargo = require("../../database/models/Cargo");
-const { sendRegistrationEmail } = require("../../utils/emailService"); //email
+const { sendRegistrationEmail } = require("../../utils/emailService");
 const fs = require("fs");
 const path = require("path");
 const uploadUtils = require("../../middleware/upload");
+
+/**
+ * FUNÇÕES AUXILIARES
+ */
 
 /**
  * Função para verificar email e enviar confirmação
@@ -73,9 +77,83 @@ const verifyAndSendEmail = async (userData) => {
   }
 };
 
+const prepararPastaUsuario = async (userId) => {
+  try {
+    // Buscar informações do usuário
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.email) {
+      throw new Error("Usuário não encontrado ou sem email");
+    }
+
+    // Criar slug do usuário baseado no email
+    const userSlug = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+
+    // Garantir que o diretório exista
+    uploadUtils.ensureDir(userDir);
+
+    // Retornar informações úteis
+    return {
+      user,
+      userSlug,
+      userDir,
+      dbPathBase: `uploads/users/${userSlug}`
+    };
+  } catch (error) {
+    console.error("Erro ao preparar pasta do usuário:", error);
+    throw error;
+  }
+};
+
+const initDefaultUserImages = () => {
+  try {
+    // Garantir que o diretório base exista
+    const usersDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users');
+    uploadUtils.ensureDir(usersDir);
+
+    // Caminhos para os arquivos padrão
+    const avatarPath = path.join(usersDir, 'AVATAR.png');
+    const capaPath = path.join(usersDir, 'CAPA.png');
+
+    // Verificar se os arquivos padrão já existem
+    if (!fs.existsSync(avatarPath) || !fs.existsSync(capaPath)) {
+      console.log('Criando arquivos de imagem padrão para usuários...');
+
+      // Se os arquivos não existirem, pode usar um método para criá-los
+      // Isso pode envolver copiar de uma pasta de recursos ou criar imagens padrão
+
+      // Exemplo: Se as imagens estiverem em uma pasta 'resources'
+      const resourcesDir = path.join(__dirname, '../../resources');
+
+      if (fs.existsSync(path.join(resourcesDir, 'AVATAR.png')) &&
+        fs.existsSync(path.join(resourcesDir, 'CAPA.png'))) {
+
+        fs.copyFileSync(
+          path.join(resourcesDir, 'AVATAR.png'),
+          avatarPath
+        );
+
+        fs.copyFileSync(
+          path.join(resourcesDir, 'CAPA.png'),
+          capaPath
+        );
+
+        console.log('Imagens padrão copiadas com sucesso.');
+      } else {
+        console.warn('Arquivos de imagem padrão não encontrados em resources!');
+        // Aqui você poderia criar imagens em branco ou usar outra estratégia
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao inicializar imagens padrão:', error);
+  }
+};
+
 /**
- * Função para criar um registro de usuário pendente
+ * FUNÇÕES DE REGISTRO E AUTENTICAÇÃO
  */
+
 const createUser = async (req, res) => {
   try {
     const { id_cargo, nome, idade, email, telefone, password } = req.body;
@@ -153,9 +231,6 @@ const createUser = async (req, res) => {
   }
 };
 
-/**
- * Função para confirmar conta e criar usuário definitivo
- */
 const confirmAccount = async (req, res) => {
   try {
     const { token } = req.body;
@@ -203,6 +278,53 @@ const confirmAccount = async (req, res) => {
       foto_capa: "CAPA.png"
     });
 
+    // Criar pasta do usuário após confirmar a conta
+    try {
+      // Criar diretório do usuário baseado no email
+      const userSlug = pendingUser.email.replace(/@/g, '_at_').replace(/\./g, '_');
+      const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
+
+      // Garantir que o diretório exista
+      uploadUtils.ensureDir(userDir);
+
+      console.log(`Diretório do usuário criado em: ${userDir}`);
+
+      // Copiar imagens padrão para a pasta do usuário, se necessário
+      const avatarSource = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', 'AVATAR.png');
+      const capaSource = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', 'CAPA.png');
+
+      const avatarDest = path.join(userDir, `${pendingUser.email}_AVATAR.png`);
+      const capaDest = path.join(userDir, `${pendingUser.email}_CAPA.png`);
+
+      // Verificar se as imagens padrão existem e copiá-las
+      if (fs.existsSync(avatarSource)) {
+        fs.copyFileSync(avatarSource, avatarDest);
+        console.log(`Avatar padrão copiado para ${avatarDest}`);
+      }
+
+      if (fs.existsSync(capaSource)) {
+        fs.copyFileSync(capaSource, capaDest);
+        console.log(`Capa padrão copiada para ${capaDest}`);
+      }
+
+      // Atualizar os caminhos das imagens no banco de dados
+      const dbPathAvatar = `uploads/users/${userSlug}/${pendingUser.email}_AVATAR.png`;
+      const dbPathCapa = `uploads/users/${userSlug}/${pendingUser.email}_CAPA.png`;
+
+      await User.update(
+        {
+          foto_perfil: dbPathAvatar,
+          foto_capa: dbPathCapa
+        },
+        { where: { id_utilizador: newUser.id_utilizador } }
+      );
+
+      console.log('Caminhos das imagens atualizados no banco de dados');
+    } catch (dirError) {
+      console.error("Erro ao criar diretório do usuário:", dirError);
+      // Não interromper o processo se a criação da pasta falhar
+    }
+
     // Remover o registro pendente
     await pendingUser.destroy();
 
@@ -232,42 +354,6 @@ const confirmAccount = async (req, res) => {
   }
 };
 
-const getAllUsers = async (req, res) => {
-  try {
-    const users = await User.findAll();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar utilizadores" });
-  }
-};
-
-const getFormadores = async (req, res) => {
-  try {
-    const users = await User.findAll({ where: { id_cargo: 2 } });
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar formadores" });
-  }
-};
-
-const getFormandos = async (req, res) => {
-  try {
-    const users = await User.findAll({ where: { id_cargo: 3 } });
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar formandos" });
-  }
-};
-
-const getGestores = async (req, res) => {
-  try {
-    const users = await User.findAll({ where: { id_cargo: 1 } });
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar gestores" });
-  }
-};
-
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -282,14 +368,16 @@ const loginUser = async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
+    // MODIFICAÇÃO: Incluir o email do usuário no token
     const token = jwt.sign(
       {
         id_utilizador: user.id_utilizador,
         nome: user.nome,
+        email: user.email, // ADICIONADO: incluir email no token
         id_cargo: user.cargo?.id_cargo,
         cargo: user.cargo?.descricao || null
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'segredo', // Usa o segredo padrão se não estiver definido
       { expiresIn: "1h" }
     );
 
@@ -297,6 +385,7 @@ const loginUser = async (req, res) => {
       token,
       id_utilizador: user.id_utilizador,
       nome: user.nome,
+      email: user.email, // ADICIONADO: incluir email na resposta
       id_cargo: user.cargo?.id_cargo,
       cargo: user.cargo?.descricao || null,
       primeiro_login: user.primeiro_login
@@ -322,7 +411,6 @@ const verifyToken = (req, res) => {
   }
 };
 
-// Função para reenviar email de confirmação
 const resendConfirmation = async (req, res) => {
   try {
     const { email } = req.body;
@@ -386,7 +474,69 @@ const resendConfirmation = async (req, res) => {
   }
 };
 
-// Função para alterar senha
+/**
+ * FUNÇÕES DE GESTÃO DE PERFIL
+ */
+
+const perfilUser = async (req, res) => {
+  try {
+    console.log('Usuário autenticado:', req.user);
+
+    const userId = req.user.id_utilizador;
+    console.log('ID do usuário:', userId);
+
+    const user = await User.findByPk(userId, {
+      include: [{ model: Cargo, as: 'cargo' }]
+    });
+
+    console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+
+    if (!user) {
+      console.log('Usuário não encontrado');
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    // Adicionar imagem default se não existir
+    if (!user.foto_perfil) {
+      console.log('Definindo foto de perfil padrão');
+      user.foto_perfil = "AVATAR.png";
+    }
+    if (!user.foto_capa) {
+      console.log('Definindo foto de capa padrão');
+      user.foto_capa = "CAPA.png";
+    }
+
+    console.log('Perfil recuperado com sucesso');
+    res.json(user);
+  } catch (error) {
+    console.error("Erro ao obter o perfil:", error);
+    res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
+  }
+};
+
+const updatePerfilUser = async (req, res) => {
+  try {
+    const userId = req.user.id_utilizador;
+    const { nome, email, telefone, idade } = req.body;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    await User.update(
+      { nome, email, telefone, idade },
+      { where: { id_utilizador: userId } }
+    );
+
+    const updatedUser = await User.findByPk(userId);
+    res.json(updatedUser);
+  } catch (error) {
+    console.error("Erro ao atualizar perfil:", error);
+    res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
+  }
+};
+
 const changePassword = async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -454,99 +604,37 @@ const changePassword = async (req, res) => {
   }
 };
 
-const perfilUser = async (req, res) => {
-  try {
-    console.log('Usuário autenticado:', req.user);
-
-    const userId = req.user.id_utilizador;
-    console.log('ID do usuário:', userId);
-
-    const user = await User.findByPk(userId, {
-      include: [{ model: Cargo, as: 'cargo' }]
-    });
-
-    console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
-
-    if (!user) {
-      console.log('Usuário não encontrado');
-      return res.status(404).json({ message: "Utilizador não encontrado" });
-    }
-
-    // Adicionar imagem default se não existir
-    if (!user.foto_perfil) {
-      console.log('Definindo foto de perfil padrão');
-      user.foto_perfil = "AVATAR.png";
-    }
-    if (!user.foto_capa) {
-      console.log('Definindo foto de capa padrão');
-      user.foto_capa = "CAPA.png";
-    }
-
-    console.log('Perfil recuperado com sucesso');
-    res.json(user);
-  } catch (error) {
-    console.error("Erro ao obter o perfil:", error);
-    res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
-  }
-};
-
-const updatePerfilUser = async (req, res) => {
-  try {
-    const userId = req.user.id_utilizador;
-    const { nome, email, telefone, idade } = req.body;
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Utilizador não encontrado" });
-    }
-
-    await User.update(
-      { nome, email, telefone, idade },
-      { where: { id_utilizador: userId } }
-    );
-
-    const updatedUser = await User.findByPk(userId);
-    res.json(updatedUser);
-  } catch (error) {
-    console.error("Erro ao atualizar perfil:", error);
-    res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
-  }
-};
-
-// Funções de upload de imagens
+/**
+ * FUNÇÕES DE UPLOAD DE IMAGENS
+ */
 const uploadImagemPerfil = async (req, res) => {
   try {
     console.log('Iniciando upload de imagem de perfil');
+
     if (!req.file) {
       console.log('Nenhuma imagem enviada');
       return res.status(400).json({ message: "Nenhuma imagem enviada" });
     }
 
-    // Buscar informações do usuário
     const userId = req.user.id_utilizador;
     console.log('ID do usuário:', userId);
-    const user = await User.findByPk(userId);
 
-    if (!user || !user.email) {
-      console.log('Usuário não encontrado ou sem email');
+    // Usar a função auxiliar para preparar a pasta
+    let userInfo;
+    try {
+      userInfo = await prepararPastaUsuario(userId);
+    } catch (error) {
       // Remover arquivo temporário
       if (fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
-      return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
+      return res.status(404).json({ message: error.message });
     }
 
-    console.log('Email do usuário:', user.email);
-
-    // Criar diretório do usuário
-    const userSlug = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
-    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
-    uploadUtils.ensureDir(userDir);
-
     // Criar o nome do arquivo final
-    const finalFilename = `${user.email}_AVATAR.png`;
+    const finalFilename = `${userInfo.user.email}_AVATAR.png`;
     const tempPath = req.file.path;
-    const finalPath = path.join(userDir, finalFilename);
+    const finalPath = path.join(userInfo.userDir, finalFilename);
 
     console.log('Arquivo temporário:', tempPath);
     console.log('Arquivo final:', finalPath);
@@ -564,7 +652,7 @@ const uploadImagemPerfil = async (req, res) => {
     }
 
     // Caminho relativo para salvar no banco de dados
-    const dbPath = `uploads/users/${userSlug}/${finalFilename}`;
+    const dbPath = `${userInfo.dbPathBase}/${finalFilename}`;
 
     // Atualizar o banco de dados
     console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
@@ -579,10 +667,6 @@ const uploadImagemPerfil = async (req, res) => {
       throw dbError;
     }
 
-    // Verificar se a atualização foi bem-sucedida
-    const updatedUser = await User.findByPk(userId);
-    console.log('Campo foto_perfil após atualização:', updatedUser.foto_perfil);
-
     res.json({
       message: "Imagem de perfil atualizada com sucesso",
       path: dbPath
@@ -596,36 +680,31 @@ const uploadImagemPerfil = async (req, res) => {
 const uploadImagemCapa = async (req, res) => {
   try {
     console.log('Iniciando upload de imagem de capa');
+
     if (!req.file) {
       console.log('Nenhuma imagem enviada');
       return res.status(400).json({ message: "Nenhuma imagem enviada" });
     }
 
-    // Buscar informações do usuário
     const userId = req.user.id_utilizador;
     console.log('ID do usuário:', userId);
-    const user = await User.findByPk(userId);
 
-    if (!user || !user.email) {
-      console.log('Usuário não encontrado ou sem email');
+    // Usar a função auxiliar para preparar a pasta
+    let userInfo;
+    try {
+      userInfo = await prepararPastaUsuario(userId);
+    } catch (error) {
       // Remover arquivo temporário
       if (fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
-      return res.status(404).json({ message: "Usuário não encontrado ou sem email" });
+      return res.status(404).json({ message: error.message });
     }
 
-    console.log('Email do usuário:', user.email);
-
-    // Criar diretório do usuário
-    const userSlug = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
-    const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
-    uploadUtils.ensureDir(userDir);
-
     // Criar o nome do arquivo final
-    const finalFilename = `${user.email}_CAPA.png`;
+    const finalFilename = `${userInfo.user.email}_CAPA.png`;
     const tempPath = req.file.path;
-    const finalPath = path.join(userDir, finalFilename);
+    const finalPath = path.join(userInfo.userDir, finalFilename);
 
     console.log('Arquivo temporário:', tempPath);
     console.log('Arquivo final:', finalPath);
@@ -643,7 +722,7 @@ const uploadImagemCapa = async (req, res) => {
     }
 
     // Caminho relativo para salvar no banco de dados
-    const dbPath = `uploads/users/${userSlug}/${finalFilename}`;
+    const dbPath = `${userInfo.dbPathBase}/${finalFilename}`;
 
     // Atualizar o banco de dados
     console.log('Atualizando banco de dados com nome do arquivo:', dbPath);
@@ -658,10 +737,6 @@ const uploadImagemCapa = async (req, res) => {
       throw dbError;
     }
 
-    // Verificar se a atualização foi bem-sucedida
-    const updatedUser = await User.findByPk(userId);
-    console.log('Campo foto_capa após atualização:', updatedUser.foto_capa);
-
     res.json({
       message: "Imagem de capa atualizada com sucesso",
       path: dbPath
@@ -673,19 +748,69 @@ const uploadImagemCapa = async (req, res) => {
 };
 
 
+
+
+/**
+ * FUNÇÕES DE CONSULTA DE USUÁRIOS
+ */
+
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar utilizadores" });
+  }
+};
+
+const getFormadores = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 2 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar formadores" });
+  }
+};
+
+const getFormandos = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 3 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar formandos" });
+  }
+};
+
+const getGestores = async (req, res) => {
+  try {
+    const users = await User.findAll({ where: { id_cargo: 1 } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar gestores" });
+  }
+};
+
+
+
 module.exports = {
+
   getAllUsers,
-  verifyToken,
   getFormadores,
   getFormandos,
   getGestores,
+
   createUser,
   loginUser,
   confirmAccount,
   resendConfirmation,
+  verifyToken,
+
   perfilUser,
   changePassword,
   updatePerfilUser,
+
   uploadImagemPerfil,
-  uploadImagemCapa
+  uploadImagemCapa,
+
+  initDefaultUserImages
 };

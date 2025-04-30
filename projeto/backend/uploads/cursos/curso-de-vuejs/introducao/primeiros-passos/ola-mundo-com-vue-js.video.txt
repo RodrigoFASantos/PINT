@@ -1,3 +1,0 @@
-Este é um placeholder para o vídeo: Olá Mundo com Vue.js
-URL: https://www.youtube.com/watch?v=exemplo-hello-world
-Substitua este arquivo por um vídeo real ou mantenha a URL.

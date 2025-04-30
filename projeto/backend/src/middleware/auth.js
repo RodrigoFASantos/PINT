@@ -34,5 +34,7 @@ function verificarToken(req, res, next) {
   });
 }
 
+
+
 // Exporta apenas a função verificarToken
 module.exports = verificarToken;

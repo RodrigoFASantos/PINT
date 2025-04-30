@@ -52,7 +52,7 @@ const PerfilUser = () => {
       } else {
         setAvatarPreview(IMAGES.USER_AVATAR(response.data.email));
       }
-      
+
       if (response.data.foto_capa === 'CAPA.png') {
         setCapaPreview(IMAGES.DEFAULT_CAPA);
       } else {
@@ -76,13 +76,13 @@ const PerfilUser = () => {
 
   // Modificado para prevenir o comportamento padrão do evento
   const handleEditToggle = (e) => {
-    // IMPORTANTE: Prevenir o comportamento padrão do evento
+
     e.preventDefault();
-    
+
     console.log("Botão de edição clicado. Estado atual de isEditing:", isEditing);
-    
+
     setIsEditing(!isEditing);
-    
+
     // Se estiver cancelando a edição, restaurar os dados originais
     if (isEditing && userInfo) {
       setFormData({
@@ -99,51 +99,68 @@ const PerfilUser = () => {
 
   const handleAvatarUpload = async (file) => {
     if (!file) return null;
-    
+
     const formData = new FormData();
     formData.append('imagem', file);
-    
+
+
+    if (userInfo && userInfo.email) {
+      formData.append('email', userInfo.email);
+      console.log('Email adicionado ao FormData:', userInfo.email);
+    }
+
     try {
       setIsUploading(true);
       const token = localStorage.getItem('token');
+      console.log('Enviando upload de avatar com token:', token ? 'Presente' : 'Ausente');
+
       const response = await axios.post(`${API_BASE}/users/img/perfil`, formData, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
+
       setIsUploading(false);
       return response.data;
     } catch (error) {
       setIsUploading(false);
-      console.error('Erro ao fazer upload do avatar:', error);
-      toast.error('Falha ao enviar imagem de perfil');
+      console.error('Erro ao fazer upload do avatar:', error.response || error);
+      toast.error('Falha ao enviar imagem de perfil: ' + (error.response?.data?.message || error.message));
       return null;
     }
   };
 
   const handleCapaUpload = async (file) => {
     if (!file) return null;
-    
+
     const formData = new FormData();
     formData.append('imagem', file);
-    formData.append('tipo', 'capa');
-    
+
+
+    if (userInfo && userInfo.email) {
+      formData.append('email', userInfo.email);
+      console.log('Email adicionado ao FormData:', userInfo.email);
+    }
+
     try {
       setIsUploading(true);
       const token = localStorage.getItem('token');
+      console.log('Enviando upload de capa com token:', token ? 'Presente' : 'Ausente');
+
       const response = await axios.post(`${API_BASE}/users/img/capa`, formData, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
+
       setIsUploading(false);
       return response.data;
     } catch (error) {
       setIsUploading(false);
-      console.error('Erro ao fazer upload da capa:', error);
-      toast.error('Falha ao enviar imagem de capa');
+      console.error('Erro ao fazer upload da capa:', error.response || error);
+      toast.error('Falha ao enviar imagem de capa: ' + (error.response?.data?.message || error.message));
       return null;
     }
   };
@@ -163,10 +180,10 @@ const PerfilUser = () => {
       if (response.status === 200) {
         toast.success('Perfil atualizado com sucesso!');
         setIsEditing(false);
-        
+
         // Recarregar dados do perfil
         await fetchUserProfile();
-        
+
         // Atualizar o contexto de autenticação se essa função existir
         if (typeof updateUserInfo === 'function') {
           updateUserInfo(userInfo);
@@ -211,18 +228,18 @@ const PerfilUser = () => {
       reader.readAsDataURL(file);
 
       // Toast de notificação
-      toast.info('Enviando imagem de perfil...', {autoClose: false, toastId: 'uploading-avatar'});
-      
+      toast.info('Enviando imagem de perfil...', { autoClose: false, toastId: 'uploading-avatar' });
+
       // Upload automático
       const result = await handleAvatarUpload(file);
-      
+
       if (result) {
         toast.update('uploading-avatar', {
           render: 'Imagem de perfil atualizada com sucesso!',
           type: 'success',
           autoClose: 3000
         });
-        
+
         // Recarrega o perfil para obter a URL atualizada
         await fetchUserProfile();
       } else {
@@ -254,18 +271,18 @@ const PerfilUser = () => {
       reader.readAsDataURL(file);
 
       // Toast de notificação
-      toast.info('Enviando imagem de capa...', {autoClose: false, toastId: 'uploading-capa'});
-      
+      toast.info('Enviando imagem de capa...', { autoClose: false, toastId: 'uploading-capa' });
+
       // Upload automático
       const result = await handleCapaUpload(file);
-      
+
       if (result) {
         toast.update('uploading-capa', {
           render: 'Imagem de capa atualizada com sucesso!',
           type: 'success',
           autoClose: 3000
         });
-        
+
         // Recarrega o perfil para obter a URL atualizada
         await fetchUserProfile();
       } else {
@@ -281,15 +298,15 @@ const PerfilUser = () => {
   const handleLogout = () => {
     // Remover token do localStorage
     localStorage.removeItem('token');
-    
+
     // Se estiver usando o contexto de autenticação, atualize-o
     if (typeof updateUserInfo === 'function') {
       updateUserInfo(null);
     }
-    
+
     // Exibir mensagem de sucesso
     toast.success('Sessão terminada com sucesso!');
-    
+
     // Redirecionar para a página de login após um breve delay
     setTimeout(() => {
       window.location.href = '/login';
@@ -434,16 +451,16 @@ const PerfilUser = () => {
                 </>
               ) : (
                 <>
-                  <button 
-                    type="button" 
-                    className="btn-edit" 
+                  <button
+                    type="button"
+                    className="btn-edit"
                     onClick={handleEditToggle}
                   >
                     Editar Perfil
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-edit" 
+                  <button
+                    type="button"
+                    className="btn-edit"
                     onClick={handleLogout}
                   >
                     Terminar Sessão
