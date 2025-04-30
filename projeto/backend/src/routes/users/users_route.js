@@ -33,7 +33,10 @@ router.post("/register", createUser);
 router.post("/login", loginUser);
 router.get("/perfil", verificarToken, perfilUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
-router.put("/users/change-password", changePassword);
+
+// Rota para mudança de senha - agora usando o middleware de autenticação adequado
+// e com um caminho mais direto
+router.put("/change-password", verificarToken, changePassword);
 
 // Rotas de confirmação de conta
 router.post("/confirm-account", confirmAccount);

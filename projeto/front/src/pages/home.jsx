@@ -7,7 +7,7 @@ import API_BASE from '../api';
 import axios from 'axios';
 import Cursos_Sugeridos from '../components/Cursos_Sugeridos';
 import fallbackCurso from '../images/default_image.png';
-import PasswordChangeModal from '../components/PasswordChangeModal'; // Importar o modal
+import Trocar_Senha_Modal from '../components/Trocar_Senha_Modal'; // Importar o modal
 
 export default function Home() {
   const navigate = useNavigate();
@@ -32,32 +32,68 @@ export default function Home() {
     "Aprender aqui é inovador"
   ];
 
-  // Verificar se é o primeiro login
+  // Verificar autenticação e redirecionar se não estiver autenticado
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        // Decodificar o token para obter as informações do usuário
-        const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        
-        // Verificar se há informações de primeiro login no localStorage
-        const primeiroLogin = localStorage.getItem('primeiroLogin');
-        setUserId(decodedToken.id_utilizador);
-        
-        // Se for o primeiro login, exibir o modal
-        if (primeiroLogin === '1') {
-          setShowPasswordModal(true);
-        }
-      } catch (error) {
-        console.error('Erro ao decodificar token:', error);
-      }
+    if (!token) {
+      console.log('Usuário não autenticado, redirecionando para login');
+      navigate('/login');
     }
+  }, [navigate]);
+
+  // Verificar se é o primeiro login
+  useEffect(() => {
+    const verificarPrimeiroLogin = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          console.log('Verificando primeiro login...');
+          
+          // Decodificar o token para obter as informações do usuário
+          const decodedToken = JSON.parse(atob(token.split('.')[1]));
+          setUserId(decodedToken.id_utilizador);
+          
+          // Verificar perfil do usuário para saber se é primeiro login
+          const config = {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          };
+          
+          const response = await axios.get(`${API_BASE}/users/perfil`, config);
+          console.log('Dados do perfil recebidos:', response.data);
+          
+          // Verificação mais robusta, aceitando tanto 1 como true ou '1'
+          const primeiroLogin = response.data.primeiro_login;
+          const isPrimeiroLogin = primeiroLogin === 1 || primeiroLogin === '1' || primeiroLogin === true;
+          
+          console.log('Valor de primeiro_login:', primeiroLogin, 'É primeiro login?', isPrimeiroLogin);
+          
+          if (isPrimeiroLogin) {
+            console.log('Primeiro login detectado, exibindo modal de troca de senha');
+            setShowPasswordModal(true);
+          } else {
+            console.log('Não é primeiro login, carregando inscrições');
+            buscarInscricoes();
+          }
+        } catch (error) {
+          console.error('Erro ao verificar perfil:', error);
+          // Mesmo com erro, tentamos buscar as inscrições
+          buscarInscricoes();
+        }
+      }
+    };
+    
+    verificarPrimeiroLogin();
   }, []);
 
   // Fechar o modal e atualizar o localStorage
   const handleClosePasswordModal = () => {
+    console.log('Modal de senha fechado, atualizando estado');
     setShowPasswordModal(false);
-    localStorage.setItem('primeiroLogin', '0');
+    
+    // Após fechar o modal, buscar inscrições
+    buscarInscricoes();
   };
 
   useEffect(() => {
@@ -142,6 +178,7 @@ export default function Home() {
       };
 
       const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, config);
+      console.log('Inscrições recebidas:', response.data);
       setInscricoes(response.data);
       setLoading(false);
       setRefreshCount(prev => prev + 1);
@@ -152,73 +189,17 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    const isFirstLoad = sessionStorage.getItem('homeVisited') !== 'true';
-    
-    if (isFirstLoad) {
-      console.log('Primeira visita à página Home - marcando como visitada');
-      sessionStorage.setItem('homeVisited', 'true');
-      
-      // Obter e armazenar a informação de primeiro login
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const config = {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          };
-          
-          axios.get(`${API_BASE}/users/perfil`, config)
-            .then(response => {
-              if (response.data && response.data.primeiro_login) {
-                localStorage.setItem('primeiroLogin', response.data.primeiro_login.toString());
-                // Se for primeiro login, recarregar para exibir o modal
-                window.location.reload();
-              }
-            })
-            .catch(error => {
-              console.error('Erro ao buscar perfil:', error);
-            });
-        } catch (error) {
-          console.error('Erro ao configurar requisição:', error);
-        }
-      }
-    } else {
-      console.log('Componente Home montado - já visitado anteriormente');
-      const needsRefresh = sessionStorage.getItem('needsRefresh');
-      if (needsRefresh === 'true') {
-        console.log('Flag needsRefresh detectada, removendo...');
-        sessionStorage.removeItem('needsRefresh');
-      }
-      buscarInscricoes();
-    }
-
-    return () => {
-      console.log('Componente Home desmontado');
-    };
-  }, []);
-
   const redirecionarParaDetalheCurso = (cursoId) => {
     console.log('Redirecionando para o curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
   };
-
-  const cursosSugeridos = [
-    { id: 1, nome: "React Avançado", formador: "João Silva" },
-    { id: 2, nome: "Node.js Essentials", formador: "Maria Costa" },
-    { id: 3, nome: "UI/UX Design", formador: "Ana Lopes" },
-    { id: 4, nome: "MongoDB Completo", formador: "Carlos Pinto" },
-    { id: 5, nome: "Python para Data Science", formador: "Sofia Martins" },
-    { id: 6, nome: "DevOps Básico", formador: "Rui Nogueira" },
-  ];
 
   return (
     <div className="home-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Modal de alteração de senha para primeiro login */}
-      <PasswordChangeModal 
+      <Trocar_Senha_Modal 
         isOpen={showPasswordModal} 
         onClose={handleClosePasswordModal} 
         userId={userId}

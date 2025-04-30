@@ -26,6 +26,49 @@ const sendRegistrationEmail = async (user) => {
     
     console.log(`Enviando email para ${user.email} com link: ${confirmationUrl}`);
     
+    // Criar tabela com os dados da conta
+    const accountDetailsTable = `
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e0e0e0;">
+        <tr>
+          <th colspan="2" style="padding: 12px; background-color: #f5f7fa; border-bottom: 1px solid #e0e0e0; text-align: left; color: #333;">
+            Dados da Conta
+          </th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Nome</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.nome || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Email</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.email || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Cargo</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.cargo_descricao || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Idade</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.idade || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Telefone</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.telefone || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Morada</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.morada || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Código Postal</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.codigo_postal || 'Não informado'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Senha Provisória</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-family: monospace; background-color: #f8fafc; color: #2563eb;">${user.senha_temporaria || 'Senha definida pelo usuário'}</td>
+        </tr>
+      </table>
+    `;
+    
     // Template do email de confirmação
     const mailOptions = {
       from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
@@ -34,17 +77,23 @@ const sendRegistrationEmail = async (user) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #FF8C00;">Bem-vindo à Plataforma de Cursos</h2>
+            <h2 style="color: #3b82f6;">Bem-vindo à Plataforma de Cursos</h2>
           </div>
           
-          <div style="margin-bottom: 30px;">
+          <div style="margin-bottom: 20px;">
             <p>Olá, ${user.nome}!</p>
             <p>Obrigado por se cadastrar em nossa plataforma de cursos online. Estamos muito felizes em tê-lo conosco!</p>
-            <p>Para começar a utilizar nossa plataforma, confirme seu cadastro clicando no botão abaixo:</p>
+            <p>Abaixo estão os dados da sua conta:</p>
+          </div>
+          
+          ${accountDetailsTable}
+          
+          <div style="margin: 30px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
+            <p style="margin: 0; color: #334155;"><strong>Importante:</strong> Para sua segurança, recomendamos que altere sua senha após o primeiro acesso.</p>
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #FF8C00; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Confirmar Registro</a>
+            <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Confirmar Registro</a>
           </div>
           
           <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
@@ -92,7 +141,7 @@ const sendPasswordResetEmail = async (user, token) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #FF8C00;">Recuperação de Senha</h2>
+            <h2 style="color: #3b82f6;">Recuperação de Senha</h2>
           </div>
           
           <div style="margin-bottom: 30px;">
@@ -102,7 +151,7 @@ const sendPasswordResetEmail = async (user, token) => {
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #FF8C00; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Redefinir Senha</a>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Redefinir Senha</a>
           </div>
           
           <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
@@ -141,13 +190,13 @@ const sendMailingList = async (formandos, cursos, area = null) => {
     // Preparar conteúdo dos cursos para o email
     const cursosHtml = cursos.map(curso => `
       <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px;">
-        <h3 style="color: #FF8C00; margin-top: 0;">${curso.nome}</h3>
+        <h3 style="color: #3b82f6; margin-top: 0;">${curso.nome}</h3>
         <p>${curso.descricao || 'Sem descrição disponível.'}</p>
         <p><strong>Área:</strong> ${curso.area ? curso.area.nome : 'Não especificada'}</p>
         <p><strong>Início:</strong> ${curso.data_inicio ? new Date(curso.data_inicio).toLocaleDateString() : 'A definir'}</p>
         <p><strong>Vagas:</strong> ${curso.vagas || 'Ilimitadas'}</p>
         <a href="${process.env.FRONTEND_URL}/cursos/${curso.id_curso}" 
-           style="display: inline-block; padding: 8px 15px; background-color: #FF8C00; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+           style="display: inline-block; padding: 8px 15px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
           Ver Detalhes
         </a>
       </div>
@@ -167,7 +216,7 @@ const sendMailingList = async (formandos, cursos, area = null) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #FF8C00;">${tituloDivulgacao}</h2>
+              <h2 style="color: #3b82f6;">${tituloDivulgacao}</h2>
             </div>
             
             <div style="margin-bottom: 30px;">

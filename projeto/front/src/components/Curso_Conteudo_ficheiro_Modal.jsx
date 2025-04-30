@@ -41,9 +41,13 @@ const Curso_Conteudo_ficheiro_Modal = ({ conteudo, onClose, API_BASE }) => {
     return typeMap[extension] || 'application/octet-stream';
   };
 
-  // Simulação do tamanho do arquivo
+  // Simulação do tamanho do arquivo - atualizada para o intervalo pedido (10KB a 15GB)
   const simulateFileSize = () => {
-    return Math.floor(Math.random() * 10000000) + 100000; // Entre 100KB e 10MB
+    // 10KB = 10 * 1024 bytes
+    // 15GB = 15 * 1024 * 1024 * 1024 bytes
+    const minSize = 10 * 1024; // 10KB
+    const maxSize = 15 * 1024 * 1024 * 1024; // 15GB
+    return Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
   };
 
   // Formatação do tamanho do arquivo
@@ -51,7 +55,8 @@ const Curso_Conteudo_ficheiro_Modal = ({ conteudo, onClose, API_BASE }) => {
     if (!size) return 'Desconhecido';
     if (size < 1024) return `${size} bytes`;
     if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   const handleDownload = () => {

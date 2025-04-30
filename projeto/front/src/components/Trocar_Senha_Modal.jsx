@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE from '../api';
-import './css/PasswordChangeModal.css';
+import './css/Trocar_Senha_Modal.css';
 
 const PasswordChangeModal = ({ isOpen, onClose, userId }) => {
   const [password, setPassword] = useState('');
@@ -30,21 +30,44 @@ const PasswordChangeModal = ({ isOpen, onClose, userId }) => {
       setLoading(true);
       setError('');
       
+      // Obter o token de autenticação do localStorage
+      const token = localStorage.getItem('token');
+      
+      // Configurar cabeçalhos com token de autenticação
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+      
+      console.log('Enviando requisição para alteração de senha');
+      
+      // Usar a rota correta para alteração de senha
       const response = await axios.put(`${API_BASE}/users/change-password`, {
         id_utilizador: userId,
-        nova_password: password
-      });
+        password: password // Parâmetro correto conforme backend
+      }, config);
       
-      setSuccess(true);
+      console.log('Resposta do servidor:', response.data);
       
-      // Após 2 segundos, fechar o modal
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-      
+      // Se a requisição for bem-sucedida, atualizar o estado do primeiro login
+      if (response.data) {
+        localStorage.setItem('primeiroLogin', '0');
+        setSuccess(true);
+        
+        // Após 2 segundos, fechar o modal
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      }
     } catch (err) {
-      setError('Erro ao alterar a senha. Por favor, tente novamente.');
       console.error('Erro ao alterar senha:', err);
+      
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erro ao alterar a senha. Por favor, tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
