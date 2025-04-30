@@ -154,13 +154,60 @@ const initDefaultUserImages = () => {
  * FUNÇÕES DE REGISTRO E AUTENTICAÇÃO
  */
 
+/**
+ * Função para gerar uma senha aleatória segura
+ * @param {number} length - Comprimento da senha
+ * @returns {string} - Senha aleatória gerada
+ */
+const generateRandomPassword = (length = 10) => {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=";
+  let password = "";
+
+  // Garantir que pelo menos um caractere de cada categoria esteja presente
+  password += charset.substr(Math.floor(Math.random() * 26), 1); // Letra maiúscula
+  password += charset.substr(26 + Math.floor(Math.random() * 26), 1); // Letra minúscula
+  password += charset.substr(52 + Math.floor(Math.random() * 10), 1); // Número
+  password += charset.substr(62 + Math.floor(Math.random() * 14), 1); // Caractere especial
+
+  // Preencher o resto da senha aleatoriamente
+  for (let i = 4; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+
+  // Embaralhar a senha para garantir que não haja um padrão reconhecível
+  return password
+    .split('')
+    .sort(() => 0.5 - Math.random())
+    .join('');
+};
+
 const createUser = async (req, res) => {
   try {
-    const { id_cargo, nome, idade, email, telefone, password } = req.body;
+    const {
+      id_cargo,
+      nome,
+      idade,
+      email,
+      telefone,
+      morada,
+      codigo_postal,
+      password // Senha opcional - se não for fornecida, será gerada aleatoriamente
+    } = req.body;
 
     // Validar campos obrigatórios
-    if (!id_cargo || !nome || !idade || !email || !telefone || !password) {
-      return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+    if (!id_cargo || !nome || !idade || !email || !telefone) {
+      return res.status(400).json({ message: "Campos obrigatórios: id_cargo, nome, idade, email, telefone" });
+    }
+
+    // Buscar descrição do cargo
+    let cargo_descricao = "";
+    try {
+      const cargo = await Cargo.findByPk(id_cargo);
+      if (cargo) {
+        cargo_descricao = cargo.descricao;
+      }
+    } catch (cargoError) {
+      console.error("Erro ao buscar cargo:", cargoError);
     }
 
     // Primeiro verificar se podemos usar este email
@@ -168,6 +215,10 @@ const createUser = async (req, res) => {
     if (!emailCheck.success) {
       return res.status(400).json({ message: emailCheck.error });
     }
+
+    // Gerar senha aleatória se não for fornecida
+    const senha_temporaria = password || generateRandomPassword(12);
+    console.log(`Senha gerada para ${email}: ${senha_temporaria}`);
 
     // Criar token de confirmação
     const token = jwt.sign(
@@ -187,7 +238,9 @@ const createUser = async (req, res) => {
       idade,
       email,
       telefone,
-      password, // Será hasheada pelo hook beforeCreate
+      morada: morada || "",
+      codigo_postal: codigo_postal || "",
+      password: senha_temporaria, // Será hasheada pelo hook beforeCreate
       token,
       expires_at
     });
@@ -199,7 +252,13 @@ const createUser = async (req, res) => {
         id_utilizador: pendingUser.id,
         nome: pendingUser.nome,
         email: pendingUser.email,
-        token: pendingUser.token // Adicionar o token para usar no email
+        token: pendingUser.token,
+        idade: pendingUser.idade,
+        telefone: pendingUser.telefone,
+        morada: pendingUser.morada,
+        codigo_postal: pendingUser.codigo_postal,
+        cargo_descricao: cargo_descricao,
+        senha_temporaria: senha_temporaria // Importante! Passar a senha temporária para o email
       };
 
       await sendRegistrationEmail(userForEmail);
@@ -230,6 +289,7 @@ const createUser = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao processar o registro." });
   }
 };
+
 
 const confirmAccount = async (req, res) => {
   try {
@@ -506,8 +566,15 @@ const perfilUser = async (req, res) => {
       user.foto_capa = "CAPA.png";
     }
 
-    console.log('Perfil recuperado com sucesso');
-    res.json(user);
+    // Convertemos primeiro_login para número para garantir 
+    // que o frontend receba o valor correto
+    const userResponse = {
+      ...user.get({ plain: true }),
+      primeiro_login: Number(user.primeiro_login)
+    };
+
+    console.log('Perfil recuperado com sucesso, primeiro_login:', userResponse.primeiro_login);
+    res.json(userResponse);
   } catch (error) {
     console.error("Erro ao obter o perfil:", error);
     res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
@@ -539,14 +606,20 @@ const updatePerfilUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
+    console.log('Requisição de alteração de senha recebida:', req.body);
 
-    // Se for fornecido token (caso de recuperação de senha)
+    // Extrair dados da requisição
+    const { token, password, id_utilizador, senha_atual, nova_senha } = req.body;
+
+    // Caso 1: Alteração via token (recuperação de senha)
     if (token) {
+      console.log('Alteração via token de recuperação de senha');
+
       let decoded;
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
       } catch (error) {
+        console.error('Token inválido:', error);
         return res.status(401).json({ message: "Token inválido ou expirado" });
       }
 
@@ -557,53 +630,85 @@ const changePassword = async (req, res) => {
       await User.update(
         {
           password: hashedPassword,
-          primeiro_login: 0 // Marcar como não sendo mais o primeiro login
+          primeiro_login: 0
         },
         { where: { id_utilizador: userId } }
       );
 
-      return res.json({ message: "Senha alterada com sucesso" });
+      console.log('Senha alterada com sucesso via token de recuperação');
+      return res.json({
+        message: "Senha alterada com sucesso",
+        primeiro_login: 0
+      });
     }
 
-    // Se não for fornecido token, verificar ID do usuário e senha atual
-    const { id_utilizador, senha_atual, nova_senha } = req.body;
+    // Caso 2: Alteração via autenticação normal
+    // Se o utilizador estiver autenticado, usar o ID do token
+    let userIdToUse = id_utilizador;
 
-    if (!id_utilizador) {
+    // Se não foi fornecido ID explicitamente mas está autenticado
+    if (!userIdToUse && req.user && req.user.id_utilizador) {
+      console.log('Usando ID do usuário do token:', req.user.id_utilizador);
+      userIdToUse = req.user.id_utilizador;
+    }
+
+    if (!userIdToUse) {
+      console.error('ID do usuário não fornecido');
       return res.status(400).json({ message: "ID do usuário é obrigatório" });
     }
 
-    const user = await User.findByPk(id_utilizador);
+    console.log('Buscando usuário com ID:', userIdToUse);
+    const user = await User.findByPk(userIdToUse);
 
     if (!user) {
+      console.error('Usuário não encontrado');
       return res.status(404).json({ message: "Usuário não encontrado" });
     }
 
-    // Se for primeiro login, não precisamos verificar a senha atual
+    // Verificar senha atual a menos que seja primeiro login
     if (user.primeiro_login !== 1 && senha_atual) {
+      console.log('Verificando senha atual (não é primeiro login)');
       const validPassword = await bcrypt.compare(senha_atual, user.password);
       if (!validPassword) {
+        console.error('Senha atual incorreta');
         return res.status(401).json({ message: "Senha atual incorreta" });
       }
+    } else {
+      console.log('Primeiro login ou senha atual não fornecida');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(nova_senha || password, salt);
+    // Determinar qual senha usar
+    const senhaParaAtualizar = nova_senha || password;
 
-    await User.update(
+    if (!senhaParaAtualizar) {
+      console.error('Nova senha não fornecida');
+      return res.status(400).json({ message: "Nova senha é obrigatória" });
+    }
+
+    console.log('Gerando hash da nova senha');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(senhaParaAtualizar, salt);
+
+    console.log('Atualizando senha e definindo primeiro_login como 0');
+    const updateResult = await User.update(
       {
         password: hashedPassword,
-        primeiro_login: 0 // Marcar como não sendo mais o primeiro login
+        primeiro_login: 0
       },
-      { where: { id_utilizador } }
+      { where: { id_utilizador: userIdToUse } }
     );
 
-    return res.json({ message: "Senha alterada com sucesso" });
+    console.log('Resultado da atualização:', updateResult);
+
+    return res.json({
+      message: "Senha alterada com sucesso",
+      primeiro_login: 0
+    });
   } catch (error) {
     console.error("Erro ao alterar senha:", error);
     res.status(500).json({ message: "Erro no servidor ao alterar senha" });
   }
 };
-
 /**
  * FUNÇÕES DE UPLOAD DE IMAGENS
  */
