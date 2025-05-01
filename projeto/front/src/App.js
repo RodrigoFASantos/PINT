@@ -211,9 +211,23 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+
+
             
             <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute adminOnly><EditarCurso /></ProtectedRoute>} />
-            <Route path="/admin/cursos/:id/inscricoes" element={<ProtectedRoute adminOnly><GerenciarInscricoes /></ProtectedRoute>} />
+
+            <Route 
+              path="/cursos/:id/inscricoes" 
+              element={
+                <ProtectedRoute roles={[1, 2]}>
+                  <GerenciarInscricoes />
+                </ProtectedRoute>
+              }
+            />
+
+
+
+
 
             {/* Redirecionar para a página inicial por padrão */}
             <Route path="*" element={<Navigate to="/" replace />} />

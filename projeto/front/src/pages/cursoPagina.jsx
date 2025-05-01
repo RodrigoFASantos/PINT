@@ -207,6 +207,10 @@ export default function CursoPagina() {
         </div>
       )}
 
+
+
+
+
       {/* Cabeçalho do curso */}
       <div
         className="w-full h-64 bg-cover bg-center rounded-lg mb-6 relative"
@@ -215,6 +219,7 @@ export default function CursoPagina() {
         <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex flex-col justify-center px-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl md:text-4xl text-white font-bold">{curso.nome}</h1>
+            {/* Apenas administradores podem excluir cursos */}
             {userRole === 1 && (
               <button
                 onClick={() => setShowDeleteConfirmation(true)}
@@ -229,14 +234,91 @@ export default function CursoPagina() {
               {curso.categoria}
             </span>
             <span className={`px-3 py-1 rounded text-sm ${curso.estado === 'Em curso'
-                ? 'bg-green-600 text-white'
-                : curso.estado === 'Terminado'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-yellow-600 text-white'
+              ? 'bg-green-600 text-white'
+              : curso.estado === 'Terminado'
+                ? 'bg-red-600 text-white'
+                : 'bg-yellow-600 text-white'
               }`}>
               {curso.estado}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Informações do curso e abas */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Abas de navegação */}
+        <div className="flex border-b">
+          <button
+            className={`px-6 py-3 text-lg font-medium ${activeTab === 'detalhes' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('detalhes')}
+          >
+            Detalhes
+          </button>
+
+          {inscrito && curso.estado === 'Em curso' && (
+            <button
+              className={`px-6 py-3 text-lg font-medium ${activeTab === 'conteudo' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
+              onClick={() => setActiveTab('conteudo')}
+            >
+              Conteúdo do Curso
+            </button>
+          )}
+
+          {/* Nova aba de gerenciamento para formadores e administradores */}
+          {(userRole === 1 || (userRole === 2 && currentUser.id_utilizador === curso.id_formador)) && (
+            <button
+              className={`px-6 py-3 text-lg font-medium ${activeTab === 'gerenciar' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
+              onClick={() => setActiveTab('gerenciar')}
+            >
+              Gerenciar Curso
+            </button>
+          )}
+        </div>
+
+        {/* Conteúdo das abas */}
+        <div className="p-6">
+          {/* ... resto do código para abas de detalhes e conteúdo ... */}
+
+          {/* Nova aba de gerenciamento para formadores e administradores */}
+          {activeTab === 'gerenciar' && (userRole === 1 || (userRole === 2 && currentUser.id_utilizador === curso.id_formador)) && (
+            <div>
+              <h2 className="text-2xl font-semibold mb-6">Gerenciamento do Curso</h2>
+
+              <div className="space-y-4">
+                <div className="border p-4 rounded-lg bg-gray-50">
+                  <h3 className="font-medium mb-2">Ações de Gerenciamento</h3>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => navigate(`/gerenciar-inscricoes/${cursoId}`)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200"
+                    >
+                      Gerenciar Inscrições
+                    </button>
+
+                    {userRole === 1 && (
+                      <button
+                        onClick={() => setShowDeleteConfirmation(true)}
+                        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200"
+                      >
+                        Excluir Curso
+                      </button>
+                    )}
+
+                    {(userRole === 1 || (userRole === 2 && currentUser.id_utilizador === curso.id_formador)) && (
+                      <button
+                        onClick={() => navigate(`/editar-curso/${cursoId}`)}
+                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
+                      >
+                        Editar Curso
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

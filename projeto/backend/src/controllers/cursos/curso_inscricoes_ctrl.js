@@ -3,7 +3,7 @@ const User = require("../../database/models/User");
 const Curso = require("../../database/models/Curso");
 const Categoria = require("../../database/models/Categoria");
 const Area = require("../../database/models/Area");
-const { sequelize } = require("../../../config/db");
+const { sequelize } = require("../../config/db");
 
 
 // Obter todas as inscrições
@@ -291,6 +291,31 @@ const cancelarInscricao = async (req, res) => {
     console.log(`- ID do cargo do usuário: ${req.user.id_cargo}`);
     console.log(`- ID do usuário da inscrição: ${inscricao.id_utilizador}`);
     
+
+    // Buscar o curso para verificar se o usuário é o formador
+let curso;
+try {
+  curso = await Curso.findByPk(inscricao.id_curso);
+} catch (findCursoError) {
+  console.error("Erro ao buscar curso:", findCursoError);
+  return res.status(500).json({
+    message: "Erro ao verificar permissões",
+    error: findCursoError.message
+  });
+}
+// Verificar permissões: admin (cargo 1), formador do curso, ou o próprio inscrito
+const isAdmin = req.user.id_cargo === 1;
+const isFormadorDoCurso = req.user.id_cargo === 2 && curso && req.user.id_utilizador === curso.id_formador;
+const isProprioUsuario = req.user.id_utilizador === inscricao.id_utilizador;
+
+if (!isAdmin && !isFormadorDoCurso && !isProprioUsuario) {
+  console.log(`[6.1] Acesso negado: Usuário ${req.user.id_utilizador} tentando cancelar inscrição de ${inscricao.id_utilizador}`);
+  return res.status(403).json({ 
+    message: "Você não tem permissão para cancelar esta inscrição" 
+  });
+}
+console.log(`[6.2] Verificação de permissão bem-sucedida`);
+
     if (req.user.id_utilizador !== inscricao.id_utilizador && req.user.id_cargo !== 1) {
       console.log(`[6.1] Acesso negado: Usuário ${req.user.id_utilizador} tentando cancelar inscrição de ${inscricao.id_utilizador}`);
       return res.status(403).json({ 

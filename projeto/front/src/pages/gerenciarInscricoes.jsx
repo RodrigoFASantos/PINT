@@ -21,58 +21,94 @@ const GerenciarInscricoes = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+
+
+
+
+
+
   // Buscar dados do curso e inscrições
+  // Modificação na função fetchData para corrigir o problema de obtenção de informações do usuário
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
 
+      // Verificar token
       const token = localStorage.getItem('token');
       if (!token) {
+        setError("Sessão expirada. Por favor, faça login novamente.");
         navigate('/login');
         return;
       }
 
-      // Obter informações do usuário logado
-      const userInfoStr = localStorage.getItem('userInfo');
-      if (userInfoStr) {
-        const userData = JSON.parse(userInfoStr);
-        setUserInfo(userData);
+      // Obter informações do usuário diretamente do token JWT
+      try {
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        setUserInfo(tokenPayload);
+
+        // Log para debug
+        console.log("Informações do usuário extraídas do token:", tokenPayload);
+      } catch (parseError) {
+        console.error("Erro ao analisar token:", parseError);
+        setError("Erro ao processar token de autenticação. Por favor, faça login novamente.");
+        navigate('/login');
+        return;
       }
 
-      // Obter detalhes do curso
-      const responseCurso = await fetch(`${API_BASE}/cursos/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      // Obter detalhes do curso com tratamento de erros melhorado
+      try {
+        console.log(`Buscando dados do curso ${id}...`);
+        const responseCurso = await fetch(`${API_BASE}/cursos/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!responseCurso.ok) {
+          throw new Error(`Erro ao carregar curso: ${responseCurso.status}`);
         }
-      });
 
-      if (!responseCurso.ok) {
-        throw new Error(`Erro ao carregar curso: ${responseCurso.status}`);
+        const cursoData = await responseCurso.json();
+        console.log("Dados do curso obtidos:", cursoData);
+        setCurso(cursoData);
+      } catch (cursoError) {
+        console.error("Erro ao carregar curso:", cursoError);
+        setError(`Erro ao carregar informações do curso: ${cursoError.message}`);
+        setLoading(false);
+        return;
       }
 
-      const cursoData = await responseCurso.json();
-      setCurso(cursoData);
+      // Obter inscrições do curso com tratamento de erros melhorado
+      try {
+        console.log(`Buscando inscrições do curso ${id}...`);
+        const responseInscricoes = await fetch(`${API_BASE}/inscricoes/curso/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      // Obter inscrições do curso
-      const responseInscricoes = await fetch(`${API_BASE}/inscricoes/curso/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        if (!responseInscricoes.ok) {
+          throw new Error(`Erro ao carregar inscrições: ${responseInscricoes.status}`);
         }
-      });
 
-      if (!responseInscricoes.ok) {
-        throw new Error(`Erro ao carregar inscrições: ${responseInscricoes.status}`);
+        const inscricoesData = await responseInscricoes.json();
+        console.log(`Obtidas ${inscricoesData.length} inscrições`);
+
+        // Filtrar apenas inscrições ativas
+        const inscricoesAtivas = inscricoesData.filter(inscricao =>
+          inscricao.estado === 'inscrito'
+        );
+
+        setInscricoes(inscricoesAtivas);
+      } catch (inscricoesError) {
+        console.error("Erro ao carregar inscrições:", inscricoesError);
+        setError(`Erro ao carregar inscrições: ${inscricoesError.message}`);
+        setLoading(false);
+        return;
       }
 
-      const inscricoesData = await responseInscricoes.json();
-      
-      // Filtrar apenas inscrições ativas
-      const inscricoesAtivas = inscricoesData.filter(inscricao => 
-        inscricao.estado === 'inscrito'
-      );
-      
-      setInscricoes(inscricoesAtivas); // Aqui usamos o filtro corretamente
       setLoading(false);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -81,16 +117,27 @@ const GerenciarInscricoes = () => {
     }
   }, [id, navigate]);
 
+
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+
+
+
+
+
+
+
+
   // Verificar permissões
   useEffect(() => {
     if (curso && userInfo) {
-      const temPermissao = userInfo.id_cargo === 1 || userInfo.id_utilizador === curso.id_formador;
-      
-      if (!temPermissao) {
+      const isAdmin = userInfo.id_cargo === 1;
+      const isFormadorDoCurso = userInfo.id_cargo === 2 && userInfo.id_utilizador === curso.id_formador;
+
+      if (!isAdmin && !isFormadorDoCurso) {
         setError("Você não tem permissão para gerenciar inscrições neste curso.");
       }
     }
@@ -102,80 +149,65 @@ const GerenciarInscricoes = () => {
     setShowConfirmation(true);
   };
 
+  // Função para confirmar o cancelamento da inscrição
+  const confirmCancelarInscricao = async () => {
+    if (!selectedInscricao) return;
 
-
-
-
-// Função para confirmar o cancelamento da inscrição
-const confirmCancelarInscricao = async () => {
-  if (!selectedInscricao) return;
-  
-  try {
-    setRemovendo(true);
-    const token = localStorage.getItem('token');
-    
-    // Enviar requisição para API com tratamento de erro adequado
-    const response = await fetch(`${API_BASE}/inscricoes/${selectedInscricao.id_inscricao}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Tentar extrair os dados da resposta, se houver
-    let responseData = {};
     try {
-      responseData = await response.json();
-    } catch (e) {
-      // Se não conseguir converter para JSON, continuar com objeto vazio
-      console.warn('Resposta não contém JSON válido:', e);
-    }
+      setRemovendo(true);
+      const token = localStorage.getItem('token');
 
-    // Log para depuração
-    console.log('Response status:', response.status);
-    console.log('Response data:', responseData);
+      // Modificado para usar o endpoint correto conforme definido no backend
+      const response = await fetch(`${API_BASE}/inscricoes/cancelar-inscricao/${selectedInscricao.id_inscricao}`, {
+        method: 'PATCH', // Alterado de DELETE para PATCH para corresponder à rota
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          motivo_cancelamento: 'Cancelado pelo formador/administrador'
+        })
+      });
 
-    // Verificar o status da resposta
-    if (!response.ok) {
-      // Se tivermos uma mensagem de erro específica na resposta, usá-la
-      const errorMessage = responseData.message || 'Erro ao cancelar inscrição';
-      throw new Error(errorMessage);
-    }
+      // Processar resposta
+      let responseData = {};
+      try {
+        responseData = await response.json();
+      } catch (e) {
+        console.warn('Resposta não contém JSON válido:', e);
+      }
 
-    // Atualizar a lista de inscrições após o cancelamento bem-sucedido
-    setInscricoes(prevInscricoes => 
-      prevInscricoes.filter(insc => insc.id_inscricao !== selectedInscricao.id_inscricao)
-    );
-    
-    toast.success('Inscrição cancelada com sucesso!');
+      console.log('Response status:', response.status);
+      console.log('Response data:', responseData);
 
-  } catch (error) {
-    console.error('Erro ao cancelar inscrição:', error);
-    
-    // Verificar se é erro de conexão
-    if (error.message.includes('temporariamente indisponível') || 
+      if (!response.ok) {
+        const errorMessage = responseData.message || 'Erro ao cancelar inscrição';
+        throw new Error(errorMessage);
+      }
+
+      // Atualizar a lista de inscrições após o cancelamento bem-sucedido
+      setInscricoes(prevInscricoes =>
+        prevInscricoes.filter(insc => insc.id_inscricao !== selectedInscricao.id_inscricao)
+      );
+
+      toast.success('Inscrição cancelada com sucesso!');
+
+    } catch (error) {
+      console.error('Erro ao cancelar inscrição:', error);
+
+      if (error.message.includes('temporariamente indisponível') ||
         error.message.includes('banco de dados')) {
-      toast.error('O serviço está temporariamente indisponível. Por favor, tente novamente mais tarde.');
-    } else {
-      // Mensagem genérica ou específica caso exista
-      toast.error(`Erro ao cancelar inscrição: ${error.message}`);
+        toast.error('O serviço está temporariamente indisponível. Por favor, tente novamente mais tarde.');
+      } else {
+        toast.error(`Erro ao cancelar inscrição: ${error.message}`);
+      }
+
+    } finally {
+      setShowConfirmation(false);
+      setSelectedInscricao(null);
+      setRemovendo(false);
     }
-    
-  } finally {
-    setShowConfirmation(false);
-    setSelectedInscricao(null);
-    setRemovendo(false);
-  }
-};
-
-
-
-
-
-
-
-
+  };
 
   if (loading) {
     return (
@@ -217,12 +249,21 @@ const confirmCancelarInscricao = async () => {
       </div>
     );
   }
-  console.log(selectedInscricao);
+
+  // Verificar se o usuário atual tem permissão para alterar o formador
+  // Somente administradores (cargo 1) podem alterar formador
+  const podeAlterarFormador = userInfo && (userInfo.id_cargo === 1 || (userInfo.id_cargo === 2 && userInfo.id_utilizador === curso?.id_formador));
+
+
+  console.log("User Info:", userInfo);
+  console.log("Curso:", curso);
+  console.log("Permissão para alterar:", podeAlterarFormador);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex flex-1">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        
+
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="gerenciar-inscricoes-container bg-white rounded-lg shadow-md">
             {/* Cabeçalho */}
@@ -240,8 +281,29 @@ const confirmCancelarInscricao = async () => {
                 </button>
               </div>
             </div>
-            
-            {/* Conteúdo */}
+
+            {/* Seção do formador */}
+            <div className="formador-section p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Formador</h2>
+                  {curso?.formador ? (
+                    <div className="formador-info">
+                      <p className="text-gray-700">
+                        <span className="font-medium">Nome:</span> {curso.formador.nome}
+                      </p>
+                      <p className="text-gray-700">
+                        <span className="font-medium">Email:</span> {curso.formador.email}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Nenhum formador atribuído</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Conteúdo das inscrições */}
             <div className="content p-6">
               <div className="mb-4 flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Alunos Inscritos ({inscricoes.length})</h2>
@@ -251,7 +313,7 @@ const confirmCancelarInscricao = async () => {
                   </p>
                 )}
               </div>
-              
+
               {inscricoes.length === 0 ? (
                 <div className="empty-state p-10 text-center border border-dashed border-gray-300 rounded-lg">
                   <p className="text-gray-500 mb-2">Não há inscrições neste curso.</p>
@@ -297,15 +359,15 @@ const confirmCancelarInscricao = async () => {
           </div>
         </div>
       </div>
-      
+
       {/* Modal de confirmação de cancelamento */}
       {showConfirmation && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3 className="modal-title">Confirmar Cancelamento</h3>
             <p className="modal-text">
-              Tem certeza que deseja cancelar a inscrição de 
-              <strong> {selectedInscricao?.utilizador?.nome || 'este aluno'}</strong> 
+              Tem certeza que deseja cancelar a inscrição de
+              <strong> {selectedInscricao?.utilizador?.nome || 'este aluno'}</strong>
               no curso?
             </p>
             <div className="modal-buttons">
@@ -327,7 +389,7 @@ const confirmCancelarInscricao = async () => {
           </div>
         </div>
       )}
-      
+
       <ToastContainer />
     </div>
   );

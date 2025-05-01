@@ -302,6 +302,19 @@ const DetalhesCurso = () => {
     return `${API_BASE}/${curso.imagem_path}`;
   };
 
+  // Função para gerenciar inscrições
+  const handleGerenciarInscricoes = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sessão expirada ou inválida. Por favor, faça login novamente.');
+      navigate('/login');
+      return;
+    }
+
+    // Usar a rota correta que está definida no App.js
+    navigate(`/cursos/${id}/inscricoes`);
+  };
+
   if (loading) {
     return (
       <div className="main-container">
@@ -558,7 +571,7 @@ const DetalhesCurso = () => {
                         </button>
 
                         <button
-                          onClick={() => navigate(`/admin/cursos/${id}/inscricoes`)}
+                          onClick={handleGerenciarInscricoes}
                           className="btn-inscricoes"
                         >
                           Gerenciar Inscrições
@@ -582,13 +595,11 @@ const DetalhesCurso = () => {
               <CursoConteudos cursoId={id} inscrito={inscrito} />
             </div>
 
-
             <Avaliacao_curso
               cursoId={id}
               userRole={userRole}
               formadorId={curso.id_formador}
             />
-
 
           </div>
         </div>

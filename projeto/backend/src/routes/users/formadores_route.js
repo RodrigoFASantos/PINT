@@ -36,16 +36,16 @@ const verificarCargo = (cargosPermitidos) => {
 
 // Rotas públicas (sem autenticação)
 router.get('/', formadorController.getAllFormadores);
-router.get('/:id', formadorController.getFormadorById);
-router.get('/:id/cursos', formadorController.getCursosFormador);
 
 // Adicionadas novas rotas de registro com confirmação 
+router.post('/', formadorController.createFormador);
 router.post('/register', formadorController.registerFormador);
 
-// Mantendo a rota antiga para compatibilidade, mas implementando o mesmo fluxo
-router.post('/', formadorController.createFormador);
+router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 
 // Rotas para gerenciar categorias de formadores
+router.get('/:id', formadorController.getFormadorById);
+router.get('/:id/cursos', formadorController.getCursosFormador);
 router.get('/:id/categorias', formadorController.getCategoriasFormador);
 router.post('/:id/categorias', verificarToken, verificarCargo(['admin', 'formador']), formadorController.addCategoriasFormador);
 router.delete('/:id/categorias/:categoriaId', verificarToken, verificarCargo(['admin', 'formador']), formadorController.removeFormadorCategoria);
@@ -60,6 +60,5 @@ router.put('/:id', verificarToken, verificarCargo(['admin']), formadorController
 router.delete('/:id', verificarToken, verificarCargo(['admin']), formadorController.deleteFormador);
 
 
-router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 
 module.exports = router;

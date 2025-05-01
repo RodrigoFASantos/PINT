@@ -11,7 +11,6 @@ const {
   updateCurso,
   deleteCurso,
   getCursosSugeridos,
-  associarFormadorCurso
 } = require("../../controllers/cursos/cursos_ctrl");
 const uploadUtils = require('../../middleware/upload');
 
@@ -27,8 +26,6 @@ router.get("/por-categoria", getCursosByCategoria);
 // Buscar cursos sugeridos
 router.get("/sugeridos", verificarToken, getCursosSugeridos);
 
-// Associar formador a um curso
-router.post("/associar-formador", verificarToken, autorizar([1, 2]), associarFormadorCurso);
 
 // Obter curso por ID
 router.get("/:id", getCursoById);

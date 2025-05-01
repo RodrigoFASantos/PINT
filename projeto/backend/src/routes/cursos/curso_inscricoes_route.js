@@ -32,8 +32,17 @@ router.post("/", verificarToken, createInscricao);
 // Rota para buscar inscrições por curso (protegida para administradores)
 router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
 
+
+
+
 // Rota para cancelar uma inscrição
 router.patch("/cancelar-inscricao/:id", verificarToken, cancelarInscricao);
+
+// Rota alternativa para suportar o método DELETE (para compatibilidade)
+router.delete("/:id", verificarToken, cancelarInscricao);
+
+
+
 
 
 // Rota para verificar se o utilizador está inscrito em um curso

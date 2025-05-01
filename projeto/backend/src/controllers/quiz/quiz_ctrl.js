@@ -1,5 +1,5 @@
 // src/controllers/quiz_ctrl.js
-const sequelize = require('../../../config/db');
+const { sequelize } = require("../../config/db");
 
 // Funções do controlador
 const getAllQuizzes = async (req, res) => {

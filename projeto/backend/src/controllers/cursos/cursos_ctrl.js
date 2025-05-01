@@ -603,6 +603,7 @@ const getCursosSugeridos = async (req, res) => {
   }
 };
 
+
 module.exports = { 
   getAllCursos,
   getCursosByCategoria, 
