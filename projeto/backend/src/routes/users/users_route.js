@@ -8,6 +8,7 @@ const {
   getFormandos, 
   getGestores, 
   createUser, 
+  deleteUser,
   loginUser, 
   perfilUser, 
   updatePerfilUser, 
@@ -51,6 +52,7 @@ router.post("/img/capa", verificarTokenComEmail, uploadUtils.ensureUserDir, uplo
 
 
 
+router.delete("/users/:id", verificarToken, deleteUser);
 
 
 

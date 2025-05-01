@@ -1113,8 +1113,48 @@ const uploadImagemCapa = async (req, res) => {
 
 
 
-
-
+const deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Verificar se o utilizador existe
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+    
+    // Verificar se é um formador com cursos ativos
+    if (user.id_cargo === 2) { // id_cargo 2 = Formador
+      const cursosAtivos = await Curso.findAll({
+        where: { 
+          id_formador: userId,
+          ativo: true
+        }
+      });
+      
+      if (cursosAtivos.length > 0) {
+        return res.status(400).json({ 
+          message: "Não é possível eliminar este formador pois possui cursos ativos",
+          cursos: cursosAtivos
+        });
+      }
+    }
+    
+    // Proceder com a exclusão (o delete cascade é tratado no modelo)
+    await user.destroy();
+    
+    return res.status(200).json({
+      message: "Utilizador eliminado com sucesso"
+    });
+    
+  } catch (error) {
+    console.error("Erro ao eliminar utilizador:", error);
+    return res.status(500).json({
+      message: "Erro ao eliminar utilizador",
+      error: error.message
+    });
+  }
+};
 
 
 
@@ -1189,6 +1229,7 @@ module.exports = {
   getGestores,
 
   createUser,
+  deleteUser,
   loginUser,
   confirmAccount,
   resendConfirmation,

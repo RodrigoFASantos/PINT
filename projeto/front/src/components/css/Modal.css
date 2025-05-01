@@ -284,3 +284,166 @@
     font-size: 0.75rem;
   }
 }
+
+
+/* Adicionar ao seu arquivo CSS existente */
+.eliminar-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.eliminar-btn:hover {
+  background-color: #c82333;
+}
+
+/* Estilos para o modal de confirmação */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  padding: 20px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.btn-cancelar {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.btn-confirmar {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.warning-text {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.info-text {
+  color: #17a2b8;
+  font-style: italic;
+}
+
+.erro-mensagem {
+  color: #dc3545;
+  margin-bottom: 10px;
+}
+
+.cursos-list {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.cursos-list ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.cursos-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 5px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ver-curso-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* Paginação */
+.paginacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.btn-pagina {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 5px;
+}
+
+.page-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.page-number.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
