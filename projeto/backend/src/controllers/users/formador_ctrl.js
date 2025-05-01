@@ -1,7 +1,7 @@
+const bcrypt = require('bcrypt');
 const { User, Curso, Categoria, Area} = require('../../database/associations');
 const FormadorCategoria = require("../../database/models/Formador_Categoria");
 const FormadorArea = require("../../database/models/Formador_Area");
-
 const { Op } = require('sequelize');
 
 // Obter todos os formadores com paginação
@@ -175,37 +175,80 @@ const getCursosFormador = async (req, res) => {
 // Atualizar cargo de usuário para formador (id_cargo = 2)
 const createFormador = async (req, res) => {
   try {
-    const { id_utilizador, nome, email, foto_perfil, telefone } = req.body;
+    const { id_utilizador, nome, email, telefone, idade, password, morada, codigo_postal } = req.body;
     
-    // Verificar se o usuário existe
+    console.log("📋 Criando formador com dados:", { 
+      nome, email, telefone
+    });
+    
+    // Verificação inicial
+    if (!email) {
+      return res.status(400).json({ message: "Email é obrigatório" });
+    }
+    
+    // Verificar se já existe um usuário com este email
     let usuario = await User.findOne({
       where: { 
-        [Op.or]: [
-          { id_utilizador: id_utilizador },
-          { email }
-        ]
+        email: email
       }
     });
     
+    // Se o usuário já existir, verificamos se podemos atualizá-lo para formador
+    if (usuario) {
+      console.log(`📝 Usuário com email ${email} já existe, atualizando para formador`);
+      
+      // Verificar se já é um formador
+      if (usuario.id_cargo === 2) {
+        return res.status(400).json({ message: "Este usuário já é um formador" });
+      }
+      
+      // Atualizar para formador
+      await usuario.update({
+        id_cargo: 2,
+        ...(nome && { nome }),
+        ...(telefone && { telefone })
+      });
+    } else {
+      // Se o usuário não existir, criamos um novo
+      console.log(`📝 Criando novo usuário formador com email ${email}`);
+      
+      // Verificar campos obrigatórios para novo usuário
+      if (!nome || !password || !idade || !telefone || !morada || !codigo_postal) {
+        return res.status(400).json({ 
+          message: "Dados incompletos para criar usuário", 
+          campos_necessarios: "nome, email, password, idade, telefone, morada, codigo_postal" 
+        });
+      }
+      
+      // Gerar hash da senha
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      
+      // Usar AVATAR.png padrão - sem processamento de imagem
+      const foto_perfil = 'AVATAR.png';
+      
+      // Criar o usuário com cargo de formador
+      usuario = await User.create({
+        nome,
+        email,
+        password: hashedPassword,
+        idade: parseInt(idade),
+        telefone,
+        morada,
+        codigo_postal,
+        id_cargo: 2, // Formador
+        foto_perfil,
+        primeiro_login: 1 // Primeiro login
+      });
+    }
+    
+    // Verificação de sucesso
     if (!usuario) {
-      return res.status(404).json({ message: "Usuário não encontrado" });
+      return res.status(500).json({ message: "Erro ao criar ou atualizar usuário" });
     }
-    
-    // Verificar se já é um formador
-    if (usuario.id_cargo === 2) {
-      return res.status(400).json({ message: "Este usuário já é um formador" });
-    }
-    
-    // Atualizar para formador
-    await usuario.update({
-      id_cargo: 2,
-      ...(nome && { nome }),
-      ...(foto_perfil && { foto_perfil }),
-      ...(telefone && { telefone })
-    });
     
     return res.status(200).json({
-      message: "Usuário promovido a formador com sucesso",
+      message: "Usuário criado/promovido a formador com sucesso",
       formador: usuario
     });
   } catch (error) {

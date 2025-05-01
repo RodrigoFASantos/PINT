@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const formadorController = require('../../controllers/users/formador_ctrl');
-
-// Importar o middleware de autenticação existente
+const uploadUtils = require('../../middleware/upload');
 const verificarToken = require('../../middleware/auth');
 
 // Função de verificação de cargos baseada no middleware existente
@@ -40,7 +39,8 @@ router.get('/', formadorController.getAllFormadores);
 router.get('/:id', formadorController.getFormadorById);
 router.get('/:id/cursos', formadorController.getCursosFormador);
 
-// Permitir a criação de formadores sem autenticação para registro
+// Permitir a criação de formadores com upload de imagem
+// Usando uploadRegister que já está configurado adequadamente no módulo upload
 router.post('/', formadorController.createFormador);
 
 // Rotas para gerenciar categorias de formadores

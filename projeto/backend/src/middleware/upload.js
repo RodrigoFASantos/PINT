@@ -464,8 +464,55 @@ const ensureUserDir = (req, res, next) => {
 
 
 
+const registerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // No registro, o email vem do corpo da requisição, não do req.user
+    const email = req.body.email;
+    
+    if (!email) {
+      return cb(new Error('Email não fornecido no corpo da requisição'), null);
+    }
+    
+    const userSlug = email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
+    
+    console.log(`Storage para registro: Salvando em ${userDir}`);
+    ensureDir(userDir);
+    cb(null, userDir);
+  },
+  filename: (req, file, cb) => {
+    // No registro, o email vem do corpo da requisição
+    const email = req.body.email;
+    
+    if (!email) {
+      return cb(new Error('Email não fornecido no corpo da requisição'), null);
+    }
+    
+    // Usar nome fixo para imagem de perfil
+    const fileName = `${email}_AVATAR.png`;
+    
+    console.log(`Storage para registro: Gerando nome de arquivo ${fileName}`);
+    cb(null, fileName);
+  }
+});
 
-
+// Criar um middleware de upload específico para registro
+const uploadRegister = multer({
+  storage: registerStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Verificar o tipo MIME
+    if (file.mimetype.startsWith('image/')) {
+      console.log(`Upload para registro: Tipo de arquivo válido: ${file.mimetype}`);
+      cb(null, true);
+    } else {
+      console.log(`Upload para registro: Tipo de arquivo inválido: ${file.mimetype}`);
+      cb(new Error('Apenas imagens são permitidas'), false);
+    }
+  }
+});
 
 
 // Exportações
@@ -490,5 +537,7 @@ module.exports = {
   uploadUserModificado,
   uploadTemp,
   userStorageModificado,	
-  ensureUserDir
+  ensureUserDir,
+  uploadRegister,
+  uploadTemporario
 };
