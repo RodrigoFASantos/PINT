@@ -18,14 +18,10 @@ const GerenciarInscricoes = () => {
   const [selectedInscricao, setSelectedInscricao] = useState(null);
   const [removendo, setRemovendo] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState('');
+  const [motivoError, setMotivoError] = useState('');
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-
-
-
-
-
 
   // Buscar dados do curso e inscrições
   // Modificação na função fetchData para corrigir o problema de obtenção de informações do usuário
@@ -117,19 +113,9 @@ const GerenciarInscricoes = () => {
     }
   }, [id, navigate]);
 
-
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-
-
-
-
-
-
-
 
   // Verificar permissões
   useEffect(() => {
@@ -146,15 +132,24 @@ const GerenciarInscricoes = () => {
   // Função para abrir modal de confirmação de cancelamento de inscrição
   const handleCancelarInscricao = (inscricao) => {
     setSelectedInscricao(inscricao);
+    setMotivoCancelamento(''); // Limpar o motivo ao abrir o modal
+    setMotivoError(''); // Limpar mensagens de erro
     setShowConfirmation(true);
   };
 
   // Função para confirmar o cancelamento da inscrição
   const confirmCancelarInscricao = async () => {
     if (!selectedInscricao) return;
+    
+    // Validar se o motivo foi fornecido
+    if (!motivoCancelamento.trim()) {
+      setMotivoError('Por favor, informe o motivo do cancelamento.');
+      return;
+    }
 
     try {
       setRemovendo(true);
+      setMotivoError(''); // Limpar mensagem de erro
       const token = localStorage.getItem('token');
 
       // Modificado para usar o endpoint correto conforme definido no backend
@@ -165,7 +160,7 @@ const GerenciarInscricoes = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          motivo_cancelamento: 'Cancelado pelo formador/administrador'
+          motivo_cancelamento: motivoCancelamento // Usando o motivo fornecido pelo usuário
         })
       });
 
@@ -206,6 +201,7 @@ const GerenciarInscricoes = () => {
       setShowConfirmation(false);
       setSelectedInscricao(null);
       setRemovendo(false);
+      setMotivoCancelamento('');
     }
   };
 
@@ -370,7 +366,25 @@ const GerenciarInscricoes = () => {
               <strong> {selectedInscricao?.utilizador?.nome || 'este aluno'}</strong>
               no curso?
             </p>
-            <div className="modal-buttons">
+            
+            {/* Novo campo para motivo do cancelamento */}
+            <div className="form-group mt-4">
+              <label htmlFor="motivoCancelamento" className="font-medium text-gray-700 block mb-2">
+                Motivo do Cancelamento *
+              </label>
+              <textarea
+                id="motivoCancelamento"
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                className={`w-full border ${motivoError ? 'border-red-500' : 'border-gray-300'} rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                rows="3"
+                placeholder="Informe o motivo do cancelamento da inscrição"
+                disabled={removendo}
+              ></textarea>
+              {motivoError && <p className="text-red-500 text-sm mt-1">{motivoError}</p>}
+            </div>
+            
+            <div className="modal-buttons mt-4">
               <button
                 onClick={() => setShowConfirmation(false)}
                 className="btn-cancelar"
