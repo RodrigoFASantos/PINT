@@ -24,7 +24,7 @@ const TopicoCurso = require('./models/TopicoCurso');
 const Trabalho_Entregue = require('./models/Trabalho_Entregue');
 const User = require('./models/User');
 const User_Pendente = require('./models/User_Pendente');
-
+const FormadorAssociacoesPendentes = require('./models/Formador_Associacoes_Pendentes');
 
 // Coleção de todos os modelos para uso nas funções associate
 const models = {
@@ -53,7 +53,8 @@ const models = {
   TopicoCurso,
   Trabalho_Entregue,
   User,
-  User_Pendente
+  User_Pendente,
+  FormadorAssociacoesPendentes
 };
 
 // ========== DEFINIÇÃO DE TODAS AS ASSOCIAÇÕES ==========
@@ -63,6 +64,19 @@ User_Pendente.belongsTo(Cargo, {
   foreignKey: "id_cargo",
   as: "cargo",
   constraints: false // Não criar constraint no banco
+});
+
+// === Associações FormadorAssociacoesPendentes ===
+FormadorAssociacoesPendentes.belongsTo(User_Pendente, {
+  foreignKey: "id_pendente",
+  as: "usuario_pendente",
+  onDelete: 'CASCADE'
+});
+
+// Adicione associação recíproca em User_Pendente
+User_Pendente.hasOne(FormadorAssociacoesPendentes, {
+  foreignKey: "id_pendente",
+  as: "associacoes"
 });
 
 // === Associações User ===

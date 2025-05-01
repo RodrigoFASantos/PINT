@@ -36,7 +36,8 @@
 }
 
 .perfil-capa:hover::after {
-  content: "✏️"; /* Emoji de lápis como fallback se FontAwesome não estiver disponível */
+  content: "✏️";
+  /* Emoji de lápis como fallback se FontAwesome não estiver disponível */
   position: absolute;
   top: 50%;
   left: 50%;
@@ -110,7 +111,8 @@
 }
 
 .perfil-avatar:hover::after {
-  content: "✏️"; /* Emoji de lápis como fallback se FontAwesome não estiver disponível */
+  content: "✏️";
+  /* Emoji de lápis como fallback se FontAwesome não estiver disponível */
   position: absolute;
   top: 50%;
   left: 50%;
@@ -145,7 +147,8 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 25px;
-  padding-left: 180px; /* Espaço para o avatar */
+  padding-left: 180px;
+  /* Espaço para o avatar */
 }
 
 .perfil-header h2 {
@@ -229,7 +232,10 @@
 }
 
 /* Botões estilizados */
-.btn-edit, .btn-save, .btn-cancel, .btn-logout {
+.btn-edit,
+.btn-save,
+.btn-cancel,
+.btn-logout {
   padding: 10px 20px;
   border-radius: 6px;
   font-size: 16px;
@@ -280,30 +286,33 @@
   .perfil-capa {
     height: 200px;
   }
-  
+
   .perfil-avatar-container {
     left: 30px;
   }
-  
+
   .perfil-avatar {
     width: 140px;
     height: 140px;
   }
-  
+
   .perfil-header {
     padding-left: 180px;
   }
-  
+
   .perfil-dados {
     grid-template-columns: 1fr;
   }
-  
+
   .perfil-acoes {
     flex-direction: column;
     gap: 10px;
   }
-  
-  .btn-edit, .btn-save, .btn-cancel, .btn-logout {
+
+  .btn-edit,
+  .btn-save,
+  .btn-cancel,
+  .btn-logout {
     width: 100%;
   }
 
@@ -311,7 +320,7 @@
     background-color: #007bff;
     color: white;
   }
-  
+
   .btn-logout:hover {
     background-color: #0056b3;
   }
@@ -323,7 +332,7 @@
     left: 50%;
     transform: translateX(-50%);
   }
-  
+
   .perfil-header {
     padding-left: 0;
     padding-top: 90px;
@@ -331,5 +340,153 @@
     align-items: center;
   }
 
-  
+
+}
+
+
+/* Adicione estes estilos ao arquivo perfilUser.css */
+
+/* Estilos para a seção de categorias e áreas */
+.formador-categorias-areas {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.formador-categorias-areas h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 8px;
+}
+
+.categorias-areas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.categoria-item {
+  background-color: white;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 4px solid #4285f4;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.categoria-item strong {
+  color: #333;
+  margin-right: 5px;
+}
+
+.admin-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Estilos para a seção de cursos */
+.formador-cursos-section {
+  margin: 30px 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.cursos-tabs {
+  display: flex;
+  border-bottom: 1px solid #e1e4e8;
+  background-color: #f8f9fa;
+}
+
+.cursos-tab {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.cursos-tab.active {
+  color: #4285f4;
+  border-bottom: 2px solid #4285f4;
+  background-color: white;
+}
+
+.cursos-tab:hover:not(.active) {
+  background-color: #eaeaea;
+}
+
+.cursos-content {
+  padding: 20px;
+}
+
+.cursos-table-container {
+  margin-bottom: 20px;
+}
+
+.cursos-table-container h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+}
+
+.cursos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cursos-table th,
+.cursos-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.cursos-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.cursos-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.no-data-message {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+/* Responsividade para tabelas em dispositivos móveis */
+@media (max-width: 768px) {
+  .cursos-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .cursos-tab {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
 }

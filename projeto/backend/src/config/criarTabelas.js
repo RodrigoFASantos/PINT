@@ -23,6 +23,16 @@ const createTablesInOrder = async () => {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
 
+    `CREATE TABLE IF NOT EXISTS formador_associacoes_pendentes (
+  id SERIAL PRIMARY KEY,
+  id_pendente INTEGER NOT NULL REFERENCES "User_Pendente"(id) ON DELETE CASCADE,
+  categorias JSONB DEFAULT '[]',
+  areas JSONB DEFAULT '[]',
+  cursos JSONB DEFAULT '[]',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT unique_formador_pendente UNIQUE (id_pendente)
+);`,
+
     `CREATE TABLE IF NOT EXISTS utilizadores (
       id_utilizador SERIAL PRIMARY KEY,
       id_cargo INTEGER REFERENCES cargos(id_cargo),

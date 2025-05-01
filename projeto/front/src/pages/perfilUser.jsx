@@ -20,6 +20,15 @@ const PerfilUser = () => {
     idade: ''
   });
 
+  // Novos estados para categorias, áreas e cursos
+  const [formadorData, setFormadorData] = useState({
+    categorias: [],
+    cursosInscritos: [],
+    cursosMinistrados: []
+  });
+  const [isFormador, setIsFormador] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // Estados para upload de imagens
   const [avatarFile, setAvatarFile] = useState(null);
   const [capaFile, setCapaFile] = useState(null);
@@ -27,31 +36,28 @@ const PerfilUser = () => {
   const [capaPreview, setCapaPreview] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
+  // Novo estado para controlar a aba ativa
+  const [activeTab, setActiveTab] = useState('ministrados');
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Função para alternar entre abas
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+  };
 
-
-
-
-
-
-
-
-
-
-
-
+  // Código existente para carregar o perfil
   useEffect(() => {
     console.log('🔄 INICIALIZAÇÃO: useEffect disparado, iniciando carregamento');
-    
+
     // Flag para gerenciar o cleanup quando o componente desmontar
     let isMounted = true;
-    
+
     const loadProfile = async () => {
       try {
         console.log('🔄 INICIALIZAÇÃO: Tentando carregar perfil do usuário');
         const token = localStorage.getItem('token');
-        
+
         if (!token) {
           console.error('🔴 INICIALIZAÇÃO: Token não encontrado');
           toast.error('Sessão expirada. Por favor, faça login novamente.');
@@ -60,12 +66,12 @@ const PerfilUser = () => {
           }, 2000);
           return;
         }
-        
+
         console.log('🔄 INICIALIZAÇÃO: Token encontrado, buscando perfil');
-        
+
         // Buscar os dados do perfil
         await fetchUserProfile();
-        
+
         if (isMounted) {
           console.log('🟢 INICIALIZAÇÃO: Perfil carregado com sucesso');
         }
@@ -73,7 +79,7 @@ const PerfilUser = () => {
         if (isMounted) {
           console.error('🔴 INICIALIZAÇÃO: Erro crítico ao inicializar perfil:', error);
           toast.error('Erro ao carregar dados. Tentando novamente em 5 segundos...');
-          
+
           // Tentar novamente após 5 segundos
           setTimeout(() => {
             if (isMounted) {
@@ -84,27 +90,16 @@ const PerfilUser = () => {
         }
       }
     };
-    
+
     // Iniciar carregamento
     loadProfile();
-    
+
     // Cleanup ao desmontar o componente
     return () => {
       isMounted = false;
       console.log('🔄 INICIALIZAÇÃO: Componente desmontando, cancelando operações pendentes');
     };
-  }, []); // Executa apenas na montagem do componente
-
-
-
-
-
-
-
-
-
-
-
+  }, []);
 
   const fetchUserProfile = async () => {
     try {
@@ -114,12 +109,12 @@ const PerfilUser = () => {
         console.log('🔄 PERFIL: Token não encontrado, abortando');
         return;
       }
-  
+
       console.log('🔄 PERFIL: Enviando requisição para a API');
       const response = await axios.get(`${API_BASE}/users/perfil`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-  
+
       console.log('🔄 PERFIL: Resposta recebida do servidor', {
         status: response.status,
         id_usuario: response.data.id_utilizador,
@@ -127,7 +122,7 @@ const PerfilUser = () => {
         foto_perfil: response.data.foto_perfil,
         foto_capa: response.data.foto_capa
       });
-  
+
       setUserInfo(response.data);
       setFormData({
         nome: response.data.nome || '',
@@ -135,22 +130,31 @@ const PerfilUser = () => {
         telefone: response.data.telefone || '',
         idade: response.data.idade || ''
       });
-  
+
+      // Verificar se é formador ou admin
+      setIsFormador(response.data.id_cargo === 2);
+      setIsAdmin(response.data.id_cargo === 1);
+
+      // Se for formador, buscar categorias, áreas e cursos
+      if (response.data.id_cargo === 2) {
+        await fetchFormadorData();
+      }
+
       // Extrair o nome do arquivo real (para debug)
       const extractFilename = (path) => {
         if (!path) return 'não definido';
         const parts = path.split('/');
         return parts[parts.length - 1];
       };
-      
+
       console.log('🔄 PERFIL: Nome do arquivo AVATAR:', extractFilename(response.data.foto_perfil));
       console.log('🔄 PERFIL: Nome do arquivo CAPA:', extractFilename(response.data.foto_capa));
-  
+
       // Adicionar timestamp para evitar cache do navegador + parâmetro force para garantir
       const timestamp = Date.now();
       const cacheParam = `t=${timestamp}&force=true`;
       console.log('🔄 PERFIL: Usando parâmetros anti-cache:', cacheParam);
-  
+
       // Configurar as URLs das imagens com timestamp para forçar recarregamento
       if (response.data.foto_perfil === 'AVATAR.png') {
         console.log('🔄 PERFIL: Usando imagem de AVATAR padrão');
@@ -160,7 +164,7 @@ const PerfilUser = () => {
         console.log('🔄 PERFIL: URL do AVATAR com anti-cache:', avatarUrl);
         setAvatarPreview(avatarUrl);
       }
-  
+
       if (response.data.foto_capa === 'CAPA.png') {
         console.log('🔄 PERFIL: Usando imagem de CAPA padrão');
         setCapaPreview(IMAGES.DEFAULT_CAPA);
@@ -169,7 +173,7 @@ const PerfilUser = () => {
         console.log('🔄 PERFIL: URL da CAPA com anti-cache:', capaUrl);
         setCapaPreview(capaUrl);
       }
-  
+
       // Limpeza explícita de cache (adicional)
       if ('caches' in window) {
         console.log('🔄 PERFIL: Limpando cache de imagens');
@@ -179,7 +183,7 @@ const PerfilUser = () => {
           });
         });
       }
-  
+
     } catch (error) {
       console.error('🔴 PERFIL: Erro ao buscar perfil:', error);
       console.error('🔴 PERFIL: Detalhes do erro:', error.response || error.message);
@@ -187,17 +191,34 @@ const PerfilUser = () => {
     }
   };
 
+  // Nova função para buscar dados específicos de formador
+  const fetchFormadorData = async () => {
+    try {
+      console.log('🔄 FORMADOR: Iniciando busca de dados específicos do formador');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('🔄 FORMADOR: Token não encontrado, abortando');
+        return;
+      }
 
+      const response = await axios.get(`${API_BASE}/formadores/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
+      console.log('🔄 FORMADOR: Dados recebidos', {
+        categorias: response.data.categorias.length,
+        cursosInscritos: response.data.cursosInscritos.length,
+        cursosMinistrados: response.data.cursosMinistrados.length
+      });
 
+      setFormadorData(response.data);
 
-
-
-
-
-
-
-
+    } catch (error) {
+      console.error('🔴 FORMADOR: Erro ao buscar dados do formador:', error);
+      console.error('🔴 FORMADOR: Detalhes do erro:', error.response || error.message);
+      toast.error('Não foi possível carregar os dados específicos do formador');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -206,11 +227,8 @@ const PerfilUser = () => {
 
   // Modificado para prevenir o comportamento padrão do evento
   const handleEditToggle = (e) => {
-
     e.preventDefault();
-
     console.log("Botão de edição clicado. Estado atual de isEditing:", isEditing);
-
     setIsEditing(!isEditing);
 
     // Se estiver cancelando a edição, restaurar os dados originais
@@ -232,7 +250,6 @@ const PerfilUser = () => {
 
     const formData = new FormData();
     formData.append('imagem', file);
-
 
     if (userInfo && userInfo.email) {
       formData.append('email', userInfo.email);
@@ -266,7 +283,6 @@ const PerfilUser = () => {
 
     const formData = new FormData();
     formData.append('imagem', file);
-
 
     if (userInfo && userInfo.email) {
       formData.append('email', userInfo.email);
@@ -339,9 +355,6 @@ const PerfilUser = () => {
     document.getElementById('capa-upload').click();
   };
 
-
-
-
   // Função modificada para fazer upload automático
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
@@ -405,6 +418,7 @@ const PerfilUser = () => {
       }
     }
   };
+
   // Função modificada para fazer upload automático
   const handleCapaChange = async (e) => {
     const file = e.target.files[0];
@@ -469,9 +483,6 @@ const PerfilUser = () => {
     }
   };
 
-
-
-
   const handleLogout = () => {
     // Remover token do localStorage
     localStorage.removeItem('token');
@@ -490,25 +501,25 @@ const PerfilUser = () => {
     }, 1500);
   };
 
-if (!userInfo) {
-  return (
-    <div className="perfil-container">
-      <Navbar toggleSidebar={toggleSidebar} />
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className="loading-container">
-        <div className="loading">
-          <div className="loading-spinner"></div>
-          <p>Carregando perfil...</p>
-          <p className="loading-tip">Se esta tela persistir por mais de 10 segundos, 
-            <span className="reload-link" onClick={() => window.location.reload()}>
-              clique aqui para recarregar
-            </span>
-          </p>
+  if (!userInfo) {
+    return (
+      <div className="perfil-container">
+        <Navbar toggleSidebar={toggleSidebar} />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="loading-container">
+          <div className="loading">
+            <div className="loading-spinner"></div>
+            <p>Carregando perfil...</p>
+            <p className="loading-tip">Se esta tela persistir por mais de 10 segundos,
+              <span className="reload-link" onClick={() => window.location.reload()}>
+                clique aqui para recarregar
+              </span>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="perfil-container">
@@ -545,7 +556,6 @@ if (!userInfo) {
             </div>
           </div>
 
-          {/* Note que aqui movemos o onSubmit APENAS para o formulário de salvar */}
           <div className="perfil-detalhes">
             <div className="perfil-header">
               <h2>{userInfo.nome}</h2>
@@ -630,6 +640,33 @@ if (!userInfo) {
               )}
             </div>
 
+            {/* Nova seção para exibir categorias e áreas (apenas para formadores) */}
+            {isFormador && (
+              <div className="formador-categorias-areas">
+                <h3>Especializações</h3>
+                <div className="categorias-areas-list">
+                  {formadorData.categorias.length > 0 ? (
+                    formadorData.categorias.map(categoria => (
+                      <div key={categoria.id} className="categoria-item">
+                        <strong>{categoria.nome}:</strong> {
+                          categoria.areas.length > 0
+                            ? categoria.areas.map(area => area.nome).join(', ')
+                            : 'Nenhuma área específica'
+                        }
+                      </div>
+                    ))
+                  ) : (
+                    <p>Nenhuma categoria ou área associada.</p>
+                  )}
+                </div>
+                {isAdmin && (
+                  <div className="admin-actions">
+                    <button className="btn-edit btn-sm">Editar Especializações</button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="perfil-acoes">
               {isEditing ? (
                 <>
@@ -657,6 +694,104 @@ if (!userInfo) {
             </div>
           </div>
         </div>
+
+        {/* Nova seção para exibir cursos do formador - CORRIGIDA com estados React */}
+        {isFormador && (
+          <div className="formador-cursos-section">
+            <div className="cursos-tabs">
+              <button
+                className={`cursos-tab ${activeTab === 'ministrados' ? 'active' : ''}`}
+                onClick={() => handleTabChange('ministrados')}
+              >
+                Cursos Ministrados
+              </button>
+              <button
+                className={`cursos-tab ${activeTab === 'inscritos' ? 'active' : ''}`}
+                onClick={() => handleTabChange('inscritos')}
+              >
+                Cursos Inscritos
+              </button>
+            </div>
+
+            <div className="cursos-content">
+              {/* Tabela de cursos ministrados */}
+              <div
+                className="cursos-table-container"
+                style={{ display: activeTab === 'ministrados' ? 'block' : 'none' }}
+              >
+                <h3>Cursos Ministrados</h3>
+                {formadorData.cursosMinistrados && formadorData.cursosMinistrados.length > 0 ? (
+                  <table className="cursos-table">
+                    <thead>
+                      <tr>
+                        <th>Nome do Curso</th>
+                        <th>Categoria</th>
+                        <th>Área</th>
+                        <th>Tipo</th>
+                        <th>Data Início</th>
+                        <th>Data Fim</th>
+                        <th>Vagas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formadorData.cursosMinistrados.map(curso => (
+                        <tr key={curso.id}>
+                          <td>{curso.nome}</td>
+                          <td>{curso.categoria}</td>
+                          <td>{curso.area}</td>
+                          <td>{curso.tipo}</td>
+                          <td>{new Date(curso.dataInicio).toLocaleDateString()}</td>
+                          <td>{new Date(curso.dataFim).toLocaleDateString()}</td>
+                          <td>{curso.vagas}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="no-data-message">Você não está ministrando nenhum curso atualmente.</p>
+                )}
+              </div>
+
+              {/* Tabela de cursos inscritos */}
+              <div
+                className="cursos-table-container"
+                style={{ display: activeTab === 'inscritos' ? 'block' : 'none' }}
+              >
+                <h3>Cursos Inscritos</h3>
+                {formadorData.cursosInscritos && formadorData.cursosInscritos.length > 0 ? (
+                  <table className="cursos-table">
+                    <thead>
+                      <tr>
+                        <th>Nome do Curso</th>
+                        <th>Categoria</th>
+                        <th>Área</th>
+                        <th>Tipo</th>
+                        <th>Data Início</th>
+                        <th>Data Fim</th>
+                        <th>Data Inscrição</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formadorData.cursosInscritos.map(curso => (
+                        <tr key={curso.id}>
+                          <td>{curso.nome}</td>
+                          <td>{curso.categoria}</td>
+                          <td>{curso.area}</td>
+                          <td>{curso.tipo}</td>
+                          <td>{new Date(curso.dataInicio).toLocaleDateString()}</td>
+                          <td>{new Date(curso.dataFim).toLocaleDateString()}</td>
+                          <td>{new Date(curso.dataInscricao).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="no-data-message">Você não está inscrito em nenhum curso atualmente.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <ToastContainer />

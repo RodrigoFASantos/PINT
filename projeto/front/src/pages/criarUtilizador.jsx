@@ -4,11 +4,10 @@ import Sidebar from '../components/Sidebar';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import imagePreview from '../images/user.png';
 import API_BASE from "../api";
 
 // Componentes de Modal
-import CategoriaModal from '../components/categoriaModal'; // Corrigido para corresponder ao nome do arquivo no disco
+import CategoriaModal from '../components/categoriaModal';
 import AreaModal from '../components/areaModal';
 import CursosModal from '../components/CursosModal';
 
@@ -39,8 +38,7 @@ function CriarUser() {
     telefone: '',
     morada: '',
     codigo_postal: '',
-    cargo: '',
-    imagem: null,
+    cargo: ''
   });
 
   // Definir a função carregarAreas com useCallback para evitar recriação em cada render
@@ -139,47 +137,28 @@ function CriarUser() {
   };
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
+    const { name, value } = e.target;
     if (name === 'idade') {
       const idade = Math.min(99, Math.max(1, Number(value)));
       setFormData({ ...formData, idade });
       return;
     }
 
-    if (name === 'imagem') {
-      setFormData({ ...formData, imagem: files[0] });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (isSubmitting) return;
     setIsSubmitting(true);
-  
+
     try {
-      const data = new FormData();
-  
-      // Adicionar todos os campos, exceto imagem para formadores
-      for (let key in formData) {
-        if (key !== 'imagem' || formData.cargo !== 'formador') {
-          if (formData[key] !== null && formData[key] !== undefined) {
-            data.append(key, formData[key]);
-          }
-        }
-      }
-      
-      // Adicionar imagem apenas para formandos
-      if (formData.cargo !== 'formador' && formData.imagem) {
-        data.append('imagem', formData.imagem);
-      }
-  
-      let userId = null;
-  
+      let response;
+
       if (formData.cargo === 'formador') {
-        // Para formadores, usar application/json em vez de multipart/form-data
+        // Para formadores, usar objeto simples (sem FormData)
         const formadorData = {
           nome: formData.nome,
           email: formData.email,
@@ -188,25 +167,51 @@ function CriarUser() {
           telefone: formData.telefone,
           morada: formData.morada,
           codigo_postal: formData.codigo_postal,
-          cargo: formData.cargo
+          cargo: 'formador'
         };
-        
-        const response = await axios.post(`${API_BASE}/formadores`, formadorData);
-  
-        toast.success('Formador criado com sucesso!');
-        userId = response.data.formador.id_utilizador || response.data.formador.id;
-  
-        // Rest of your code for associating categories, areas, etc.
-      } else {
-        // Para formandos, continuar usando multipart/form-data
-        const response = await axios.post(`${API_BASE}/auth/register`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+
+        // Adicionar categorias, áreas e curso selecionados
+        if (categoriasSelecionadas.length > 0) {
+          formadorData.categorias = categoriasSelecionadas.map(cat => cat.id_categoria);
+        }
+
+        if (areasSelecionadas.length > 0) {
+          formadorData.areas = areasSelecionadas.map(area => area.id_area);
+        }
+
+        if (cursoSelecionado) {
+          formadorData.curso = cursoSelecionado;
+        }
+
+        // Importante: enviar como application/json, não como multipart/form-data
+        response = await axios.post(`${API_BASE}/formadores/register`, formadorData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
-  
-        toast.success('Utilizador criado com sucesso!');
+
+
+
+        toast.success('Formador registrado com sucesso! Um email de confirmação foi enviado.');
+      } else {
+        // Para formandos, também usar objeto simples (sem FormData)
+        const formandoData = {
+          nome: formData.nome,
+          email: formData.email,
+          password: formData.password,
+          idade: formData.idade,
+          telefone: formData.telefone,
+          morada: formData.morada,
+          codigo_postal: formData.codigo_postal,
+          cargo: 'formando'
+        };
+
+
+
+        toast.success('Formando registrado com sucesso! Um email de confirmação foi enviado.');
       }
-  
-      // Limpar o formulário
+
+      // Limpar o formulário após sucesso
       setFormData({
         nome: '',
         email: '',
@@ -215,38 +220,37 @@ function CriarUser() {
         telefone: '',
         morada: '',
         codigo_postal: '',
-        cargo: '',
-        imagem: null,
+        cargo: ''
       });
       setCategoriasSelecionadas([]);
       setAreasSelecionadas([]);
       setCursoSelecionado(null);
-  
+
     } catch (error) {
-      // Error handling code...
+      console.error("Erro ao criar usuário:", error);
+
+      let mensagem = "Erro ao criar usuário. Por favor, tente novamente.";
+
+      if (error.response && error.response.data && error.response.data.message) {
+        mensagem = error.response.data.message;
+      }
+
+      toast.error(mensagem);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+
+
+
 
   return (
     <div className="register-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       <ToastContainer />
 
-      <form className='form-register' onSubmit={handleSubmit} encType="multipart/form-data">
-        <label className="custom-file-upload">
-          <input
-            type="file"
-            name="imagem"
-            accept="image/*"
-            onChange={handleChange}
-          />
-          <img className="image" src={formData.imagem ? URL.createObjectURL(formData.imagem) : imagePreview} alt="Pré-visualização" style={{
-            animation: "float 2.5s infinite ease-in-out",
-            transition: "transform 0.3s ease"
-          }} />
-        </label>
+      <form className='form-register' onSubmit={handleSubmit}>
 
         <div className="inputs">
           <div className="row">
@@ -297,7 +301,7 @@ function CriarUser() {
           )}
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Criando...' : 'Criar Conta'}
+            {isSubmitting ? 'Registrando...' : 'Registrar Usuário'}
           </button>
         </div>
       </form>

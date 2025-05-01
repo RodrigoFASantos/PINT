@@ -39,8 +39,10 @@ router.get('/', formadorController.getAllFormadores);
 router.get('/:id', formadorController.getFormadorById);
 router.get('/:id/cursos', formadorController.getCursosFormador);
 
-// Permitir a criação de formadores com upload de imagem
-// Usando uploadRegister que já está configurado adequadamente no módulo upload
+// Adicionadas novas rotas de registro com confirmação 
+router.post('/register', formadorController.registerFormador);
+
+// Mantendo a rota antiga para compatibilidade, mas implementando o mesmo fluxo
 router.post('/', formadorController.createFormador);
 
 // Rotas para gerenciar categorias de formadores
@@ -56,5 +58,8 @@ router.delete('/:id/areas/:areaId', verificarToken, verificarCargo(['admin', 'fo
 // Rotas protegidas - apenas administradores podem atualizar/excluir formadores
 router.put('/:id', verificarToken, verificarCargo(['admin']), formadorController.updateFormador);
 router.delete('/:id', verificarToken, verificarCargo(['admin']), formadorController.deleteFormador);
+
+
+router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 
 module.exports = router;

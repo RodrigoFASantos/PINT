@@ -8,6 +8,12 @@ const fs = require("fs");
 const path = require("path");
 const uploadUtils = require("../../middleware/upload");
 
+
+const FormadorAssociacoesPendentes = require("../../database/models/Formador_Associacoes_Pendentes");
+const FormadorCategoria = require("../../database/models/Formador_Categoria");
+const FormadorArea = require("../../database/models/Formador_Area");
+const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+
 /**
  * FUNÇÕES AUXILIARES
  */
@@ -190,6 +196,7 @@ const createUser = async (req, res) => {
   try {
     console.log("🔍 Iniciando criação de usuário");
     const { nome, email, password, idade, telefone, morada, codigo_postal, cargo } = req.body;
+    const senha_temporaria = password; // Guardar a senha em texto puro para o email
 
     // Validar campos obrigatórios
     if (!nome || !email || !password) {
@@ -204,6 +211,7 @@ const createUser = async (req, res) => {
 
     // Determinar o cargo padrão (3 = formando)
     const cargoId = cargo === 'formador' ? 2 : 3;
+    const cargoDescricao = cargo === 'formador' ? 'Formador' : 'Formando';
 
     // Hash da senha
     const salt = await bcrypt.genSalt(10);
@@ -242,6 +250,37 @@ const createUser = async (req, res) => {
     const usuarioSemSenha = { ...novoUsuario.toJSON() };
     delete usuarioSemSenha.password;
 
+    // Enviar email com os dados da conta
+    try {
+      // Gerar token para anexar ao email (opcional, podemos usar só para fins informativos)
+      const token = jwt.sign(
+        { id_utilizador: novoUsuario.id_utilizador, email },
+        process.env.JWT_SECRET,
+        { expiresIn: "24h" }
+      );
+
+      // Preparar dados para o email
+      const userForEmail = {
+        id: novoUsuario.id_utilizador,
+        nome: novoUsuario.nome,
+        email: novoUsuario.email,
+        idade: novoUsuario.idade,
+        telefone: novoUsuario.telefone,
+        morada: novoUsuario.morada,
+        codigo_postal: novoUsuario.codigo_postal,
+        cargo_descricao: cargoDescricao,
+        senha_temporaria: senha_temporaria, // Enviar a senha em texto puro no email
+        token: token
+      };
+
+      // Enviar email com os dados da conta
+      await sendRegistrationEmail(userForEmail);
+      console.log(`✅ Email enviado para: ${email}`);
+    } catch (emailError) {
+      console.error("⚠️ Erro ao enviar email:", emailError);
+      // Continuar normalmente mesmo que o email falhe
+    }
+
     console.log(`✅ Usuário criado com sucesso: ${novoUsuario.id_utilizador}`);
 
     return res.status(201).json({
@@ -258,6 +297,9 @@ const createUser = async (req, res) => {
     });
   }
 };
+
+
+
 
 
 const confirmAccount = async (req, res) => {
@@ -306,6 +348,75 @@ const confirmAccount = async (req, res) => {
       foto_perfil: "AVATAR.png",
       foto_capa: "CAPA.png"
     });
+
+    // NOVO: Buscar e processar associações pendentes
+    try {
+      const associacoesPendentes = await FormadorAssociacoesPendentes.findOne({
+        where: { id_pendente: pendingUser.id }
+      });
+
+      if (associacoesPendentes) {
+        console.log("✅ Encontradas associações pendentes para processar");
+        
+        // Processar categorias
+        if (associacoesPendentes.categorias && associacoesPendentes.categorias.length > 0) {
+          console.log(`✅ Processando ${associacoesPendentes.categorias.length} categorias`);
+          const dataAtual = new Date();
+          
+          for (const categoria of associacoesPendentes.categorias) {
+            await FormadorCategoria.create({
+              id_formador: newUser.id_utilizador,
+              id_categoria: typeof categoria === 'object' ? categoria.id_categoria : categoria,
+              data_associacao: dataAtual
+            });
+          }
+        }
+        
+        // Processar áreas
+        if (associacoesPendentes.areas && associacoesPendentes.areas.length > 0) {
+          console.log(`✅ Processando ${associacoesPendentes.areas.length} áreas`);
+          const dataAtual = new Date();
+          
+          for (const area of associacoesPendentes.areas) {
+            await FormadorArea.create({
+              id_formador: newUser.id_utilizador,
+              id_area: typeof area === 'object' ? area.id_area : area,
+              data_associacao: dataAtual
+            });
+          }
+        }
+        
+        // Processar cursos
+        if (associacoesPendentes.cursos && associacoesPendentes.cursos.length > 0) {
+          console.log(`✅ Processando ${associacoesPendentes.cursos.length} cursos`);
+          
+          for (const cursoId of associacoesPendentes.cursos) {
+            try {
+              // Criar inscrição no curso
+              await Inscricao_Curso.create({
+                id_utilizador: newUser.id_utilizador,
+                id_curso: typeof cursoId === 'object' ? cursoId.id_curso : cursoId,
+                data_inscricao: new Date(),
+                estado: "inscrito"
+              });
+              
+              console.log(`✅ Formador inscrito no curso ID: ${cursoId}`);
+            } catch (error) {
+              console.error(`⚠️ Erro ao inscrever formador no curso ID: ${cursoId}`, error);
+              // Continuar com os próximos cursos mesmo se um falhar
+            }
+          }
+        }
+
+
+        // Remover as associações pendentes
+        await associacoesPendentes.destroy();
+        console.log("✅ Associações pendentes processadas e removidas");
+      }
+    } catch (assocError) {
+      console.error("⚠️ Erro ao processar associações pendentes:", assocError);
+      // Não falharemos a confirmação por causa disso
+    }
 
     // Criar pasta do usuário após confirmar a conta
     try {
