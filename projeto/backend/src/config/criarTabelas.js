@@ -24,14 +24,14 @@ const createTablesInOrder = async () => {
     );`,
 
     `CREATE TABLE IF NOT EXISTS formador_associacoes_pendentes (
-  id SERIAL PRIMARY KEY,
-  id_pendente INTEGER NOT NULL REFERENCES "User_Pendente"(id) ON DELETE CASCADE,
-  categorias JSONB DEFAULT '[]',
-  areas JSONB DEFAULT '[]',
-  cursos JSONB DEFAULT '[]',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT unique_formador_pendente UNIQUE (id_pendente)
-);`,
+      id SERIAL PRIMARY KEY,
+      id_pendente INTEGER NOT NULL REFERENCES "User_Pendente"(id) ON DELETE CASCADE,
+      categorias JSONB DEFAULT '[]',
+      areas JSONB DEFAULT '[]',
+      cursos JSONB DEFAULT '[]',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      CONSTRAINT unique_formador_pendente UNIQUE (id_pendente)
+    );`,
 
     `CREATE TABLE IF NOT EXISTS utilizadores (
       id_utilizador SERIAL PRIMARY KEY,
@@ -44,6 +44,12 @@ const createTablesInOrder = async () => {
       primeiro_login BOOLEAN DEFAULT TRUE,
       foto_perfil VARCHAR(500),
       foto_capa VARCHAR(500),
+      morada VARCHAR(255),
+      cidade VARCHAR(100),
+      distrito VARCHAR(100),
+      freguesia VARCHAR(100),
+      codigo_postal VARCHAR(20),
+      descricao TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,

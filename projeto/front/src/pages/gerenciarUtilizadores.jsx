@@ -1,380 +1,456 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
-import './css/gerenciarUsuarios.css';
 import Sidebar from '../components/Sidebar';
-import EditarUsuarioModal from '../components/EditarUsuarioModal';
 import API_BASE from '../api';
+import 'react-toastify/dist/ReactToastify.css';
+import './css/gerenciarUsuarios.css';
 
 const GerenciarUtilizadores = () => {
   const navigate = useNavigate();
   const [utilizadores, setUtilizadores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [perfilFiltro, setPerfilFiltro] = useState('');
-  const [nomeFiltro, setNomeFiltro] = useState('');
-  const [showEditarUtilizador, setShowEditarUtilizador] = useState(false);
-  const [utilizadorSelecionado, setUtilizadorSelecionado] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [erro, setErro] = useState(null);
-  // Estados para paginação
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  // Estados para modal de exclusão
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
-  const [deleteError, setDeleteError] = useState(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [utilizadorParaExcluir, setUtilizadorParaExcluir] = useState(null);
+  const [showCursosModal, setShowCursosModal] = useState(false);
   const [cursosFormador, setCursosFormador] = useState([]);
+  const [formadorComCursos, setFormadorComCursos] = useState(null);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  // Auth context
+  const { currentUser } = useAuth();
 
-  useEffect(() => {
-    const fetchUtilizadores = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        // Usando a rota padrão /api/users
-        const response = await axios.get(`${API_BASE}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('Resposta da API de utilizadores:', response.data);
-        
-        // A resposta já deve ser um array de utilizadores
-        if (Array.isArray(response.data)) {
-          setUtilizadores(response.data);
-          // Calcular o total de páginas
-          setTotalPages(Math.ceil(response.data.length / itemsPerPage));
-          setErro(null);
-        } else {
-          console.error('Resposta não é um array:', response.data);
-          setErro('Formato de resposta inesperado da API');
-          
-          // Se a resposta tiver uma mensagem, vamos mostrar para o usuário
-          if (response.data && response.data.message) {
-            setErro(`API retornou: ${response.data.message}`);
-          }
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro ao carregar utilizadores:', error);
-        setErro('Erro ao carregar utilizadores: ' + (error.response?.data?.message || error.message));
-        setLoading(false);
-      }
-    };
+  // Estados para paginação
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [totalUtilizadores, setTotalUtilizadores] = useState(0);
+  const utilizadoresPorPagina = 20;
 
-    fetchUtilizadores();
-  }, [itemsPerPage]);
+  // Estados para filtros
+  const [filtros, setFiltros] = useState({
+    nome: '',
+    perfil: '',
+    email: ''
+  });
 
-  // Obter utilizadores da página atual
-  const indexOfLastUser = currentPage * itemsPerPage;
-  const indexOfFirstUser = indexOfLastUser - itemsPerPage;
-  const currentUsers = utilizadores.slice(indexOfFirstUser, indexOfLastUser);
-
-  const handleFiltrarUtilizadores = () => {
-    // Filtragem local
-    const filtrados = utilizadores.filter(u => {
-      const nomeMatch = !nomeFiltro || u.nome.toLowerCase().includes(nomeFiltro.toLowerCase());
-      const perfilMatch = !perfilFiltro || (u.id_cargo === getCargoId(perfilFiltro));
-      return nomeMatch && perfilMatch;
-    });
-    
-    setUtilizadores(filtrados);
-    setTotalPages(Math.ceil(filtrados.length / itemsPerPage));
-    setCurrentPage(1);
+  // Toggle para a sidebar
+  const toggleSidebar = () => {
+    console.log('[DEBUG] GerenciarUtilizadores: Toggling sidebar');
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleLimparFiltros = () => {
-    setNomeFiltro('');
-    setPerfilFiltro('');
-    
-    // Recarregar todos os utilizadores
-    const fetchUtilizadores = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_BASE}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (Array.isArray(response.data)) {
-          setUtilizadores(response.data);
-          setTotalPages(Math.ceil(response.data.length / itemsPerPage));
-          setErro(null);
-        } else {
-          console.error('Resposta não é um array:', response.data);
-          setErro('Formato de resposta inesperado da API');
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro ao carregar utilizadores:', error);
-        setErro('Erro ao carregar utilizadores: ' + (error.response?.data?.message || error.message));
-        setLoading(false);
-      }
-    };
-
-    fetchUtilizadores();
-  };
-
-  const handleEditarUtilizador = (utilizador) => {
-    setUtilizadorSelecionado(utilizador);
-    setShowEditarUtilizador(true);
-  };
-
-  const handleAtivarDesativar = async (utilizadorId, ativo) => {
+  // Função para buscar utilizadores com paginação e filtros (usando useCallback)
+  const buscarUtilizadores = useCallback(async (pagina = 1) => {
     try {
+      console.log('[DEBUG] GerenciarUtilizadores: Iniciando busca de utilizadores - Página:', pagina);
+      setLoading(true);
       const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE}/users/${utilizadorId}/ativar-desativar`,
-        { ativo },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      // Atualizar lista de utilizadores
-      setUtilizadores(utilizadores.map(u => 
-        u.id_utilizador === utilizadorId ? { ...u, ativo } : u
-      ));
-      
-      return true;
+
+      // Aplicar filtros localmente
+      let utilizadoresFiltrados = [...utilizadores];
+
+      if (filtros.nome) {
+        utilizadoresFiltrados = utilizadoresFiltrados.filter(u =>
+          u.nome?.toLowerCase().includes(filtros.nome.toLowerCase())
+        );
+      }
+
+      if (filtros.email) {
+        utilizadoresFiltrados = utilizadoresFiltrados.filter(u =>
+          u.email?.toLowerCase().includes(filtros.email.toLowerCase())
+        );
+      }
+
+      if (filtros.perfil) {
+        utilizadoresFiltrados = utilizadoresFiltrados.filter(u =>
+          u.id_cargo === parseInt(filtros.perfil)
+        );
+      }
+
+      // Se for a primeira vez ou não há utilizadores carregados, buscar do servidor
+      if (utilizadores.length === 0 ||
+        (filtros.nome === '' && filtros.email === '' && filtros.perfil === '')) {
+        const response = await axios.get(`${API_BASE}/users`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (Array.isArray(response.data)) {
+          setUtilizadores(response.data);
+          utilizadoresFiltrados = response.data;
+        }
+      }
+
+      // Atualizar com filtros aplicados
+      setTotalUtilizadores(utilizadoresFiltrados.length);
+      setLoading(false);
+
     } catch (error) {
-      console.error('Erro ao ativar/desativar utilizador:', error);
-      return false;
+      console.error('[DEBUG] GerenciarUtilizadores: Erro ao buscar utilizadores:', error);
+      setTotalUtilizadores(0);
+      setLoading(false);
+    }
+  }, [filtros, utilizadores]);
+
+  // Buscar dados iniciais
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.get(`${API_BASE}/users`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (Array.isArray(response.data)) {
+          setUtilizadores(response.data);
+          setTotalUtilizadores(response.data.length);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('[DEBUG] GerenciarUtilizadores: Erro ao carregar dados:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, [navigate]);
+
+  // Handler para mudança de filtros - atualizado para filtrar em tempo real
+  const handleFiltroChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Aplicar filtros imediatamente
+    let filtrado = [...utilizadores];
+
+    const novosFiltros = { ...filtros, [name]: value };
+
+    if (novosFiltros.nome) {
+      filtrado = filtrado.filter(u =>
+        u.nome?.toLowerCase().includes(novosFiltros.nome.toLowerCase())
+      );
+    }
+
+    if (novosFiltros.email) {
+      filtrado = filtrado.filter(u =>
+        u.email?.toLowerCase().includes(novosFiltros.email.toLowerCase())
+      );
+    }
+
+    if (novosFiltros.perfil) {
+      filtrado = filtrado.filter(u =>
+        u.id_cargo === parseInt(novosFiltros.perfil)
+      );
+    }
+
+    setTotalUtilizadores(filtrado.length);
+  };
+
+  // Handler para limpar filtros
+  const handleLimparFiltros = () => {
+    setFiltros({
+      nome: '',
+      perfil: '',
+      email: ''
+    });
+    setTotalUtilizadores(utilizadores.length);
+  };
+
+  // Função para determinar o nome do cargo
+  const getNomeCargo = (idCargo) => {
+    switch (parseInt(idCargo)) {
+      case 1: return 'Gestor';
+      case 2: return 'Formador';
+      case 3: return 'Formando';
+      default: return 'Desconhecido';
     }
   };
 
-  // Função para abrir o modal de exclusão
-  const handleDeleteUtilizador = (utilizador) => {
-    setUserToDelete(utilizador);
-    setDeleteError(null);
-    setCursosFormador([]);
-    setShowDeleteModal(true);
+  // Função para navegar para o perfil do utilizador
+  const handleVerPerfil = (utilizadorId) => {
+    navigate(`/admin/users/${utilizadorId}`);
   };
 
-  // Função para confirmar a exclusão
-  const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-    
+  // Função para editar utilizador (navegar para página de edição)
+  const handleEditarUtilizador = (utilizadorId) => {
+    console.log("[DEBUG] ID do utilizador para editar:", utilizadorId);
+    console.log("[DEBUG] Navegando para:", `/admin/users/${utilizadorId}/editar`);
+    navigate(`/admin/users/${utilizadorId}/editar`);
+  };
+
+  // Função para mostrar confirmação de exclusão
+  const handleConfirmarExclusao = (utilizador, e) => {
+    e.stopPropagation();
+    setUtilizadorParaExcluir(utilizador);
+    setShowDeleteConfirmation(true);
+  };
+
+  // Função para excluir o utilizador
+  const handleExcluirUtilizador = async () => {
+    if (!utilizadorParaExcluir) return;
+
+    const utilizadorId = utilizadorParaExcluir.id_utilizador;
+    let shouldCloseModal = true;
+
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE}/users/${userToDelete.id_utilizador}`, {
+      await axios.delete(`${API_BASE}/users/${utilizadorId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // Atualizar a lista de utilizadores
-      setUtilizadores(utilizadores.filter(u => u.id_utilizador !== userToDelete.id_utilizador));
-      
-      // Recalcular o total de páginas
-      const newTotalPages = Math.ceil((utilizadores.length - 1) / itemsPerPage);
-      setTotalPages(newTotalPages);
-      
-      // Se a página atual for maior que o total de páginas, voltar para a última página
-      if (currentPage > newTotalPages) {
-        setCurrentPage(newTotalPages || 1);
-      }
-      
-      // Fechar o modal
-      setShowDeleteModal(false);
-      setUserToDelete(null);
-      
+
+      // Remover da lista local
+      const novaLista = utilizadores.filter(u => u.id_utilizador !== utilizadorId);
+      setUtilizadores(novaLista);
+      setTotalUtilizadores(novaLista.length);
+      toast.success('Utilizador excluído com sucesso!');
+
     } catch (error) {
-      console.error('Erro ao eliminar utilizador:', error);
-      
-      // Se for um formador com cursos ativos
-      if (error.response?.status === 400 && error.response?.data?.cursos) {
-        setCursosFormador(error.response.data.cursos);
-        setDeleteError(error.response.data.message);
+      console.error('Erro ao excluir utilizador:', error);
+
+      if (error.response?.status === 400) {
+        const data = error.response.data;
+
+        // Formador com cursos ativos - mostrar modal
+        if (data.tipo === "formador_com_cursos") {
+          setFormadorComCursos(utilizadorParaExcluir);
+          setCursosFormador(data.cursos);
+          setShowCursosModal(true);
+          setShowDeleteConfirmation(false);
+          shouldCloseModal = false;
+        }
+        // Utilizador com inscrições
+        else if (data.tipo === "utilizador_com_inscricoes") {
+          toast.error(`${data.message}. Total de inscrições: ${data.inscricoes}`);
+        }
+        // Qualquer outra mensagem de erro 400
+        else {
+          toast.error(data.message);
+        }
       } else {
-        setDeleteError('Erro ao eliminar utilizador: ' + (error.response?.data?.message || error.message));
+        toast.error('Erro ao excluir utilizador: ' + (error.response?.data?.message || error.message));
+      }
+    } finally {
+      if (shouldCloseModal) {
+        setShowDeleteConfirmation(false);
+        setUtilizadorParaExcluir(null);
       }
     }
   };
 
-  // Função para navegar para a página do curso
-  const handleVerCurso = (cursoId) => {
-    setShowDeleteModal(false);
-    navigate(`/admin/cursos/${cursoId}`);
-  };
-
+  // Função para criar um novo utilizador
   const handleCriarUtilizador = () => {
     navigate('/admin/criar-usuario');
   };
 
-  const handleVerPercursoFormativo = (utilizadorId) => {
-    navigate(`/admin/percurso-formativo/${utilizadorId}`);
+  // Aplicar filtros aos utilizadores
+  const utilizadoresFiltrados = utilizadores.filter(utilizador => {
+    const nomeMatch = !filtros.nome || utilizador.nome?.toLowerCase().includes(filtros.nome.toLowerCase());
+    const emailMatch = !filtros.email || utilizador.email?.toLowerCase().includes(filtros.email.toLowerCase());
+    const perfilMatch = !filtros.perfil || utilizador.id_cargo === parseInt(filtros.perfil);
+
+    return nomeMatch && emailMatch && perfilMatch;
+  });
+
+  // Paginação
+  const indexOfLastUser = paginaAtual * utilizadoresPorPagina;
+  const indexOfFirstUser = indexOfLastUser - utilizadoresPorPagina;
+  const utilizadoresAtuais = utilizadoresFiltrados.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPaginas = Math.ceil(utilizadoresFiltrados.length / utilizadoresPorPagina);
+
+  const handlePaginaAnterior = () => {
+    if (paginaAtual > 1) {
+      setPaginaAtual(paginaAtual - 1);
+    }
   };
 
-  // Função para mudar de página
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+  const handleProximaPagina = () => {
+    if (paginaAtual < totalPaginas) {
+      setPaginaAtual(paginaAtual + 1);
+    }
   };
 
-  if (loading) {
-    return <div className="loading">Carregando utilizadores...</div>;
+  // Interface de carregamento
+  if (loading && utilizadores.length === 0) {
+    return (
+      <div className="gerenciar-usuarios-container">
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="main-content">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Carregando utilizadores...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  // Renderização principal
   return (
     <div className="gerenciar-usuarios-container">
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+
       <div className="main-content">
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className="usuarios-content">
-          <h1>Gerir Utilizadores</h1>
-          
-          {erro && (
-            <div className="erro-mensagem">
-              {erro}
-            </div>
-          )}
-          
-          <div className="filtros-container">
-            <div className="filtro">
-              <label htmlFor="nome-filtro">Nome:</label>
-              <input 
-                type="text" 
-                id="nome-filtro" 
-                value={nomeFiltro}
-                onChange={(e) => setNomeFiltro(e.target.value)}
-                placeholder="Filtrar por nome"
-              />
-            </div>
-            
-            <div className="filtro">
-              <label htmlFor="perfil-filtro">Perfil:</label>
-              <select 
-                id="perfil-filtro" 
-                value={perfilFiltro}
-                onChange={(e) => setPerfilFiltro(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="formando">Formando</option>
-                <option value="formador">Formador</option>
-                <option value="gestor">Gestor</option>
-              </select>
-            </div>
-            
-            <div className="filtro-acoes">
-              <button 
-                className="filtrar-btn"
-                onClick={handleFiltrarUtilizadores}
-              >
-                Filtrar
-              </button>
-              
-              <button 
-                className="limpar-btn"
-                onClick={handleLimparFiltros}
-              >
-                Limpar
-              </button>
-            </div>
+        <div className="usuarios-header">
+          <h1>Gerenciar Utilizadores</h1>
+          <button
+            className="criar-usuario-btn"
+            onClick={handleCriarUtilizador}
+          >
+            Criar Novo Utilizador
+          </button>
+        </div>
+
+        <div className="filtros-container">
+          <div className="filtro">
+            <label htmlFor="nome">Nome:</label>
+            <input
+              type="text"
+              id="nome"
+              name="nome"
+              value={filtros.nome}
+              onChange={handleFiltroChange}
+              placeholder="Filtrar por nome"
+            />
           </div>
-          
-          <div className="usuarios-header">
-            <h2>Lista de Utilizadores</h2>
-            <button 
-              className="criar-usuario-btn"
-              onClick={handleCriarUtilizador}
+
+          <div className="filtro">
+            <label htmlFor="email">Email:</label>
+            <input
+              type="text"
+              id="email"
+              name="email"
+              value={filtros.email}
+              onChange={handleFiltroChange}
+              placeholder="Filtrar por email"
+            />
+          </div>
+
+          <div className="filtro">
+            <label htmlFor="perfil">Perfil:</label>
+            <select
+              id="perfil"
+              name="perfil"
+              value={filtros.perfil}
+              onChange={handleFiltroChange}
             >
-              Adicionar Utilizador
+              <option value="">Todos os perfis</option>
+              <option value="1">Gestor</option>
+              <option value="2">Formador</option>
+              <option value="3">Formando</option>
+            </select>
+          </div>
+
+          <div className="filtro-acoes">
+            <button
+              className="btn-limpar"
+              onClick={handleLimparFiltros}
+              disabled={loading}
+            >
+              Limpar Filtros
             </button>
           </div>
-          
-          {currentUsers.length === 0 ? (
-            <p className="no-usuarios">Nenhum utilizador encontrado.</p>
+        </div>
+
+        <div className="usuarios-table-container">
+          {loading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Carregando utilizadores...</p>
+            </div>
+          ) : utilizadoresAtuais.length === 0 ? (
+            <div className="no-usuarios">
+              <p>Nenhum utilizador encontrado com os filtros aplicados.</p>
+            </div>
           ) : (
             <>
-              <div className="usuarios-table-container">
-                <table className="usuarios-table">
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Email</th>
-                      <th>Perfil</th>
-                      <th>Estado</th>
-                      <th>Telefone</th>
-                      <th>Ações</th>
+              <table className="usuarios-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Perfil</th>
+                    <th>Telefone</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {utilizadoresAtuais.map(utilizador => (
+                    <tr
+                      key={utilizador.id_utilizador}
+                      className={utilizador.ativo !== 1 ? 'inativo' : ''}
+                    >
+                      <td
+                        className="usuario-nome clickable"
+                        onClick={() => handleVerPerfil(utilizador.id_utilizador)}
+                        style={{ cursor: 'pointer', color: '#3b82f6' }}
+                      >
+                        {utilizador.nome}
+                      </td>
+                      <td
+                        className="usuario-email clickable"
+                        onClick={() => handleVerPerfil(utilizador.id_utilizador)}
+                        style={{ cursor: 'pointer', color: '#3b82f6' }}
+                      >
+                        {utilizador.email}
+                      </td>
+                      <td>
+                        <span className={`status-badge perfil perfil-${getNomeCargo(utilizador.id_cargo).toLowerCase()}`}>
+                          {getNomeCargo(utilizador.id_cargo)}
+                        </span>
+                      </td>
+                      <td>{utilizador.telefone || 'N/A'}</td>
+                      <td className="acoes">
+                        <button
+                          className="btn-icon btn-editar"
+                          onClick={() => {
+                            console.log("[DEBUG] Clicando para editar utilizador:", utilizador.id_utilizador);
+                            console.log("[DEBUG] Dados do utilizador:", utilizador);
+                            handleEditarUtilizador(utilizador.id_utilizador);
+                          }}
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+
+                        <button
+                          className="btn-icon btn-excluir"
+                          onClick={(e) => handleConfirmarExclusao(utilizador, e)}
+                          title="Excluir"
+                        >
+                          🗑️
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {currentUsers.map((utilizador, index) => (
-                      <tr key={utilizador.id_utilizador || index} className={!utilizador.ativo ? 'inativo' : ''}>
-                        <td>{utilizador.nome || 'N/A'}</td>
-                        <td>{utilizador.email || 'N/A'}</td>
-                        <td>
-                          <span className={`badge cargo-${utilizador.id_cargo || 'desconhecido'}`}>
-                            {getCargo(utilizador.id_cargo)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`status ${utilizador.ativo ? 'ativo' : 'inativo'}`}>
-                            {utilizador.ativo === 1 ? 'Ativo' : 'Inativo'}
-                          </span>
-                        </td>
-                        <td>{utilizador.telefone || 'N/A'}</td>
-                        <td className="acoes">
-                          <button 
-                            className="editar-btn"
-                            onClick={() => handleEditarUtilizador(utilizador)}
-                          >
-                            Editar
-                          </button>
-                          
-                          <button 
-                            className={utilizador.ativo === 1 ? 'desativar-btn' : 'ativar-btn'}
-                            onClick={() => handleAtivarDesativar(utilizador.id_utilizador, utilizador.ativo === 1 ? 0 : 1)}
-                          >
-                            {utilizador.ativo === 1 ? 'Desativar' : 'Ativar'}
-                          </button>
-                          
-                          {utilizador.id_cargo === 3 && (
-                            <button 
-                              className="percurso-btn"
-                              onClick={() => handleVerPercursoFormativo(utilizador.id_utilizador)}
-                            >
-                              Percurso
-                            </button>
-                          )}
-                          
-                          {/* Botão de Eliminar */}
-                          <button 
-                            className="eliminar-btn"
-                            onClick={() => handleDeleteUtilizador(utilizador)}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Paginação */}
-              {totalPages > 1 && (
+                  ))}
+                </tbody>
+              </table>
+
+              {totalPaginas > 1 && (
                 <div className="paginacao">
-                  <button 
-                    onClick={() => handlePageChange(currentPage - 1)} 
-                    disabled={currentPage === 1}
+                  <button
+                    onClick={handlePaginaAnterior}
+                    disabled={paginaAtual === 1 || loading}
                     className="btn-pagina"
                   >
                     Anterior
                   </button>
-                  
-                  <div className="page-numbers">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
-                      <button
-                        key={number}
-                        onClick={() => handlePageChange(number)}
-                        className={currentPage === number ? 'page-number active' : 'page-number'}
-                      >
-                        {number}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <button 
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+
+                  <span className="pagina-atual">
+                    Página {paginaAtual} de {totalPaginas}
+                  </span>
+
+                  <button
+                    onClick={handleProximaPagina}
+                    disabled={paginaAtual === totalPaginas || loading}
                     className="btn-pagina"
                   >
                     Próxima
@@ -385,115 +461,81 @@ const GerenciarUtilizadores = () => {
           )}
         </div>
       </div>
-      
-      {/* Modal de Edição de Utilizador */}
-      {showEditarUtilizador && utilizadorSelecionado && (
-        <EditarUsuarioModal 
-          usuario={utilizadorSelecionado}
-          onClose={() => setShowEditarUtilizador(false)}
-          onSuccess={(utilizadorAtualizado) => {
-            setShowEditarUtilizador(false);
-            // Atualizar utilizador na lista
-            setUtilizadores(utilizadores.map(u => 
-              u.id_utilizador === utilizadorAtualizado.id_utilizador ? utilizadorAtualizado : u
-            ));
-          }}
-        />
-      )}
-      
-      {/* Modal de Confirmação de Exclusão */}
-      {showDeleteModal && userToDelete && (
+
+      {/* Modal de confirmação de exclusão */}
+      {showDeleteConfirmation && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Confirmar Exclusão</h3>
-            {deleteError ? (
-              <div className="erro-container">
-                <p className="erro-mensagem">{deleteError}</p>
-                
-                {cursosFormador && cursosFormador.length > 0 && (
-                  <div className="cursos-list">
-                    <p>Este formador está associado aos seguintes cursos:</p>
-                    <ul>
-                      {cursosFormador.map(curso => (
-                        <li key={curso.id_curso}>
-                          {curso.nome}
-                          <button 
-                            className="ver-curso-btn"
-                            onClick={() => handleVerCurso(curso.id_curso)}
-                          >
-                            Ver Curso
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    <p>É necessário alterar o formador destes cursos antes de eliminar o utilizador.</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p>
-                Tem certeza que deseja excluir o utilizador "{userToDelete.nome}"?
-                <br />
-                <span className="warning-text">
-                  Esta ação não pode ser desfeita e todos os dados associados serão eliminados.
-                </span>
-                
-                {userToDelete.id_cargo === 2 && (
-                  <span className="info-text">
-                    <br />Nota: Se este formador estiver associado a cursos ativos, não será possível eliminá-lo.
-                  </span>
-                )}
-              </p>
-            )}
+            <p>
+              Tem certeza que deseja excluir o utilizador "{utilizadorParaExcluir?.nome}"?
+              Esta ação não pode ser desfeita.
+            </p>
             <div className="modal-actions">
-              <button 
+              <button
                 className="btn-cancelar"
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => setShowDeleteConfirmation(false)}
               >
                 Cancelar
               </button>
-              {!deleteError && (
-                <button 
-                  className="btn-confirmar"
-                  onClick={handleConfirmDelete}
-                >
-                  Confirmar Exclusão
-                </button>
-              )}
+              <button
+                className="btn-confirmar"
+                onClick={handleExcluirUtilizador}
+              >
+                Confirmar Exclusão
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Novo Modal de cursos do formador */}
+      {showCursosModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-cursos">
+            <h3>Cursos Ativos do Formador</h3>
+            <p>
+              O formador "{formadorComCursos?.nome}" não pode ser eliminado pois leciona os seguintes cursos ativos:
+            </p>
+
+            <div className="cursos-list">
+              {cursosFormador.map((curso, index) => (
+                <div key={curso.id} className="curso-item">
+                  <h4>{curso.nome}</h4>
+                  <p className="curso-descricao">{curso.descricao}</p>
+                  {curso.data_inicio && (
+                    <p className="curso-dates">
+                      Início: {new Date(curso.data_inicio).toLocaleDateString('pt-BR')}
+                      {curso.data_fim && ` | Fim: ${new Date(curso.data_fim).toLocaleDateString('pt-BR')}`}
+                    </p>
+                  )}
+                  <span className={`badge-status ${curso.status.toLowerCase()}`}>
+                    {curso.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowCursosModal(false);
+                  setFormadorComCursos(null);
+                  setCursosFormador([]);
+                  setUtilizadorParaExcluir(null);
+                }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer />
     </div>
   );
 };
-
-// Função auxiliar para obter o nome do cargo pelo ID
-function getCargo(id_cargo) {
-  switch (id_cargo) {
-    case 1:
-      return 'Gestor';
-    case 2:
-      return 'Formador';
-    case 3:
-      return 'Formando';
-    default:
-      return 'Desconhecido';
-  }
-}
-
-// Função auxiliar para obter o ID do cargo pelo nome
-function getCargoId(cargo) {
-  switch (cargo.toLowerCase()) {
-    case 'gestor':
-      return 1;
-    case 'formador':
-      return 2;
-    case 'formando':
-      return 3;
-    default:
-      return null;
-  }
-}
 
 export default GerenciarUtilizadores;

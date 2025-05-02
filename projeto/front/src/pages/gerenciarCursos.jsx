@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/gerenciarCursos.css';
@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import API_BASE from "../api";
+import { useAuth } from '../contexts/AuthContext';
 
 const GerenciarCursos = () => {
   const navigate = useNavigate();
@@ -17,6 +18,9 @@ const GerenciarCursos = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [cursoParaExcluir, setCursoParaExcluir] = useState(null);
+  
+  // Auth context
+  const { currentUser } = useAuth();
   
   // Estados para paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -32,55 +36,18 @@ const GerenciarCursos = () => {
   });
 
   // Toggle para a sidebar
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleSidebar = () => {
+    console.log('[DEBUG] GerenciarCursos: Toggling sidebar');
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
-  // Buscar dados iniciais
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        // Obter categorias para o filtro
-        const categoriasResponse = await axios.get(`${API_BASE}/categorias`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setCategorias(categoriasResponse.data);
-        
-        // Obter formadores para o filtro
-        const formadoresResponse = await axios.get(`${API_BASE}/users/formadores`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setFormadores(formadoresResponse.data);
-        
-        // Obter cursos (primeira página)
-        await buscarCursos();
-        
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        toast.error('Erro ao carregar dados. Por favor, tente novamente mais tarde.');
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Função para buscar cursos com paginação e filtros
-  const buscarCursos = async (pagina = 1) => {
+  // Função para buscar cursos com paginação e filtros (usando useCallback)
+  const buscarCursos = useCallback(async (pagina = 1) => {
     try {
+      console.log('[DEBUG] GerenciarCursos: Iniciando busca de cursos - Página:', pagina);
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      // Calcular offset para paginação
-      const offset = (pagina - 1) * cursosPorPagina;
+      console.log('[DEBUG] GerenciarCursos: Token encontrado:', token ? 'SIM' : 'NÃO');
       
       // Criar objeto de parâmetros para a requisição
       const params = {
@@ -89,44 +56,178 @@ const GerenciarCursos = () => {
         ...filtros
       };
       
+      // Fazer algumas alterações nos nomes dos parâmetros para corresponder à API
+      if (params.idCategoria) {
+        params.categoria = params.idCategoria;
+        delete params.idCategoria;
+      }
+      
+      if (params.idFormador) {
+        params.formador = params.idFormador;
+        delete params.idFormador;
+      }
+      
+      if (params.nome) {
+        params.search = params.nome;
+        delete params.nome;
+      }
+      
       // Remover parâmetros vazios
       Object.keys(params).forEach(key => 
-        params[key] === '' && delete params[key]
+        (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
       );
       
-      // Usando o mesmo endpoint que funciona na página de cursos
-      console.log('Buscando cursos com os parâmetros:', params);
+      console.log('[DEBUG] GerenciarCursos: Buscando cursos com os parâmetros:', params);
+      
       const response = await axios.get(`${API_BASE}/cursos`, {
         params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Adaptação para o formato de resposta conforme visto em cursos.jsx
-      if (response.data && Array.isArray(response.data.cursos)) {
-        setCursos(response.data.cursos);
-        setTotalCursos(response.data.total || response.data.cursos.length);
-        // Se tiver informação de totalPages, usar para calcular o total de cursos
-        if (response.data.totalPages) {
-          setTotalCursos(response.data.totalPages * cursosPorPagina);
+      console.log('[DEBUG] GerenciarCursos: Resposta da API:', response.data);
+      
+      // Verifica a estrutura dos dados recebidos
+      if (response.data) {
+        if (Array.isArray(response.data.cursos)) {
+          setCursos(response.data.cursos);
+          setTotalCursos(response.data.total || response.data.cursos.length);
+        } else if (Array.isArray(response.data)) {
+          // Se a resposta for um array direto
+          setCursos(response.data);
+          setTotalCursos(response.data.length);
+        } else {
+          console.error('[DEBUG] GerenciarCursos: Formato de resposta inesperado:', response.data);
+          toast.error('Formato de dados inválido recebido do servidor.');
+          setCursos([]);
+          setTotalCursos(0);
         }
       } else {
-        // Se a resposta não tiver a estrutura esperada, assume que é um array direto
-        setCursos(Array.isArray(response.data) ? response.data : []);
-        setTotalCursos(Array.isArray(response.data) ? response.data.length : 0);
+        console.error('[DEBUG] GerenciarCursos: Resposta vazia ou inválida');
+        toast.error('Nenhum dado recebido do servidor.');
+        setCursos([]);
+        setTotalCursos(0);
       }
       
       setPaginaAtual(pagina);
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar cursos:', error);
-      toast.error('Erro ao carregar cursos. Por favor, tente novamente.');
+      console.error('[DEBUG] GerenciarCursos: Erro ao buscar cursos:', error);
+      
+      if (error.response) {
+        console.error('[DEBUG] GerenciarCursos: Dados do erro:', error.response.data);
+        console.error('[DEBUG] GerenciarCursos: Status:', error.response.status);
+        console.error('[DEBUG] GerenciarCursos: Headers:', error.response.headers);
+        
+        if (error.response.status === 401) {
+          console.log('[DEBUG] GerenciarCursos: Erro 401 - Não autorizado. Redirecionando para login...');
+          toast.error('Não autorizado. Faça login novamente.');
+          navigate('/login');
+        } else if (error.response.status === 500) {
+          toast.error('Erro no servidor. Tente novamente em alguns instantes.');
+        } else {
+          toast.error(`Erro ao carregar cursos: ${error.response.data.message || 'Erro desconhecido'}`);
+        }
+      } else if (error.request) {
+        console.error('[DEBUG] GerenciarCursos: Erro de requisição:', error.request);
+        toast.error('Erro de conexão com o servidor. Verifique sua internet.');
+      } else {
+        console.error('[DEBUG] GerenciarCursos: Erro:', error.message);
+        toast.error('Erro ao processar a requisição.');
+      }
+      
+      setCursos([]);
+      setTotalCursos(0);
       setLoading(false);
     }
-  };
+  }, [filtros, cursosPorPagina, navigate]);
+
+  // Buscar dados iniciais
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('[DEBUG] GerenciarCursos: ===== INICIANDO VERIFICAÇÕES DE AUTENTICAÇÃO =====');
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        console.log('[DEBUG] GerenciarCursos: Token no localStorage:', token ? 'SIM' : 'NÃO');
+        console.log('[DEBUG] GerenciarCursos: Token value:', token ? token.substring(0, 50) + '...' : 'null');
+        
+        if (!token) {
+          console.log('[DEBUG] GerenciarCursos: Token não encontrado. Redirecionando para login...');
+          navigate('/login');
+          return;
+        }
+        
+        // Log do usuário atual do AuthContext
+        console.log('[DEBUG] GerenciarCursos: Usuário atual do AuthContext:', currentUser);
+        
+        if (currentUser) {
+          console.log('[DEBUG] GerenciarCursos: Dados do usuário do AuthContext:', {
+            id_utilizador: currentUser.id_utilizador,
+            nome: currentUser.nome,
+            id_cargo: currentUser.id_cargo,
+            cargoTipo: typeof currentUser.id_cargo,
+            email: currentUser.email,
+            cargo: currentUser.cargo
+          });
+        }
+        
+        console.log('[DEBUG] GerenciarCursos: Autenticação verificada com sucesso. Buscando dados...');
+        
+        // Obter categorias para o filtro
+        const categoriasResponse = await axios.get(`${API_BASE}/categorias`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('[DEBUG] GerenciarCursos: Categorias carregadas:', categoriasResponse.data);
+        setCategorias(categoriasResponse.data);
+        
+        // Obter formadores para o filtro
+        const formadoresResponse = await axios.get(`${API_BASE}/users/formadores`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('[DEBUG] GerenciarCursos: Formadores carregados:', formadoresResponse.data);
+        setFormadores(formadoresResponse.data);
+        
+        // Obter cursos (primeira página)
+        await buscarCursos();
+        
+      } catch (error) {
+        console.error('[DEBUG] GerenciarCursos: Erro ao carregar dados:', error);
+        
+        // Tratamento mais específico de erros
+        if (error.response) {
+          console.error('[DEBUG] GerenciarCursos: Erro da resposta:', error.response.data);
+          console.error('[DEBUG] GerenciarCursos: Status do erro:', error.response.status);
+          
+          if (error.response.status === 403) {
+            console.log('[DEBUG] GerenciarCursos: Erro 403 - Acesso negado. Redirecionando para página inicial...');
+            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            navigate('/');
+          } else if (error.response.status === 401) {
+            console.log('[DEBUG] GerenciarCursos: Erro 401 - Não autorizado. Redirecionando para login...');
+            toast.error('Não autorizado. Por favor, faça login novamente.');
+            navigate('/login');
+          } else {
+            toast.error('Erro ao carregar dados. Por favor, tente novamente mais tarde.');
+          }
+        } else {
+          console.error('[DEBUG] GerenciarCursos: Erro de conexão:', error.message);
+          toast.error('Erro de conexão. Verifique sua conexão com a internet.');
+        }
+        
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [navigate, buscarCursos, currentUser]);
 
   // Handler para mudança de filtros
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
+    console.log(`[DEBUG] GerenciarCursos: Filtro alterado: ${name} = ${value}`);
     setFiltros(prev => ({
       ...prev,
       [name]: value
@@ -135,12 +236,14 @@ const GerenciarCursos = () => {
 
   // Handler para aplicar filtros
   const handleAplicarFiltros = () => {
+    console.log('[DEBUG] GerenciarCursos: Aplicando filtros:', filtros);
     setPaginaAtual(1); // Volta para a primeira página ao filtrar
     buscarCursos(1);
   };
 
   // Handler para limpar filtros
   const handleLimparFiltros = () => {
+    console.log('[DEBUG] GerenciarCursos: Limpando filtros');
     setFiltros({
       nome: '',
       idCategoria: '',
@@ -155,12 +258,14 @@ const GerenciarCursos = () => {
 
   // Funções de navegação
   const handlePaginaAnterior = () => {
+    console.log('[DEBUG] GerenciarCursos: Navegando para página anterior');
     if (paginaAtual > 1) {
       buscarCursos(paginaAtual - 1);
     }
   };
 
   const handleProximaPagina = () => {
+    console.log('[DEBUG] GerenciarCursos: Navegando para próxima página');
     const totalPaginas = Math.ceil(totalCursos / cursosPorPagina);
     if (paginaAtual < totalPaginas) {
       buscarCursos(paginaAtual + 1);
@@ -187,6 +292,7 @@ const GerenciarCursos = () => {
 
   // Função para navegar para a página de detalhes do formador
   const handleVerFormador = (formadorId) => {
+    console.log('[DEBUG] GerenciarCursos: Navegando para detalhes do formador:', formadorId);
     if (formadorId) {
       navigate(`/formadores/${formadorId}`);
     }
@@ -194,18 +300,21 @@ const GerenciarCursos = () => {
 
   // Função para navegar para a página de detalhes do curso
   const handleVerCurso = (cursoId) => {
+    console.log('[DEBUG] GerenciarCursos: Navegando para detalhes do curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
   };
 
   // Função para navegar para a página de edição do curso
   const handleEditarCurso = (cursoId, e) => {
     e.stopPropagation(); // Impede que o clique propague para a linha
+    console.log('[DEBUG] GerenciarCursos: Navegando para edição do curso:', cursoId);
     navigate(`/admin/cursos/${cursoId}/editar`);
   };
 
   // Função para mostrar confirmação de exclusão
   const handleConfirmarExclusao = (curso, e) => {
     e.stopPropagation(); // Impede que o clique propague para a linha
+    console.log('[DEBUG] GerenciarCursos: Solicitando confirmação de exclusão para curso:', curso);
     setCursoParaExcluir(curso);
     setShowDeleteConfirmation(true);
   };
@@ -215,27 +324,27 @@ const GerenciarCursos = () => {
     if (!cursoParaExcluir) return;
     
     const cursoId = cursoParaExcluir.id || cursoParaExcluir.id_curso;
+    console.log('[DEBUG] GerenciarCursos: Iniciando exclusão do curso:', cursoId);
     
     try {
       const token = localStorage.getItem('token');
-      console.log(`Tentando excluir curso ${cursoId}`);
+      console.log(`[DEBUG] GerenciarCursos: Enviando requisição de exclusão para curso ${cursoId}`);
       
-      // Verificar o formato da requisição DELETE para cursos
       await axios.delete(`${API_BASE}/cursos/${cursoId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      console.log('[DEBUG] GerenciarCursos: Curso excluído com sucesso');
       toast.success('Curso excluído com sucesso!');
       
       // Atualizar a lista de cursos
       buscarCursos(paginaAtual);
       
     } catch (error) {
-      console.error(`Erro ao excluir curso ${cursoId}:`, error);
+      console.error(`[DEBUG] GerenciarCursos: Erro ao excluir curso ${cursoId}:`, error);
       
-      // Mostrar detalhes do erro se disponíveis
       if (error.response) {
-        console.error('Detalhes da resposta:', {
+        console.error('[DEBUG] GerenciarCursos: Detalhes da resposta:', {
           status: error.response.status,
           data: error.response.data
         });
@@ -250,12 +359,14 @@ const GerenciarCursos = () => {
 
   // Função para criar um novo curso
   const handleCriarCurso = () => {
+    console.log('[DEBUG] GerenciarCursos: Navegando para criação de novo curso');
     navigate('/admin/criar-curso');
   };
 
   // Calcular número total de páginas
   const totalPaginas = Math.ceil(totalCursos / cursosPorPagina);
 
+  // Interface de carregamento
   if (loading && cursos.length === 0) {
     return (
       <div className="gerenciar-cursos-container">
@@ -270,6 +381,7 @@ const GerenciarCursos = () => {
     );
   }
 
+  // Renderização principal
   return (
     <div className="gerenciar-cursos-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -371,13 +483,15 @@ const GerenciarCursos = () => {
             <button 
               className="btn-aplicar"
               onClick={handleAplicarFiltros}
+              disabled={loading}
             >
-              Aplicar Filtros
+              {loading ? 'Carregando...' : 'Aplicar Filtros'}
             </button>
             
             <button 
               className="btn-limpar"
               onClick={handleLimparFiltros}
+              disabled={loading}
             >
               Limpar Filtros
             </button>
@@ -385,7 +499,12 @@ const GerenciarCursos = () => {
         </div>
         
         <div className="cursos-table-container">
-          {cursos.length === 0 ? (
+          {loading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Carregando cursos...</p>
+            </div>
+          ) : cursos.length === 0 ? (
             <div className="no-cursos">
               <p>Nenhum curso encontrado com os filtros aplicados.</p>
             </div>
@@ -418,19 +537,6 @@ const GerenciarCursos = () => {
                     
                     const cursoId = curso.id || curso.id_curso;
                     
-                    // Log para diagnóstico
-                    console.log('Renderizando curso:', { 
-                      id: cursoId, 
-                      nome: curso.nome || curso.titulo,
-                      formador: formadorNome, 
-                      formadorId: formadorId,
-                      datas: {
-                        inicio: curso.data_inicio || curso.dataInicio,
-                        fim: curso.data_fim || curso.dataFim
-                      },
-                      status
-                    });
-                    
                     return (
                       <tr 
                         key={cursoId} 
@@ -438,7 +544,7 @@ const GerenciarCursos = () => {
                         onClick={() => handleVerCurso(cursoId)}
                       >
                         <td className="curso-nome">{curso.nome || curso.titulo}</td>
-                        <td>{curso.categoria || curso.nome_categoria || "Não especificada"}</td>
+                        <td>{curso.categoria?.nome || curso.nome_categoria || "Não especificada"}</td>
                         <td 
                           className={formadorId ? "formador-cell" : ""}
                           onClick={e => {
@@ -494,7 +600,7 @@ const GerenciarCursos = () => {
                 <div className="paginacao">
                   <button 
                     onClick={handlePaginaAnterior} 
-                    disabled={paginaAtual === 1}
+                    disabled={paginaAtual === 1 || loading}
                     className="btn-pagina"
                   >
                     Anterior
@@ -506,7 +612,7 @@ const GerenciarCursos = () => {
                   
                   <button 
                     onClick={handleProximaPagina}
-                    disabled={paginaAtual === totalPaginas}
+                    disabled={paginaAtual === totalPaginas || loading}
                     className="btn-pagina"
                   >
                     Próxima

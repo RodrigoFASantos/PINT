@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Páginas
 import Login from './pages/login';
-import ConfirmAccount from './pages/confirmAccount'; // Nova página
+import ConfirmAccount from './pages/confirmAccount';
 import Home from './pages/home';
 import Cursos from './pages/cursos';
 import CriarCurso from './pages/criarCurso';
@@ -14,6 +14,8 @@ import PercursoFormativo from './pages/percursoFormativo';
 import AreaProfessor from './pages/areaProfessor';
 import ForumPartilha from './pages/forumPartilha';
 import CriarUtilizador from './pages/criarUtilizador';
+import DetalhesUtilizador from './pages/detalhesUtilizador';
+import EditarUtilizador from './pages/editarUtilizador';
 import AdminDashboard from './pages/adminDashboard';
 import GerenciarUtilizadores from './pages/gerenciarUtilizadores';
 import GerenciarCursos from './pages/gerenciarCursos';
@@ -22,118 +24,135 @@ import Formadores from './pages/formadores';
 import EditarCurso from './pages/editarCurso';
 import GerenciarInscricoes from './pages/gerenciarInscricoes';
 import DetalhesFormadores from './pages/detalhesFormadores';
-import Topicos_Chat from './components/Topicos_Chat'; 
+import TopicosChatComponent from './components/Topicos_Chat';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Wrapper para adicionar logs em rotas
+const RouteWrapper = ({ path, children }) => {
+  React.useEffect(() => {
+    console.log(`[DEBUG] Navegando para rota: ${path}`);
+  }, [path]);
+
+  return children;
+};
+
 const App = () => {
-
-  useEffect(() => {
-  }, []);
-
   return (
     <div id="appRoot">
-
       <AuthProvider>
-
         <Router>
-
           <Routes>
-
             {/* Rotas públicas */}
             <Route path="/login" element={
-              <React.Fragment>
+              <RouteWrapper path="/login">
                 <Login />
-              </React.Fragment>
+              </RouteWrapper>
             } />
-            
-            {/* Rota de confirmação de conta */}
             <Route path="/confirm-account" element={
-              <React.Fragment>
+              <RouteWrapper path="/confirm-account">
                 <ConfirmAccount />
-              </React.Fragment>
+              </RouteWrapper>
             } />
 
             {/* Rotas protegidas - disponíveis para todos os perfis */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
+                <RouteWrapper path="/">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <Home />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/perfil"
               element={
-                <ProtectedRoute>
-                  <PerfilUser />
-                </ProtectedRoute>
+                <RouteWrapper path="/perfil">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <PerfilUser />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/cursos"
               element={
-                <ProtectedRoute>
-                  <Cursos />
-                </ProtectedRoute>
+                <RouteWrapper path="/cursos">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <Cursos />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/formadores"
               element={
-                <ProtectedRoute>
-                  <Formadores />
-                </ProtectedRoute>
+                <RouteWrapper path="/formadores">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <Formadores />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
-              />
+            />
 
             <Route
               path="/CriarCurso"
               element={
-                <ProtectedRoute roles={[1,2]}>
-                  <CriarCurso />
-                </ProtectedRoute>
+                <RouteWrapper path="/CriarCurso">
+                  <ProtectedRoute allowedRoles={[1, 2]}>
+                    <CriarCurso />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/formadores/:id"
               element={
-                <ProtectedRoute>
-                  <DetalhesFormadores />
-                </ProtectedRoute>
+                <RouteWrapper path="/formadores/:id">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <DetalhesFormadores />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/cursos/:id"
               element={
-                <ProtectedRoute>
-                  <DetalhesCurso />
-                </ProtectedRoute>
+                <RouteWrapper path="/cursos/:id">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <DetalhesCurso />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/forum"
               element={
-                <ProtectedRoute>
-                  <ForumPartilha />
-                </ProtectedRoute>
+                <RouteWrapper path="/forum">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <ForumPartilha />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/forum/topico/:topicoId"
               element={
-                <ProtectedRoute>
-                  <Topicos_Chat />
-                </ProtectedRoute>
+                <RouteWrapper path="/forum/topico/:topicoId">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <TopicosChatComponent />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
@@ -141,18 +160,22 @@ const App = () => {
             <Route
               path="/percurso-formativo"
               element={
-                <ProtectedRoute roles={[3]}>
-                  <PercursoFormativo />
-                </ProtectedRoute>
+                <RouteWrapper path="/percurso-formativo">
+                  <ProtectedRoute allowedRoles={[3]}>
+                    <PercursoFormativo />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/quiz/:id"
               element={
-                <ProtectedRoute>
-                  <QuizPage />
-                </ProtectedRoute>
+                <RouteWrapper path="/quiz/:id">
+                  <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                    <QuizPage />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
@@ -160,9 +183,11 @@ const App = () => {
             <Route
               path="/area-professor"
               element={
-                <ProtectedRoute roles={[1,2]}>
-                  <AreaProfessor />
-                </ProtectedRoute>
+                <RouteWrapper path="/area-professor">
+                  <ProtectedRoute allowedRoles={[1, 2]}>
+                    <AreaProfessor />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
@@ -170,64 +195,101 @@ const App = () => {
             <Route
               path="/admin/dashboard"
               element={
-                <ProtectedRoute roles={[1]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/dashboard">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/admin/usuarios"
               element={
-                <ProtectedRoute roles={[1]}>
-                  <GerenciarUtilizadores />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/usuarios">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <GerenciarUtilizadores />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/admin/cursos"
               element={
-                <ProtectedRoute roles={[1]}>
-                  <GerenciarCursos />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/cursos">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <GerenciarCursos />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/admin/criar-curso"
               element={
-                <ProtectedRoute roles={[1]}>
-                  <CriarCurso />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/criar-curso">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <CriarCurso />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
             <Route
               path="/admin/criar-usuario"
               element={
-                <ProtectedRoute roles={[1]}>
-                  <CriarUtilizador />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/criar-usuario">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <CriarUtilizador />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
-
-            
-            <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute adminOnly><EditarCurso /></ProtectedRoute>} />
-
-            <Route 
-              path="/cursos/:id/inscricoes" 
+            <Route
+              path="/admin/cursos/:id/editar"
               element={
-                <ProtectedRoute roles={[1, 2]}>
-                  <GerenciarInscricoes />
-                </ProtectedRoute>
+                <RouteWrapper path="/admin/cursos/:id/editar">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <EditarCurso />
+                  </ProtectedRoute>
+                </RouteWrapper>
               }
             />
 
+            <Route
+              path="/cursos/:id/inscricoes"
+              element={
+                <RouteWrapper path="/cursos/:id/inscricoes">
+                  <ProtectedRoute allowedRoles={[1, 2]}>
+                    <GerenciarInscricoes />
+                  </ProtectedRoute>
+                </RouteWrapper>
+              }
+            />
 
+            <Route
+              path="/admin/users/:id"
+              element={
+                <RouteWrapper path="/admin/users/:id">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <DetalhesUtilizador />
+                  </ProtectedRoute>
+                </RouteWrapper>
+              }
+            />
 
-
+            <Route
+              path="/admin/users/:id/editar"
+              element={
+                <RouteWrapper path="/admin/users/:id/editar">
+                  <ProtectedRoute allowedRoles={[1]}>
+                    <EditarUtilizador />
+                  </ProtectedRoute>
+                </RouteWrapper>
+              }
+            />
 
             {/* Redirecionar para a página inicial por padrão */}
             <Route path="*" element={<Navigate to="/" replace />} />

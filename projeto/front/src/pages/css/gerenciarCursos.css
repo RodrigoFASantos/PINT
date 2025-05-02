@@ -1,15 +1,22 @@
-/* gerenciarCursos.css */
-
+/* Corrigir alinhamento da página */
 .gerenciar-cursos-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   min-height: 100vh;
   background-color: #f5f7fa;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 60px; /* Espaço para a navbar */
 }
 
+/* Corrigir largura e centralização do conteúdo */
 .main-content {
-  flex: 1;
+  width: 100%;
+  max-width: 1400px; /* Limita o tamanho para telas muito grandes */
+  margin: 0 auto;
   padding: 2rem;
-  margin-left: 16rem; /* Ajustar conforme a largura da sidebar */
+  box-sizing: border-box;
   transition: margin-left 0.3s ease;
 }
 
@@ -119,6 +126,8 @@
 
 /* Tabela de cursos */
 .cursos-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background-color: white;
   border-radius: 0.5rem;
   padding: 1.5rem;
@@ -130,6 +139,7 @@
   width: 100%;
   border-collapse: collapse;
 }
+
 
 .cursos-table th {
   background-color: #f3f4f6;
@@ -218,12 +228,12 @@
 }
 
 .btn-editar {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #e0f2fe;
+  color: #0369a1;
 }
 
 .btn-editar:hover {
-  background-color: #bfdbfe;
+  background-color: #bae6fd;
 }
 
 .btn-excluir {
@@ -234,6 +244,7 @@
 .btn-excluir:hover {
   background-color: #fecaca;
 }
+
 
 /* Paginação */
 .paginacao {

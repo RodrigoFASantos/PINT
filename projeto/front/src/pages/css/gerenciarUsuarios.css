@@ -1,378 +1,673 @@
+/* Corrigir alinhamento da página */
 .gerenciar-usuarios-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 60px; /* Espaço para a navbar */
+}
+
+/* Corrigir largura e centralização do conteúdo */
+.main-content {
+  width: 100%;
+  max-width: 1400px; /* Limita o tamanho para telas muito grandes */
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+  transition: margin-left 0.3s ease;
+}
+
+/* Cabeçalho */
+.usuarios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.usuarios-header h1 {
+  color: #333;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.criar-usuario-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.criar-usuario-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Seção de filtros */
+.filtros-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.filtro {
+  display: flex;
+  flex-direction: column;
+}
+
+.filtro label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.filtro input, .filtro select {
+  padding: 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: #f9fafb;
+  font-size: 0.875rem;
+}
+
+.filtro input:focus, .filtro select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  ring: 2px;
+  ring-color: rgba(59, 130, 246, 0.5);
+}
+
+.filtro-acoes {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  grid-column: 1 / -1;
+}
+
+.btn-aplicar, .btn-limpar {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-aplicar {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-aplicar:hover {
+  background-color: #2563eb;
+}
+
+.btn-limpar {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-limpar:hover {
+  background-color: #e5e7eb;
+}
+
+/* Tabela de utilizadores */
+.usuarios-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.usuarios-table th {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.usuarios-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.usuarios-table tr {
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.usuarios-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.usuarios-table tr.inativo {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.ativo {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inativo {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-badge.perfil-gestor {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.status-badge.perfil-formador {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.perfil-formando {
+  background-color: #e0f2fe;
+  color: #075985;
+}
+
+.acoes {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.btn-editar, .btn-excluir, .btn-ativar, .btn-desativar, .btn-percurso {
+  padding: 0.375rem 0.75rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-editar {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.btn-editar:hover {
+  background-color: #bae6fd;
+}
+
+.btn-excluir {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-excluir:hover {
+  background-color: #fecaca;
+}
+
+.btn-ativar {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.btn-ativar:hover {
+  background-color: #bbf7d0;
+}
+
+.btn-desativar {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-desativar:hover {
+  background-color: #fecaca;
+}
+
+.btn-percurso {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.btn-percurso:hover {
+  background-color: #bae6fd;
+}
+
+/* Paginação */
+.paginacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+  gap: 1rem;
+}
+
+.btn-pagina {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #4b5563;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pagina:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagina-atual {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+/* Estado sem utilizadores */
+.no-usuarios {
+  padding: 3rem 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #3b82f6;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  
+}
+
+/* Modal de confirmação */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h3 {
+  color: #b91c1c;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.modal-content p {
+  color: #4b5563;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-cancelar, .btn-confirmar {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-cancelar {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-confirmar {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-cancelar:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-confirmar:hover {
+  background-color: #dc2626;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
   .main-content {
-    display: flex;
-    flex: 1;
-  }
-  
-  .usuarios-content {
-    flex: 1;
-    padding: 1.5rem;
-  }
-  
-  .usuarios-content h1 {
-    font-size: 1.8rem;
-    color: #212529;
-    margin-bottom: 1.5rem;
+    margin-left: 0;
+    padding: 1rem;
   }
   
   .filtros-container {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-end;
+    grid-template-columns: 1fr;
   }
-  
-  .filtro {
-    flex: 1;
-    min-width: 200px;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-closed .main-content {
+    margin-left: 4rem;
   }
-  
-  .filtro label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #212529;
-    font-size: 0.875rem;
-  }
-  
-  .filtro select, 
-  .filtro input {
-    width: 100%;
-    padding: 0.625rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.875rem;
+}
+
+/* Estilos adicionais para consistência */
+.usuarios-content {
+  flex: 1;
+}
+
+.usuarios-content h1 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+
+
+/* Estilos existentes permanecem iguais... */
+/* (Todos os estilos anteriores) */
+
+/* Estilos adicionais para as novas funcionalidades */
+
+/* Estilos para usuário e email clicáveis */
+.usuario-nome.clickable,
+.usuario-email.clickable {
+  cursor: pointer;
+  color: #3b82f6;
+  transition: color 0.2s;
+}
+
+.usuario-nome.clickable:hover,
+.usuario-email.clickable:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Estilos para o dropdown de cargo */
+.cargo-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  appearance: none;
+  min-width: 100px;
+}
+
+.cargo-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Estilos para os botões de ação com ícones */
+.btn-icon {
+  padding: 0.375rem;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Cores específicas para cada tipo de botão com ícone */
+.btn-icon.btn-editar {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.btn-icon.btn-editar:hover:not(:disabled) {
+  background-color: #bae6fd;
+}
+
+.btn-icon.btn-excluir {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-icon.btn-excluir:hover:not(:disabled) {
+  background-color: #fecaca;
+}
+
+.btn-icon.btn-ativar {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.btn-icon.btn-ativar:hover:not(:disabled) {
+  background-color: #bbf7d0;
+}
+
+.btn-icon.btn-desativar {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-icon.btn-desativar:hover:not(:disabled) {
+  background-color: #fecaca;
+}
+
+/* Estilos para o perfil clicável */
+.status-badge.perfil {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.status-badge.perfil:hover {
+  opacity: 0.8;
+}
+
+/* Ajustes na seção de filtros para remover o botão de aplicar */
+.filtro-acoes {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+/* Garantir que o botão de limpar tenha o estilo correto */
+.btn-limpar {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-limpar:hover {
+  background-color: #e5e7eb;
+}
+
+/* Ajustes para a tabela sem a coluna de estado */
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.usuarios-table th,
+.usuarios-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.usuarios-table th {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  text-align: left;
+  font-weight: 600;
+}
+
+.usuarios-table tr {
+  transition: background-color 0.2s;
+}
+
+.usuarios-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.usuarios-table tr.inativo {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Ajuste para os filtros ficarem mais responsivos */
+@media (max-width: 768px) {
+  .filtros-container {
+    grid-template-columns: 1fr;
   }
   
   .filtro-acoes {
-    display: flex;
-    gap: 0.5rem;
+    grid-column: auto;
   }
-  
-  .filtrar-btn {
-    padding: 0.625rem 1rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .filtrar-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .limpar-btn {
-    padding: 0.625rem 1rem;
-    background-color: #e9ecef;
-    color: #495057;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .limpar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .usuarios-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-  
-  .usuarios-header h2 {
-    font-size: 1.5rem;
-    color: #212529;
-  }
-  
-  .criar-usuario-btn {
-    padding: 0.625rem 1rem;
-    background-color: #0062cc;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .criar-usuario-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .usuarios-table-container {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-  
-  .usuarios-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .usuarios-table th,
-  .usuarios-table td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e9ecef;
-  }
-  
-  .usuarios-table th {
-    background-color: #f8f9fa;
-    font-weight: 500;
-    color: #495057;
-  }
-  
-  .usuarios-table tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .usuarios-table tr.inativo {
-    background-color: #f8f9fa;
-    color: #6c757d;
-  }
-  
-  .badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-  
-  .badge.formando {
-    background-color: #cce5ff;
-    color: #004085;
-  }
-  
-  .badge.formador {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  
-  .badge.gestor {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-  
-  .status {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-  
-  .status.ativo {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  
-  .status.inativo {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-  
-  .acoes {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .editar-btn,
-  .ativar-btn,
-  .desativar-btn,
-  .percurso-btn {
-    padding: 0.375rem 0.625rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  
-  .editar-btn {
-    background-color: #e9ecef;
-    color: #495057;
-  }
-  
-  .editar-btn:hover {
-    background-color: #dee2e6;
-  }
-  
-  .ativar-btn {
-    background-color: #28a745;
-    color: #ffffff;
-  }
-  
-  .ativar-btn:hover {
-    background-color: #218838;
-  }
-  
-  .desativar-btn {
-    background-color: #dc3545;
-    color: #ffffff;
-  }
-  
-  .desativar-btn:hover {
-    background-color: #c82333;
-  }
-  
-  .percurso-btn {
-    background-color: #0062cc;
-    color: #ffffff;
-  }
-  
-  .percurso-btn:hover {
-    background-color: #0056b3;
-  }
-  
-  .no-usuarios {
-    text-align: center;
-    padding: 3rem;
-    color: #6c757d;
-    font-style: italic;
-  }
-
-  /* Estilos para o componente de diagnóstico */
-.diagnostico-container {
-  background-color: #f5f5f5;
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.diagnostico-container h2 {
-  margin-top: 0;
-  color: #333;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 8px;
-  margin-bottom: 16px;
+
+
+
+
+
+
+.modal-cursos {
+  max-width: 600px;
 }
 
-.diagnostico-item {
-  margin-bottom: 12px;
-  padding: 8px;
-  background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.diagnostico-item strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #333;
-}
-
-.diagnostico-data {
-  background-color: #f8f8f8;
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  font-family: monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 100px;
+.cursos-list {
+  max-height: 300px;
   overflow-y: auto;
-}
-
-.diagnostico-conclusao {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #e8f5e9;
+  margin: 20px 0;
+  padding: 10px;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  border-left: 4px solid #4caf50;
 }
 
-.diagnostico-conclusao h3 {
-  margin-top: 0;
-  color: #2e7d32;
-}
-
-.btn-diagnostico {
-  margin-left: 12px;
-  background-color: #2196f3;
-  color: white;
-  border: none;
-  padding: 4px 8px;
+.curso-item {
+  background: #f5f5f5;
+  padding: 15px;
+  margin-bottom: 10px;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
+  border-left: 4px solid #3b82f6;
 }
 
-.diagnostico-btn {
-  background-color: #673ab7;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 8px;
+.curso-item h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
 }
 
-.diagnostico-btn:hover {
-  background-color: #5e35b1;
+.curso-descricao {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 14px;
 }
 
-/* Estilos para mensagem de erro */
-.erro-mensagem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #ffebee;
-  color: #d32f2f;
-  padding: 12px 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border-left: 4px solid #d32f2f;
-  font-weight: 500;
+.curso-dates {
+  margin: 0 0 8px 0;
+  color: #555;
+  font-size: 13px;
 }
-  
-  @media (max-width: 992px) {
-    .acoes {
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .main-content {
-      flex-direction: column;
-    }
-    
-    .filtros-container {
-      flex-direction: column;
-    }
-    
-    .usuarios-table {
-      display: block;
-      overflow-x: auto;
-    }
-    
-    .usuarios-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-    }
-  }
+
+.badge-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.badge-status.ativo {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-status.inativo {
+  background: #fee2e2;
+  color: #991b1b;
+}

@@ -18,7 +18,7 @@ const User = sequelize.define("utilizadores", {
   },
   idade: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   email: {
     type: DataTypes.STRING(255),
@@ -27,7 +27,7 @@ const User = sequelize.define("utilizadores", {
   },
   telefone: {
     type: DataTypes.STRING(9),
-    allowNull: false,
+    allowNull: true,
   },
   password: {
     type: DataTypes.STRING(255),
@@ -35,16 +35,43 @@ const User = sequelize.define("utilizadores", {
   },
   foto_perfil: {
     type: DataTypes.STRING,
+    allowNull: true,
     defaultValue: 'AVATAR.png'
   },
   foto_capa: {
     type: DataTypes.STRING,
+    allowNull: true,
     defaultValue: 'CAPA.png'
   },  
   primeiro_login: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 1, // Começa sempre como 1, para forçar a troca da password no 1º login
+  },
+  // Novos campos adicionados
+  morada: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  cidade: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  distrito: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  freguesia: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  codigo_postal: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
+  descricao: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   }
 }, {
   tableName: "utilizadores",

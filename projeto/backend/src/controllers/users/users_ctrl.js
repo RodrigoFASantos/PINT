@@ -13,7 +13,7 @@ const FormadorAssociacoesPendentes = require("../../database/models/Formador_Ass
 const FormadorCategoria = require("../../database/models/Formador_Categoria");
 const FormadorArea = require("../../database/models/Formador_Area");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
-
+const Curso = require("../../database/models/Curso");
 /**
  * FUNÇÕES AUXILIARES
  */
@@ -663,18 +663,44 @@ const perfilUser = async (req, res) => {
 
 const updatePerfilUser = async (req, res) => {
   try {
-    const userId = req.user.id_utilizador;
-    const { nome, email, telefone, idade } = req.body;
+    // Utilizar o ID dos parâmetros, não do usuário autenticado, pois é o admin a atualizar o perfil de outro utilizador
+    const userId = req.params.id;
+    const { 
+      nome, 
+      email, 
+      telefone, 
+      idade,
+      morada,
+      cidade,
+      distrito,
+      freguesia,
+      codigo_postal,
+      descricao,
+      id_cargo // Adicionado: permitir atualização do cargo
+    } = req.body;
 
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
-    await User.update(
-      { nome, email, telefone, idade },
-      { where: { id_utilizador: userId } }
-    );
+    // Criar objeto com os campos para atualizar
+    const updateData = {
+      ...(nome && { nome }),
+      ...(email && { email }),
+      ...(telefone && { telefone }),
+      ...(idade && { idade }),
+      ...(morada && { morada }),
+      ...(cidade && { cidade }),
+      ...(distrito && { distrito }),
+      ...(freguesia && { freguesia }),
+      ...(codigo_postal && { codigo_postal }),
+      ...(descricao && { descricao }),
+      ...(id_cargo && { id_cargo }) // Adicionado: permitir atualização do cargo
+    };
+
+    // Atualizar os campos
+    await User.update(updateData, { where: { id_utilizador: userId } });
 
     const updatedUser = await User.findByPk(userId);
     res.json(updatedUser);
@@ -1112,50 +1138,87 @@ const uploadImagemCapa = async (req, res) => {
 
 
 
-
 const deleteUser = async (req, res) => {
+  console.log('===== Apagar UTILIZADOR =====');
+  console.log('ID recebido:', req.params.id);
+  console.log('Utilizador autenticado:', req.user);
+  
   try {
     const userId = req.params.id;
     
     // Verificar se o utilizador existe
     const user = await User.findByPk(userId);
+    console.log('Utilizador encontrado:', user ? 'Sim' : 'Não');
+    
     if (!user) {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
     
-    // Verificar se é um formador com cursos ativos
-    if (user.id_cargo === 2) { // id_cargo 2 = Formador
-      const cursosAtivos = await Curso.findAll({
-        where: { 
-          id_formador: userId,
-          ativo: true
-        }
-      });
-      
-      if (cursosAtivos.length > 0) {
-        return res.status(400).json({ 
-          message: "Não é possível eliminar este formador pois possui cursos ativos",
-          cursos: cursosAtivos
+    console.log('Cargo do utilizador:', user.id_cargo);
+    
+    // Verificar se o utilizador tem inscrições em cursos (qualquer cargo)
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: { id_utilizador: userId }
+    });
+    
+    console.log('Inscrições encontradas:', inscricoes.length);
+    
+    if (inscricoes.length > 0 || user.id_cargo === 2) {
+      // Se for um formador, verificar cursos ativos que ele leciona
+      if (user.id_cargo === 2) {
+        const cursosAtivos = await Curso.findAll({
+          where: { 
+            id_formador: userId,
+            ativo: true
+          }
         });
+        
+        if (cursosAtivos.length > 0) {
+          const cursoInfo = cursosAtivos.map(curso => ({
+            id: curso.id_curso,
+            nome: curso.nome,
+            descricao: curso.descricao,
+            data_inicio: curso.data_inicio,
+            data_fim: curso.data_fim,
+            status: curso.ativo ? 'Ativo' : 'Inativo'
+          }));
+          
+          return res.status(400).json({ 
+            message: "Não é possível eliminar este formador pois possui cursos ativos",
+            cursos: cursoInfo,
+            tipo: "formador_com_cursos"
+          });
+        }
       }
+      
+      // Se tem apenas inscrições (não é formador com cursos ativos)
+      return res.status(400).json({ 
+        message: "Não é possível eliminar este utilizador pois está inscrito em cursos",
+        inscricoes: inscricoes.length,
+        tipo: "utilizador_com_inscricoes"
+      });
     }
     
+    console.log('Iniciando exclusão do utilizador...');
     // Proceder com a exclusão (o delete cascade é tratado no modelo)
     await user.destroy();
     
+    console.log('Utilizador eliminado com sucesso');
     return res.status(200).json({
       message: "Utilizador eliminado com sucesso"
     });
     
   } catch (error) {
-    console.error("Erro ao eliminar utilizador:", error);
+    console.error("===== ERRO AO ELIMINAR UTILIZADOR =====");
+    console.error("Erro completo:", error);
+    console.error("Stack trace:", error.stack);
+    
     return res.status(500).json({
       message: "Erro ao eliminar utilizador",
       error: error.message
     });
   }
 };
-
 
 
 
@@ -1189,6 +1252,29 @@ const getAllUsers = async (req, res) => {
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Erro ao buscar utilizadores" });
+  }
+};
+
+const getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId, {
+      include: [{ model: Cargo, as: 'cargo' }]
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+    
+    // Remover a senha da resposta
+    const userWithoutPassword = { ...user.toJSON() };
+    delete userWithoutPassword.password;
+    
+    res.json(userWithoutPassword);
+  } catch (error) {
+    console.error("Erro ao buscar utilizador:", error);
+    res.status(500).json({ message: "Erro ao buscar utilizador" });
   }
 };
 
@@ -1227,6 +1313,7 @@ module.exports = {
   getFormadores,
   getFormandos,
   getGestores,
+  getUserById,
 
   createUser,
   deleteUser,
