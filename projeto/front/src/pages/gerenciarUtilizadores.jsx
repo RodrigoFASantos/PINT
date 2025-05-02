@@ -33,27 +33,17 @@ const GerenciarUtilizadores = () => {
     const fetchUtilizadores = async () => {
       try {
         const token = localStorage.getItem('token');
-        // Usando a rota padrão /api/users
-        const response = await axios.get(`${API_BASE}/users`, {
+        const response = await axios.get(`${API_BASE}/users/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        console.log('Resposta da API de utilizadores:', response.data);
-        
-        // A resposta já deve ser um array de utilizadores
         if (Array.isArray(response.data)) {
           setUtilizadores(response.data);
-          // Calcular o total de páginas
           setTotalPages(Math.ceil(response.data.length / itemsPerPage));
           setErro(null);
         } else {
           console.error('Resposta não é um array:', response.data);
           setErro('Formato de resposta inesperado da API');
-          
-          // Se a resposta tiver uma mensagem, vamos mostrar para o usuário
-          if (response.data && response.data.message) {
-            setErro(`API retornou: ${response.data.message}`);
-          }
         }
         
         setLoading(false);
@@ -94,7 +84,7 @@ const GerenciarUtilizadores = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_BASE}/users`, {
+        const response = await axios.get(`${API_BASE}/users/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
