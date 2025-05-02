@@ -7,9 +7,9 @@ import axios from 'axios';
 
 export default function CursosPage() {
   const [cursos, setCursos] = useState([]);
-  const [filteredCursos, setFilteredCursos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCursos, setTotalCursos] = useState(0);
   const cursosPerPage = 12;
 
   // Estados para a barra de pesquisa
@@ -32,13 +32,11 @@ export default function CursosPage() {
 
   // Função para verificar os diferentes campos possíveis de id_categoria
   const getCategoriaId = (area) => {
-    // Tentar diferentes formatos de propriedade
     if (area.id_categoria !== undefined) return area.id_categoria;
     if (area.categoria_id !== undefined) return area.categoria_id;
     if (area.idCategoria !== undefined) return area.idCategoria;
     if (area.categoriaId !== undefined) return area.categoriaId;
     
-    // Se não encontrar, procurar qualquer chave que contenha "categoria" e "id"
     const categoriaKey = Object.keys(area).find(k => 
       k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
     );
@@ -46,61 +44,15 @@ export default function CursosPage() {
     return categoriaKey ? area[categoriaKey] : null;
   };
 
-  // Função similar para encontrar o ID da área de forma flexível
-  const getAreaId = (curso) => {
-    // Verificar diferentes formatos de id_area
-    if (curso.id_area !== undefined) return curso.id_area;
-    if (curso.area_id !== undefined) return curso.area_id;
-    if (curso.idArea !== undefined) return curso.idArea;
-    if (curso.areaId !== undefined) return curso.areaId;
-    
-    // Verificar estrutura aninhada
-    if (curso.area && curso.area.id !== undefined) return curso.area.id;
-    
-    // Se não encontrar, procurar qualquer chave que contenha "area" e "id"
-    const areaKey = Object.keys(curso).find(k => 
-      k.toLowerCase().includes('area') && k.toLowerCase().includes('id')
-    );
-    
-    return areaKey ? curso[areaKey] : null;
-  };
-
-  // Função para obter o ID da categoria de um curso de forma flexível
-  const getCursoCategoria = (curso) => {
-    // Verificar diferentes formatos de id_categoria
-    if (curso.id_categoria !== undefined) return curso.id_categoria;
-    if (curso.categoria_id !== undefined) return curso.categoria_id;
-    if (curso.idCategoria !== undefined) return curso.idCategoria;
-    if (curso.categoriaId !== undefined) return curso.categoriaId;
-    
-    // Verificar estrutura aninhada
-    if (curso.categoria && curso.categoria.id !== undefined) return curso.categoria.id;
-    
-    // Se não encontrar, procurar qualquer chave que contenha "categoria" e "id"
-    const categoriaKey = Object.keys(curso).find(k => 
-      k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
-    );
-    
-    return categoriaKey ? curso[categoriaKey] : null;
-  };
-
   // Filtrar áreas com base na categoria selecionada
   useEffect(() => {
     if (categoriaId) {
-      // Converter para string para garantir comparação consistente
       const catId = String(categoriaId);
-      
-      // Filtragem mais flexível para lidar com diferentes estruturas de dados
       const areasFiltered = areas.filter(area => {
         const areaCategoriaId = getCategoriaId(area);
         return areaCategoriaId !== null && String(areaCategoriaId) === catId;
       });
-      
-      console.log("Categoria selecionada:", catId);
-      console.log("Áreas filtradas:", areasFiltered);
       setAreasFiltradas(areasFiltered);
-      
-      // Limpar área selecionada se a categoria mudar
       setAreaId('');
     } else {
       setAreasFiltradas([]);
@@ -108,32 +60,54 @@ export default function CursosPage() {
     }
   }, [categoriaId, areas]);
 
-  useEffect(() => {
-    const fetchCursos = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`${API_BASE}/cursos?page=${currentPage}&limit=${cursosPerPage}`);
-        const data = await response.json();
-        const cursosList = data.cursos || [];
-        
-        // Logging para debug
-        console.log("Cursos carregados:", cursosList);
-        if (cursosList.length > 0) {
-          console.log("Primeiro curso estrutura:", Object.keys(cursosList[0]));
-        }
-        
-        setCursos(cursosList);
-        setFilteredCursos(cursosList);
-        setTotalPages(data.totalPages || 1);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Erro ao carregar cursos:", error);
-        setIsLoading(false);
-      }
-    };
+  // Função para buscar cursos com filtros
+  const fetchCursos = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Construir parâmetros da query
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: cursosPerPage.toString()
+      });
 
+      // Adicionar filtros se estiverem ativos
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      if (categoriaId) {
+        params.append('categoria', categoriaId);
+      }
+      if (areaId) {
+        params.append('area', areaId);
+      }
+      if (tipoFiltro !== 'todos') {
+        params.append('tipo', tipoFiltro);
+      }
+
+      const url = `${API_BASE}/cursos?${params.toString()}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      setCursos(data.cursos || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCursos(data.totalCursos || 0);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Erro ao carregar cursos:", error);
+      setIsLoading(false);
+    }
+  };
+
+  // Buscar cursos sempre que a página ou filtros mudarem
+  useEffect(() => {
     fetchCursos();
-  }, [currentPage]);
+  }, [currentPage, searchTerm, categoriaId, areaId, tipoFiltro]);
+
+  // Resetar para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoriaId, areaId, tipoFiltro]);
 
   // Carregar categorias e áreas
   useEffect(() => {
@@ -144,7 +118,6 @@ export default function CursosPage() {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        console.log("Categorias carregadas:", response.data);
         setCategorias(response.data);
       } catch (error) {
         console.error("Erro ao carregar categorias:", error);
@@ -158,7 +131,6 @@ export default function CursosPage() {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        console.log("Áreas carregadas:", response.data);
         setAreas(response.data);
       } catch (error) {
         console.error("Erro ao carregar áreas:", error);
@@ -168,51 +140,6 @@ export default function CursosPage() {
     fetchCategorias();
     fetchAreas();
   }, []);
-
-  // Efeito para aplicar filtros quando qualquer critério de filtro mudar
-  useEffect(() => {
-    applyFilters();
-  }, [searchTerm, categoriaId, areaId, tipoFiltro, cursos]);
-
-  // Função para aplicar todos os filtros com melhor suporte para diferentes estruturas de dados
-  const applyFilters = () => {
-    let filtered = [...cursos];
-    
-    // Filtrar por termo de pesquisa
-    if (searchTerm) {
-      filtered = filtered.filter(curso => 
-        curso.nome && curso.nome.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filtrar por categoria com suporte flexível para diferentes estruturas
-    if (categoriaId) {
-      const catId = String(categoriaId);
-      filtered = filtered.filter(curso => {
-        const cursoCategoriaId = getCursoCategoria(curso);
-        return cursoCategoriaId !== null && String(cursoCategoriaId) === catId;
-      });
-      
-      // Debug log para verificar a filtragem
-      console.log(`Cursos filtrados por categoria ${catId}:`, filtered.length);
-    }
-    
-    // Filtrar por área com suporte flexível para diferentes estruturas
-    if (areaId) {
-      const areIdStr = String(areaId);
-      filtered = filtered.filter(curso => {
-        const cursoAreaId = getAreaId(curso);
-        return cursoAreaId !== null && String(cursoAreaId) === areIdStr;
-      });
-    }
-    
-    // Filtrar por tipo
-    if (tipoFiltro !== 'todos') {
-      filtered = filtered.filter(curso => curso.tipo === tipoFiltro);
-    }
-    
-    setFilteredCursos(filtered);
-  };
 
   // Funções para navegação de páginas
   const goToPreviousPage = () => {
@@ -239,17 +166,11 @@ export default function CursosPage() {
   const handleCategoriaChange = (e) => {
     const id = e.target.value;
     setCategoriaId(id);
-    
-    // Debug para verificar mudança de categoria
-    console.log(`Categoria alterada para: ${id}`);
   };
 
   const handleAreaChange = (e) => {
     const id = e.target.value;
     setAreaId(id);
-    
-    // Debug para verificar mudança de área
-    console.log(`Área alterada para: ${id}`);
   };
 
   const handleSearchChange = (e) => {
@@ -257,12 +178,10 @@ export default function CursosPage() {
   };
 
   const getImageUrl = (curso) => {
-    // Se o curso tiver um caminho de imagem definido, usá-lo diretamente
     if (curso && curso.imagem_path) {
       return `${API_BASE}/${curso.imagem_path}`;
     }
     
-    // Se não tiver imagem_path mas tiver nome, criar um slug do nome (compatibilidade)
     if (curso && curso.nome) {
       const nomeCursoSlug = curso.nome
         .toLowerCase()
@@ -271,8 +190,14 @@ export default function CursosPage() {
       return IMAGES.CURSO(nomeCursoSlug);
     }
     
-    // Fallback para imagem padrão
     return '/placeholder-curso.jpg';
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoriaId('');
+    setAreaId('');
+    setTipoFiltro('todos');
   };
   
   return (
@@ -305,7 +230,7 @@ export default function CursosPage() {
       {showFilters && (
         <div className="cursos-filter-options">
           <div className="cursos-filter-group">
-            {/* Select para categoria usando as classes CSS */}
+            {/* Select para categoria */}
             <div className="custom-select-wrapper">
               <select
                 className="custom-select-button select-categoria"
@@ -322,7 +247,7 @@ export default function CursosPage() {
               <i className="fas fa-folder custom-select-icon"></i>
             </div>
             
-            {/* Select para área (somente visível quando categoria estiver selecionada) */}
+            {/* Select para área */}
             {categoriaId && (
               <div className="custom-select-wrapper">
                 <select
@@ -336,9 +261,7 @@ export default function CursosPage() {
                     <option value="" disabled>Carregando áreas...</option>
                   ) : areasFiltradas.length > 0 ? (
                     areasFiltradas.map(area => {
-                      // Obter ID da área de maneira flexível
                       const areaIdValue = area.id_area || area.id || area.idArea || area.area_id;
-                      // Obter nome da área de maneira flexível
                       const areaNomeValue = area.nome || area.name || area.descricao || area.description;
                       
                       return (
@@ -386,18 +309,53 @@ export default function CursosPage() {
             {(searchTerm || categoriaId || areaId || tipoFiltro !== 'todos') && (
               <button 
                 className="cursos-filter-clear-button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCategoriaId('');
-                  setAreaId('');
-                  setTipoFiltro('todos');
-                }}
+                onClick={clearFilters}
               >
                 <i className="fas fa-times cursos-filter-button-icon"></i>
                 <span>Limpar Filtros</span>
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Indicador de carregamento */}
+      {isLoading && (
+        <div className="text-center py-8">
+          <div className="loading-spinner"></div>
+          <p className="text-gray-600 mt-4">Carregando cursos...</p>
+        </div>
+      )}
+
+      {/* Lista de cursos */}
+      {!isLoading && (
+        <div className="grid">
+          {cursos.map((curso) => (
+            <div
+              key={curso.id_curso}
+              onClick={() => handleCursoClick(curso.id_curso)}
+              className="curso-card cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105"
+              style={{
+                backgroundImage: `url(${getImageUrl(curso)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
+              <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                <h3 className="text-white text-xl font-semibold text-center px-4">{curso.nome}</h3>
+                <p className="text-white text-sm mt-2">
+                  {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Mensagem para quando não há cursos */}
+      {!isLoading && cursos.length === 0 && (
+        <div className="text-center py-10">
+          <p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p>
         </div>
       )}
 
@@ -423,57 +381,6 @@ export default function CursosPage() {
           <span className="pagination-icon">&#10095;</span>
         </button>
       </div>
-
-      {/* Debug info - removido para produção */}
-      {/* <div className="bg-gray-100 p-3 rounded mb-4">
-        <p>Categoria selecionada: {categoriaId || 'Nenhuma'}</p>
-        <p>Área selecionada: {areaId || 'Nenhuma'}</p>
-        <p>Tipo selecionado: {tipoFiltro}</p>
-        <p>Total de cursos: {cursos.length}</p>
-        <p>Cursos filtrados: {filteredCursos.length}</p>
-      </div> */}
-
-      {/* Indicador de carregamento */}
-      {isLoading && (
-        <div className="text-center py-8">
-          <div className="loading-spinner"></div>
-          <p className="text-gray-600 mt-4">Carregando cursos...</p>
-        </div>
-      )}
-
-      {/* Lista de cursos filtrados */}
-      {!isLoading && (
-        <div className="grid">
-          {filteredCursos.map((curso) => {
-            return (
-              <div
-                key={curso.id_curso}
-                onClick={() => handleCursoClick(curso.id_curso)}
-                className="curso-card cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105"
-                style={{
-                  backgroundImage: `url(${getImageUrl(curso)})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              >
-                <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                  <h3 className="text-white text-xl font-semibold text-center px-4">{curso.nome}</h3>
-                  <p className="text-white text-sm mt-2">
-                    {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Mensagem para quando não há cursos */}
-      {!isLoading && filteredCursos.length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p>
-        </div>
-      )}
     </div>
   );
 }

@@ -20,26 +20,30 @@ const getAllCursos = async (req, res) => {
     const offset = (page - 1) * limit;
     
     // Parâmetros de filtro opcionais
-    const { categoria, area, formador, search } = req.query;
-    
-    // Construir condições de filtro
-    const where = {};
-    
-    if (categoria) {
-      where.id_categoria = categoria;
-    }
-    
-    if (area) {
-      where.id_area = area;
-    }
-    
-    if (formador) {
-      where.id_formador = formador;
-    }
-    
-    if (search) {
-      where.nome = { [Op.iLike]: `%${search}%` };
-    }
+    const { categoria, area, formador, search, tipo } = req.query;
+
+      // Construir condições de filtro
+      const where = {};
+
+      if (categoria) {
+        where.id_categoria = categoria;
+      }
+
+      if (area) {
+        where.id_area = area;
+      }
+
+      if (formador) {
+        where.id_formador = formador;
+      }
+
+      if (search) {
+        where.nome = { [Op.iLike]: `%${search}%` };
+      }
+
+      if (tipo) {
+        where.tipo = tipo;
+      }
 
     const { count, rows } = await Curso.findAndCountAll({
       where,
