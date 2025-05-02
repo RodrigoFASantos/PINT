@@ -182,6 +182,14 @@ const getCursosFormador = async (req, res) => {
   }
 };
 
+
+// Função antiga - manter para compatibilidade, mas redirecionar para o novo fluxo
+const createFormador = async (req, res) => {
+  // Redirecionar para o novo método de registro
+  return registerFormador(req, res);
+};
+
+
 // Função para registrar um novo formador (pendente de confirmação)
 const registerFormador = async (req, res) => {
   try {
@@ -313,11 +321,13 @@ const registerFormador = async (req, res) => {
   }
 };
 
-// Função antiga - manter para compatibilidade, mas redirecionar para o novo fluxo
-const createFormador = async (req, res) => {
-  // Redirecionar para o novo método de registro
-  return registerFormador(req, res);
-};
+
+
+
+
+
+
+
 
 // Atualizar formador
 const updateFormador = async (req, res) => {
@@ -409,9 +419,23 @@ const deleteFormador = async (req, res) => {
   }
 };
 
-// FUNÇÕES PARA GERENCIAR CATEGORIAS E ÁREAS DOS FORMADORES
 
-// Obter categorias de um formador
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ FUNÇÕES PARA GERIR CATEGORIAS E ÁREAS DOS FORMADORES
+*/
+
 const getCategoriasFormador = async (req, res) => {
   try {
     const { id } = req.params;
@@ -441,6 +465,41 @@ const getCategoriasFormador = async (req, res) => {
     return res.status(500).json({ message: "Erro ao buscar categorias do formador", error: error.message });
   }
 };
+
+const getAreasFormador = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se o formador existe
+    const formador = await User.findByPk(id);
+    if (!formador || formador.id_cargo !== 2) {
+      return res.status(404).json({ message: "Formador não encontrado" });
+    }
+
+    // Obter áreas do formador
+    const areas = await Area.findAll({
+      include: [
+        {
+          model: User,
+          as: "formadores",
+          where: { id_utilizador: id },
+          through: { attributes: [] },
+          attributes: []
+        },
+        {
+          model: Categoria,
+          as: "categoriaParent"
+        }
+      ]
+    });
+
+    return res.json(areas);
+  } catch (error) {
+    console.error("❌ Erro ao buscar áreas do formador:", error);
+    return res.status(500).json({ message: "Erro ao buscar áreas do formador", error: error.message });
+  }
+};
+
 
 // Adicionar categorias a um formador
 const addCategoriasFormador = async (req, res) => {
@@ -555,41 +614,6 @@ const removeFormadorCategoria = async (req, res) => {
   } catch (error) {
     console.error("❌ Erro ao remover categoria do formador:", error);
     return res.status(500).json({ message: "Erro ao remover categoria do formador", error: error.message });
-  }
-};
-
-// Obter áreas de um formador
-const getAreasFormador = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Verificar se o formador existe
-    const formador = await User.findByPk(id);
-    if (!formador || formador.id_cargo !== 2) {
-      return res.status(404).json({ message: "Formador não encontrado" });
-    }
-
-    // Obter áreas do formador
-    const areas = await Area.findAll({
-      include: [
-        {
-          model: User,
-          as: "formadores",
-          where: { id_utilizador: id },
-          through: { attributes: [] },
-          attributes: []
-        },
-        {
-          model: Categoria,
-          as: "categoriaParent"
-        }
-      ]
-    });
-
-    return res.json(areas);
-  } catch (error) {
-    console.error("❌ Erro ao buscar áreas do formador:", error);
-    return res.status(500).json({ message: "Erro ao buscar áreas do formador", error: error.message });
   }
 };
 
