@@ -8,14 +8,17 @@ const {
   getAllTopicosCategoria,
   getTopicoById,
   getTopicosByCategoria,
-  createTopico,
-  updateTopico,
-  deleteTopico,
   getComentariosByTopico,
   createComentario,
   avaliarComentario,
   denunciarComentario
 } = require("../../controllers/chat/topico_categoria_ctrl");
+
+const {
+  createTopico,
+  updateTopico,
+  deleteTopico
+} = require("../../controllers/chat/Topico_ctrl");
 
 // Middleware para verificar autenticação
 router.use(authMiddleware);

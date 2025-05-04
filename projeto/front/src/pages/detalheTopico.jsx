@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import './css/detalheTopico.css';
 import Sidebar from '../components/Sidebar';
 import NovoComentarioForm from '../components/NovoComentarioForm';
+import './css/detalheTopico.css';
 
 const DetalheTopico = () => {
   const { id } = useParams();

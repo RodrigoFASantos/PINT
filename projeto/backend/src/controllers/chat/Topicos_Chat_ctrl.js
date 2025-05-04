@@ -320,6 +320,13 @@ const denunciarMensagem = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
+
 // Exportar todas as funções no final do ficheiro
 module.exports = {
   getTopico,

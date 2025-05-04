@@ -3,16 +3,11 @@ import axios from 'axios';
 import './css/Modal.css';
 import API_BASE from '../api';
 
-const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
+const SolicitarTopicoModal = ({ categoria, onClose, onSuccess }) => {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-
-  const categoriaId = categoria?.id_categoria || categoria?.id || '';
-  const categoriaNome = categoria?.nome || 'Categoria';
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,23 +17,15 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       return;
     }
     
-    // Verifica se categoriaId está definido
-    if (!categoriaId) {
-      setError('Categoria inválida');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
       const token = localStorage.getItem('token');
-      
-      // Usa categoriaId em vez de categoria?.id_categoria || categoria?.id
       const response = await axios.post(
-        `${API_BASE}/topicos`,
+        `${API_BASE}/topicos/solicitar`,
         {
-          id_categoria: categoriaId,
+          id_categoria: categoria.id_categoria || categoria.id,
           titulo: titulo,
           descricao: descricao
         },
@@ -49,13 +36,13 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       
       if (response.data.success) {
         if (onSuccess) {
-          onSuccess(response.data.data);
+          onSuccess();
         }
         onClose();
       }
     } catch (error) {
-      console.error('Erro ao criar tópico:', error);
-      setError(error.response?.data?.message || 'Erro ao criar tópico. Tente novamente.');
+      console.error('Erro ao solicitar tópico:', error);
+      setError(error.response?.data?.message || 'Erro ao solicitar tópico. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -65,7 +52,7 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
     <div className="modal-overlay">
       <div className="modal-container">
         <div className="modal-header">
-          <h2>Criar Novo Tópico</h2>
+          <h2>Solicitar Novo Tópico</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         
@@ -73,7 +60,7 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Categoria:</label>
-              <p className="categoria-name">{categoriaNome}</p>
+              <p className="categoria-name">{categoria.nome}</p>
             </div>
             
             <div className="form-group">
@@ -115,7 +102,7 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
                 className="submit-btn"
                 disabled={loading}
               >
-                {loading ? 'Criando...' : 'Criar Tópico'}
+                {loading ? 'Enviando...' : 'Enviar Solicitação'}
               </button>
             </div>
           </form>
@@ -125,4 +112,4 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
   );
 };
 
-export default CriarTopicoModal;
+export default SolicitarTopicoModal;

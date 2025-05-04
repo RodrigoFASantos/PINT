@@ -152,6 +152,7 @@ const rotas = [
   { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
 
   // Chat
+  { caminho: "./src/routes/chat/Topico_routes", prefixo: "/api/topicos" },
   { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
   { caminho: "./src/routes/chat/topico_categoria_route", prefixo: "/api/topicos-categoria" },
