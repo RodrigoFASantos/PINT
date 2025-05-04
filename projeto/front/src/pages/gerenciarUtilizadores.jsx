@@ -6,7 +6,7 @@ import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import API_BASE from '../api';
 import 'react-toastify/dist/ReactToastify.css';
-import './css/gerenciarUsuarios.css';
+import './css/gerenciarUtilizadores.css';
 
 const GerenciarUtilizadores = () => {
   const navigate = useNavigate();
@@ -300,7 +300,7 @@ const GerenciarUtilizadores = () => {
 
       <div className="main-content">
         <div className="usuarios-header">
-          <h1>Gerenciar Utilizadores</h1>
+          <h1>Utilizadores</h1>
           <button
             className="criar-usuario-btn"
             onClick={handleCriarUtilizador}
@@ -349,7 +349,7 @@ const GerenciarUtilizadores = () => {
             </select>
           </div>
 
-          <div className="filtro-acoes">
+          <div className="filtro-acoes limpar-filtros-container">
             <button
               className="btn-limpar"
               onClick={handleLimparFiltros}
@@ -434,29 +434,30 @@ const GerenciarUtilizadores = () => {
                 </tbody>
               </table>
 
-              {totalPaginas > 1 && (
-                <div className="paginacao">
-                  <button
-                    onClick={handlePaginaAnterior}
-                    disabled={paginaAtual === 1 || loading}
-                    className="btn-pagina"
-                  >
-                    Anterior
-                  </button>
+              {/* Sempre mostrar a paginação, independente do número de páginas */}
+              <div className="paginacao">
+                <button
+                  onClick={handlePaginaAnterior}
+                  disabled={paginaAtual === 1 || loading}
+                  className="btn-pagina"
+                  aria-label="Página anterior"
+                >
+                  <span className="pagination-icon">&#10094;</span>
+                </button>
 
-                  <span className="pagina-atual">
-                    Página {paginaAtual} de {totalPaginas}
-                  </span>
+                <span className="pagina-atual">
+                  {paginaAtual}/{totalPaginas > 0 ? totalPaginas : 1}
+                </span>
 
-                  <button
-                    onClick={handleProximaPagina}
-                    disabled={paginaAtual === totalPaginas || loading}
-                    className="btn-pagina"
-                  >
-                    Próxima
-                  </button>
-                </div>
-              )}
+                <button
+                  onClick={handleProximaPagina}
+                  disabled={paginaAtual === totalPaginas || totalPaginas <= 1 || loading}
+                  className="btn-pagina"
+                  aria-label="Próxima página"
+                >
+                  <span className="pagination-icon">&#10095;</span>
+                </button>
+              </div>
             </>
           )}
         </div>

@@ -20,36 +20,49 @@ const getAllCursos = async (req, res) => {
     const offset = (page - 1) * limit;
     
     // Parâmetros de filtro opcionais
-    const { categoria, area, formador, search, tipo } = req.query;
+    const { categoria, area, formador, search, tipo, estado, ativo, vagas } = req.query;
 
-      // Construir condições de filtro
-      const where = {};
+    // Construir condições de filtro
+    const where = {};
 
-      if (categoria) {
-        where.id_categoria = categoria;
-      }
+    if (categoria) {
+      where.id_categoria = categoria;
+    }
 
-      if (area) {
-        where.id_area = area;
-      }
+    if (area) {
+      where.id_area = area;
+    }
 
-      if (formador) {
-        where.id_formador = formador;
-      }
+    if (formador) {
+      where.id_formador = formador;
+    }
 
-      if (search) {
-        where.nome = { [Op.iLike]: `%${search}%` };
-      }
+    if (search) {
+      where.nome = { [Op.iLike]: `%${search}%` };
+    }
 
-      if (tipo) {
-        where.tipo = tipo;
-      }
+    if (tipo) {
+      where.tipo = tipo;
+    }
+
+    if (estado) {
+      where.estado = estado;
+    }
+
+    if (ativo !== undefined) {
+      // "false" vem como string da query, por isso comparo diretamente
+      where.ativo = ativo === 'false' ? false : true;
+    }
+
+    if (vagas) {
+      where.vagas = { [Op.gte]: parseInt(vagas, 10) };
+    }
 
     const { count, rows } = await Curso.findAndCountAll({
       where,
       offset,
       limit,
-      order: [['data_inicio', 'DESC']], // ordena por data de início (opcional)
+      order: [['data_inicio', 'DESC']],
       include: [
         {
           model: User,
@@ -78,6 +91,7 @@ const getAllCursos = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar cursos" });
   }
 };
+
 
 // Função para obter cursos filtrados por categorias (para associação com formador)
 const getCursosByCategoria = async (req, res) => {

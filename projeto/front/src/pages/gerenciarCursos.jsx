@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/gerenciarCursos.css';
@@ -35,6 +35,9 @@ const GerenciarCursos = () => {
     vagas: ''
   });
 
+  // Ref para controlar debounce nos filtros
+  const filterTimeoutRef = useRef(null);
+
   // Toggle para a sidebar
   const toggleSidebar = () => {
     console.log('[DEBUG] GerenciarCursos: Toggling sidebar');
@@ -42,34 +45,59 @@ const GerenciarCursos = () => {
   };
 
   // Função para buscar cursos com paginação e filtros (usando useCallback)
-  const buscarCursos = useCallback(async (pagina = 1) => {
+  const buscarCursos = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
       console.log('[DEBUG] GerenciarCursos: Iniciando busca de cursos - Página:', pagina);
+      console.log('[DEBUG] GerenciarCursos: Filtros aplicados:', filtrosAtuais);
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log('[DEBUG] GerenciarCursos: Token encontrado:', token ? 'SIM' : 'NÃO');
       
       // Criar objeto de parâmetros para a requisição
       const params = {
         page: pagina,
         limit: cursosPorPagina,
-        ...filtros
       };
       
-      // Fazer algumas alterações nos nomes dos parâmetros para corresponder à API
-      if (params.idCategoria) {
-        params.categoria = params.idCategoria;
-        delete params.idCategoria;
+      // Adicionar filtros válidos - mapear nomes dos campos para API
+      if (filtrosAtuais.nome) {
+        params.search = filtrosAtuais.nome;
       }
       
-      if (params.idFormador) {
-        params.formador = params.idFormador;
-        delete params.idFormador;
+      if (filtrosAtuais.idCategoria) {
+        params.categoria = filtrosAtuais.idCategoria;
       }
       
-      if (params.nome) {
-        params.search = params.nome;
-        delete params.nome;
+      if (filtrosAtuais.idFormador) {
+        params.formador = filtrosAtuais.idFormador;
+      }
+      
+      // CORREÇÃO FILTRO DE ESTADO
+      if (filtrosAtuais.estado) {
+        // Log específico para debug do estado
+        console.log('[DEBUG] GerenciarCursos: Estado original do filtro:', filtrosAtuais.estado);
+        
+        // Mapeamento exato entre valores da interface e valores da API
+        const mapeamentoEstados = {
+          'Planeado': 'planeado',
+          'Em curso': 'em_curso',
+          'Terminado': 'terminado'
+        };
+        
+        // Se for "Inativo", não enviamos estado, apenas ativo=false
+        if (filtrosAtuais.estado === 'Inativo') {
+          params.ativo = false;
+          console.log('[DEBUG] GerenciarCursos: Configurando parâmetro ativo=false');
+        } 
+        // Para outros estados, usar o mapeamento
+        else if (mapeamentoEstados[filtrosAtuais.estado]) {
+          params.estado = mapeamentoEstados[filtrosAtuais.estado];
+          console.log('[DEBUG] GerenciarCursos: Estado mapeado para API:', params.estado);
+        }
+      }
+      
+      if (filtrosAtuais.vagas) {
+        // Se filtro de vagas for preenchido, enviar para o backend
+        params.vagas = parseInt(filtrosAtuais.vagas, 10);
       }
       
       // Remover parâmetros vazios
@@ -77,7 +105,7 @@ const GerenciarCursos = () => {
         (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
       );
       
-      console.log('[DEBUG] GerenciarCursos: Buscando cursos com os parâmetros:', params);
+      console.log('[DEBUG] GerenciarCursos: Buscando cursos com os parâmetros finais:', params);
       
       const response = await axios.get(`${API_BASE}/cursos`, {
         params,
@@ -139,9 +167,9 @@ const GerenciarCursos = () => {
       setTotalCursos(0);
       setLoading(false);
     }
-  }, [filtros, cursosPorPagina, navigate]);
+  }, [cursosPorPagina, navigate]);
 
-  // Buscar dados iniciais
+  // Buscar dados iniciais - apenas na montagem do componente
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -190,8 +218,8 @@ const GerenciarCursos = () => {
         console.log('[DEBUG] GerenciarCursos: Formadores carregados:', formadoresResponse.data);
         setFormadores(formadoresResponse.data);
         
-        // Obter cursos (primeira página)
-        await buscarCursos();
+        // Obter cursos (primeira página) - com filtros vazios inicialmente
+        await buscarCursos(1, filtros);
         
       } catch (error) {
         console.error('[DEBUG] GerenciarCursos: Erro ao carregar dados:', error);
@@ -222,45 +250,69 @@ const GerenciarCursos = () => {
     };
 
     fetchData();
-  }, [navigate, buscarCursos, currentUser]);
+  }, [navigate, buscarCursos, currentUser]); // Removido 'filtros' das dependências
 
-  // Handler para mudança de filtros
+  // Handler para mudança de filtros com debounce melhorado
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     console.log(`[DEBUG] GerenciarCursos: Filtro alterado: ${name} = ${value}`);
-    setFiltros(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handler para aplicar filtros
-  const handleAplicarFiltros = () => {
-    console.log('[DEBUG] GerenciarCursos: Aplicando filtros:', filtros);
-    setPaginaAtual(1); // Volta para a primeira página ao filtrar
-    buscarCursos(1);
+    
+    // Limpar qualquer temporizador existente
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    // Atualizar o estado dos filtros
+    setFiltros(prev => {
+      const novosFiltros = {
+        ...prev,
+        [name]: value
+      };
+      
+      console.log('[DEBUG] GerenciarCursos: Novos filtros:', novosFiltros);
+      
+      // Ativar o indicador de carregamento imediatamente
+      setLoading(true);
+      
+      // Configurar novo temporizador de debounce
+      filterTimeoutRef.current = setTimeout(() => {
+        // Quando o temporizador disparar, usar os valores atuais dos filtros
+        buscarCursos(1, novosFiltros);
+      }, 600); // Aumentar ligeiramente o tempo de debounce
+      
+      return novosFiltros;
+    });
   };
 
   // Handler para limpar filtros
   const handleLimparFiltros = () => {
     console.log('[DEBUG] GerenciarCursos: Limpando filtros');
-    setFiltros({
+    
+    // Limpar qualquer temporizador existente
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    const filtrosLimpos = {
       nome: '',
       idCategoria: '',
       idFormador: '',
       estado: '',
       vagas: ''
-    });
+    };
     
+    setFiltros(filtrosLimpos);
     setPaginaAtual(1);
-    buscarCursos(1);
+    
+    // Buscar dados com filtros limpos
+    buscarCursos(1, filtrosLimpos);
   };
 
   // Funções de navegação
   const handlePaginaAnterior = () => {
     console.log('[DEBUG] GerenciarCursos: Navegando para página anterior');
     if (paginaAtual > 1) {
-      buscarCursos(paginaAtual - 1);
+      buscarCursos(paginaAtual - 1, filtros);
     }
   };
 
@@ -268,26 +320,8 @@ const GerenciarCursos = () => {
     console.log('[DEBUG] GerenciarCursos: Navegando para próxima página');
     const totalPaginas = Math.ceil(totalCursos / cursosPorPagina);
     if (paginaAtual < totalPaginas) {
-      buscarCursos(paginaAtual + 1);
+      buscarCursos(paginaAtual + 1, filtros);
     }
-  };
-
-  // Função para determinar o status do curso
-  const getStatusCurso = (curso) => {
-    // Se o curso já tiver um estado definido, usá-lo diretamente
-    if (curso.estado) {
-      return curso.estado;
-    }
-    
-    const hoje = new Date();
-    // Tratar diferentes formatos de data possíveis
-    const dataInicio = new Date(curso.data_inicio || curso.dataInicio);
-    const dataFim = new Date(curso.data_fim || curso.dataFim);
-
-    if (!curso.ativo) return "Inativo";
-    if (hoje < dataInicio) return "Agendado";
-    if (hoje >= dataInicio && hoje <= dataFim) return "Em curso";
-    return "Terminado";
   };
 
   // Função para navegar para a página de detalhes do formador
@@ -323,7 +357,7 @@ const GerenciarCursos = () => {
   const handleExcluirCurso = async () => {
     if (!cursoParaExcluir) return;
     
-    const cursoId = cursoParaExcluir.id || cursoParaExcluir.id_curso;
+    const cursoId = cursoParaExcluir.id_curso || cursoParaExcluir.id;
     console.log('[DEBUG] GerenciarCursos: Iniciando exclusão do curso:', cursoId);
     
     try {
@@ -338,7 +372,7 @@ const GerenciarCursos = () => {
       toast.success('Curso excluído com sucesso!');
       
       // Atualizar a lista de cursos
-      buscarCursos(paginaAtual);
+      buscarCursos(paginaAtual, filtros);
       
     } catch (error) {
       console.error(`[DEBUG] GerenciarCursos: Erro ao excluir curso ${cursoId}:`, error);
@@ -366,6 +400,33 @@ const GerenciarCursos = () => {
   // Calcular número total de páginas
   const totalPaginas = Math.ceil(totalCursos / cursosPorPagina);
 
+  // Formatar estado do curso para exibição
+  const formatarEstado = (estado) => {
+    if (!estado) return "Desconhecido";
+    
+    // Mapear estados do banco para exibição
+    const estadosMap = {
+      'planeado': 'PLANEADO',
+      'em_curso': 'EM CURSO',
+      'terminado': 'TERMINADO'
+    };
+    
+    // Normalizar para minúsculas e remover espaços para comparação
+    const estadoNormalizado = estado.toLowerCase().replace(/[\s_]+/g, '_');
+    
+    return estadosMap[estadoNormalizado] || estado.toUpperCase();
+  };
+
+  // Limpar timeout quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      // Limpar qualquer temporizador pendente durante a desmontagem
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Interface de carregamento
   if (loading && cursos.length === 0) {
     return (
@@ -388,7 +449,7 @@ const GerenciarCursos = () => {
       
       <div className="main-content">
         <div className="cursos-header">
-          <h1>Gerenciar Cursos</h1>
+          <h1>Cursos</h1>
           <button 
             className="criar-curso-btn"
             onClick={handleCriarCurso}
@@ -459,7 +520,7 @@ const GerenciarCursos = () => {
               onChange={handleFiltroChange}
             >
               <option value="">Todos</option>
-              <option value="Agendado">Agendado</option>
+              <option value="Planeado">Planeado</option>
               <option value="Em curso">Em curso</option>
               <option value="Terminado">Terminado</option>
               <option value="Inativo">Inativo</option>
@@ -479,15 +540,7 @@ const GerenciarCursos = () => {
             />
           </div>
           
-          <div className="filtro-acoes">
-            <button 
-              className="btn-aplicar"
-              onClick={handleAplicarFiltros}
-              disabled={loading}
-            >
-              {loading ? 'Carregando...' : 'Aplicar Filtros'}
-            </button>
-            
+          <div className="filtro-acoes limpar-filtros-container">
             <button 
               className="btn-limpar"
               onClick={handleLimparFiltros}
@@ -516,17 +569,23 @@ const GerenciarCursos = () => {
                     <th>Nome do Curso</th>
                     <th>Categoria</th>
                     <th>Formador</th>
-                    <th>Estado</th>
                     <th>Período</th>
                     <th>Vagas</th>
-                    <th>Ações</th>
+                    <th></th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {cursos.map(curso => {
-                    const status = getStatusCurso(curso);
+                    // Obter ID do curso de maneira consistente
+                    const cursoId = curso.id_curso || curso.id;
                     
-                    // Lidar com diferentes estruturas de dados possíveis
+                    // Obter nome da categoria
+                    const categoriaNome = curso.categoria 
+                      ? (typeof curso.categoria === 'object' ? curso.categoria.nome : curso.categoria) 
+                      : curso.nome_categoria || "Não especificada";
+                    
+                    // Obter informações do formador
                     const formadorNome = curso.formador 
                       ? (typeof curso.formador === 'object' ? curso.formador.nome : curso.formador) 
                       : curso.nome_formador || "Curso Assíncrono";
@@ -535,7 +594,30 @@ const GerenciarCursos = () => {
                       ? (curso.formador.id_utilizador || curso.formador.id)
                       : curso.id_formador;
                     
-                    const cursoId = curso.id || curso.id_curso;
+                    // Normalizar estado para exibição
+                    let estadoExibicao = formatarEstado(curso.estado);
+                    
+                    // Obter classe CSS para a badge de estado
+                    let estadoClass = 'desconhecido';
+                    if (curso.estado) {
+                      // Normalizar o estado para o formato da classe CSS
+                      const estadoNormalizado = curso.estado.toLowerCase().replace(/[\s_]+/g, '-');
+                      estadoClass = estadoNormalizado || 'desconhecido';
+                    } 
+                    
+                    // Verificar se o curso está inativo
+                    if (curso.ativo === false) {
+                      estadoClass = 'inativo';
+                      estadoExibicao = 'INATIVO';
+                    }
+                    
+                    // Formatar datas
+                    const dataInicio = curso.data_inicio || curso.dataInicio;
+                    const dataFim = curso.data_fim || curso.dataFim;
+                    
+                    // Calcular vagas disponíveis
+                    const vagasOcupadas = curso.vagas_ocupadas || curso.inscritos || 0;
+                    const totalVagas = curso.vagas || curso.totalVagas || 0;
                     
                     return (
                       <tr 
@@ -544,7 +626,7 @@ const GerenciarCursos = () => {
                         onClick={() => handleVerCurso(cursoId)}
                       >
                         <td className="curso-nome">{curso.nome || curso.titulo}</td>
-                        <td>{curso.categoria?.nome || curso.nome_categoria || "Não especificada"}</td>
+                        <td>{categoriaNome}</td>
                         <td 
                           className={formadorId ? "formador-cell" : ""}
                           onClick={e => {
@@ -553,72 +635,78 @@ const GerenciarCursos = () => {
                           }}
                         >
                           {formadorNome}
-                        </td>
+                        </td>                      
+
                         <td>
-                          <span className={`status-badge ${status.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {status}
-                          </span>
-                        </td>
-                        <td>
-                          {(curso.data_inicio || curso.dataInicio) ? 
-                            `${new Date(curso.data_inicio || curso.dataInicio).toLocaleDateString()} - 
-                            ${new Date(curso.data_fim || curso.dataFim).toLocaleDateString()}`
+                          {dataInicio ? 
+                            `${new Date(dataInicio).toLocaleDateString()} - 
+                            ${new Date(dataFim).toLocaleDateString()}`
                             : "Datas não disponíveis"}
                         </td>
+
                         <td>
-                          {status !== "Terminado" && curso.tipo === "sincrono" ? (
-                            `${curso.vagas_ocupadas || curso.inscritos || 0} / ${curso.vagas || curso.totalVagas || 0}`
-                          ) : (
-                            status !== "Terminado" && curso.tipo !== "sincrono" ? (
-                              curso.inscritos || 0
-                            ) : (
-                              "N/A"
-                            )
-                          )}
+                          {/* Mostrar apenas o número total de vagas ou "?" se for null */}
+                          {totalVagas !== null && totalVagas !== undefined 
+                            ? totalVagas
+                            : "?"}
                         </td>
+                        
+                        <td>
+                          <span className={`status-badge perfil ${estadoClass}`}>
+                            {estadoExibicao}
+                          </span>
+                        </td>
+
                         <td className="acoes">
                           <button 
-                            className="btn-editar"
+                            className="btn-icon btn-editar"
                             onClick={(e) => handleEditarCurso(cursoId, e)}
+                            title="Editar"
                           >
-                            Editar
+                            ✏️
                           </button>
                           <button 
-                            className="btn-excluir"
+                            className="btn-icon btn-excluir"
                             onClick={(e) => handleConfirmarExclusao(curso, e)}
+                            title="Excluir"
                           >
-                            Excluir
+                            🗑️
                           </button>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
+
               </table>
               
+              {/* Paginação */}
               {totalPaginas > 1 && (
                 <div className="paginacao">
                   <button 
                     onClick={handlePaginaAnterior} 
                     disabled={paginaAtual === 1 || loading}
                     className="btn-pagina"
+                    aria-label="Página anterior"
                   >
-                    Anterior
+                    <span className="pagination-icon">&#10094;</span>
                   </button>
                   
                   <span className="pagina-atual">
-                    Página {paginaAtual} de {totalPaginas}
+                    {paginaAtual}/{totalPaginas}
                   </span>
                   
                   <button 
                     onClick={handleProximaPagina}
                     disabled={paginaAtual === totalPaginas || loading}
                     className="btn-pagina"
+                    aria-label="Próxima página"
                   >
-                    Próxima
+                    <span className="pagination-icon">&#10095;</span>
                   </button>
                 </div>
               )}
+
             </>
           )}
         </div>

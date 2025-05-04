@@ -1,14 +1,11 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
+const { sendRegistrationEmail } = require("../../utils/emailService");
 const { User, Curso, Categoria, Area, Inscricao_Curso } = require('../../database/associations');
 const User_Pendente = require('../../database/models/User_Pendente');
 const FormadorCategoria = require("../../database/models/Formador_Categoria");
 const FormadorArea = require("../../database/models/Formador_Area");
-const { Op } = require('sequelize');
-const { sendRegistrationEmail } = require("../../utils/emailService");
-const fs = require('fs');
-const path = require('path');
-const uploadUtils = require('../../middleware/upload');
 const FormadorAssociacoesPendentes = require("../../database/models/Formador_Associacoes_Pendentes");
 
 
@@ -25,54 +22,49 @@ const getAllFormadores = async (req, res) => {
     // Busca usuários com cargo de formador (id_cargo = 2)
     console.log("🔍 Buscando na tabela User com id_cargo = 2");
 
-    try {
-      const result = await User.findAndCountAll({
-        where: {
-          id_cargo: 2
+    const formadores = await User.findAll({
+      where: { id_cargo: 2 },
+      include: [
+        {
+          model: Categoria,
+          as: "categorias_formador",
+          through: { attributes: [] },
+          required: false
         },
-        include: [
-          {
-            model: Categoria,
-            as: "categorias_formador",
-            through: { attributes: [] }, // Exclui os atributos da tabela de junção
-            required: false
-          },
-          {
-            model: Area,
-            as: "areas_formador",
-            through: { attributes: [] }, // Exclui os atributos da tabela de junção
-            required: false
-          }
-        ],
-        limit,
-        offset,
-        order: [['nome', 'ASC']]
-      });
+        {
+          model: Area,
+          as: "areas_formador",
+          through: { attributes: [] },
+          required: false
+        }
+      ],
+      limit,
+      offset,
+      order: [['nome', 'ASC']]
+    });
 
-      const formadores = result.rows;
-      const count = result.count;
+    const count = await User.count({
+      where: { id_cargo: 2 }
+    });
 
-      console.log(`✅ Encontrados ${count} formadores na tabela User`);
+    const totalPages = Math.max(1, Math.ceil(count / limit));
 
-      return res.json({
-        formadores,
-        totalItems: count,
-        totalPages: Math.ceil(count / limit),
-        currentPage: page
-      });
+    console.log(`✅ Encontrados ${count} formadores na tabela User`);
 
-    } catch (error) {
-      console.error("❌ Erro ao buscar formadores:", error.message);
-      console.error(error.stack);
-      return res.status(500).json({ message: "Erro ao listar formadores", error: error.message });
-    }
+    return res.json({
+      formadores,
+      totalItems: count,
+      totalPages,
+      currentPage: Math.min(page, totalPages)
+    });
 
   } catch (error) {
-    console.error("❌ Erro geral ao listar formadores:", error);
+    console.error("❌ Erro ao listar formadores:", error.message);
     console.error(error.stack);
     return res.status(500).json({ message: "Erro ao listar formadores", error: error.message });
   }
 };
+
 
 // Obter um formador específico por ID
 const getFormadorById = async (req, res) => {
@@ -147,6 +139,166 @@ const getFormadorById = async (req, res) => {
   }
 };
 
+
+const getFormadorProfile = async (req, res) => {
+  try {
+    const userId = req.user.id_utilizador;
+
+    // Verificar se o usuário é um formador
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado" });
+    }
+
+    if (user.id_cargo !== 2) {
+      return res.status(400).json({ message: "Este usuário não é um formador" });
+    }
+
+    // Buscar o formador com suas categorias e áreas
+    const formador = await User.findByPk(userId, {
+      include: [
+        {
+          model: Categoria,
+          as: "categorias_formador",
+          through: { attributes: [] },
+          include: [
+            {
+              model: Area,
+              as: "areas",
+              required: false
+            }
+          ]
+        },
+        {
+          model: Area,
+          as: "areas_formador",
+          through: { attributes: [] },
+          include: [
+            {
+              model: Categoria,
+              as: "categoriaParent",
+              attributes: ["id_categoria", "nome"]
+            }
+          ]
+        }
+      ]
+    });
+
+    // Buscar cursos em que o formador está inscrito
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: {
+        id_utilizador: userId,
+        estado: 'inscrito'
+      },
+      include: [
+        {
+          model: Curso,
+          as: "curso",
+          include: [
+            {
+              model: Categoria,
+              as: "categoria",
+              attributes: ['nome']
+            },
+            {
+              model: Area,
+              as: "area",
+              attributes: ['nome']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Buscar cursos ministrados pelo formador
+    const cursosMinistrados = await Curso.findAll({
+      where: { id_formador: userId },
+      include: [
+        {
+          model: Categoria,
+          as: "categoria",
+          attributes: ['nome']
+        },
+        {
+          model: Area,
+          as: "area",
+          attributes: ['nome']
+        }
+      ]
+    });
+
+    // Organizar as categorias e áreas no formato desejado
+    const categoriasComAreas = {};
+
+    // Processar as categorias e suas áreas
+    if (formador.categorias_formador && formador.categorias_formador.length > 0) {
+      formador.categorias_formador.forEach(categoria => {
+        if (!categoriasComAreas[categoria.id_categoria]) {
+          categoriasComAreas[categoria.id_categoria] = {
+            id: categoria.id_categoria,
+            nome: categoria.nome,
+            areas: []
+          };
+        }
+      });
+    }
+
+    // Processar as áreas e associá-las às suas categorias
+    if (formador.areas_formador && formador.areas_formador.length > 0) {
+      formador.areas_formador.forEach(area => {
+        if (area.categoriaParent && categoriasComAreas[area.categoriaParent.id_categoria]) {
+          categoriasComAreas[area.categoriaParent.id_categoria].areas.push({
+            id: area.id_area,
+            nome: area.nome
+          });
+        }
+      });
+    }
+
+    // Converter para um array para facilitar o uso no frontend
+    const categoriasFormatadas = Object.values(categoriasComAreas);
+
+    // Formatar os dados dos cursos inscritos
+    const cursosInscritos = inscricoes.map(inscricao => ({
+      id: inscricao.id_inscricao,
+      cursoId: inscricao.curso.id_curso,
+      nome: inscricao.curso.nome,
+      categoria: inscricao.curso.categoria ? inscricao.curso.categoria.nome : "N/A",
+      area: inscricao.curso.area ? inscricao.curso.area.nome : "N/A",
+      dataInicio: inscricao.curso.data_inicio,
+      dataFim: inscricao.curso.data_fim,
+      tipo: inscricao.curso.tipo,
+      dataInscricao: inscricao.data_inscricao
+    }));
+
+    // Formatar os dados dos cursos ministrados
+    const cursosMinistradosFormatados = cursosMinistrados.map(curso => ({
+      id: curso.id_curso,
+      nome: curso.nome,
+      categoria: curso.categoria ? curso.categoria.nome : "N/A",
+      area: curso.area ? curso.area.nome : "N/A",
+      dataInicio: curso.data_inicio,
+      dataFim: curso.data_fim,
+      tipo: curso.tipo,
+      vagas: curso.vagas
+    }));
+
+    // Enviar todos os dados para o frontend
+    return res.json({
+      categorias: categoriasFormatadas,
+      cursosInscritos: cursosInscritos,
+      cursosMinistrados: cursosMinistradosFormatados
+    });
+  } catch (error) {
+    console.error("Erro ao buscar perfil do formador:", error);
+    return res.status(500).json({
+      message: "Erro ao buscar perfil do formador",
+      error: error.message
+    });
+  }
+};
+
+
 // Obter cursos ministrados por um formador
 const getCursosFormador = async (req, res) => {
   try {
@@ -182,12 +334,6 @@ const getCursosFormador = async (req, res) => {
   }
 };
 
-
-// Função antiga - manter para compatibilidade, mas redirecionar para o novo fluxo
-const createFormador = async (req, res) => {
-  // Redirecionar para o novo método de registro
-  return registerFormador(req, res);
-};
 
 
 // Função para registrar um novo formador (pendente de confirmação)
@@ -323,12 +469,6 @@ const registerFormador = async (req, res) => {
 
 
 
-
-
-
-
-
-
 // Atualizar formador
 const updateFormador = async (req, res) => {
   try {
@@ -418,14 +558,6 @@ const deleteFormador = async (req, res) => {
     return res.status(500).json({ message: "Erro ao excluir formador", error: error.message });
   }
 };
-
-
-
-
-
-
-
-
 
 
 
@@ -758,184 +890,10 @@ const removeFormadorArea = async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-const getFormadorProfile = async (req, res) => {
-  try {
-    const userId = req.user.id_utilizador;
-
-    // Verificar se o usuário é um formador
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado" });
-    }
-
-    if (user.id_cargo !== 2) {
-      return res.status(400).json({ message: "Este usuário não é um formador" });
-    }
-
-    // Buscar o formador com suas categorias e áreas
-    const formador = await User.findByPk(userId, {
-      include: [
-        {
-          model: Categoria,
-          as: "categorias_formador",
-          through: { attributes: [] },
-          include: [
-            {
-              model: Area,
-              as: "areas",
-              required: false
-            }
-          ]
-        },
-        {
-          model: Area,
-          as: "areas_formador",
-          through: { attributes: [] },
-          include: [
-            {
-              model: Categoria,
-              as: "categoriaParent",
-              attributes: ["id_categoria", "nome"]
-            }
-          ]
-        }
-      ]
-    });
-
-    // Buscar cursos em que o formador está inscrito
-    const inscricoes = await Inscricao_Curso.findAll({
-      where: {
-        id_utilizador: userId,
-        estado: 'inscrito'
-      },
-      include: [
-        {
-          model: Curso,
-          as: "curso",
-          include: [
-            {
-              model: Categoria,
-              as: "categoria",
-              attributes: ['nome']
-            },
-            {
-              model: Area,
-              as: "area",
-              attributes: ['nome']
-            }
-          ]
-        }
-      ]
-    });
-
-    // Buscar cursos ministrados pelo formador
-    const cursosMinistrados = await Curso.findAll({
-      where: { id_formador: userId },
-      include: [
-        {
-          model: Categoria,
-          as: "categoria",
-          attributes: ['nome']
-        },
-        {
-          model: Area,
-          as: "area",
-          attributes: ['nome']
-        }
-      ]
-    });
-
-    // Organizar as categorias e áreas no formato desejado
-    const categoriasComAreas = {};
-
-    // Processar as categorias e suas áreas
-    if (formador.categorias_formador && formador.categorias_formador.length > 0) {
-      formador.categorias_formador.forEach(categoria => {
-        if (!categoriasComAreas[categoria.id_categoria]) {
-          categoriasComAreas[categoria.id_categoria] = {
-            id: categoria.id_categoria,
-            nome: categoria.nome,
-            areas: []
-          };
-        }
-      });
-    }
-
-    // Processar as áreas e associá-las às suas categorias
-    if (formador.areas_formador && formador.areas_formador.length > 0) {
-      formador.areas_formador.forEach(area => {
-        if (area.categoriaParent && categoriasComAreas[area.categoriaParent.id_categoria]) {
-          categoriasComAreas[area.categoriaParent.id_categoria].areas.push({
-            id: area.id_area,
-            nome: area.nome
-          });
-        }
-      });
-    }
-
-    // Converter para um array para facilitar o uso no frontend
-    const categoriasFormatadas = Object.values(categoriasComAreas);
-
-    // Formatar os dados dos cursos inscritos
-    const cursosInscritos = inscricoes.map(inscricao => ({
-      id: inscricao.id_inscricao,
-      cursoId: inscricao.curso.id_curso,
-      nome: inscricao.curso.nome,
-      categoria: inscricao.curso.categoria ? inscricao.curso.categoria.nome : "N/A",
-      area: inscricao.curso.area ? inscricao.curso.area.nome : "N/A",
-      dataInicio: inscricao.curso.data_inicio,
-      dataFim: inscricao.curso.data_fim,
-      tipo: inscricao.curso.tipo,
-      dataInscricao: inscricao.data_inscricao
-    }));
-
-    // Formatar os dados dos cursos ministrados
-    const cursosMinistradosFormatados = cursosMinistrados.map(curso => ({
-      id: curso.id_curso,
-      nome: curso.nome,
-      categoria: curso.categoria ? curso.categoria.nome : "N/A",
-      area: curso.area ? curso.area.nome : "N/A",
-      dataInicio: curso.data_inicio,
-      dataFim: curso.data_fim,
-      tipo: curso.tipo,
-      vagas: curso.vagas
-    }));
-
-    // Enviar todos os dados para o frontend
-    return res.json({
-      categorias: categoriasFormatadas,
-      cursosInscritos: cursosInscritos,
-      cursosMinistrados: cursosMinistradosFormatados
-    });
-  } catch (error) {
-    console.error("Erro ao buscar perfil do formador:", error);
-    return res.status(500).json({
-      message: "Erro ao buscar perfil do formador",
-      error: error.message
-    });
-  }
-};
-
-
-
-
-
-
 module.exports = {
   getAllFormadores,
   getFormadorById,
   getCursosFormador,
-  createFormador,
   registerFormador,
   updateFormador,
   deleteFormador,

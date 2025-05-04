@@ -38,7 +38,6 @@ const verificarCargo = (cargosPermitidos) => {
 router.get('/', formadorController.getAllFormadores);
 
 // Adicionadas novas rotas de registro com confirmação 
-router.post('/', formadorController.createFormador);
 router.post('/register', formadorController.registerFormador);
 
 router.get("/profile", verificarToken, formadorController.getFormadorProfile);

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
-import "./css/cursos.css";
 import Sidebar from "../components/Sidebar";
+import "./css/cursos.css";
 
 export default function FormadoresPage() {
   const [formadores, setFormadores] = useState([]);
@@ -12,7 +12,7 @@ export default function FormadoresPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const formadoresPerPage = 10;
-  
+
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -20,23 +20,25 @@ export default function FormadoresPage() {
     const fetchFormadores = async () => {
       try {
         setLoading(true);
-        console.log(`Buscando formadores - Página ${currentPage}`);
         const response = await fetch(`${API_BASE}/formadores?page=${currentPage}&limit=${formadoresPerPage}`);
-        
+  
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || `Erro ao carregar formadores: ${response.status}`);
         }
-        
+  
         const data = await response.json();
-        console.log("Dados de formadores recebidos:", data);
-        
-        if (data.formadores && data.formadores.length > 0) {
-          console.log("IDs dos formadores disponíveis:", data.formadores.map(f => f.id || f.id_utilizador));
+  
+        const total = Math.max(1, data.totalPages || 1); // força mínimo de 1
+  
+        // Corrigir se a página atual for maior do que a última página válida
+        if (currentPage > total) {
+          setCurrentPage(1); // ou total, se preferires ir para a última página válida
+          return;
         }
-        
+  
         setFormadores(data.formadores || []);
-        setTotalPages(data.totalPages || 1);
+        setTotalPages(total);
         setError(null);
       } catch (error) {
         console.error("Erro ao carregar formadores:", error);
@@ -45,10 +47,11 @@ export default function FormadoresPage() {
         setLoading(false);
       }
     };
-
+  
     fetchFormadores();
-  }, [currentPage]);  
-
+  }, [currentPage]);
+  
+  
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -66,7 +69,7 @@ export default function FormadoresPage() {
       console.error("Tentativa de navegar para formador sem ID");
       return;
     }
-    
+
     console.log(`Navegando para detalhes do formador ID: ${formadorId}`);
     navigate(`/formadores/${formadorId}`);
   };
@@ -74,23 +77,23 @@ export default function FormadoresPage() {
   // Função para obter o URL da imagem
   const getImageUrl = (formador) => {
     if (!formador) return '/placeholder-formador.jpg';
-    
+
     // Se o formador já tiver uma URL de foto de perfil completa, use-a
     if (formador.foto_perfil && (formador.foto_perfil.startsWith('http') || formador.foto_perfil.startsWith('/'))) {
       return formador.foto_perfil;
     }
-    
+
     // Obter o email do formador para buscar sua imagem
     const email = formador.email;
     if (!email) return '/placeholder-formador.jpg';
-    
+
     // Usar a função de URLs de imagens com o email, se disponível
     if (IMAGES && typeof IMAGES.FORMADOR === 'function') {
       return IMAGES.FORMADOR(email);
     } else if (IMAGES && typeof IMAGES.USER_AVATAR === 'function') {
       return IMAGES.USER_AVATAR(email);
     }
-    
+
     return '/placeholder-formador.jpg';
   };
 
@@ -115,7 +118,7 @@ export default function FormadoresPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-500 text-lg">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
@@ -132,38 +135,13 @@ export default function FormadoresPage() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
 
-      {/* Barra de paginação */}
-      <div className="flex justify-center items-center my-6">
-        <button
-          onClick={goToPreviousPage}
-          disabled={currentPage === 1}
-          className={`px-4 py-2 ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <span className="mx-4 text-lg font-medium">{currentPage}/{totalPages}</span>
-
-        <button
-          onClick={goToNextPage}
-          disabled={currentPage === totalPages}
-          className={`px-4 py-2 ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
       {/* Lista de formadores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {formadores.length > 0 ? (
           formadores.map((formador, index) => {
             // Obter o ID do formador de forma segura
             const formadorId = formador.id || formador.id_utilizador;
-            
+
             return (
               <div
                 key={formadorId || index}
@@ -202,6 +180,30 @@ export default function FormadoresPage() {
           </div>
         )}
       </div>
+
+      {/* Paginação no estilo de cursos.jsx */}
+      <div className="flex justify-center items-center my-6 pagination-container">
+        <button
+          onClick={goToPreviousPage}
+          disabled={currentPage === 1}
+          className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
+          aria-label="Página anterior"
+        >
+          <span className="pagination-icon">&#10094;</span>
+        </button>
+
+        <span className="mx-4 text-lg font-medium pagination-info">{currentPage}/{totalPages}</span>
+
+        <button
+          onClick={goToNextPage}
+          disabled={currentPage === totalPages}
+          className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
+          aria-label="Próxima página"
+        >
+          <span className="pagination-icon">&#10095;</span>
+        </button>
+      </div>
+
     </div>
   );
 }

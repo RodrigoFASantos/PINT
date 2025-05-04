@@ -60,6 +60,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 1rem;
+  position: relative;
+  padding-bottom: 4rem; /* Espaço para o botão limpar filtros */
 }
 
 .filtro {
@@ -89,14 +91,14 @@
   ring-color: rgba(59, 130, 246, 0.5);
 }
 
-.filtro-acoes {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-  grid-column: 1 / -1;
+/* Posicionamento do botão limpar filtros no canto inferior direito */
+.limpar-filtros-container {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.5rem;
 }
 
-.btn-aplicar, .btn-limpar {
+.btn-limpar {
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 0.375rem;
@@ -104,18 +106,6 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-.btn-aplicar {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-aplicar:hover {
-  background-color: #2563eb;
-}
-
-.btn-limpar {
   background-color: #f3f4f6;
   color: #4b5563;
 }
@@ -139,7 +129,6 @@
   width: 100%;
   border-collapse: collapse;
 }
-
 
 .cursos-table th {
   background-color: #f3f4f6;
@@ -192,23 +181,23 @@
 }
 
 .status-badge.agendado {
-  background-color: #fef3c7;
+  background-color: #fef3c7; /* Amarelo */
   color: #92400e;
 }
 
 .status-badge.em-curso {
-  background-color: #dcfce7;
+  background-color: #dcfce7; /* Verde */
   color: #166534;
 }
 
 .status-badge.terminado {
-  background-color: #e5e7eb;
-  color: #4b5563;
+  background-color: #fee2e2; /* Vermelho */
+  color: #b91c1c;
 }
 
 .status-badge.inativo {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: #f3f4f6;
+  color: #6b7280;
 }
 
 .acoes {
@@ -217,36 +206,41 @@
   white-space: nowrap;
 }
 
-.btn-editar, .btn-excluir {
-  padding: 0.375rem 0.75rem;
+/* Botões de ícones */
+.btn-icon {
+  padding: 0.375rem;
   border: none;
   border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
 }
 
-.btn-editar {
+.btn-icon.btn-editar {
   background-color: #e0f2fe;
   color: #0369a1;
 }
 
-.btn-editar:hover {
+.btn-icon.btn-editar:hover {
   background-color: #bae6fd;
 }
 
-.btn-excluir {
+.btn-icon.btn-excluir {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-.btn-excluir:hover {
+.btn-icon.btn-excluir:hover {
   background-color: #fecaca;
 }
 
-
-/* Paginação */
+/* Paginação com estilo similar ao cursos.jsx */
 .paginacao {
   display: flex;
   justify-content: center;
@@ -261,10 +255,14 @@
   border-radius: 0.375rem;
   background-color: white;
   color: #4b5563;
-  font-size: 0.875rem;
+  font-size: 1.125rem; /* Aumentado para setas */
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-pagina:hover:not(:disabled) {
@@ -280,6 +278,11 @@
 .pagina-atual {
   font-size: 0.875rem;
   color: #4b5563;
+}
+
+.pagination-icon {
+  display: block;
+  line-height: 1;
 }
 
 /* Estado sem cursos */
@@ -398,4 +401,29 @@
   .sidebar-closed .main-content {
     margin-left: 4rem;
   }
+}
+
+/* Para "planeado" (ou "agendado") - amarelo */
+.status-badge.perfil.planeado,
+.status-badge.perfil.agendado {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Para "em curso" - verde */
+.status-badge.perfil.em-curso {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+/* Para "terminado" - vermelho */
+.status-badge.perfil.terminado {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Para "inativo" - cinza */
+.status-badge.perfil.inativo {
+  background-color: #f3f4f6;
+  color: #6b7280;
 }

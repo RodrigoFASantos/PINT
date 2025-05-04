@@ -60,6 +60,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 1rem;
+  position: relative;
+  padding-bottom: 4rem; /* Espaço para o botão limpar filtros */
 }
 
 .filtro {
@@ -89,14 +91,14 @@
   ring-color: rgba(59, 130, 246, 0.5);
 }
 
-.filtro-acoes {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-  grid-column: 1 / -1;
+/* Posicionamento do botão limpar filtros no canto inferior direito */
+.limpar-filtros-container {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.5rem;
 }
 
-.btn-aplicar, .btn-limpar {
+.btn-limpar {
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 0.375rem;
@@ -104,18 +106,6 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-.btn-aplicar {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-aplicar:hover {
-  background-color: #2563eb;
-}
-
-.btn-limpar {
   background-color: #f3f4f6;
   color: #4b5563;
 }
@@ -209,62 +199,65 @@
   white-space: nowrap;
 }
 
-.btn-editar, .btn-excluir, .btn-ativar, .btn-desativar, .btn-percurso {
-  padding: 0.375rem 0.75rem;
+/* Botões de ícones */
+.btn-icon {
+  padding: 0.375rem;
   border: none;
   border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
 }
 
-.btn-editar {
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Cores específicas para cada tipo de botão com ícone */
+.btn-icon.btn-editar {
   background-color: #e0f2fe;
   color: #0369a1;
 }
 
-.btn-editar:hover {
+.btn-icon.btn-editar:hover:not(:disabled) {
   background-color: #bae6fd;
 }
 
-.btn-excluir {
+.btn-icon.btn-excluir {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-.btn-excluir:hover {
+.btn-icon.btn-excluir:hover:not(:disabled) {
   background-color: #fecaca;
 }
 
-.btn-ativar {
+.btn-icon.btn-ativar {
   background-color: #dcfce7;
   color: #166534;
 }
 
-.btn-ativar:hover {
+.btn-icon.btn-ativar:hover:not(:disabled) {
   background-color: #bbf7d0;
 }
 
-.btn-desativar {
+.btn-icon.btn-desativar {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-.btn-desativar:hover {
+.btn-icon.btn-desativar:hover:not(:disabled) {
   background-color: #fecaca;
 }
 
-.btn-percurso {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
-
-.btn-percurso:hover {
-  background-color: #bae6fd;
-}
-
-/* Paginação */
+/* Paginação com estilo similar ao cursos.jsx */
 .paginacao {
   display: flex;
   justify-content: center;
@@ -279,10 +272,14 @@
   border-radius: 0.375rem;
   background-color: white;
   color: #4b5563;
-  font-size: 0.875rem;
+  font-size: 1.125rem; /* Aumentado para setas */
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-pagina:hover:not(:disabled) {
@@ -298,6 +295,11 @@
 .pagina-atual {
   font-size: 0.875rem;
   color: #4b5563;
+}
+
+.pagination-icon {
+  display: block;
+  line-height: 1;
 }
 
 /* Estado sem utilizadores */
@@ -429,13 +431,6 @@
   margin-bottom: 1.5rem;
 }
 
-
-
-/* Estilos existentes permanecem iguais... */
-/* (Todos os estilos anteriores) */
-
-/* Estilos adicionais para as novas funcionalidades */
-
 /* Estilos para usuário e email clicáveis */
 .usuario-nome.clickable,
 .usuario-email.clickable {
@@ -450,84 +445,6 @@
   text-decoration: underline;
 }
 
-/* Estilos para o dropdown de cargo */
-.cargo-select {
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  border: 1px solid #d1d5db;
-  background-color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  cursor: pointer;
-  appearance: none;
-  min-width: 100px;
-}
-
-.cargo-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-/* Estilos para os botões de ação com ícones */
-.btn-icon {
-  padding: 0.375rem;
-  border: none;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  line-height: 1;
-  width: 32px;
-  height: 32px;
-}
-
-.btn-icon:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Cores específicas para cada tipo de botão com ícone */
-.btn-icon.btn-editar {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
-
-.btn-icon.btn-editar:hover:not(:disabled) {
-  background-color: #bae6fd;
-}
-
-.btn-icon.btn-excluir {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-.btn-icon.btn-excluir:hover:not(:disabled) {
-  background-color: #fecaca;
-}
-
-.btn-icon.btn-ativar {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.btn-icon.btn-ativar:hover:not(:disabled) {
-  background-color: #bbf7d0;
-}
-
-.btn-icon.btn-desativar {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-.btn-icon.btn-desativar:hover:not(:disabled) {
-  background-color: #fecaca;
-}
-
 /* Estilos para o perfil clicável */
 .status-badge.perfil {
   cursor: pointer;
@@ -538,83 +455,7 @@
   opacity: 0.8;
 }
 
-/* Ajustes na seção de filtros para remover o botão de aplicar */
-.filtro-acoes {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-  grid-column: 1 / -1;
-  justify-content: flex-start;
-}
-
-/* Garantir que o botão de limpar tenha o estilo correto */
-.btn-limpar {
-  padding: 0.625rem 1.25rem;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  background-color: #f3f4f6;
-  color: #4b5563;
-}
-
-.btn-limpar:hover {
-  background-color: #e5e7eb;
-}
-
-/* Ajustes para a tabela sem a coluna de estado */
-.usuarios-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;
-}
-
-.usuarios-table th,
-.usuarios-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-}
-
-.usuarios-table th {
-  background-color: #f3f4f6;
-  color: #4b5563;
-  text-align: left;
-  font-weight: 600;
-}
-
-.usuarios-table tr {
-  transition: background-color 0.2s;
-}
-
-.usuarios-table tr:hover {
-  background-color: #f9fafb;
-}
-
-.usuarios-table tr.inativo {
-  background-color: #f3f4f6;
-  color: #6b7280;
-}
-
-/* Ajuste para os filtros ficarem mais responsivos */
-@media (max-width: 768px) {
-  .filtros-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .filtro-acoes {
-    grid-column: auto;
-  }
-}
-
-
-
-
-
-
-
+/* Modal de cursos */
 .modal-cursos {
   max-width: 600px;
 }

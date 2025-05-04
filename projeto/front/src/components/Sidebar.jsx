@@ -118,12 +118,12 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 </li>
                 <li className={isActive('/admin/cursos') ? 'active' : ''}>
                   <Link to="/admin/cursos" onClick={toggleSidebar}>
-                    <i className="fas fa-book-open"></i> Gerenciar Cursos
+                    <i className="fas fa-book-open"></i> Gerir Cursos
                   </Link>
                 </li>
                 <li className={isActive('/admin/usuarios') ? 'active' : ''}>
                   <Link to="/admin/usuarios" onClick={toggleSidebar}>
-                    <i className="fas fa-users"></i> Gerenciar Utilizadores
+                    <i className="fas fa-users"></i> Gerir Utilizadores
                   </Link>
                 </li>
                 <li className={isActive('/admin/criar-curso') ? 'active' : ''}>
