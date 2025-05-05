@@ -294,25 +294,36 @@ const getCursoById = async (req, res) => {
     cursoComInscritos.terminado = cursoTerminado;
     
     // Se o curso terminou e um usuário está tentando acessar, verificar se está inscrito
-    if (cursoTerminado && userId) {
-      // Verificar se o usuário está inscrito neste curso
-      const inscricao = await Inscricao_Curso.findOne({
-        where: { 
-          id_utilizador: userId,
-          id_curso: id,
-          estado: 'inscrito' // Considera apenas inscrições ativas
-        }
-      });
-      
-      // Indicar se o usuário tem acesso ao curso
-      cursoComInscritos.acessoPermitido = !!inscricao;
-    } else if (cursoTerminado) {
-      // Se não há usuário autenticado e o curso terminou, não permitir acesso
-      cursoComInscritos.acessoPermitido = false;
-    } else {
-      // Se o curso não terminou, permitir acesso
-      cursoComInscritos.acessoPermitido = true;
-    }
+if (cursoTerminado && userId) {
+  try {
+    // Verificar se o usuário está inscrito neste curso
+    const inscricao = await Inscricao_Curso.findOne({
+      where: { 
+        id_utilizador: userId,
+        id_curso: id,
+        estado: 'inscrito' // Considera apenas inscrições ativas
+      }
+    });
+    
+    // Adicionar logs para diagnóstico
+    console.log(`Verificando inscrição para usuário ${userId} no curso ${id}`);
+    console.log(`Resultado da busca de inscrição:`, inscricao);
+    
+    // Indicar se o usuário tem acesso ao curso
+    cursoComInscritos.acessoPermitido = !!inscricao;
+    console.log(`Acesso permitido: ${cursoComInscritos.acessoPermitido}`);
+  } catch (error) {
+    console.error("Erro ao verificar inscrição:", error);
+    // Em caso de erro, vamos considerar que o usuário não tem acesso
+    cursoComInscritos.acessoPermitido = false;
+  }
+} else if (cursoTerminado) {
+  // Se não há usuário autenticado e o curso terminou, não permitir acesso
+  cursoComInscritos.acessoPermitido = false;
+} else {
+  // Se o curso não terminou, permitir acesso
+  cursoComInscritos.acessoPermitido = true;
+}
 
     // Adicionar contagem de inscrições ativas (código existente)
     try {

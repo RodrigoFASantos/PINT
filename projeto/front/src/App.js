@@ -45,6 +45,17 @@ const App = () => {
     <div id="appRoot">
       <AuthProvider>
         <Router>
+        <ToastContainer 
+            position="top-center"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={

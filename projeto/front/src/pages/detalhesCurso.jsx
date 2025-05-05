@@ -44,30 +44,12 @@ const DetalhesCurso = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        setCurso(response.data);
+        const cursoData = response.data;    
         
-        // Verificar se o curso terminou e o usuário não tem acesso
-        if (response.data.terminado && !response.data.acessoPermitido) {
-          // Exibir mensagem de aviso com toaster
-          toast.error(
-            "Este curso já terminou e só está disponível para alunos inscritos.", 
-            {
-              position: "top-center",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true
-            }
-          );
-          
-          // Redirecionar o usuário após 5 segundos
-          setTimeout(() => {
-            navigate('/cursos');
-          }, 5000);
-        }
         
+        setCurso(cursoData);
         setLoading(false);
+        
       } catch (error) {
         console.error("Erro ao carregar curso:", error);
         setError("Não foi possível carregar o curso. Tente novamente mais tarde.");
@@ -380,24 +362,7 @@ const DetalhesCurso = () => {
     return <div className="not-found">Curso não encontrado</div>;
   }
 
-  if (curso.terminado && !curso.acessoPermitido) {
-    return (
-      <div className="acesso-negado">
-        <h2>Acesso Negado</h2>
-        <div className="mensagem-acesso-negado">
-          <i className="fas fa-lock"></i>
-          <p>Este curso já terminou e só está disponível para alunos inscritos.</p>
-          <p>Você será redirecionado para a lista de cursos em alguns segundos.</p>
-        </div>
-        <button 
-          className="voltar-btn"
-          onClick={() => navigate('/cursos')}
-        >
-          Voltar para a lista de cursos
-        </button>
-      </div>
-    );
-  }
+
 
   if (loading) {
     return (

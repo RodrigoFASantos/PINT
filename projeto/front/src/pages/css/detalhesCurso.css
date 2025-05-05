@@ -588,3 +588,22 @@ button,
 .voltar-btn:hover {
   background-color: #0056b3;
 }
+
+
+
+/* Adicione estes estilos ao seu arquivo CSS global ou componente específico */
+
+.Toastify__toast-container {
+  z-index: 9999;
+}
+
+.Toastify__toast--error {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.Toastify__toast-body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 16px;
+  padding: 8px 0;
+}

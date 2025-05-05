@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
+import { toast } from 'react-toastify';
 import "./css/cursos.css";
 import Sidebar from "../components/Sidebar";
 import axios from 'axios';
@@ -154,8 +155,40 @@ export default function CursosPage() {
     }
   };
 
-  const handleCursoClick = (cursoId) => {
-    navigate(`/cursos/${cursoId}`);
+  const handleCursoClick = async (cursoId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE}/cursos/${cursoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const cursoData = response.data;
+      const dataAtual = new Date();
+      const dataFimCurso = new Date(cursoData.data_fim);
+      const cursoTerminado = dataFimCurso < dataAtual;
+      
+      // Verificar acesso
+      if (cursoTerminado && !cursoData.acessoPermitido) {
+        toast.error(
+          "Este curso já terminou e só está disponível para alunos inscritos.", 
+          {
+            position: "top-center",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true
+          }
+        );
+        return; // Impede a navegação
+      }
+      
+      // Se passou pela verificação, navega para a página
+      navigate(`/cursos/${cursoId}`);
+    } catch (error) {
+      console.error('Erro ao verificar acesso ao curso:', error);
+      toast.error("Erro ao verificar acesso ao curso. Tente novamente mais tarde.");
+    }
   };
 
   // Funções para manipular os filtros
