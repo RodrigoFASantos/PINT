@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 import './css/detalhesCurso.css';
 import Sidebar from '../components/Sidebar';
 import CursoConteudos from '../components/CursoConteudos';
@@ -26,6 +28,56 @@ const DetalhesCurso = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
 
+
+  useEffect(() => {
+    const carregarCurso = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+        
+        const response = await axios.get(`${API_BASE}/cursos/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setCurso(response.data);
+        
+        // Verificar se o curso terminou e o usuário não tem acesso
+        if (response.data.terminado && !response.data.acessoPermitido) {
+          // Exibir mensagem de aviso com toaster
+          toast.error(
+            "Este curso já terminou e só está disponível para alunos inscritos.", 
+            {
+              position: "top-center",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true
+            }
+          );
+          
+          // Redirecionar o usuário após 5 segundos
+          setTimeout(() => {
+            navigate('/cursos');
+          }, 5000);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Erro ao carregar curso:", error);
+        setError("Não foi possível carregar o curso. Tente novamente mais tarde.");
+        setLoading(false);
+      }
+    };
+    
+    carregarCurso();
+  }, [id, navigate]);
+  
   // Função para buscar categoria diretamente pelo ID
   const getCategoriaById = async (categoriaId) => {
     try {
@@ -314,6 +366,38 @@ const DetalhesCurso = () => {
     // Usar a rota correta que está definida no App.js
     navigate(`/cursos/${id}/inscricoes`);
   };
+
+  // Renderização condicional com base no acesso permitido
+  if (loading) {
+    return <div className="loading">Carregando detalhes do curso...</div>;
+  }
+  
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+  
+  if (!curso) {
+    return <div className="not-found">Curso não encontrado</div>;
+  }
+
+  if (curso.terminado && !curso.acessoPermitido) {
+    return (
+      <div className="acesso-negado">
+        <h2>Acesso Negado</h2>
+        <div className="mensagem-acesso-negado">
+          <i className="fas fa-lock"></i>
+          <p>Este curso já terminou e só está disponível para alunos inscritos.</p>
+          <p>Você será redirecionado para a lista de cursos em alguns segundos.</p>
+        </div>
+        <button 
+          className="voltar-btn"
+          onClick={() => navigate('/cursos')}
+        >
+          Voltar para a lista de cursos
+        </button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

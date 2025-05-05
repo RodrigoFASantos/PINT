@@ -97,6 +97,15 @@ uploadUtils.ensureBaseDirs();
 // Carregar associações da base de dados
 require("./src/database/associations");
 
+
+// Limites para requisições grandes
+app.use(express.json({ limit: '15GB' }));
+app.use(express.urlencoded({ extended: true, limit: '15GB' }));
+server.timeout = 3600000; // 1 hora
+
+
+
+
 // Função utilitária para carregar rotas com segurança
 function carregarRota(caminho, prefixo) {
   try {

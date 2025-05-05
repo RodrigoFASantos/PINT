@@ -14,25 +14,24 @@ INSERT INTO utilizadores (id_cargo, nome, idade, email, telefone, password, prim
 VALUES
   -- Administradores
   ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Administrador', 35, 'admin@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', TRUE, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rareura', 25, 'fe@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/fe@gmail.com_AVATAR.png', 'uploads/users/fe@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rodrigo', 25, 'ro@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ro@gmail.com_AVATAR.png', 'uploads/users/ro@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rareura', 25, 'fe@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/fe_at_gmail_com/fe@gmail.com_AVATAR.png', 'uploads/users/fe_at_gmail_com/fe@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Administrador' LIMIT 1), 'Formador Rodrigo', 25, 'ro@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ro_at_gmail_com/ro@gmail.com_AVATAR.png', 'uploads/users/ro_at_gmail_com/ro@gmail.com_CAPA.png'),
   
   -- Formadores
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', TRUE, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Carla Pereira', 38, 'carla@gmail.com', '923456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/carla@gmail.com_AVATAR.png', 'uploads/users/carla@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Miguel Santos', 42, 'miguel@gmail.com', '933456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/miguel@gmail.com_AVATAR.png', 'uploads/users/miguel@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Sara Oliveira', 35, 'sara@gmail.com', '943456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sara@gmail.com_AVATAR.png', 'uploads/users/sara@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Formador', 40, 'a@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', TRUE, 'uploads/users/a_at_gmail_com/a@gmail.com_AVATAR.png', 'uploads/users/a_at_gmail_com/a@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Carla Pereira', 38, 'carla@gmail.com', '923456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/carla_at_gmail_com/carla@gmail.com_AVATAR.png', 'uploads/users/carla_at_gmail_com/carla@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Miguel Santos', 42, 'miguel@gmail.com', '933456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/miguel_at_gmail_com/miguel@gmail.com_AVATAR.png', 'uploads/users/miguel_at_gmail_com/miguel@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formador' LIMIT 1), 'Sara Oliveira', 35, 'sara@gmail.com', '943456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sara_at_gmail_com/sara@gmail.com_AVATAR.png', 'uploads/users/sara_at_gmail_com/sara@gmail.com_CAPA.png'),
   
   -- Formandos
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'AVATAR.png', 'CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'João Silva', 28, 'joao@gmail.com', '953456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/joao@gmail.com_AVATAR.png', 'uploads/users/joao@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ana Martins', 24, 'ana@gmail.com', '963456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ana@gmail.com_AVATAR.png', 'uploads/users/ana@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Pedro Costa', 31, 'pedro@gmail.com', '973456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/pedro@gmail.com_AVATAR.png', 'uploads/users/pedro@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Sofia Nunes', 26, 'sofia@gmail.com', '983456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sofia@gmail.com_AVATAR.png', 'uploads/users/sofia@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ricardo Ferreira', 29, 'ricardo@gmail.com', '993456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ricardo@gmail.com_AVATAR.png', 'uploads/users/ricardo@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Mariana Lopes', 27, 'mariana@gmail.com', '913456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/mariana@gmail.com_AVATAR.png', 'uploads/users/mariana@gmail.com_CAPA.png'),
-  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Luís Rodrigues', 33, 'luis@gmail.com', '913456788', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/luis@gmail.com_AVATAR.png', 'uploads/users/luis@gmail.com_CAPA.png');
-
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Formando', 25, 'b@gmail.com', '123456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/b_at_gmail_com/b@gmail.com_AVATAR.png', 'uploads/users/b_at_gmail_com/b@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'João Silva', 28, 'joao@gmail.com', '953456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/joao_at_gmail_com/joao@gmail.com_AVATAR.png', 'uploads/users/joao_at_gmail_com/joao@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ana Martins', 24, 'ana@gmail.com', '963456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ana_at_gmail_com/ana@gmail.com_AVATAR.png', 'uploads/users/ana_at_gmail_com/ana@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Pedro Costa', 31, 'pedro@gmail.com', '973456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/pedro_at_gmail_com/pedro@gmail.com_AVATAR.png', 'uploads/users/pedro_at_gmail_com/pedro@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Sofia Nunes', 26, 'sofia@gmail.com', '983456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/sofia_at_gmail_com/sofia@gmail.com_AVATAR.png', 'uploads/users/sofia_at_gmail_com/sofia@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Ricardo Ferreira', 29, 'ricardo@gmail.com', '993456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/ricardo_at_gmail_com/ricardo@gmail.com_AVATAR.png', 'uploads/users/ricardo_at_gmail_com/ricardo@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Mariana Lopes', 27, 'mariana@gmail.com', '913456789', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/mariana_at_gmail_com/mariana@gmail.com_AVATAR.png', 'uploads/users/mariana_at_gmail_com/mariana@gmail.com_CAPA.png'),
+  ((SELECT id_cargo FROM cargos WHERE descricao = 'Formando' LIMIT 1), 'Luís Rodrigues', 33, 'luis@gmail.com', '913456788', '$2b$10$.9k7z4T4HyciRcEYa6/0Xu/adc/fXdr1pui5EvCDu97KLTY5V1/jO', FALSE, 'uploads/users/luis_at_gmail_com/luis@gmail.com_AVATAR.png', 'uploads/users/luis_at_gmail_com/luis@gmail.com_CAPA.png');
 
 -- =============================================
 -- 3. CATEGORIAS
@@ -88,11 +87,6 @@ VALUES
 
 
 
-
-
-
-
-
 -- =============================================
 -- ASSOCIAÇÕES FORMADORES COM CATEGORIAS
 -- =============================================
@@ -100,16 +94,16 @@ VALUES
 -- Associar Formador (id_cargo=2) com Categorias
 INSERT INTO formador_categoria (id_formador, id_categoria, data_associacao)
 VALUES
-  -- Formador padrão com Tecnologia, Programação e Design
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  -- Formador com Tecnologia, Programação e Design
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
    NOW()),
    
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
    NOW()),
    
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
    NOW()),
    
@@ -155,16 +149,16 @@ VALUES
 -- Associar Formador (id_cargo=2) com Áreas
 INSERT INTO formador_area (id_formador, id_area, data_associacao)
 VALUES
-  -- Formador padrão com Desenvolvimento Web, JavaScript e UI/UX Design
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  -- Formador com Desenvolvimento Web, JavaScript e UI/UX Design
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    NOW()),
    
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
    NOW()),
    
-  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' AND id_cargo = 2 LIMIT 1), 
+  ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1), 
    (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
    NOW()),
    
@@ -218,14 +212,6 @@ VALUES
   ((SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1), 
    (SELECT id_area FROM areas WHERE nome = 'Nutrição' LIMIT 1),
    NOW());
-
-
-
-
-
-
-
-
 
 
 -- =============================================
@@ -1315,6 +1301,16 @@ BEGIN
         VALUES (topico_id, user_id, 'Uma técnica que uso é fazer check-ins emocionais no início das reuniões. Perguntar como as pessoas estão se sentindo realmente, não só profissionalmente.', NOW() - INTERVAL '4 DAY');
     END IF;
 END $$;
+
+
+
+
+
+
+
+
+
+
 
 -- =============================================
 -- 14. TIPOS DE CONTEÚDO

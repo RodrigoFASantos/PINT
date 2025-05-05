@@ -64,7 +64,7 @@ const fileFilter = (req, file, cb) => {
 
 // Configurar limites
 const limits = {
-  fileSize: 10 * 1024 * 1024, // 10MB máximo
+  fileSize: 15 * 1024 * 1024 * 1024, // 15GB máximo
 };
 
 // Configurar middleware multer
@@ -135,7 +135,7 @@ const handleUploadErrors = (err, req, res, next) => {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'Arquivo muito grande. O tamanho máximo permitido é 10MB.'
+        message: 'Arquivo muito grande. O tamanho máximo permitido é 15MB.'
       });
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       return res.status(400).json({

@@ -514,3 +514,77 @@ button,
   border-bottom: 1px solid #eee;
   padding-bottom: 10px;
 }
+
+
+
+/* Para o aviso no modal de edição */
+.aviso-importante {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  border: 1px solid #ffeeba;
+}
+
+.aviso-importante i {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.input-disabled {
+  background-color: #e9ecef;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.campo-bloqueado-info {
+  color: #dc3545;
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+/* Para a página de acesso negado */
+.acesso-negado {
+  text-align: center;
+  padding: 3rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.acesso-negado h2 {
+  color: #dc3545;
+  margin-bottom: 1.5rem;
+}
+
+.mensagem-acesso-negado {
+  margin-bottom: 2rem;
+}
+
+.mensagem-acesso-negado i {
+  font-size: 3rem;
+  color: #dc3545;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.voltar-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.voltar-btn:hover {
+  background-color: #0056b3;
+}
