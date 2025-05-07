@@ -45,12 +45,41 @@ function CriarUser() {
   const carregarAreas = useCallback(async () => {
     try {
       if (categoriasSelecionadas.length > 0) {
-        const categoriaId = categoriasSelecionadas[0].id_categoria;
-        console.log(`Carregando áreas para a categoria ID: ${categoriaId}`);
-
-        const response = await axios.get(`${API_BASE}/categorias/${categoriaId}/areas`);
-        console.log("Áreas carregadas com sucesso:", response.data);
-        setAreas(response.data);
+        setAreas([]); // Clear previous areas
+        
+        // Load areas one category at a time using the existing endpoint
+        let todasAreas = [];
+        
+        // Create an array of promises, one for each category
+        const promises = categoriasSelecionadas.map(async (categoria) => {
+          const categoriaId = categoria.id_categoria;
+          console.log(`Carregando áreas para a categoria ID: ${categoriaId}`);
+          
+          try {
+            // Use the existing endpoint that works
+            const response = await axios.get(`${API_BASE}/categorias/${categoriaId}/areas`);
+            return response.data; // Return the areas for this category
+          } catch (catError) {
+            console.error(`Erro ao carregar áreas para categoria ${categoriaId}:`, catError);
+            return []; // Return empty array if there's an error
+          }
+        });
+        
+        // Wait for all requests to complete
+        const resultados = await Promise.all(promises);
+        
+        // Combine all areas and remove duplicates
+        resultados.forEach(areasCategoria => {
+          areasCategoria.forEach(area => {
+            // Only add if not already in the array (check by id_area)
+            if (!todasAreas.some(a => a.id_area === area.id_area)) {
+              todasAreas.push(area);
+            }
+          });
+        });
+        
+        console.log(`Total de ${todasAreas.length} áreas carregadas de ${categoriasSelecionadas.length} categorias`);
+        setAreas(todasAreas);
       }
     } catch (error) {
       console.error("Erro ao carregar áreas:", error);
@@ -190,10 +219,8 @@ function CriarUser() {
           }
         });
 
-
-
         toast.success('Formador registrado com sucesso! Um email de confirmação foi enviado.');
-      } else {
+      } else if (formData.cargo === 'formando'){
         // Para formandos, também usar objeto simples (sem FormData)
         const formandoData = {
           nome: formData.nome,
@@ -206,9 +233,36 @@ function CriarUser() {
           cargo: 'formando'
         };
 
-
+        // Enviar requisição para registrar formando
+        response = await axios.post(`${API_BASE}/users/register`, formandoData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
         toast.success('Formando registrado com sucesso! Um email de confirmação foi enviado.');
+      } else if (formData.cargo === 'gestor') {
+        const gestorData = {
+          nome: formData.nome,
+          email: formData.email,
+          password: formData.password,
+          idade: formData.idade,
+          telefone: formData.telefone,
+          morada: formData.morada,
+          codigo_postal: formData.codigo_postal,
+          cargo: 'gestor'
+        };
+
+        // Enviar requisição para registrar gestor
+        response = await axios.post(`${API_BASE}/users/register`, gestorData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        toast.success('Gestor registrado com sucesso! Um email de confirmação foi enviado.');
+      } else {
+        throw new Error("Tipo de cargo não reconhecido");
       }
 
       // Limpar o formulário após sucesso
@@ -241,10 +295,6 @@ function CriarUser() {
     }
   };
 
-
-
-
-
   return (
     <div className="register-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -259,6 +309,7 @@ function CriarUser() {
               <option disabled value="">Cargo do Utilizador</option>
               <option value="formador">Formador</option>
               <option value="formando">Formando</option>
+              <option value="gestor">Gestor</option>
             </select>
             <input type="number" name="idade" placeholder="Idade" value={formData.idade} onChange={handleChange} required min="1" max="99" />
             <input type="number" name="telefone" placeholder="Telefone" value={formData.telefone} onChange={handleChange} required />
@@ -333,6 +384,7 @@ function CriarUser() {
           onClose={fecharModal}
           onSelect={handleCursoSelecionado}
           categoriasSelecionadas={categoriasSelecionadas}
+          areasSelecionadas={areasSelecionadas} // Add this prop
         />
       )}
     </div>

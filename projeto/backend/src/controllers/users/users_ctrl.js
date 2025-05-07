@@ -548,82 +548,101 @@ const changePassword = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    console.log("🔍 Iniciando criação de usuário");
+    console.log("🔍 Iniciando criação de usuário pendente");
     const { nome, email, password, idade, telefone, morada, codigo_postal, cargo } = req.body;
-    const senha_temporaria = password; // Guardar a senha em texto puro para o email
 
     // Validar campos obrigatórios
     if (!nome || !email || !password) {
       return res.status(400).json({ message: "Campos obrigatórios: nome, email e password" });
     }
 
-    // Verificar se o e-mail já está em uso
-    const emailExistente = await User.findOne({ where: { email } });
-    if (emailExistente) {
-      return res.status(400).json({ message: "Este e-mail já está em uso" });
+    // Verificar se o e-mail já está em uso (tanto em usuários ativos quanto pendentes)
+    const emailExistenteAtivo = await User.findOne({ where: { email } });
+    if (emailExistenteAtivo) {
+      return res.status(400).json({ message: "Este e-mail já está em uso por um utilizador ativo" });
     }
 
-    // Determinar o cargo padrão (3 = formando)
-    const cargoId = cargo === 'formador' ? 2 : 3;
-    const cargoDescricao = cargo === 'formador' ? 'Formador' : 'Formando';
+    const emailExistentePendente = await User_Pendente.findOne({ where: { email } });
+    if (emailExistentePendente) {
+      return res.status(400).json({ message: "Este e-mail já está pendente de confirmação" });
+    }
+
+    // Determinar o cargo corretamente (1 = gestor, 2 = formador, 3 = formando)
+    let cargoId;
+    let cargoDescricao;
+
+    if (cargo === 'gestor') {
+      cargoId = 1;
+      cargoDescricao = 'Gestor';
+    } else if (cargo === 'formador') {
+      cargoId = 2;
+      cargoDescricao = 'Formador';
+    } else {
+      cargoId = 3;
+      cargoDescricao = 'Formando';
+    }
+
+    console.log(`🔍 Cargo selecionado: ${cargo}, ID do cargo: ${cargoId}, Descrição: ${cargoDescricao}`);
+
+    // Gerar token para confirmação
+    const token = jwt.sign(
+      { email, nome },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    // Definir data de expiração do token (24 horas)
+    const expires_at = new Date();
+    expires_at.setHours(expires_at.getHours() + 24);
 
     // Hash da senha
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Caminho da imagem (se existir)
-    let imagemPath = null;
-    if (req.file) {
-      // Usar email como parte do nome do arquivo para evitar conflitos
-      const userSlug = email.replace(/@/g, '_at_').replace(/\./g, '_');
-      imagemPath = `uploads/users/${userSlug}/${email}_AVATAR.png`;
-
-      // Criar diretório do usuário se ainda não existir
-      const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
-      uploadUtils.ensureDir(userDir);
-
-      console.log(`✅ Imagem salva em: ${imagemPath}`);
-    }
-
-    // Criar o usuário no banco de dados
-    const novoUsuario = await User.create({
+    // Criar usuário pendente
+    const novoPendente = await User_Pendente.create({
       nome,
       email,
       password: hashedPassword,
-      idade: idade || null,
+      idade: idade || 0,
       telefone: telefone || null,
-      morada: morada || null,
-      codigo_postal: codigo_postal || null,
       id_cargo: cargoId,
-      foto_perfil: imagemPath,
-      ativo: true,
-      data_registo: new Date()
+      token,
+      expires_at
     });
 
-    // Remover a senha da resposta
-    const usuarioSemSenha = { ...novoUsuario.toJSON() };
-    delete usuarioSemSenha.password;
+    console.log(`✅ Usuário pendente criado com ID: ${novoPendente.id}`);
 
-    // Enviar email com os dados da conta
+    // Verificar se há informações adicionais (associações) para formadores
+    if (cargo === 'formador' && req.body.categorias) {
+      try {
+        // Criar entrada na tabela de associações pendentes
+        await FormadorAssociacoesPendentes.create({
+          id_pendente: novoPendente.id,
+          categorias: req.body.categorias || [],
+          areas: req.body.areas || [],
+          cursos: req.body.cursos ? [req.body.cursos] : []
+        });
+        console.log(`✅ Associações pendentes criadas para formador: ${novoPendente.id}`);
+      } catch (assocError) {
+        console.error(`⚠️ Erro ao criar associações pendentes: ${assocError.message}`);
+        // Não falhar o registro por causa disso
+      }
+    }
+
+    // Enviar email com os dados da conta e token de confirmação
     try {
-      // Gerar token para anexar ao email (opcional, podemos usar só para fins informativos)
-      const token = jwt.sign(
-        { id_utilizador: novoUsuario.id_utilizador, email },
-        process.env.JWT_SECRET,
-        { expiresIn: "24h" }
-      );
-
       // Preparar dados para o email
       const userForEmail = {
-        id: novoUsuario.id_utilizador,
-        nome: novoUsuario.nome,
-        email: novoUsuario.email,
-        idade: novoUsuario.idade,
-        telefone: novoUsuario.telefone,
-        morada: novoUsuario.morada,
-        codigo_postal: novoUsuario.codigo_postal,
+        id: novoPendente.id,
+        nome: novoPendente.nome,
+        email: novoPendente.email,
+        idade: novoPendente.idade,
+        telefone: novoPendente.telefone,
+        morada: morada || 'Não informado',
+        codigo_postal: codigo_postal || 'Não informado',
         cargo_descricao: cargoDescricao,
-        senha_temporaria: senha_temporaria, // Enviar a senha em texto puro no email
+        senha_temporaria: password, // Enviar a senha em texto puro no email
         token: token
       };
 
@@ -635,11 +654,14 @@ const createUser = async (req, res) => {
       // Continuar normalmente mesmo que o email falhe
     }
 
-    console.log(`✅ Usuário criado com sucesso: ${novoUsuario.id_utilizador}`);
+    // Preparar resposta sem informações sensíveis
+    const pendenteSemSenha = { ...novoPendente.toJSON() };
+    delete pendenteSemSenha.password;
+    delete pendenteSemSenha.token;
 
     return res.status(201).json({
-      message: `Usuário ${cargo === 'formador' ? 'formador' : ''} criado com sucesso!`,
-      ...usuarioSemSenha
+      message: `Utilizador ${cargoDescricao} registrado com sucesso! Um email de confirmação foi enviado.`,
+      utilizador: pendenteSemSenha
     });
 
   } catch (error) {
@@ -651,7 +673,6 @@ const createUser = async (req, res) => {
     });
   }
 };
-
 
 const confirmAccount = async (req, res) => {
   try {

@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   secure: process.env.EMAIL_SECURE === 'true',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD,
   },
 });
 
@@ -254,6 +254,8 @@ const sendMailingList = async (formandos, cursos, area = null) => {
     throw error;
   }
 };
+
+
 
 module.exports = {
   sendRegistrationEmail,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
 import Sidebar from "../components/Sidebar";
-import "./css/cursos.css";
+import "./css/formadores.css";
 
 export default function FormadoresPage() {
   const [formadores, setFormadores] = useState([]);
@@ -16,6 +16,52 @@ export default function FormadoresPage() {
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Função para obter o URL da imagem de perfil do formador
+  const getProfileImageUrl = (formador) => {
+    if (!formador) return '/placeholder-formador.jpg';
+
+    // Se o formador já tiver uma URL de foto de perfil completa, use-a
+    if (formador.foto_perfil && (formador.foto_perfil.startsWith('http') || formador.foto_perfil.startsWith('/'))) {
+      return formador.foto_perfil;
+    }
+
+    // Obter o email do formador para buscar sua imagem
+    const email = formador.email;
+    if (!email) return '/placeholder-formador.jpg';
+
+    // Usar a função de URLs de imagens com o email, se disponível
+    if (IMAGES && typeof IMAGES.FORMADOR === 'function') {
+      return IMAGES.FORMADOR(email);
+    } else if (IMAGES && typeof IMAGES.USER_AVATAR === 'function') {
+      return IMAGES.USER_AVATAR(email);
+    }
+
+    return '/placeholder-formador.jpg';
+  };
+
+  // Função para obter o URL da imagem de capa do formador
+  const getCoverImageUrl = (formador) => {
+    if (!formador) return '/placeholder-cover.jpg';
+
+    // Se o formador já tiver uma URL de foto de capa completa, use-a
+    if (formador.foto_capa && (formador.foto_capa.startsWith('http') || formador.foto_capa.startsWith('/'))) {
+      return formador.foto_capa;
+    }
+
+    // Obter o email do formador para buscar sua imagem de capa
+    const email = formador.email;
+    if (!email) return '/placeholder-cover.jpg';
+
+    // Usar a função de URLs de imagens com o email, se disponível
+    if (IMAGES && typeof IMAGES.USER_CAPA === 'function') {
+      return IMAGES.USER_CAPA(email);
+    } else if (IMAGES && IMAGES.DEFAULT_CAPA) {
+      return IMAGES.DEFAULT_CAPA;
+    }
+
+    return '/placeholder-cover.jpg';
+  };
+
   useEffect(() => {
     const fetchFormadores = async () => {
       try {
@@ -28,12 +74,11 @@ export default function FormadoresPage() {
         }
   
         const data = await response.json();
-  
         const total = Math.max(1, data.totalPages || 1); // força mínimo de 1
   
         // Corrigir se a página atual for maior do que a última página válida
         if (currentPage > total) {
-          setCurrentPage(1); // ou total, se preferires ir para a última página válida
+          setCurrentPage(1);
           return;
         }
   
@@ -50,7 +95,6 @@ export default function FormadoresPage() {
   
     fetchFormadores();
   }, [currentPage]);
-  
   
   const goToPreviousPage = () => {
     if (currentPage > 1) {
@@ -74,32 +118,9 @@ export default function FormadoresPage() {
     navigate(`/formadores/${formadorId}`);
   };
 
-  // Função para obter o URL da imagem
-  const getImageUrl = (formador) => {
-    if (!formador) return '/placeholder-formador.jpg';
-
-    // Se o formador já tiver uma URL de foto de perfil completa, use-a
-    if (formador.foto_perfil && (formador.foto_perfil.startsWith('http') || formador.foto_perfil.startsWith('/'))) {
-      return formador.foto_perfil;
-    }
-
-    // Obter o email do formador para buscar sua imagem
-    const email = formador.email;
-    if (!email) return '/placeholder-formador.jpg';
-
-    // Usar a função de URLs de imagens com o email, se disponível
-    if (IMAGES && typeof IMAGES.FORMADOR === 'function') {
-      return IMAGES.FORMADOR(email);
-    } else if (IMAGES && typeof IMAGES.USER_AVATAR === 'function') {
-      return IMAGES.USER_AVATAR(email);
-    }
-
-    return '/placeholder-formador.jpg';
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-white p-6">
+      <div className="p-6 min-h-screen flex flex-col bg-white">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -113,7 +134,7 @@ export default function FormadoresPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col bg-white p-6">
+      <div className="p-6 min-h-screen flex flex-col bg-white">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -133,10 +154,11 @@ export default function FormadoresPage() {
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      
+      <h1 className="page-title">Formadores</h1>
 
-
-      {/* Lista de formadores */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {/* Lista de formadores com o novo design */}
+      <div className="formadores-grid">
         {formadores.length > 0 ? (
           formadores.map((formador, index) => {
             // Obter o ID do formador de forma segura
@@ -146,30 +168,27 @@ export default function FormadoresPage() {
               <div
                 key={formadorId || index}
                 onClick={() => formadorId && handleFormadorClick(formadorId)}
-                className="cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105"
+                className="formador-card"
                 style={{
-                  backgroundImage: `url(${getImageUrl(formador)})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
+                  backgroundImage: `url(${getCoverImageUrl(formador)})`
                 }}
               >
-                <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center">
-                  <h3 className="text-white text-xl font-semibold text-center px-4">
+                <div className="formador-info">
+                  <img 
+                    src={getProfileImageUrl(formador)} 
+                    alt={formador.nome || "Formador"} 
+                    className="formador-avatar"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/placeholder-formador.jpg';
+                    }}
+                  />
+                  <h3 className="formador-name">
                     {formador.nome || formador.name || "Nome não disponível"}
                   </h3>
-                  <p className="text-white text-sm mt-2">
+                  <p className="formador-email">
                     {formador.email || "Email não disponível"}
                   </p>
-                  {formador.area_especializacao && (
-                    <p className="text-white text-sm mt-1">
-                      {formador.area_especializacao}
-                    </p>
-                  )}
-                  {formadorId && (
-                    <p className="text-white text-xs mt-1 bg-blue-600 px-2 py-1 rounded">
-                      ID: {formadorId}
-                    </p>
-                  )}
                 </div>
               </div>
             );
@@ -181,7 +200,7 @@ export default function FormadoresPage() {
         )}
       </div>
 
-      {/* Paginação no estilo de cursos.jsx */}
+      {/* Paginação - Cópia exata da página de cursos.jsx */}
       <div className="flex justify-center items-center my-6 pagination-container">
         <button
           onClick={goToPreviousPage}
@@ -203,7 +222,6 @@ export default function FormadoresPage() {
           <span className="pagination-icon">&#10095;</span>
         </button>
       </div>
-
     </div>
   );
 }

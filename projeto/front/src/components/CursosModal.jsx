@@ -3,7 +3,7 @@ import axios from "axios";
 import "./css/Modal.css";
 import API_BASE from "../api";
 
-const CursosModal = ({ isOpen, onClose, onSelect, categoriasSelecionadas }) => {
+const CursosModal = ({ isOpen, onClose, onSelect, categoriasSelecionadas, areasSelecionadas }) => {
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,36 +19,52 @@ const CursosModal = ({ isOpen, onClose, onSelect, categoriasSelecionadas }) => {
     if (isOpen && categoriasSelecionadas && categoriasSelecionadas.length > 0) {
       carregarCursos(currentPage);
     } else if (isOpen) {
-      // Se não há categorias selecionadas, limpar os cursos
+      // If no categories selected, clear courses
       setCursos([]);
       setLoading(false);
       setError("Selecione pelo menos uma categoria primeiro");
     }
-  }, [isOpen, currentPage, categoriasSelecionadas]);
+  }, [isOpen, currentPage, categoriasSelecionadas, areasSelecionadas]);
 
   const carregarCursos = async (page) => {
     if (!categoriasSelecionadas || categoriasSelecionadas.length === 0) {
       return;
     }
-
+  
     try {
       setLoading(true);
       
-      // Extrair os IDs das categorias selecionadas
+      // Extract category IDs
       const categoriaIds = categoriasSelecionadas.map(cat => cat.id_categoria).join(',');
       
-      // Fazer a requisição com os parâmetros de filtro e paginação
+      // Get courses filtered by categories using existing endpoint
       const response = await axios.get(`${API_BASE}/cursos/por-categoria`, {
         params: {
           categorias: categoriaIds,
           page: page,
-          limit: 10
+          limit: 50 // Get more results to allow for client-side filtering
         }
       });
       
-      setCursos(response.data.cursos);
-      setTotalPages(response.data.totalPages);
-      setTotalItems(response.data.total);
+      let filteredCursos = response.data.cursos;
+      
+      // If areas are selected, filter courses by those areas on the client side
+      if (areasSelecionadas && areasSelecionadas.length > 0) {
+        const areaIds = areasSelecionadas.map(area => area.id_area);
+        filteredCursos = filteredCursos.filter(curso => 
+          curso.id_area && areaIds.includes(curso.id_area)
+        );
+      }
+      
+      // Update state with filtered courses
+      setCursos(filteredCursos);
+      
+      // Update pagination manually based on filtered results
+      const totalFilteredItems = filteredCursos.length;
+      setTotalItems(totalFilteredItems);
+      setTotalPages(Math.max(1, Math.ceil(totalFilteredItems / 10)));
+      
+      // Reset error state
       setError(null);
     } catch (err) {
       console.error("Erro ao carregar cursos:", err);

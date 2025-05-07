@@ -113,7 +113,7 @@
 
 /* Estilos para o cabeçalho do formador */
 .formador-header {
-  margin-top: 60px; /* Aumentado para dar mais espaço após a foto de perfil */
+  margin-top: 40px; /* Reduzido para subir mais o conteúdo */
   text-align: center;
   margin-bottom: 2rem;
 }
@@ -121,8 +121,8 @@
 .formador-name {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 0.25rem;
+  color: #333; /* Alterado para cor escura (quase preto) */
+  margin-bottom: 1rem; /* Aumentado o espaçamento para baixo */
 }
 
 .formador-badge {
@@ -263,96 +263,6 @@
   color: #2470dc;
 }
 
-/* Lista de cursos */
-.cursos-list {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.curso-item {
-  padding: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.curso-item:last-child {
-  border-bottom: none;
-}
-
-.curso-item:hover {
-  background-color: #f9f9f9;
-}
-
-.curso-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.curso-info {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.curso-status {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.status-ativo {
-  background-color: #e6f7e6;
-  color: #2e7d32;
-}
-
-.status-terminado {
-  background-color: #feeaea;
-  color: #c62828;
-}
-
-.status-disponivel {
-  background-color: #e6f0fd;
-  color: #1565c0;
-}
-
-.empty-cursos {
-  padding: 2rem;
-  text-align: center;
-  color: #666;
-  font-style: italic;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .cursos-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-
-/* Transições e efeitos */
-.fade-in {
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* Melhorias visuais para campos vazios */
 .empty-value {
   color: #999;
@@ -366,4 +276,180 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+/* NOVOS ESTILOS PARA OS CARDS DE CURSOS (semelhante à página Home) */
+
+.cursos-container {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.cursos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.cartao-curso {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: #fff;
+  height: 100%;
+  position: relative;
+}
+
+/* Estilo para cursos onde o usuário não pode acessar */
+.curso-restrito {
+  position: relative;
+  opacity: 0.7;
+}
+
+.curso-restrito::after {
+  content: '🔒';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #d32f2f;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.curso-acessivel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.curso-acessivel:hover .curso-imagem-container img {
+  transform: scale(1.05);
+}
+
+.curso-imagem-container {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 8px 8px 0 0;
+}
+
+.curso-imagem-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.3s ease;
+}
+
+.curso-info {
+  padding: 12px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.curso-titulo {
+  margin-top: 0;
+  margin-left: -5%;
+  font-size: 20px;
+  font-weight: 600;
+  color: black;
+  margin-bottom: 8px;
+}
+
+.curso-detalhe {
+  font-size: 15px;
+  color: black;
+  margin-bottom: 6px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: auto;
+  align-self: flex-end;
+}
+
+.status-em-andamento {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-completo {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.status-pendente {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-reprovado {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.sem-cursos {
+  width: 100%;
+  text-align: center;
+  padding: 2rem;
+  background-color: #fff8e1;
+  color: #ff8f00;
+  border-radius: 8px;
+  font-style: italic;
+}
+
+/* Transições e efeitos */
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .cursos-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cursos-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .cursos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .cursos-grid {
+    grid-template-columns: 1fr;
+  }
 }

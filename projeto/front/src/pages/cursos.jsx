@@ -237,6 +237,9 @@ export default function CursosPage() {
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
+      {/* Título da página Cursos */}
+      <h1 className="page-title">Cursos</h1>
+      
       {/* Barra de pesquisa e filtros */}
       <div className="cursos-search-container">
         <div className="cursos-search-input-container">

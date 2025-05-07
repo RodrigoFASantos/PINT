@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import API_BASE, { IMAGES } from "../api";
 import Sidebar from "../components/Sidebar";
 import "./css/detalhesFormadores.css";
+import fallbackCurso from '../images/default_image.png'; // Importe a imagem de fallback
+import { toast } from 'react-toastify'; // Para notificações mais elegantes
 
 const DetalhesFormadores = () => {
   const { id } = useParams();
@@ -66,7 +68,7 @@ const DetalhesFormadores = () => {
     fetchFormador();
   }, [fetchFormador]);
 
-  // Função melhorada para obter o URL da imagem
+  // Função para obter a URL da imagem do perfil ou capa
   const getImageUrl = (formador, type = 'avatar') => {
     if (!formador) return type === 'avatar' ? '/placeholder-formador.jpg' : '/placeholder-cover.jpg';
     
@@ -106,8 +108,124 @@ const DetalhesFormadores = () => {
     }
   };
 
+  // Função para obter a URL da imagem do curso
+  const getCursoImageUrl = (curso) => {
+    if (curso && curso.imagem_path) {
+      return `${API_BASE}/${curso.imagem_path}`;
+    }
+
+    if (curso && curso.nome) {
+      const nomeCursoSlug = curso.nome
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+      return `${API_BASE}/uploads/cursos/${nomeCursoSlug}/capa.png`;
+    }
+
+    return fallbackCurso;
+  };
+
+  // Função para determinar a classe CSS do status
+  const getStatusClass = (estado) => {
+    if (!estado) return 'status-pendente';
+    
+    const estadoLower = estado.toLowerCase();
+    
+    if (estadoLower === 'em_curso' || estadoLower === 'em curso') {
+      return 'status-em-andamento';
+    } else if (estadoLower === 'terminado') {
+      return 'status-completo';
+    } else if (estadoLower === 'planeado' || estadoLower === 'planejado' || estadoLower === 'agendado') {
+      return 'status-pendente';
+    }
+    
+    return 'status-pendente';
+  };
+
+  // Função para formatar o nome do status
+  const formatStatusName = (estado) => {
+    if (!estado) return 'Agendado';
+    
+    const estadoLower = estado.toLowerCase();
+    
+    if (estadoLower === 'em_curso' || estadoLower === 'em curso') {
+      return 'Em Curso';
+    } else if (estadoLower === 'terminado') {
+      return 'Terminado';
+    } else if (estadoLower === 'planeado' || estadoLower === 'planejado') {
+      return 'Agendado';
+    }
+    
+    return estado;
+  };
+
   const handleVoltar = () => {
     navigate(-1);
+  };
+
+  // Verifica se o utilizador está inscrito nesse curso
+  const verificarInscricao = async (cursoId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return false;
+      
+      const response = await fetch(`${API_BASE}/inscricoes/verificar/${cursoId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.inscrito || false;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar inscrição:", error);
+      return false;
+    }
+  };
+
+  // Função para verificar se um curso é acessível (agendado ou com utilizador inscrito)
+  const verificarAcessoCurso = (curso) => {
+    const estado = curso.estado?.toLowerCase() || '';
+    
+    // Considera acessível se estiver agendado/planeado
+    return estado.includes('planeado') || 
+           estado.includes('planejado') || 
+           estado.includes('agendado');
+    
+    // Nota: A verificação de inscrição é feita de forma assíncrona no momento do clique
+  };
+  
+  // Navega para a página do curso apenas se estiver agendado ou o utilizador estiver inscrito
+  const irParaCurso = async (curso) => {
+    const cursoId = curso.id_curso || curso.id;
+    const estado = curso.estado?.toLowerCase() || '';
+    
+    // Permite acesso se o curso estiver agendado/planeado
+    const ehAgendado = estado.includes('planeado') || 
+                        estado.includes('planejado') || 
+                        estado.includes('agendado');
+    
+    if (ehAgendado) {
+      navigate(`/cursos/${cursoId}`);
+      return;
+    }
+    
+    // Verifica se o utilizador está inscrito antes de permitir acesso
+    const inscrito = await verificarInscricao(cursoId);
+    if (inscrito) {
+      navigate(`/cursos/${cursoId}`);
+    } else {
+      // Notifica o usuário que não pode acessar esse curso usando toast
+      // Posicionado no canto superior direito
+      toast.warning("Acesso restrito: Você não está inscrito neste curso.", {
+        position: "top-right",
+        autoClose: 3000
+      });
+    }
   };
 
   // Filtrar cursos ativos/todos
@@ -172,7 +290,6 @@ const DetalhesFormadores = () => {
 
   // Debug da URL da imagem de capa
   const coverImageUrl = getImageUrl(formador, 'cover');
-  console.log("URL da imagem de capa:", coverImageUrl);
   
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -187,16 +304,14 @@ const DetalhesFormadores = () => {
               Voltar para a lista de formadores
             </button>
             
-            {/* Nova seção com foto de capa e foto de perfil */}
+            {/* Seção com foto de capa e foto de perfil */}
             <div className="cover-container">
-              {/* Usando uma tag img em vez de background-image para a capa */}
               <img 
                 src={coverImageUrl} 
                 alt="Capa" 
                 className="cover-image"
                 onError={(e) => {
                   console.log("Erro ao carregar imagem de capa, usando fallback");
-                  // Tenta usar a capa padrão como fallback
                   if (IMAGES && IMAGES.DEFAULT_CAPA) {
                     e.target.src = IMAGES.DEFAULT_CAPA;
                   } else {
@@ -222,9 +337,17 @@ const DetalhesFormadores = () => {
               </div>
             </div>
             
+            {/* Informações do formador */}
             <div className="content-section">
-              <div className="formador-header">
-                <h1 className="formador-name">{formador.nome || "Ferreira2"}</h1>
+              <div className="formador-header" style={{ marginTop: "40px" }}>
+                <h1 style={{ 
+                  fontSize: "1.75rem", 
+                  fontWeight: "700", 
+                  color: "#000000", 
+                  marginBottom: "1rem" 
+                }}>
+                  {formador.nome || formador.name || "Nome do Formador"}
+                </h1>
                 <span className="formador-badge">Formador</span>
               </div>
               
@@ -243,14 +366,16 @@ const DetalhesFormadores = () => {
               </div>
             </div>
             
+            {/* Descrição do formador */}
             <div className="content-section descricao-section">
               <h2 className="section-title">Descrição</h2>
               <div className="descricao-content">
-                {formador.biografia || "Nenhuma descrição disponível para este formador."}
+                {formador.biografia || formador.descricao || "Nenhuma descrição disponível para este formador."}
               </div>
             </div>
             
-            <div className="content-section cursos-section">
+            {/* Seção de cursos com estilo da home */}
+            <div className="content-section">
               <div className="cursos-header">
                 <h2 className="section-title">Cursos Associados</h2>
                 <span className="cursos-count">{cursos.length}</span>
@@ -270,46 +395,49 @@ const DetalhesFormadores = () => {
                 >
                   Ativos
                   <span className="tab-count">
-                    {cursos.filter(c => c.estado === 'em_curso' ).length}
-                    
+                    {cursos.filter(c => c.estado === 'em_curso' || c.estado === 'Disponível').length}
                   </span>
                 </button>
               </div>
               
-              <div className="cursos-list">
-                {filteredCursos.length > 0 ? (
-                  filteredCursos.map((curso, index) => (
-                    <div 
-                      key={curso.id || curso.id_curso || index} 
-                      className="curso-item"
-                      onClick={() => navigate(`/cursos/${curso.id || curso.id_curso}`)}
-                    >
-                      <h3 className="curso-title">{curso.titulo || curso.nome || "Título"}</h3>
-                      <div className="curso-info">
-                        {curso.data_inicio && (
-                          <span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="inline-block w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {new Date(curso.data_inicio).toLocaleDateString('pt-PT')}
-                          </span>
-                        )}
-                        
-                        {curso.estado && (
-                          <span className={`curso-status ${
-                            curso.estado === 'em_curso' ? 'status-ativo' :
-                            curso.estado === 'Terminado' ? 'status-terminado' :
-                            'status-disponivel'
-                          }`}>
-                            {curso.estado}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))
+              {/* Estilo de cursos semelhante à home */}
+              <div className="cursos-container">
+                {filteredCursos.length === 0 ? (
+                  <div className="sem-cursos">
+                    Este formador não possui cursos {activeTab === 'ativos' ? 'ativos' : ''}.
+                  </div>
                 ) : (
-                  <div className="empty-cursos">
-                    Este formador não tem nenhum curso ativo.
+                  <div className="cursos-grid">
+                    {filteredCursos.map((curso) => (
+                      <div
+                        key={curso.id_curso || curso.id}
+                        className={`cartao-curso ${verificarAcessoCurso(curso) ? 'curso-acessivel' : 'curso-restrito'}`}
+                        onClick={() => irParaCurso(curso)}
+                      >
+                        <div className="curso-imagem-container">
+                          <img
+                            src={getCursoImageUrl(curso)}
+                            alt={curso.nome || curso.titulo || "Curso"}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = fallbackCurso;
+                            }}
+                          />
+                        </div>
+                        <div className="curso-info">
+                          <p className="curso-titulo">{curso.nome || curso.titulo}</p>
+                          <p className="curso-detalhe">
+                            Categoria: {curso.categoria_nome || curso.categoria || "N/A"}
+                          </p>
+                          <p className="curso-detalhe">
+                            Área: {curso.area_nome || curso.area || "N/A"}
+                          </p>
+                          <div className={`status-badge ${getStatusClass(curso.estado)}`}>
+                            {formatStatusName(curso.estado)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

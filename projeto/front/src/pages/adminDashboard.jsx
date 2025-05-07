@@ -17,6 +17,13 @@ const AdminDashboard = () => {
   const [cursosPorCategoria, setCursosPorCategoria] = useState([]);
   const [inscricoesPorMes, setInscricoesPorMes] = useState([]);
   const [usuariosPorPerfil, setUsuariosPorPerfil] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    console.log('[DEBUG] GerenciarUtilizadores: Toggling sidebar');
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -213,7 +220,7 @@ const AdminDashboard = () => {
   return (
     <div className="admin-dashboard-container">
       <div className="main-content">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="dashboard-content">
           <h1>Painel de Administração</h1>
           
