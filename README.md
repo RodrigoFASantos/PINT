@@ -16,4 +16,5 @@ Executar o projeto:
 flutter run
 
 Executar o emulator no cmd:
+cd Documents/emulator
 .\emulator -avd android34
