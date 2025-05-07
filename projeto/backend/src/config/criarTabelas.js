@@ -240,6 +240,25 @@ const createTablesInOrder = async () => {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
 
+    `CREATE TABLE IF NOT EXISTS notificacoes (
+      id_notificacao SERIAL PRIMARY KEY,
+      titulo VARCHAR(255) NOT NULL,
+      mensagem TEXT NOT NULL,
+      tipo VARCHAR(50) NOT NULL CHECK (tipo IN ('curso_adicionado', 'formador_alterado', 'formador_criado')),
+      id_referencia INTEGER,
+      data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      enviado_email BOOLEAN NOT NULL DEFAULT FALSE
+    );`,
+
+    `CREATE TABLE IF NOT EXISTS notificacoes_utilizadores (
+      id SERIAL PRIMARY KEY,
+      id_notificacao INTEGER NOT NULL REFERENCES notificacoes(id_notificacao) ON DELETE CASCADE,
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
+      lida BOOLEAN NOT NULL DEFAULT FALSE,
+      data_leitura TIMESTAMP WITH TIME ZONE,
+      CONSTRAINT unique_notificacao_utilizador UNIQUE (id_notificacao, id_utilizador)
+    );`,
+
     // Tabelas para conteúdos de cursos
     `CREATE TABLE IF NOT EXISTS curso_topico (
       id_topico SERIAL PRIMARY KEY,

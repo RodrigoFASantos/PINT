@@ -39,19 +39,19 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const userId = req.params.id;
-    
+
     const user = await User.findByPk(userId, {
       include: [{ model: Cargo, as: 'cargo' }]
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
-    
+
     // Remover a senha da resposta
     const userWithoutPassword = { ...user.toJSON() };
     delete userWithoutPassword.password;
-    
+
     res.json(userWithoutPassword);
   } catch (error) {
     console.error("Erro ao buscar utilizador:", error);
@@ -168,7 +168,7 @@ const uploadImagemPerfil = async (req, res) => {
     // 2. Verificar se o usuário existe
     const userId = req.user.id_utilizador;
     const userEmail = req.user.email;
-    
+
     if (!userId || !userEmail) {
       return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
     }
@@ -182,14 +182,14 @@ const uploadImagemPerfil = async (req, res) => {
     // 4. Preparar o diretório e caminho do arquivo
     const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
     const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
-    
+
     // Garantir que o diretório exista
     uploadUtils.ensureDir(userDir);
-    
+
     // Nome fixo do arquivo (sem timestamp)
     const fileName = `${userEmail}_AVATAR.png`;
     const filePath = path.join(userDir, fileName);
-    
+
     // Caminho relativo para o banco de dados
     const dbPath = `uploads/users/${userSlug}/${fileName}`;
 
@@ -210,7 +210,7 @@ const uploadImagemPerfil = async (req, res) => {
 
     // 6. Mover o arquivo temporário para o destino final
     fs.copyFileSync(req.file.path, filePath);
-    
+
     // Remover o arquivo temporário
     if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -228,7 +228,7 @@ const uploadImagemPerfil = async (req, res) => {
       message: "Imagem de perfil atualizada com sucesso",
       path: dbPath
     });
-    
+
   } catch (error) {
     console.error("Erro ao processar upload de imagem de perfil:", error);
     return res.status(500).json({
@@ -250,7 +250,7 @@ const uploadImagemCapa = async (req, res) => {
     // 2. Verificar se o usuário existe
     const userId = req.user.id_utilizador;
     const userEmail = req.user.email;
-    
+
     if (!userId || !userEmail) {
       return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
     }
@@ -264,14 +264,14 @@ const uploadImagemCapa = async (req, res) => {
     // 4. Preparar o diretório e caminho do arquivo
     const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
     const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
-    
+
     // Garantir que o diretório exista
     uploadUtils.ensureDir(userDir);
-    
+
     // Nome fixo do arquivo (sem timestamp)
     const fileName = `${userEmail}_CAPA.png`;
     const filePath = path.join(userDir, fileName);
-    
+
     // Caminho relativo para o banco de dados
     const dbPath = `uploads/users/${userSlug}/${fileName}`;
 
@@ -292,7 +292,7 @@ const uploadImagemCapa = async (req, res) => {
 
     // 6. Mover o arquivo temporário para o destino final
     fs.copyFileSync(req.file.path, filePath);
-    
+
     // Remover o arquivo temporário
     if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -310,7 +310,7 @@ const uploadImagemCapa = async (req, res) => {
       message: "Imagem de capa atualizada com sucesso",
       path: dbPath
     });
-    
+
   } catch (error) {
     console.error("Erro ao processar upload de imagem de capa:", error);
     return res.status(500).json({
@@ -375,10 +375,10 @@ const updatePerfilUser = async (req, res) => {
   try {
     // Utilizar o ID dos parâmetros, não do usuário autenticado, pois é o admin a atualizar o perfil de outro utilizador
     const userId = req.params.id;
-    const { 
-      nome, 
-      email, 
-      telefone, 
+    const {
+      nome,
+      email,
+      telefone,
       idade,
       morada,
       cidade,
@@ -654,6 +654,17 @@ const createUser = async (req, res) => {
       // Continuar normalmente mesmo que o email falhe
     }
 
+    // Se for um formador, notificar os administradores
+    if (isFormador) {
+      try {
+        await notificacaoController.notificarNovoFormador(novoUsuario);
+        console.log(`✅ Notificação de novo formador enviada para os administradores`);
+      } catch (notifError) {
+        console.error("⚠️ Erro ao enviar notificação de novo formador:", notifError);
+        // Continuar normalmente mesmo se a notificação falhar
+      }
+    }
+
     // Preparar resposta sem informações sensíveis
     const pendenteSemSenha = { ...novoPendente.toJSON() };
     delete pendenteSemSenha.password;
@@ -729,12 +740,12 @@ const confirmAccount = async (req, res) => {
 
       if (associacoesPendentes) {
         console.log("✅ Encontradas associações pendentes para processar");
-        
+
         // Processar categorias
         if (associacoesPendentes.categorias && associacoesPendentes.categorias.length > 0) {
           console.log(`✅ Processando ${associacoesPendentes.categorias.length} categorias`);
           const dataAtual = new Date();
-          
+
           for (const categoria of associacoesPendentes.categorias) {
             await FormadorCategoria.create({
               id_formador: newUser.id_utilizador,
@@ -743,12 +754,12 @@ const confirmAccount = async (req, res) => {
             });
           }
         }
-        
+
         // Processar áreas
         if (associacoesPendentes.areas && associacoesPendentes.areas.length > 0) {
           console.log(`✅ Processando ${associacoesPendentes.areas.length} áreas`);
           const dataAtual = new Date();
-          
+
           for (const area of associacoesPendentes.areas) {
             await FormadorArea.create({
               id_formador: newUser.id_utilizador,
@@ -757,11 +768,11 @@ const confirmAccount = async (req, res) => {
             });
           }
         }
-        
+
         // Processar cursos
         if (associacoesPendentes.cursos && associacoesPendentes.cursos.length > 0) {
           console.log(`✅ Processando ${associacoesPendentes.cursos.length} cursos`);
-          
+
           for (const cursoId of associacoesPendentes.cursos) {
             try {
               // Criar inscrição no curso
@@ -771,7 +782,7 @@ const confirmAccount = async (req, res) => {
                 data_inscricao: new Date(),
                 estado: "inscrito"
               });
-              
+
               console.log(`✅ Formador inscrito no curso ID: ${cursoId}`);
             } catch (error) {
               console.error(`⚠️ Erro ao inscrever formador no curso ID: ${cursoId}`, error);
@@ -1000,37 +1011,37 @@ const deleteUser = async (req, res) => {
   console.log('===== Apagar UTILIZADOR =====');
   console.log('ID recebido:', req.params.id);
   console.log('Utilizador autenticado:', req.user);
-  
+
   try {
     const userId = req.params.id;
-    
+
     // Verificar se o utilizador existe
     const user = await User.findByPk(userId);
     console.log('Utilizador encontrado:', user ? 'Sim' : 'Não');
-    
+
     if (!user) {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
-    
+
     console.log('Cargo do utilizador:', user.id_cargo);
-    
+
     // Verificar se o utilizador tem inscrições em cursos (qualquer cargo)
     const inscricoes = await Inscricao_Curso.findAll({
       where: { id_utilizador: userId }
     });
-    
+
     console.log('Inscrições encontradas:', inscricoes.length);
-    
+
     if (inscricoes.length > 0 || user.id_cargo === 2) {
       // Se for um formador, verificar cursos ativos que ele leciona
       if (user.id_cargo === 2) {
         const cursosAtivos = await Curso.findAll({
-          where: { 
+          where: {
             id_formador: userId,
             ativo: true
           }
         });
-        
+
         if (cursosAtivos.length > 0) {
           const cursoInfo = cursosAtivos.map(curso => ({
             id: curso.id_curso,
@@ -1040,37 +1051,37 @@ const deleteUser = async (req, res) => {
             data_fim: curso.data_fim,
             status: curso.ativo ? 'Ativo' : 'Inativo'
           }));
-          
-          return res.status(400).json({ 
+
+          return res.status(400).json({
             message: "Não é possível eliminar este formador pois possui cursos ativos",
             cursos: cursoInfo,
             tipo: "formador_com_cursos"
           });
         }
       }
-      
+
       // Se tem apenas inscrições (não é formador com cursos ativos)
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Não é possível eliminar este utilizador pois está inscrito em cursos",
         inscricoes: inscricoes.length,
         tipo: "utilizador_com_inscricoes"
       });
     }
-    
+
     console.log('Iniciando exclusão do utilizador...');
     // Proceder com a exclusão (o delete cascade é tratado no modelo)
     await user.destroy();
-    
+
     console.log('Utilizador eliminado com sucesso');
     return res.status(200).json({
       message: "Utilizador eliminado com sucesso"
     });
-    
+
   } catch (error) {
     console.error("===== ERRO AO ELIMINAR UTILIZADOR =====");
     console.error("Erro completo:", error);
     console.error("Stack trace:", error.stack);
-    
+
     return res.status(500).json({
       message: "Erro ao eliminar utilizador",
       error: error.message

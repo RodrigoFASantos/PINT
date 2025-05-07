@@ -26,6 +26,9 @@ const User = require('./models/User');
 const User_Pendente = require('./models/User_Pendente');
 const FormadorAssociacoesPendentes = require('./models/Formador_Associacoes_Pendentes');
 
+const Notificacao = require('./models/Notificacao');
+const NotificacaoUtilizador = require('./models/NotificacaoUtilizador');
+
 // Coleção de todos os modelos para uso nas funções associate
 const models = {
   Area,
@@ -54,7 +57,9 @@ const models = {
   Trabalho_Entregue,
   User,
   User_Pendente,
-  FormadorAssociacoesPendentes
+  FormadorAssociacoesPendentes,
+  Notificacao,
+  NotificacaoUtilizador
 };
 
 // ========== DEFINIÇÃO DE TODAS AS ASSOCIAÇÕES ==========
@@ -447,6 +452,27 @@ Object.values(models).forEach(model => {
     model.associate(models);
     console.log(`Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`);
   }
+});
+
+// === Associações Notificação ===
+Notificacao.hasMany(NotificacaoUtilizador, {
+  foreignKey: "id_notificacao",
+  as: "destinatarios"
+});
+
+NotificacaoUtilizador.belongsTo(Notificacao, {
+  foreignKey: "id_notificacao",
+  as: "notificacao"
+});
+
+User.hasMany(NotificacaoUtilizador, {
+  foreignKey: "id_utilizador",
+  as: "notificacoes"
+});
+
+NotificacaoUtilizador.belongsTo(User, {
+  foreignKey: "id_utilizador",
+  as: "utilizador"
 });
 
 // Exportar todos os modelos configurados
