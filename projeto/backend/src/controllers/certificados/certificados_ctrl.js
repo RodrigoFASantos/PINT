@@ -22,7 +22,7 @@ const gerarCertificado = async (req, res) => {
       });
     }
 
-    // Buscar informações do formando e curso
+    // Procurar informações do formando e curso
     const inscricao = await Inscricao_Curso.findByPk(avaliacao.id_inscricao);
     if (!inscricao) {
       return res.status(404).json({ message: "Inscrição não encontrada" });
@@ -54,7 +54,7 @@ const gerarCertificado = async (req, res) => {
   }
 };
 
-// Buscar certificado existente
+// Procurar certificado existente
 const getCertificado = async (req, res) => {
   try {
     const { id_avaliacao } = req.params;
@@ -72,9 +72,12 @@ const getCertificado = async (req, res) => {
       url: avaliacao.url_certificado
     });
   } catch (error) {
-    console.error("Erro ao buscar certificado:", error);
-    res.status(500).json({ message: "Erro ao buscar certificado" });
+    console.error("Erro ao procurar certificado:", error);
+    res.status(500).json({ message: "Erro ao procurar certificado" });
   }
 };
 
-module.exports = { gerarCertificado, getCertificado };
+module.exports = { 
+  gerarCertificado, 
+  getCertificado 
+};

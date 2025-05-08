@@ -22,11 +22,11 @@ const atualizarEstadosCursos = async () => {
     }
 
     const hoje = new Date();
-    
+
     // Atualizar para "em_curso"
     const cursosParaIniciar = await Curso.findAll({
       where: {
-        estado: 'planeado', 
+        estado: 'planeado',
         data_inicio: { [Op.lte]: hoje }
       }
     });
@@ -39,7 +39,7 @@ const atualizarEstadosCursos = async () => {
     // Atualizar para "terminado"
     const cursosParaTerminar = await Curso.findAll({
       where: {
-        estado: 'em_curso', 
+        estado: 'em_curso',
         data_fim: { [Op.lte]: hoje }
       }
     });
@@ -58,7 +58,7 @@ const atualizarEstadosCursos = async () => {
 // Iniciar agendamentos
 const iniciarAgendamentos = () => {
   // Executar uma vez no início para garantir estados corretos
-  atualizarEstadosCursos().catch(err => 
+  atualizarEstadosCursos().catch(err =>
     console.error('Erro na execução inicial de atualização de estados:', err)
   );
 

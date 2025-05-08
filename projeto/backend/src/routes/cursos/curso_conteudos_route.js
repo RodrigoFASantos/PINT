@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const conteudoCursoController = require("../../controllers/cursos/curso_conteudos_ctrl");
+const { getAllConteudos, getConteudoById, getConteudosByPasta, getConteudosByCurso, createConteudo, updateConteudo, deleteConteudo, deleteConteudoPermanently, restoreConteudo, reordenarConteudos, corrigirConteudosSemCurso } = require("../../controllers/cursos/curso_conteudos_ctrl");
 const authMiddleware = require('../../middleware/auth');
 const uploadMiddleware = require('../../middleware/upload_middleware');
 
-// Middleware para verificar se o usuário é admin ou formador
+// Middleware para verificar se o utilizador é admin ou formador
 const permissionMiddleware = (req, res, next) => {
   if (req.user.id_cargo === 1 || req.user.id_cargo === 2) {
     return next();
@@ -20,63 +20,33 @@ const adminMiddleware = (req, res, next) => {
   return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem executar esta ação.' });
 };
 
-// Rotas para gerenciamento de conteúdos
-router.get('/', authMiddleware, conteudoCursoController.getAllConteudos);
-router.get('/:id', authMiddleware, conteudoCursoController.getConteudoById);
-router.get('/pasta/:pastaId', authMiddleware, conteudoCursoController.getConteudosByPasta);
+// Rotas para gestão de conteúdos
+router.get('/', authMiddleware, getAllConteudos);
+router.get('/:id', authMiddleware, getConteudoById);
+router.get('/pasta/:pastaId', authMiddleware, getConteudosByPasta);
 
 // Rota para obter conteúdos por curso
-router.get('/curso/:cursoId', authMiddleware, conteudoCursoController.getConteudosByCurso);
+router.get('/curso/:cursoId', authMiddleware, getConteudosByCurso);
 
 // Rota para criar um novo conteúdo
-router.post('/', 
-  authMiddleware, 
-  permissionMiddleware,
-  uploadMiddleware.uploadCursoConteudo,
-  conteudoCursoController.createConteudo
-);
+router.post('/', authMiddleware, permissionMiddleware, uploadMiddleware.uploadCursoConteudo, createConteudo);
 
 // Rota para atualizar um conteúdo existente
-router.put('/:id', 
-  authMiddleware, 
-  permissionMiddleware, 
-  uploadMiddleware.uploadCursoConteudo,
-  conteudoCursoController.updateConteudo
-);
+router.put('/:id', authMiddleware, permissionMiddleware, uploadMiddleware.uploadCursoConteudo, updateConteudo);
 
 // Rota para excluir um conteúdo (exclusão lógica)
-router.delete('/:id', 
-  authMiddleware, 
-  permissionMiddleware, 
-  conteudoCursoController.deleteConteudo
-);
+router.delete('/:id', authMiddleware, permissionMiddleware, deleteConteudo);
 
 // Rota para excluir permanentemente um conteúdo
-router.delete('/:id/permanent', 
-  authMiddleware, 
-  adminMiddleware, 
-  conteudoCursoController.deleteConteudoPermanently
-);
+router.delete('/:id/permanent', authMiddleware, adminMiddleware, deleteConteudoPermanently);
 
 // Rota para restaurar um conteúdo excluído logicamente
-router.put('/:id/restore', 
-  authMiddleware, 
-  permissionMiddleware, 
-  conteudoCursoController.restoreConteudo
-);
+router.put('/:id/restore', authMiddleware, permissionMiddleware, restoreConteudo);
 
-// Rota para reordenar conteúdos em uma pasta
-router.put('/pasta/:pastaId/ordenar', 
-  authMiddleware, 
-  permissionMiddleware, 
-  conteudoCursoController.reordenarConteudos
-);
+// Rota para reordenar conteúdos numa pasta
+router.put('/pasta/:pastaId/ordenar', authMiddleware, permissionMiddleware, reordenarConteudos);
 
 // Rota para corrigir conteúdos sem id_curso (apenas admin)
-router.post('/admin/corrigir', 
-  authMiddleware, 
-  adminMiddleware, 
-  conteudoCursoController.corrigirConteudosSemCurso
-);
+router.post('/admin/corrigir', authMiddleware, adminMiddleware, corrigirConteudosSemCurso);
 
 module.exports = router;

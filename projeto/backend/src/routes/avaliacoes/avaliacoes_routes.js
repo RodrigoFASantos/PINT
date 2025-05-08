@@ -1,11 +1,16 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const verificarToken = require('../../middleware/auth');
-const autorizar = require('../../middleware/autorizar');
-const { getAllAvaliacoes, createAvaliacao } = require("../../controllers/avaliacoes/avaliacoes_ctrl");
+const { listarTopicos, obterTopico, criarTopico, atualizarTopico, excluirTopico } = require('../../controllers/cursos/topico_ctrl');
+const authMiddleware = require('../../middlewares/authMiddleware');
 
-// Rotas protegidas - adicionar autenticação e autorização
-router.get("/", verificarToken, getAllAvaliacoes);
-router.post("/", verificarToken, autorizar([1, 2]), createAvaliacao);
+// Aplicar middleware de autenticação em todas as rotas
+router.use(authMiddleware);
+
+// Rotas para tópicos
+router.get('/', listarTopicos);
+router.get('/:id', obterTopico);
+router.post('/', criarTopico);
+router.put('/:id', atualizarTopico);
+router.delete('/:id', excluirTopico);
 
 module.exports = router;

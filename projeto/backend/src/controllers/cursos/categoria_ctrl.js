@@ -10,8 +10,8 @@ const getAllCategorias = async (req, res) => {
     });
     res.json(categorias);
   } catch (error) {
-    console.error("Erro ao buscar categorias:", error);
-    res.status(500).json({ message: "Erro ao buscar categorias", error: error.message });
+    console.error("Erro ao procurar categorias:", error);
+    res.status(500).json({ message: "Erro ao procurar categorias", error: error.message });
   }
 };
 
@@ -27,8 +27,8 @@ const getCategoriaById = async (req, res) => {
 
     res.json(categoria);
   } catch (error) {
-    console.error("Erro ao buscar categoria:", error);
-    res.status(500).json({ message: "Erro ao buscar categoria", error: error.message });
+    console.error("Erro ao procurar categoria:", error);
+    res.status(500).json({ message: "Erro ao procurar categoria", error: error.message });
   }
 };
 
@@ -43,7 +43,7 @@ const getAreasByCategoria = async (req, res) => {
       return res.status(404).json({ message: "Categoria não encontrada" });
     }
     
-    // Buscar áreas que pertencem à categoria
+    // Procurar áreas que pertencem à categoria
     const areas = await Area.findAll({
       where: { id_categoria: id },
       order: [['nome', 'ASC']]
@@ -51,8 +51,8 @@ const getAreasByCategoria = async (req, res) => {
     
     res.json(areas);
   } catch (error) {
-    console.error(`Erro ao buscar áreas da categoria ${req.params.id}:`, error);
-    res.status(500).json({ message: "Erro ao buscar áreas da categoria", error: error.message });
+    console.error(`Erro ao procurar áreas da categoria ${req.params.id}:`, error);
+    res.status(500).json({ message: "Erro ao procurar áreas da categoria", error: error.message });
   }
 };
 
@@ -69,7 +69,7 @@ const createCategoria = async (req, res) => {
     const categoriaExistente = await Categoria.findOne({
       where: {
         nome: {
-          [Op.iLike]: nome // Busca case-insensitive
+          [Op.iLike]: nome // Procura case-insensitive
         }
       }
     });
@@ -104,7 +104,7 @@ const updateCategoria = async (req, res) => {
       return res.status(404).json({ message: "Categoria não encontrada" });
     }
 
-    // Se o nome está sendo alterado, verificar se já existe outra categoria com este nome
+    // Se o nome está a ser alterado, verificar se já existe outra categoria com este nome
     if (nome && nome !== categoria.nome) {
       const categoriaExistente = await Categoria.findOne({
         where: {
@@ -138,7 +138,7 @@ const updateCategoria = async (req, res) => {
   }
 };
 
-// Deletar categoria
+// Eliminar categoria
 const deleteCategoria = async (req, res) => {
   try {
     const { id } = req.params;
@@ -150,7 +150,7 @@ const deleteCategoria = async (req, res) => {
 
     if (areasAssociadas > 0) {
       return res.status(400).json({
-        message: "Não é possível excluir esta categoria pois existem áreas associadas a ela",
+        message: "Não é possível eliminar esta categoria pois existem áreas associadas a ela",
         areasCount: areasAssociadas
       });
     }
@@ -163,10 +163,10 @@ const deleteCategoria = async (req, res) => {
       return res.status(404).json({ message: "Categoria não encontrada" });
     }
 
-    res.json({ message: "Categoria excluída com sucesso" });
+    res.json({ message: "Categoria eliminada com sucesso" });
   } catch (error) {
-    console.error("Erro ao excluir categoria:", error);
-    res.status(500).json({ message: "Erro ao excluir categoria", error: error.message });
+    console.error("Erro ao eliminar categoria:", error);
+    res.status(500).json({ message: "Erro ao eliminar categoria", error: error.message });
   }
 };
 

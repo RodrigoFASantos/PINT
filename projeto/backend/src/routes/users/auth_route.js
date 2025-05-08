@@ -3,15 +3,15 @@ const router = express.Router();
 const { loginUser, verifyToken, confirmAccount, changePassword, createUser } = require("../../controllers/users/users_ctrl");
 const uploadUtils = require('../../middleware/upload');
 
-// Rota para debug - verificar se o servidor está respondendo
+// Rota para debug - verificar se o servidor está a responder
 router.get("/", (req, res) => {
-  res.status(200).json({ message: "API de autenticação está funcionando!" });
+  res.status(200).json({ message: "API de autenticação está a funcionar!" });
 });
 
-// Rota para registro de novos usuários com upload de imagem
+// Rota para registo de novos utilizadores com upload de imagem
 router.post("/register", uploadUtils.uploadUser.single("imagem"), createUser);
 
-// Rota para login
+// Rota para iniciar sessão
 router.post("/login", loginUser);
 
 // Rota para verificar token
@@ -20,7 +20,7 @@ router.post("/verify-token", verifyToken);
 // Rota para confirmar conta
 router.post("/confirm-account", confirmAccount);
 
-// Rota para alterar senha (primeira vez ou recuperação)
+// Rota para alterar palavra-passe (primeira vez ou recuperação)
 router.post("/change-password", changePassword);
 
 module.exports = router;

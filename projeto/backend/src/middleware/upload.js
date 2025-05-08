@@ -10,7 +10,7 @@ const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOA
 const ensureBaseDirs = () => {
   const baseDirs = [
     BASE_UPLOAD_DIR,
-    path.join(BASE_UPLOAD_DIR, 'users'),
+    path.join(BASE_UPLOAD_DIR, 'utilizadores'),
     path.join(BASE_UPLOAD_DIR, 'cursos'),
     path.join(BASE_UPLOAD_DIR, 'chat'),
     path.join(BASE_UPLOAD_DIR, 'temp'),
@@ -22,21 +22,21 @@ const ensureBaseDirs = () => {
     }
   });
 
-  // Garantir que os arquivos base existam
+  // Garantir que os ficheiros base existam
   const avatarPath = path.join(BASE_UPLOAD_DIR, 'AVATAR.png');
   const capaPath = path.join(BASE_UPLOAD_DIR, 'CAPA.png');
 
   if (!fs.existsSync(avatarPath)) {
     fs.writeFileSync(
       avatarPath,
-      'Este é um placeholder para AVATAR.png. Substitua por uma imagem real.'
+      'Este é um espaço reservado para AVATAR.png. Substitua por uma imagem real.'
     );
   }
 
   if (!fs.existsSync(capaPath)) {
     fs.writeFileSync(
       capaPath,
-      'Este é um placeholder para CAPA.png. Substitua por uma imagem real.'
+      'Este é um espaço reservado para CAPA.png. Substitua por uma imagem real.'
     );
   }
 };
@@ -44,7 +44,7 @@ const ensureBaseDirs = () => {
 // Chamar a função para garantir que os diretórios existam
 ensureBaseDirs();
 
-// Funções auxiliares para normalização de nomes de arquivos
+// Funções auxiliares para normalização de nomes de ficheiros
 const normalizarNome = (nome) => {
   if (!nome) return '';
   return nome
@@ -64,17 +64,17 @@ const ensureDir = (dirPath) => {
   return false;
 };
 
-// Função para determinar o tipo de arquivo
+// Função para determinar o tipo de ficheiro
 const getFileType = (mimetype) => {
   if (mimetype.startsWith('image/')) return 'imagem';
-  if (mimetype.startsWith('video/')) return 'video';
-  if (mimetype.startsWith('audio/')) return 'audio';
+  if (mimetype.startsWith('video/')) return 'vídeo';
+  if (mimetype.startsWith('audio/')) return 'áudio';
   if (mimetype.startsWith('application/pdf')) return 'pdf';
   if (mimetype.startsWith('application/') || mimetype.startsWith('text/')) return 'documento';
-  return 'arquivo';
+  return 'ficheiro';
 };
 
-// Função para gerar nome de arquivo único
+// Função para gerar nome de ficheiro único
 const gerarNomeUnico = (originalname) => {
   const timestamp = Date.now();
   const randomString = crypto.randomBytes(8).toString('hex');
@@ -82,26 +82,26 @@ const gerarNomeUnico = (originalname) => {
   return `${timestamp}-${randomString}${extension}`;
 };
 
-// Configuração do armazenamento de usuários
+// Configuração do armazenamento de utilizadores
 const userStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (!req.user || !req.user.email) {
-      return cb(new Error('Usuário não identificado'), null);
+    if (!req.utilizador || !req.utilizador.email) {
+      return cb(new Error('Utilizador não identificado'), null);
     }
-    
-    const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
-    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
-    
+
+    const userSlug = req.utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(BASE_UPLOAD_DIR, 'utilizadores', userSlug);
+
     ensureDir(userDir);
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
-    if (!req.user || !req.user.email) {
-      return cb(new Error('Usuário não identificado'), null);
+    if (!req.utilizador || !req.utilizador.email) {
+      return cb(new Error('Utilizador não identificado'), null);
     }
-    
-    const tipoArquivo = req.body.tipo || 'AVATAR'; // AVATAR ou CAPA
-    const fileName = `${req.user.email}_${tipoArquivo}.png`;
+
+    const tipoFicheiro = req.body.tipo || 'AVATAR'; // AVATAR ou CAPA
+    const fileName = `${req.utilizador.email}_${tipoFicheiro}.png`;
     cb(null, fileName);
   }
 });
@@ -113,10 +113,10 @@ const cursoStorage = multer.diskStorage({
     if (!nome) {
       return cb(new Error('Nome do curso não fornecido'), null);
     }
-    
+
     const cursoSlug = normalizarNome(nome);
     const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
-    
+
     ensureDir(cursoDir);
     cb(null, cursoDir);
   },
@@ -128,7 +128,7 @@ const cursoStorage = multer.diskStorage({
 // Configuração do armazenamento de conteúdos do curso
 const conteudoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Salvar temporariamente e mover mais tarde
+    // Guardar temporariamente e mover mais tarde
     const tempDir = path.join(BASE_UPLOAD_DIR, 'temp');
     ensureDir(tempDir);
     cb(null, tempDir);
@@ -155,7 +155,7 @@ const limits = {
   fileSize: 10 * 1024 * 1024, // 10MB
 };
 
-// Filtro de arquivos
+// Filtro de ficheiros
 const fileFilter = (req, file, cb) => {
   // Lista de mimetypes permitidos
   const allowedMimeTypes = [
@@ -177,7 +177,7 @@ const fileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error(
-        `Tipo de arquivo não permitido. Formatos aceitos: ${allowedMimeTypes.join(', ')}`
+        `Tipo de ficheiro não permitido. Formatos aceites: ${allowedMimeTypes.join(', ')}`
       ),
       false
     );
@@ -199,14 +199,14 @@ const uploadUser = multer({
 });
 
 const uploadCurso = multer({
-  storage: cursoStorage, 
+  storage: cursoStorage,
   limits,
   fileFilter
 });
 
 const uploadConteudo = multer({
   storage: conteudoStorage,
-  limits, 
+  limits,
   fileFilter
 });
 
@@ -231,7 +231,7 @@ const criarDiretorosCurso = (curso) => {
   const cursoSlug = normalizarNome(curso.nome);
   const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
   ensureDir(cursoDir);
-  
+
   return {
     dirPath: cursoDir,
     urlPath: `uploads/cursos/${cursoSlug}`
@@ -244,7 +244,7 @@ const criarDiretoriosTopico = (curso, topico) => {
   const topicoSlug = normalizarNome(topico.nome);
   const topicoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
   ensureDir(topicoDir);
-  
+
   return {
     dirPath: topicoDir,
     urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}`
@@ -257,17 +257,17 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   const topicoSlug = normalizarNome(topico.nome);
   const pastaSlug = normalizarNome(pasta.nome);
   const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
-  
+
   // Criar diretório principal da pasta
   ensureDir(pastaDir);
-  
+
   // Criar diretórios para conteúdos e quizes
   const conteudosDir = path.join(pastaDir, 'conteudos');
   const quizesDir = path.join(pastaDir, 'quizes');
-  
+
   ensureDir(conteudosDir);
   ensureDir(quizesDir);
-  
+
   return {
     dirPath: pastaDir,
     conteudosPath: conteudosDir,
@@ -282,13 +282,13 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
 const criarDiretoriosChat = (categoria, topico) => {
   const categoriaSlug = normalizarNome(categoria);
   const topicoSlug = normalizarNome(topico);
-  
+
   const chatDir = path.join(BASE_UPLOAD_DIR, 'chat', categoriaSlug, topicoSlug);
   const conteudosDir = path.join(chatDir, 'conteudos');
-  
+
   ensureDir(chatDir);
   ensureDir(conteudosDir);
-  
+
   return {
     dirPath: chatDir,
     conteudosPath: conteudosDir,
@@ -297,96 +297,82 @@ const criarDiretoriosChat = (categoria, topico) => {
   };
 };
 
-// Função para mover arquivo temporário para o destino final
+// Função para mover ficheiro temporário para o destino final
 const moverArquivo = (origem, destino) => {
   try {
     // Normalizar caminhos para comparação
     const origemPath = path.resolve(origem);
     const destinoPath = path.resolve(destino);
-    
+
     // Se origem e destino são iguais, não precisamos fazer nada
     if (origemPath === destinoPath) {
       console.log('Origem e destino são iguais, não é necessário mover');
       return true;
     }
-    
+
     // Garantir que o diretório de destino exista
     const destDir = path.dirname(destino);
     ensureDir(destDir);
-    
-    // Se o arquivo de origem existir, copiá-lo e depois removê-lo
+
+    // Se o ficheiro de origem existir, copiá-lo e depois removê-lo
     if (fs.existsSync(origem)) {
-      // Se o arquivo de destino já existir, remover primeiro
+      // Se o ficheiro de destino já existir, remover primeiro
       if (fs.existsSync(destino)) {
         try {
           fs.unlinkSync(destino);
         } catch (deleteError) {
-          console.error('Erro ao remover arquivo existente:', deleteError);
+          console.error('Erro ao remover ficheiro existente:', deleteError);
           // Continuar mesmo com erro ao remover
         }
       }
-      
+
       fs.copyFileSync(origem, destino);
-      
-      // Tentar remover o arquivo de origem
+
+      // Tentar remover o ficheiro de origem
       try {
         fs.unlinkSync(origem);
       } catch (unlinkError) {
-        console.error('Erro ao remover arquivo de origem:', unlinkError);
-        // Não falhar a operação se não conseguir remover o arquivo de origem
+        console.error('Erro ao remover ficheiro de origem:', unlinkError);
+        // Não falhar a operação se não conseguir remover o ficheiro de origem
       }
-      
+
       return true;
     }
     return false;
   } catch (error) {
-    console.error('Erro ao mover arquivo:', error);
+    console.error('Erro ao mover ficheiro:', error);
     return false;
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
 const userStorageModificado = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (!req.user || !req.user.email) {
-      return cb(new Error('Usuário não identificado'), null);
+    if (!req.utilizador || !req.utilizador.email) {
+      return cb(new Error('Utilizador não identificado'), null);
     }
-    
-    const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
-    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
-    
-    console.log(`Storage: Salvando em ${userDir}`);
+
+    const userSlug = req.utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const userDir = path.join(BASE_UPLOAD_DIR, 'utilizadores', userSlug);
+
+    console.log(`Storage: A guardar em ${userDir}`);
     ensureDir(userDir);
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
-    if (!req.user || !req.user.email) {
-      return cb(new Error('Usuário não identificado'), null);
+    if (!req.utilizador || !req.utilizador.email) {
+      return cb(new Error('Utilizador não identificado'), null);
     }
-    
+
     // Usar req.tipoImagem em vez de req.body.tipo
     // Adicionar timestamp para evitar conflitos de cache
-    const tipoArquivo = req.tipoImagem || 'UNKNOWN';
+    const tipoFicheiro = req.tipoImagem || 'UNKNOWN';
     const timestamp = Date.now();
-    const fileName = `${req.user.email}_${tipoArquivo}_${timestamp}.png`;
-    
-    console.log(`Storage: Gerando nome de arquivo ${fileName} (tipo: ${tipoArquivo})`);
+    const fileName = `${req.utilizador.email}_${tipoFicheiro}_${timestamp}.png`;
+
+    console.log(`Storage: A gerar nome de ficheiro ${fileName} (tipo: ${tipoFicheiro})`);
     cb(null, fileName);
   }
 });
-
-
 
 const uploadUserModificado = multer({
   storage: userStorageModificado,
@@ -394,13 +380,11 @@ const uploadUserModificado = multer({
   fileFilter
 });
 
-
-
 const uploadTemporario = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Sempre salvar na pasta temp primeiro
+    // Sempre guardar na pasta temp primeiro
     const tempDir = path.join(BASE_UPLOAD_DIR, 'temp');
-    console.log(`⏱️ UPLOAD TEMP: Salvando temporariamente em ${tempDir}`);
+    console.log(`⏱️ UPLOAD TEMP: A guardar temporariamente em ${tempDir}`);
     ensureDir(tempDir);
     cb(null, tempDir);
   },
@@ -408,17 +392,17 @@ const uploadTemporario = multer.diskStorage({
     // Gerar um nome único com timestamp para evitar colisões
     const timestamp = Date.now();
     const randomString = crypto.randomBytes(4).toString('hex');
-    
+
     // Detectar tipo de upload baseado na rota
-    let tipoArquivo = 'temp';
+    let tipoFicheiro = 'temp';
     if (req.path.includes('/img/perfil')) {
-      tipoArquivo = 'AVATAR';
+      tipoFicheiro = 'AVATAR';
     } else if (req.path.includes('/img/capa')) {
-      tipoArquivo = 'CAPA';
+      tipoFicheiro = 'CAPA';
     }
-    
-    const fileName = `${timestamp}_${randomString}_${tipoArquivo}.png`;
-    console.log(`⏱️ UPLOAD TEMP: Gerando nome temporário: ${fileName}`);
+
+    const fileName = `${timestamp}_${randomString}_${tipoFicheiro}.png`;
+    console.log(`⏱️ UPLOAD TEMP: A gerar nome temporário: ${fileName}`);
     cb(null, fileName);
   }
 });
@@ -432,71 +416,66 @@ const uploadTemp = multer({
   fileFilter: (req, file, cb) => {
     // Verificar o tipo MIME
     if (file.mimetype.startsWith('image/')) {
-      console.log(`⏱️ UPLOAD TEMP: Tipo de arquivo válido: ${file.mimetype}`);
+      console.log(`⏱️ UPLOAD TEMP: Tipo de ficheiro válido: ${file.mimetype}`);
       cb(null, true);
     } else {
-      console.log(`⏱️ UPLOAD TEMP: Tipo de arquivo inválido: ${file.mimetype}`);
+      console.log(`⏱️ UPLOAD TEMP: Tipo de ficheiro inválido: ${file.mimetype}`);
       cb(new Error('Apenas imagens são permitidas'), false);
     }
   }
 });
 
-// Middleware para garantir diretórios dos usuários
+// Middleware para garantir diretórios dos utilizadores
 const ensureUserDir = (req, res, next) => {
-  if (!req.user || !req.user.email) {
-    return res.status(401).json({ message: "Usuário não autenticado" });
+  if (!req.utilizador || !req.utilizador.email) {
+    return res.status(401).json({ message: "Utilizador não autenticado" });
   }
-  
-  const userSlug = req.user.email.replace(/@/g, '_at_').replace(/\./g, '_');
-  const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
-  
+
+  const userSlug = req.utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
+  const userDir = path.join(BASE_UPLOAD_DIR, 'utilizadores', userSlug);
+
   ensureDir(userDir);
-  
+
   // Adicionar informações ao request para uso nos controladores
   req.userDir = userDir;
   req.userSlug = userSlug;
-  
+
   next();
 };
 
-
-
-
-
-
 const registerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // No registro, o email vem do corpo da requisição, não do req.user
+    // No registo, o email vem do corpo da requisição, não do req.utilizador
     const email = req.body.email;
-    
+
     if (!email) {
       return cb(new Error('Email não fornecido no corpo da requisição'), null);
     }
-    
+
     const userSlug = email.replace(/@/g, '_at_').replace(/\./g, '_');
-    const userDir = path.join(BASE_UPLOAD_DIR, 'users', userSlug);
-    
-    console.log(`Storage para registro: Salvando em ${userDir}`);
+    const userDir = path.join(BASE_UPLOAD_DIR, 'utilizadores', userSlug);
+
+    console.log(`Storage para registo: A guardar em ${userDir}`);
     ensureDir(userDir);
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
-    // No registro, o email vem do corpo da requisição
+    // No registo, o email vem do corpo da requisição
     const email = req.body.email;
-    
+
     if (!email) {
       return cb(new Error('Email não fornecido no corpo da requisição'), null);
     }
-    
+
     // Usar nome fixo para imagem de perfil
     const fileName = `${email}_AVATAR.png`;
-    
-    console.log(`Storage para registro: Gerando nome de arquivo ${fileName}`);
+
+    console.log(`Storage para registo: A gerar nome de ficheiro ${fileName}`);
     cb(null, fileName);
   }
 });
 
-// Criar um middleware de upload específico para registro
+// Criar um middleware de upload específico para registo
 const uploadRegister = multer({
   storage: registerStorage,
   limits: {
@@ -505,10 +484,10 @@ const uploadRegister = multer({
   fileFilter: (req, file, cb) => {
     // Verificar o tipo MIME
     if (file.mimetype.startsWith('image/')) {
-      console.log(`Upload para registro: Tipo de arquivo válido: ${file.mimetype}`);
+      console.log(`Upload para registo: Tipo de ficheiro válido: ${file.mimetype}`);
       cb(null, true);
     } else {
-      console.log(`Upload para registro: Tipo de arquivo inválido: ${file.mimetype}`);
+      console.log(`Upload para registo: Tipo de ficheiro inválido: ${file.mimetype}`);
       cb(new Error('Apenas imagens são permitidas'), false);
     }
   }
@@ -536,7 +515,7 @@ module.exports = {
   moverArquivo,
   uploadUserModificado,
   uploadTemp,
-  userStorageModificado,	
+  userStorageModificado,
   ensureUserDir,
   uploadRegister,
   uploadTemporario

@@ -209,7 +209,7 @@ const enviarMensagem = async (req, res) => {
   }
 };
 
-// Controlador para avaliar um comentário (gostar/não gostar)
+// Controlador para avaliar um comentário (Like/Deslike)
 const avaliarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
@@ -319,10 +319,6 @@ const denunciarMensagem = async (req, res) => {
     });
   }
 };
-
-
-
-
 
 
 

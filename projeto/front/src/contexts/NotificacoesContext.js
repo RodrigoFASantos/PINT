@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { notificacoesService } from '../services/axiosService';
 import { useAuth } from './AuthContext';
 
 // Criar o contexto
@@ -25,12 +25,25 @@ export function NotificacoesProvider({ children }) {
     
     try {
       setLoading(true);
-      const response = await axios.get('/api/notificacoes');
+      console.log('Buscando notificações do usuário...');
+      
+      const response = await notificacoesService.getNotificacoes();
+      
+      console.log('Resposta da API de notificações:', response.data);
+      
+      if (!response.data) {
+        console.error('Resposta vazia da API');
+        throw new Error('Resposta vazia da API');
+      }
       
       // Ordenar por data de criação (mais recentes primeiro)
-      const notificacoesOrdenadas = response.data.sort((a, b) => 
-        new Date(b.notificacao.data_criacao) - new Date(a.notificacao.data_criacao)
-      );
+      const notificacoesOrdenadas = response.data.sort((a, b) => {
+        const dataA = a.notificacao?.data_criacao || '';
+        const dataB = b.notificacao?.data_criacao || '';
+        return new Date(dataB) - new Date(dataA);
+      });
+      
+      console.log('Notificações processadas:', notificacoesOrdenadas);
       
       setNotificacoes(notificacoesOrdenadas);
       setError(null);
@@ -47,23 +60,40 @@ export function NotificacoesProvider({ children }) {
     if (!currentUser) return;
     
     try {
-      const response = await axios.get('/api/notificacoes/nao-lidas/contagem');
-      setNotificacoesNaoLidas(response.data.count);
+      console.log('Buscando contagem de notificações não lidas...');
+      
+      const response = await notificacoesService.getNotificacoesNaoLidasContagem();
+      
+      console.log('Contagem de notificações não lidas:', response.data);
+      
+      if (response.data && typeof response.data.count === 'number') {
+        setNotificacoesNaoLidas(response.data.count);
+      } else {
+        console.warn('Formato inesperado para contagem:', response.data);
+        // Tentar extrair a contagem de outra forma, caso o formato da resposta seja diferente
+        const count = response.data?.count || response.data?.naoLidas || 0;
+        setNotificacoesNaoLidas(count);
+      }
     } catch (error) {
       console.error('Erro ao buscar notificações não lidas:', error);
+      // Não definir erro aqui para não afetar a experiência do usuário
     }
   }, [currentUser]);
   
   // Função para marcar uma notificação como lida
   const marcarComoLida = useCallback(async (idNotificacao) => {
     try {
-      await axios.put(`/api/notificacoes/${idNotificacao}/lida`);
+      console.log(`Marcando notificação ${idNotificacao} como lida...`);
+      
+      await notificacoesService.marcarComoLida(idNotificacao);
+      
+      console.log(`Notificação ${idNotificacao} marcada como lida`);
       
       // Atualizar estado local
       setNotificacoes(prevNotificacoes => 
         prevNotificacoes.map(notif => 
           notif.id_notificacao === idNotificacao 
-            ? { ...notif, lida: true } 
+            ? { ...notif, lida: true, data_leitura: new Date().toISOString() } 
             : notif
         )
       );
@@ -81,11 +111,19 @@ export function NotificacoesProvider({ children }) {
   // Função para marcar todas as notificações como lidas
   const marcarTodasComoLidas = useCallback(async () => {
     try {
-      await axios.put('/api/notificacoes/marcar-todas-como-lidas');
+      console.log('Marcando todas as notificações como lidas...');
+      
+      await notificacoesService.marcarTodasComoLidas();
+      
+      console.log('Todas as notificações marcadas como lidas');
       
       // Atualizar estado local
       setNotificacoes(prevNotificacoes =>
-        prevNotificacoes.map(notif => ({ ...notif, lida: true }))
+        prevNotificacoes.map(notif => ({ 
+          ...notif, 
+          lida: true, 
+          data_leitura: new Date().toISOString() 
+        }))
       );
       
       // Atualizar contagem
@@ -98,19 +136,22 @@ export function NotificacoesProvider({ children }) {
     }
   }, []);
   
-  // Carregar contagem inicial de notificações não lidas
+  // Carregar notificações e contagem inicial ao montar o componente
   useEffect(() => {
     if (currentUser) {
       buscarNotificacoesNaoLidas();
+      buscarNotificacoes();
     }
-  }, [currentUser, buscarNotificacoesNaoLidas]);
+  }, [currentUser, buscarNotificacoes, buscarNotificacoesNaoLidas]);
   
   // Configurar escuta de socket.io para novas notificações
   useEffect(() => {
     if (!currentUser) return;
     
     if (window.socket) {
-      window.socket.on('nova_notificacao', () => {
+      console.log('Configurando socket para notificações');
+      window.socket.on('nova_notificacao', (data) => {
+        console.log('Nova notificação recebida via socket:', data);
         buscarNotificacoesNaoLidas();
         buscarNotificacoes();
       });
@@ -118,12 +159,13 @@ export function NotificacoesProvider({ children }) {
     
     return () => {
       if (window.socket) {
+        console.log('Removendo listener de socket para notificações');
         window.socket.off('nova_notificacao');
       }
     };
   }, [currentUser, buscarNotificacoesNaoLidas, buscarNotificacoes]);
   
-  // Definir função global
+  // Definir função global para atualização de notificações
   useEffect(() => {
     window.atualizarContagemNotificacoes = buscarNotificacoesNaoLidas;
     

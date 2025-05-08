@@ -117,7 +117,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_user_curso UNIQUE (id_utilizador, id_curso)
     );`,
 
-      `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
+    `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
       id_trabalho SERIAL PRIMARY KEY,
       id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao),
       ficheiro_path VARCHAR(500) NOT NULL,
@@ -298,7 +298,7 @@ const createTablesInOrder = async () => {
     );`
   ];
 
-  // Executa a criação das tabelas em sequência
+  // Executar a criação das tabelas em sequência
   for (const sql of createTablesSQL) {
     try {
       await sequelize.query(sql);

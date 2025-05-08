@@ -28,14 +28,14 @@ const sequelize = new Sequelize(
   }
 );
 
-// Função para testar a conexão com o banco de dados
+// Função para testar a conexão com a base de dados
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Conexão com o banco de dados estabelecida com sucesso!');
+    console.log('Conexão com o base de dados estabelecida com sucesso!');
     return true;
   } catch (error) {
-    console.error('Erro ao conectar ao banco de dados:', error);
+    console.error('Erro ao conectar à base de dados:', error);
     return false;
   }
 };

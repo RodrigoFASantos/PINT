@@ -7,24 +7,24 @@ const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOA
 
 async function criarPastasEImagensUsuarios() {
   try {
-    console.log('Conectando ao banco de dados...');
+    console.log('Conectar à base de dados...');
     const conexaoOk = await sequelize.testConnection();
     if (!conexaoOk) {
-      throw new Error('Não foi possível conectar ao banco de dados.');
+      throw new Error('Não foi possível conectar à base de dados.');
     }
 
-    console.log('Buscando usuários na base de dados...');
+    console.log('Procurar utilizadores na base de dados...');
     const [usuarios] = await sequelize.query(
       'SELECT id_utilizador, nome, email, foto_perfil, foto_capa FROM user'
     );
 
-    console.log(`Encontrados ${usuarios.length} usuários para processar.`);
+    console.log(`Encontrados ${usuarios.length} utilizadores para processar.`);
 
     // Garantir que a pasta base de uploads/users exista
     const usersBaseDir = path.join(BASE_UPLOAD_DIR, 'users');
     if (!fs.existsSync(usersBaseDir)) {
       fs.mkdirSync(usersBaseDir, { recursive: true });
-      console.log(`✅ Diretório base de usuários criado: ${usersBaseDir}`);
+      console.log(`✅ Diretório base de utilizadores criado: ${usersBaseDir}`);
     }
 
     // Verificar se existem as imagens padrão
@@ -32,12 +32,12 @@ async function criarPastasEImagensUsuarios() {
     const capaPadrao = path.join(usersBaseDir, 'CAPA.png');
 
     if (!fs.existsSync(avatarPadrao)) {
-      console.log('⚠️ Imagem padrão de avatar não encontrada. Criando placeholder...');
+      console.log('⚠️ Imagem padrão de avatar não encontrada. A criar placeholder...');
       try {
         // Você pode substituir isto por uma cópia de uma imagem real
         fs.writeFileSync(
           avatarPadrao,
-          'Este é um placeholder para avatar. Substitua por uma imagem real.'
+          'Este é um placeholder para avatar. Substitua por uma imagem real!'
         );
         console.log(`✅ Arquivo placeholder de avatar criado em ${avatarPadrao}`);
       } catch (error) {
@@ -46,7 +46,7 @@ async function criarPastasEImagensUsuarios() {
     }
 
     if (!fs.existsSync(capaPadrao)) {
-      console.log('⚠️ Imagem padrão de capa não encontrada. Criando placeholder...');
+      console.log('⚠️ Imagem padrão de capa não encontrada. A criar placeholder...');
       try {
         // Você pode substituir isto por uma cópia de uma imagem real
         fs.writeFileSync(
@@ -59,33 +59,33 @@ async function criarPastasEImagensUsuarios() {
       }
     }
 
-    // Processar cada usuário
+    // Processar cada utilizador
     for (const usuario of usuarios) {
-      console.log(`\nProcessando usuário: ${usuario.nome} (ID: ${usuario.id_utilizador})`);
+      console.log(`\nA processar utilizador: ${usuario.nome} (ID: ${usuario.id_utilizador})`);
 
-      // Criar slug do usuário baseado no email
+      // Criar slug do utilizador baseado no email
       const userSlug = usuario.email.replace(/@/g, '_at_').replace(/\./g, '_');
       const userDir = path.join(usersBaseDir, userSlug);
 
-      console.log(`Diretório de usuário: ${userDir}`);
+      console.log(`Diretório de utilizador: ${userDir}`);
 
-      // Criar pasta do usuário
+      // Criar pasta do utilizador
       if (!fs.existsSync(userDir)) {
         try {
           fs.mkdirSync(userDir, { recursive: true });
-          console.log(`✅ Diretório de usuário criado com sucesso.`);
+          console.log(`✅ Diretório de utilizador criado com sucesso.`);
         } catch (error) {
-          console.error(`❌ Erro ao criar diretório de usuário: ${error.message}`);
+          console.error(`❌ Erro ao criar diretório de utilizador: ${error.message}`);
           continue;
         }
       } else {
-        console.log(`ℹ️ Diretório de usuário já existe.`);
+        console.log(`ℹ️ Diretório de utilizador já existe.`);
       }
 
       // Definir caminhos para as imagens
       const avatarFilename = `${usuario.email}_AVATAR.png`;
       const capaFilename = `${usuario.email}_CAPA.png`;
-      
+
       const avatarPath = path.join(userDir, avatarFilename);
       const capaPath = path.join(userDir, capaFilename);
 
@@ -113,7 +113,7 @@ async function criarPastasEImagensUsuarios() {
         console.log(`ℹ️ Imagem de capa já existe.`);
       }
 
-      // Atualizar referências no banco de dados se necessário
+      // Atualizar referências na base de dados se necessário
       const dbPathAvatar = `uploads/users/${userSlug}/${avatarFilename}`;
       const dbPathCapa = `uploads/users/${userSlug}/${capaFilename}`;
 
@@ -126,12 +126,12 @@ async function criarPastasEImagensUsuarios() {
               replacements: [dbPathAvatar, dbPathCapa, usuario.id_utilizador]
             }
           );
-          console.log(`✅ Referências de imagens atualizadas no banco de dados.`);
+          console.log(`✅ Referências de imagens atualizadas na base de dados.`);
         } catch (error) {
-          console.error(`❌ Erro ao atualizar banco de dados: ${error.message}`);
+          console.error(`❌ Erro ao atualizar base de dados: ${error.message}`);
         }
       } else {
-        console.log(`ℹ️ Referências de imagens já estão corretas no banco de dados.`);
+        console.log(`ℹ️ Referências de imagens já estão corretas no base de dados.`);
       }
     }
 
@@ -141,9 +141,9 @@ async function criarPastasEImagensUsuarios() {
   } finally {
     try {
       await sequelize.close();
-      console.log('Conexão com o banco de dados fechada.');
+      console.log('Conexão com a base de dados fechada.');
     } catch (error) {
-      console.error('Erro ao fechar conexão com o banco:', error);
+      console.error('Erro ao fechar conexão com a base de dados:', error);
     }
   }
 }

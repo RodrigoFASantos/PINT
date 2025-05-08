@@ -1,4 +1,3 @@
-// Verifica se a pasta public existe, se não existir cria-a
 const fs = require('fs');
 const path = require('path');
 

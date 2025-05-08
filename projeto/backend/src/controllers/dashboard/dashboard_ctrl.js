@@ -46,8 +46,8 @@ const getEstatisticas = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Erro ao buscar estatísticas:", error);
-    res.status(500).json({ message: "Erro ao buscar estatísticas" });
+    console.error("Erro ao procurar estatísticas:", error);
+    res.status(500).json({ message: "Erro ao procurar estatísticas" });
   }
 };
 

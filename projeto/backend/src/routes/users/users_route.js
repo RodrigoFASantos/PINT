@@ -2,28 +2,12 @@ const express = require("express");
 const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const verificarTokenComEmail = require('../../utils/verificarTokenComEmail');
-const { 
-  getAllUsers, 
-  getFormadores, 
-  getFormandos, 
-  getGestores, 
-  createUser, 
-  deleteUser,
-  loginUser, 
-  perfilUser, 
-  updatePerfilUser, 
-  changePassword,
-  uploadImagemPerfil,
-  uploadImagemCapa,
-  confirmAccount,
-  resendConfirmation,
-  getUserById
-} = require("../../controllers/users/users_ctrl");
+const { getAllUsers, getFormadores, getFormandos, getGestores, createUser, deleteUser, loginUser, perfilUser, updatePerfilUser, changePassword, uploadImagemPerfil, uploadImagemCapa, confirmAccount, resendConfirmation, getUserById } = require("../../controllers/users/users_ctrl");
 const uploadUtils = require('../../middleware/upload');
 
 // Rota para debug - verificar se o servidor está a responder
 router.get("/debug-check", (req, res) => {
-  res.status(200).json({ message: "API de users está a funcionar!" });
+  res.status(200).json({ message: "API de utilizadores está a funcionar!" });
 });
 
 // Rotas específicas devem vir PRIMEIRO
@@ -37,7 +21,7 @@ router.post("/register", createUser);
 router.post("/login", loginUser);
 router.put("/perfil", verificarToken, updatePerfilUser);
 
-// Rota para mudança de senha
+// Rota para mudança de palavra-passe
 router.put("/change-password", verificarToken, changePassword);
 
 // Rotas de confirmação de conta
@@ -52,7 +36,7 @@ router.post("/img/capa", verificarTokenComEmail, uploadUtils.ensureUserDir, uplo
 router.get("/:id", verificarToken, getUserById);
 router.put("/:id", verificarToken, updatePerfilUser);
 router.delete("/:id", (req, res, next) => {
-  console.log('===== DEBUG DELETE USER =====');
+  console.log('===== DEBUG ELIMINAR UTILIZADOR =====');
   console.log('Requisição DELETE recebida para ID:', req.params.id);
   console.log('Headers:', req.headers);
   console.log('Token presente:', !!req.headers.authorization);

@@ -6,7 +6,7 @@ const getAllAreas = async (req, res) => {
     const areas = await Area.findAll();
     res.json(areas);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar áreas" });
+    res.status(500).json({ message: "Erro ao procurar áreas" });
   }
 };
 

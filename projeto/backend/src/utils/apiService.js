@@ -27,7 +27,7 @@ api.interceptors.response.use(
     // Redirecionar para login se o token expirou ou não é válido
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('utilizador');
       
       // Redirecionar para a página de login apenas se não estiver já na página de login
       if (!window.location.pathname.includes('/login')) {
@@ -42,12 +42,12 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email, password) => {
     try {
-      const response = await api.post('/users/login', { email, password });
+      const response = await api.post('/utilizadores/login', { email, password });
       
-      // Salvar token e informações do usuário
+      // Guardar token e informações do utilizador
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('userId', response.data.id_utilizador);
-      localStorage.setItem('user', JSON.stringify({
+      localStorage.setItem('utilizador', JSON.stringify({
         id_utilizador: response.data.id_utilizador,
         nome: response.data.nome,
         id_cargo: response.data.id_cargo,
@@ -57,37 +57,37 @@ export const authService = {
       
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao realizar login' };
+      throw error.response?.data || { message: 'Erro ao iniciar sessão' };
     }
   },
   
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
-    localStorage.removeItem('user');
+    localStorage.removeItem('utilizador');
   },
   
   changePassword: async (id_utilizador, nova_password) => {
     try {
-      const response = await api.post('/users/change-password', { id_utilizador, nova_password });
+      const response = await api.post('/utilizadores/change-password', { id_utilizador, nova_password });
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao alterar senha' };
+      throw error.response?.data || { message: 'Erro ao alterar palavra-passe' };
     }
   },
   
   getProfile: async () => {
     try {
-      const response = await api.get('/users/perfil');
+      const response = await api.get('/utilizadores/perfil');
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao obter perfil do usuário' };
+      throw error.response?.data || { message: 'Erro ao obter perfil do utilizador' };
     }
   },
   
   updateProfile: async (userData) => {
     try {
-      const response = await api.put('/users/perfil', userData);
+      const response = await api.put('/utilizadores/perfil', userData);
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao atualizar perfil' };
@@ -102,7 +102,7 @@ export const cursosService = {
       const response = await api.get(`/cursos?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar cursos' };
+      throw error.response?.data || { message: 'Erro ao procurar cursos' };
     }
   },
   
@@ -111,7 +111,7 @@ export const cursosService = {
       const response = await api.get(`/cursos/${id}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar detalhes do curso' };
+      throw error.response?.data || { message: 'Erro ao procurar detalhes do curso' };
     }
   },
   
@@ -120,7 +120,7 @@ export const cursosService = {
       const response = await api.get(`/cursos/categoria/${id_categoria}?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar cursos por categoria' };
+      throw error.response?.data || { message: 'Erro ao procurar cursos por categoria' };
     }
   },
   
@@ -129,13 +129,13 @@ export const cursosService = {
       const response = await api.get(`/cursos/area/${id_area}?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar cursos por área' };
+      throw error.response?.data || { message: 'Erro ao procurar cursos por área' };
     }
   },
   
   createCurso: async (cursoData) => {
     try {
-      // Se contém arquivo, usar FormData
+      // Se contém ficheiro, usar FormData
       if (cursoData.imagem instanceof File) {
         const formData = new FormData();
         
@@ -167,7 +167,7 @@ export const cursosService = {
   
   updateCurso: async (id, cursoData) => {
     try {
-      // Se contém arquivo, usar FormData
+      // Se contém ficheiro, usar FormData
       if (cursoData.imagem instanceof File) {
         const formData = new FormData();
         
@@ -202,7 +202,7 @@ export const cursosService = {
       const response = await api.delete(`/cursos/${id}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao excluir curso' };
+      throw error.response?.data || { message: 'Erro ao eliminar curso' };
     }
   }
 };
@@ -211,16 +211,16 @@ export const cursosService = {
 export const inscricoesService = {
   getMinhasInscricoes: async () => {
     try {
-      const response = await api.get('/users/inscricoes');
+      const response = await api.get('/utilizadores/inscricoes');
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar inscrições' };
+      throw error.response?.data || { message: 'Erro ao procurar inscrições' };
     }
   },
   
   verificarInscricao: async (id_curso) => {
     try {
-      const response = await api.get(`/users/inscrito/${id_curso}`);
+      const response = await api.get(`/utilizadores/inscrito/${id_curso}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao verificar inscrição' };
@@ -243,7 +243,7 @@ export const inscricoesService = {
   
   cancelarInscricao: async (id_curso) => {
     try {
-      const response = await api.put(`/users/cancelar-inscricao/${id_curso}`);
+      const response = await api.put(`/utilizadores/cancelar-inscricao/${id_curso}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao cancelar inscrição' };
@@ -255,7 +255,7 @@ export const inscricoesService = {
       const response = await api.get(`/cursos/${id_curso}/inscricoes`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar alunos inscritos' };
+      throw error.response?.data || { message: 'Erro ao procurar alunos inscritos' };
     }
   }
 };
@@ -267,20 +267,20 @@ export const conteudosService = {
       const response = await api.get(`/conteudos/curso/${id_curso}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao buscar conteúdos do curso' };
+      throw error.response?.data || { message: 'Erro ao procurar conteúdos do curso' };
     }
   },
   
   createConteudo: async (conteudoData) => {
     try {
-      // Se contém arquivo, usar FormData
-      if (conteudoData.arquivo instanceof File) {
+      // Se contém ficheiro, usar FormData
+      if (conteudoData.ficheiro instanceof File) {
         const formData = new FormData();
         
         // Adicionar campos ao FormData
         Object.keys(conteudoData).forEach(key => {
-          if (key === 'arquivo') {
-            formData.append('arquivo', conteudoData.arquivo);
+          if (key === 'ficheiro') {
+            formData.append('ficheiro', conteudoData.ficheiro);
           } else {
             formData.append(key, conteudoData[key]);
           }
@@ -294,7 +294,7 @@ export const conteudosService = {
         
         return response.data;
       } else {
-        // Sem arquivo, enviar JSON normal
+        // Sem ficheiro, enviar JSON normal
         const response = await api.post('/conteudos', conteudoData);
         return response.data;
       }
@@ -308,7 +308,7 @@ export const conteudosService = {
       const response = await api.delete(`/conteudos/${id}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Erro ao excluir conteúdo' };
+      throw error.response?.data || { message: 'Erro ao eliminar conteúdo' };
     }
   }
 };

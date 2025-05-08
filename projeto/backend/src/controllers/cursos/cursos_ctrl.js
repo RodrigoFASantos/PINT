@@ -12,6 +12,7 @@ const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
 
+// Importando o controller de notificações diretamente
 const notificacaoController = require('../notificacoes/notificacoes_ctrl');
 
 // Obter todos os cursos com paginação
@@ -89,8 +90,8 @@ const getAllCursos = async (req, res) => {
       currentPage: page
     });
   } catch (error) {
-    console.error("Erro ao buscar cursos:", error);
-    res.status(500).json({ message: "Erro ao buscar cursos" });
+    console.error("Erro ao procurar cursos:", error);
+    res.status(500).json({ message: "Erro ao procurar cursos" });
   }
 };
 
@@ -109,7 +110,7 @@ const getCursosByCategoria = async (req, res) => {
     // Converter a string de categorias em um array de IDs
     const categoriaIds = categorias.split(',').map(id => parseInt(id.trim()));
 
-    // Buscar cursos que pertencem a essas categorias
+    // Procurar cursos que pertencem a essas categorias
     const { count, rows } = await Curso.findAndCountAll({
       where: {
         id_categoria: { [Op.in]: categoriaIds }
@@ -136,14 +137,15 @@ const getCursosByCategoria = async (req, res) => {
       currentPage: page
     });
   } catch (error) {
-    console.error("Erro ao buscar cursos por categoria:", error);
-    res.status(500).json({ message: "Erro ao buscar cursos por categoria" });
+    console.error("Erro ao procurar cursos por categoria:", error);
+    res.status(500).json({ message: "Erro ao procurar cursos por categoria" });
   }
 };
 
 // Função para criar um novo curso
 const createCurso = async (req, res) => {
   try {
+    console.log("A iniciar criação de curso");
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria } = req.body;
 
     if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
@@ -157,15 +159,15 @@ const createCurso = async (req, res) => {
     // Garantir que o diretório exista
     uploadUtils.ensureDir(cursoDir);
 
-    // Caminho para o banco de dados
+    // Caminho para a base de dados
     const dirPath = `uploads/cursos/${cursoSlug}`;
 
     // Verificar se foi enviada uma imagem
     let imagemPath = null;
     if (req.file) {
-      // Configurar o caminho da imagem para o banco de dados
+      // Configurar o caminho da imagem para a base de dados
       imagemPath = `${dirPath}/capa.png`;
-      console.log(`Caminho da imagem salvo no BD: ${imagemPath}`);
+      console.log(`Caminho da imagem guardado na BD: ${imagemPath}`);
     }
 
     const novoCurso = await Curso.create({
@@ -183,18 +185,12 @@ const createCurso = async (req, res) => {
       ativo: true
     });
 
-    // Notificar sobre o novo curso
+    console.log(`Curso criado com sucesso: ${novoCurso.id_curso} - ${novoCurso.nome}`);
+
+    // Notificar sobre o novo curso usando o controller diretamente
     try {
-      const axios = require('axios');
-      const apiUrl = process.env.API_URL || 'http://localhost:4000';
-      
-      await axios.post(`${apiUrl}/api/notificacoes/curso-criado`, {
-        id_curso: novoCurso.id_curso,
-        nome_curso: novoCurso.nome,
-        id_categoria: novoCurso.id_categoria,
-        id_area: novoCurso.id_area
-      });
-      
+      console.log("A chamar função de notificação diretamente");
+      await notificacaoController.notificarNovoCurso(novoCurso);
       console.log("Notificação de curso criado enviada com sucesso");
     } catch (notificationError) {
       console.error("Erro ao enviar notificação de curso criado:", notificationError);
@@ -214,7 +210,7 @@ const updateCurso = async (req, res) => {
     const { id_curso } = req.params;
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
 
-    // Buscar dados atuais do curso para comparação
+    // Procurar dados atuais do curso para comparação
     const cursoAtual = await Curso.findByPk(id_curso, {
       include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
     });
@@ -222,6 +218,14 @@ const updateCurso = async (req, res) => {
     if (!cursoAtual) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
+
+    // Guardar os dados antigos para comparação
+    const dataInicioAntiga = cursoAtual.data_inicio;
+    const dataFimAntiga = cursoAtual.data_fim;
+    const formadorAntigo = cursoAtual.formador ? { 
+      id_utilizador: cursoAtual.formador.id_utilizador, 
+      nome: cursoAtual.formador.nome 
+    } : null;
 
     // Atualizar o curso
     await cursoAtual.update({
@@ -237,26 +241,20 @@ const updateCurso = async (req, res) => {
       ativo: ativo !== undefined ? ativo : cursoAtual.ativo
     });
 
+    // Recarregar o curso atualizado com as suas relações
+    const cursoAtualizado = await Curso.findByPk(id_curso, {
+      include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
+    });
+
     // Verificar se o formador foi alterado
     if (id_formador && id_formador !== cursoAtual.id_formador) {
       try {
-        // Buscar dados do novo formador
-        const novoFormador = await User.findByPk(id_formador, {
-          attributes: ['id_utilizador', 'nome']
-        });
-
-        const axios = require('axios');
-        const apiUrl = process.env.API_URL || 'http://localhost:4000';
-        
-        await axios.post(`${apiUrl}/api/notificacoes/formador-alterado`, {
-          id_curso: parseInt(id_curso),
-          nome_curso: nome || cursoAtual.nome,
-          id_formador_antigo: cursoAtual.id_formador,
-          nome_formador_antigo: cursoAtual.formador?.nome || 'Formador anterior',
-          id_formador_novo: id_formador,
-          nome_formador_novo: novoFormador?.nome || 'Novo formador'
-        });
-        
+        // Chamar a função de notificação diretamente
+        await notificacaoController.notificarFormadorAlterado(
+          cursoAtualizado,
+          formadorAntigo,
+          cursoAtualizado.formador
+        );
         console.log("Notificação de alteração de formador enviada com sucesso");
       } catch (notificationError) {
         console.error("Erro ao enviar notificação de alteração de formador:", notificationError);
@@ -265,23 +263,19 @@ const updateCurso = async (req, res) => {
     }
 
     // Verificar se as datas foram alteradas
-    const dataInicioAlterada = data_inicio && new Date(data_inicio).getTime() !== new Date(cursoAtual.data_inicio).getTime();
-    const dataFimAlterada = data_fim && new Date(data_fim).getTime() !== new Date(cursoAtual.data_fim).getTime();
+    const dataInicioAlterada = data_inicio && 
+      new Date(data_inicio).getTime() !== new Date(dataInicioAntiga).getTime();
+    const dataFimAlterada = data_fim && 
+      new Date(data_fim).getTime() !== new Date(dataFimAntiga).getTime();
 
     if (dataInicioAlterada || dataFimAlterada) {
       try {
-        const axios = require('axios');
-        const apiUrl = process.env.API_URL || 'http://localhost:4000';
-        
-        await axios.post(`${apiUrl}/api/notificacoes/data-curso-alterada`, {
-          id_curso: parseInt(id_curso),
-          nome_curso: nome || cursoAtual.nome,
-          data_inicio_antiga: cursoAtual.data_inicio,
-          data_fim_antiga: cursoAtual.data_fim,
-          data_inicio_nova: data_inicio || cursoAtual.data_inicio,
-          data_fim_nova: data_fim || cursoAtual.data_fim
-        });
-        
+        // Chamar a função de notificação diretamente
+        await notificacaoController.notificarDataCursoAlterada(
+          cursoAtualizado,
+          dataInicioAntiga,
+          dataFimAntiga
+        );
         console.log("Notificação de alteração de datas enviada com sucesso");
       } catch (notificationError) {
         console.error("Erro ao enviar notificação de alteração de datas:", notificationError);
@@ -292,7 +286,7 @@ const updateCurso = async (req, res) => {
     // Responder com sucesso
     return res.status(200).json({
       message: "Curso atualizado com sucesso",
-      curso: await Curso.findByPk(id_curso)
+      curso: cursoAtualizado
     });
   } catch (error) {
     console.error("Erro ao atualizar curso:", error);
@@ -303,13 +297,13 @@ const updateCurso = async (req, res) => {
   }
 };
 
-// Buscar curso por ID com detalhes
+// Procurar curso por ID com detalhes
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
-    const userId = req.user?.id_utilizador; // ID do usuário atual, se estiver autenticado
+    const userId = req.user?.id_utilizador; // ID do utilizador atual, se estiver autenticado
 
-    // Buscar o curso com suas relações
+    // Procurar o curso com as suas relações
     const curso = await Curso.findByPk(id, {
       include: [
         {
@@ -340,13 +334,13 @@ const getCursoById = async (req, res) => {
     const dataFimCurso = new Date(curso.data_fim);
     const cursoTerminado = dataFimCurso < dataAtual;
 
-    // Adicionar status de acesso para cursos terminados
+    // Adicionar estado de acesso para cursos terminados
     cursoComInscritos.terminado = cursoTerminado;
 
-    // Se o curso terminou e um usuário está tentando acessar, verificar se está inscrito
+    // Se o curso terminou e um utilizador está a tentar aceder, verificar se está inscrito
     if (cursoTerminado && userId) {
       try {
-        // Verificar se o usuário está inscrito neste curso
+        // Verificar se o utilizador está inscrito neste curso
         const inscricao = await Inscricao_Curso.findOne({
           where: {
             id_utilizador: userId,
@@ -356,19 +350,19 @@ const getCursoById = async (req, res) => {
         });
 
         // Adicionar logs para diagnóstico
-        console.log(`Verificando inscrição para usuário ${userId} no curso ${id}`);
-        console.log(`Resultado da busca de inscrição:`, inscricao);
+        console.log(`A verificar inscrição para utilizador ${userId} no curso ${id}`);
+        console.log(`Resultado da procura de inscrição:`, inscricao);
 
-        // Indicar se o usuário tem acesso ao curso
+        // Indicar se o utilizador tem acesso ao curso
         cursoComInscritos.acessoPermitido = !!inscricao;
         console.log(`Acesso permitido: ${cursoComInscritos.acessoPermitido}`);
       } catch (error) {
         console.error("Erro ao verificar inscrição:", error);
-        // Em caso de erro, vamos considerar que o usuário não tem acesso
+        // Em caso de erro, vamos considerar que o utilizador não tem acesso
         cursoComInscritos.acessoPermitido = false;
       }
     } else if (cursoTerminado) {
-      // Se não há usuário autenticado e o curso terminou, não permitir acesso
+      // Se não há utilizador autenticado e o curso terminou, não permitir acesso
       cursoComInscritos.acessoPermitido = false;
     } else {
       // Se o curso não terminou, permitir acesso
@@ -390,7 +384,7 @@ const getCursoById = async (req, res) => {
             }
           }
         } catch (e) {
-          console.log("Aviso: Não foi possível determinar coluna de status de inscrição", e.message);
+          console.log("Aviso: Não foi possível determinar coluna de estado de inscrição", e.message);
         }
 
         const inscricoesAtivas = await Inscricao_Curso.count({ where });
@@ -403,8 +397,8 @@ const getCursoById = async (req, res) => {
 
     res.json(cursoComInscritos);
   } catch (error) {
-    console.error("Erro ao buscar curso:", error);
-    res.status(500).json({ message: "Erro ao buscar curso", error: error.message });
+    console.error("Erro ao procurar curso:", error);
+    res.status(500).json({ message: "Erro ao procurar curso", error: error.message });
   }
 };
 
@@ -423,10 +417,10 @@ const associarFormadorCurso = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Verificar se o usuário é realmente um formador
+    // Verificar se o utilizador é realmente um formador
     const formador = await User.findByPk(id_formador);
     if (!formador || formador.id_cargo !== 2) {
-      return res.status(400).json({ message: "O usuário especificado não é um formador" });
+      return res.status(400).json({ message: "O utilizador especificado não é um formador" });
     }
 
     // Verificar se o formador tem acesso à categoria/área do curso
@@ -446,9 +440,31 @@ const associarFormadorCurso = async (req, res) => {
       });
     }
 
+    // Guardar formador antigo para notificação
+    const formadorAntigo = curso.id_formador ? 
+      await User.findByPk(curso.id_formador, { attributes: ['id_utilizador', 'nome'] }) : null;
+
     // Atualizar o curso com o novo formador
     curso.id_formador = id_formador;
     await curso.save();
+
+    // Recarregar o curso para a notificação
+    const cursoAtualizado = await Curso.findByPk(id_curso, {
+      include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
+    });
+
+    // Notificar sobre a alteração do formador
+    try {
+      await notificacaoController.notificarFormadorAlterado(
+        cursoAtualizado,
+        formadorAntigo,
+        formador
+      );
+      console.log("Notificação de alteração de formador enviada com sucesso");
+    } catch (notificationError) {
+      console.error("Erro ao enviar notificação de alteração de formador:", notificationError);
+      // Continuar mesmo com erro na notificação
+    }
 
     res.json({
       message: "Formador associado ao curso com sucesso",
@@ -482,12 +498,12 @@ const getInscricoesCurso = async (req, res) => {
 
     res.json(inscricoes);
   } catch (error) {
-    console.error("Erro ao buscar inscrições do curso:", error);
-    res.status(500).json({ message: "Erro ao buscar inscrições" });
+    console.error("Erro ao procurar inscrições do curso:", error);
+    res.status(500).json({ message: "Erro ao procurar inscrições" });
   }
 };
 
-// Função para deletar curso com remoção da imagem e diretórios
+// Função para eliminar curso com remoção da imagem e diretórios
 const deleteCurso = async (req, res) => {
   try {
     const { id } = req.params;
@@ -495,7 +511,7 @@ const deleteCurso = async (req, res) => {
     // Verificar permissão (id_cargo === 1 para administrador)
     if (req.user.id_cargo !== 1) {
       return res.status(403).json({
-        message: "Você não tem permissão para excluir cursos"
+        message: "Não tem permissão para eliminar cursos"
       });
     }
 
@@ -512,7 +528,7 @@ const deleteCurso = async (req, res) => {
     const cursoDirAbs = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
 
     try {
-      // Excluir diretamente as inscrições
+      // Eliminar diretamente as inscrições
       const numInscricoesRemovidas = await Inscricao_Curso.destroy({
         where: { id_curso: id }
       });
@@ -526,14 +542,14 @@ const deleteCurso = async (req, res) => {
 
       const topicoIds = topicos.map(topico => topico.id_topico);
 
-      // Buscar todas as pastas dos tópicos
+      // Procurar todas as pastas dos tópicos
       const pastas = await PastaCurso.findAll({
         where: { id_topico: { [Op.in]: topicoIds } }
       });
 
       const pastaIds = pastas.map(pasta => pasta.id_pasta);
 
-      // Excluir os conteúdos das pastas
+      // Eliminar os conteúdos das pastas
       if (pastaIds.length > 0) {
         await ConteudoCurso.destroy({
           where: { id_pasta: { [Op.in]: pastaIds } }
@@ -541,7 +557,7 @@ const deleteCurso = async (req, res) => {
         console.log(`Removidos conteúdos das pastas do curso ${id}`);
       }
 
-      // Excluir as pastas
+      // Eliminar as pastas
       if (topicoIds.length > 0) {
         await PastaCurso.destroy({
           where: { id_topico: { [Op.in]: topicoIds } }
@@ -549,34 +565,34 @@ const deleteCurso = async (req, res) => {
         console.log(`Removidas pastas dos tópicos do curso ${id}`);
       }
 
-      // Excluir os tópicos
+      // Eliminar os tópicos
       await TopicoCurso.destroy({
         where: { id_curso: id }
       });
       console.log(`Removidos tópicos do curso ${id}`);
 
-      // Excluir quaisquer conteúdos diretamente associados ao curso
+      // Eliminar quaisquer conteúdos diretamente associados ao curso
       await ConteudoCurso.destroy({
         where: { id_curso: id }
       });
       console.log(`Removidos conteúdos diretos do curso ${id}`);
 
-      // Excluir o curso
+      // Eliminar o curso
       await curso.destroy();
-      console.log(`Curso ${id} excluído com sucesso`);
+      console.log(`Curso ${id} eliminado com sucesso`);
 
       // Remover o diretório do curso e todos os seus conteúdos
       if (fs.existsSync(cursoDirAbs)) {
-        // Função recursiva para remover diretórios e arquivos
+        // Função recursiva para remover diretórios e ficheiros
         const removerDiretorioRecursivo = (dir) => {
           if (fs.existsSync(dir)) {
-            fs.readdirSync(dir).forEach((arquivo) => {
-              const caminhoCompleto = path.join(dir, arquivo);
+            fs.readdirSync(dir).forEach((ficheiro) => {
+              const caminhoCompleto = path.join(dir, ficheiro);
               if (fs.lstatSync(caminhoCompleto).isDirectory()) {
                 // Se for diretório, chamar recursivamente
                 removerDiretorioRecursivo(caminhoCompleto);
               } else {
-                // Se for arquivo, remover
+                // Se for ficheiro, remover
                 fs.unlinkSync(caminhoCompleto);
               }
             });
@@ -593,32 +609,32 @@ const deleteCurso = async (req, res) => {
 
       // Retornar resposta de sucesso
       return res.json({
-        message: "Curso excluído com sucesso!",
+        message: "Curso eliminado com sucesso!",
         inscricoesRemovidas: numInscricoesRemovidas,
         diretorioRemovido: true
       });
     } catch (error) {
-      console.error("Erro específico ao excluir relações:", error);
+      console.error("Erro específico ao eliminar relações:", error);
       return res.status(500).json({
-        message: "Erro ao excluir relações do curso",
+        message: "Erro ao eliminar relações do curso",
         error: error.message
       });
     }
   } catch (error) {
-    console.error("Erro geral ao excluir curso:", error);
+    console.error("Erro geral ao eliminar curso:", error);
     return res.status(500).json({
-      message: "Erro no servidor ao excluir curso.",
+      message: "Erro no servidor ao eliminar curso.",
       error: error.message
     });
   }
 };
 
-// Buscar cursos sugeridos para o utilizador
+// Procurar cursos sugeridos para o utilizador
 const getCursosSugeridos = async (req, res) => {
   try {
     const id_utilizador = req.user.id_utilizador;
 
-    // Buscar inscrições do utilizador
+    // Procurar inscrições do utilizador
     const inscricoes = await Inscricao_Curso.findAll({
       where: { id_utilizador }
     });
@@ -628,7 +644,7 @@ const getCursosSugeridos = async (req, res) => {
     let cursosSugeridos = [];
 
     if (inscricoes.length > 0) {
-      // Buscar categorias e áreas dos cursos em que o user está inscrito
+      // Procurar categorias e áreas dos cursos em que o utilizador está inscrito
       const cursosInscritos = await Curso.findAll({
         where: { id_curso: cursosInscritosIds }
       });
@@ -636,7 +652,7 @@ const getCursosSugeridos = async (req, res) => {
       const categoriasInscrito = [...new Set(cursosInscritos.map(c => c.id_categoria))];
       const areasInscrito = [...new Set(cursosInscritos.map(c => c.id_area))];
 
-      // Buscar cursos sugeridos com exclusão
+      // Procurar cursos sugeridos com exclusão
       cursosSugeridos = await Curso.findAll({
         where: {
           id_categoria: categoriasInscrito,
@@ -665,8 +681,8 @@ const getCursosSugeridos = async (req, res) => {
 
     return res.json(cursosSugeridos);
   } catch (error) {
-    console.error("Erro ao buscar cursos sugeridos:", error);
-    res.status(500).json({ message: "Erro no servidor ao buscar cursos sugeridos." });
+    console.error("Erro ao procurar cursos sugeridos:", error);
+    res.status(500).json({ message: "Erro no servidor ao procurar cursos sugeridos." });
   }
 };
 

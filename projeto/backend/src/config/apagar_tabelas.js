@@ -1,15 +1,15 @@
 const sequelize = require("../config/db");
 
 /**
- * Script para apagar todas as tabelas do banco de dados
+ * Script para apagar todas as tabelas da base de dados
  * Este script deve ser usado com cautela, pois removerá TODOS os dados
  */
 
 (async () => {
   try {
-    // Teste de conexão
+    // Teste de ligação
     await sequelize.testConnection();
-    console.log("Conexão com o banco de dados estabelecida com sucesso!");
+    console.log("Ligação à base de dados estabelecida com sucesso!");
 
     // Verificar se o sequelize está disponível
     if (!sequelize || !sequelize.define) {
@@ -19,22 +19,22 @@ const sequelize = require("../config/db");
     }
 
     console.log("\n⚠️  ATENÇÃO! ⚠️");
-    console.log("⚠️  Este script irá apagar TODAS as tabelas e dados do banco de dados!");
+    console.log("⚠️  Este script irá apagar TODAS as tabelas e dados da base de dados!");
     console.log("⚠️  Esta operação NÃO pode ser desfeita!");
-    console.log("⚠️  Pressione CTRL+C para cancelar se não tem certeza.");
-    console.log("\n⏳ Aguardando 5 segundos antes de prosseguir...");
+    console.log("⚠️  Prima CTRL+C para cancelar se não tem a certeza.");
+    console.log("\n⏳ A aguardar 5 segundos antes de prosseguir...");
 
-    // Aguardar 5 segundos para dar chance ao usuário de cancelar
+    // Aguardar 5 segundos para dar oportunidade ao utilizador de cancelar
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    console.log("\n🔄 Iniciando processo de limpeza...");
+    console.log("\n🔄 A iniciar processo de limpeza...");
 
     // Obter o nome do schema atual (geralmente 'public' em PostgreSQL)
     const [schemaResult] = await sequelize.query(`SELECT current_schema() as schema`);
     const schema = schemaResult[0].schema;
     console.log(`🔍 Schema atual: ${schema}`);
 
-    // Pegar uma lista de todas as tabelas no banco de dados
+    // Obter uma lista de todas as tabelas na base de dados
     const [tablesResult] = await sequelize.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = '${schema}' AND 
        tablename NOT LIKE 'pg_%' AND tablename NOT LIKE 'sql_%'`
@@ -48,13 +48,13 @@ const sequelize = require("../config/db");
     console.log(`🔍 Encontradas ${tablesResult.length} tabelas para apagar.`);
     
     // Primeiro, desabilitar todas as verificações de chave estrangeira
-    console.log("🔓 Desabilitando verificações de chave estrangeira...");
+    console.log("🔓 A desabilitar verificações de chave estrangeira...");
     await sequelize.query("SET CONSTRAINTS ALL DEFERRED;");
     
     // Preparar o comando para apagar todas as tabelas
     const tableNames = tablesResult.map(table => `"${table.tablename}"`).join(", ");
     
-    console.log("🗑️ Apagando todas as tabelas...");
+    console.log("🗑️ A apagar todas as tabelas...");
     await sequelize.query(`DROP TABLE IF EXISTS ${tableNames} CASCADE;`);
     
     // Também eliminar todas as sequências, que são usadas para campos autoincrement/serial
@@ -66,11 +66,11 @@ const sequelize = require("../config/db");
       console.log(`🔍 Encontradas ${sequencesResult.length} sequências para apagar.`);
       const sequenceNames = sequencesResult.map(seq => `"${seq.sequence_name}"`).join(", ");
       
-      console.log("🗑️ Apagando todas as sequências...");
+      console.log("🗑️ A apagar todas as sequências...");
       await sequelize.query(`DROP SEQUENCE IF EXISTS ${sequenceNames} CASCADE;`);
     }
     
-    // Eliminar também funções personalizadas que podem ter sido criadas
+    // Eliminar também funções personalizadas que possam ter sido criadas
     const [functionsResult] = await sequelize.query(
       `SELECT routine_name FROM information_schema.routines 
        WHERE routine_schema = '${schema}' AND routine_type = 'FUNCTION'`
@@ -81,13 +81,13 @@ const sequelize = require("../config/db");
       
       // Apagar cada função individualmente
       for (const func of functionsResult) {
-        console.log(`🗑️ Apagando função: ${func.routine_name}`);
+        console.log(`🗑️ A apagar função: ${func.routine_name}`);
         await sequelize.query(`DROP FUNCTION IF EXISTS "${func.routine_name}" CASCADE;`);
       }
     }
     
     console.log("\n✅ Todas as tabelas, sequências e funções foram removidas com sucesso!");
-    console.log("🔄 Para recriar o banco de dados, execute o script sync.js");
+    console.log("🔄 Para recriar a base de dados, execute o script sync.js");
     
     process.exit(0);
   } catch (error) {

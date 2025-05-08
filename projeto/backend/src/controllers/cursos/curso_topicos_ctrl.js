@@ -11,7 +11,7 @@ const getTopicosByCurso = async (req, res) => {
   try {
     const { id_curso } = req.params;
     
-    // Buscar tópicos
+    // Procurar tópicos
     const topicos = await TopicoCurso.findAll({
       where: { 
         id_curso,
@@ -23,12 +23,12 @@ const getTopicosByCurso = async (req, res) => {
     // Array para armazenar o resultado final com relacionamentos
     const topicosFormatados = [];
     
-    // Para cada tópico, buscar suas pastas
+    // Para cada tópico, procurar suas pastas
     for (const topico of topicos) {
       const topicoObj = topico.toJSON();
       topicoObj.expanded = false; // inicialmente fechado
       
-      // Buscar pastas para este tópico
+      // Procurar pastas para este tópico
       const pastas = await PastaCurso.findAll({
         where: { 
           id_topico: topico.id_topico,
@@ -37,14 +37,14 @@ const getTopicosByCurso = async (req, res) => {
         order: [['ordem', 'ASC']]
       });
       
-      // Para cada pasta, buscar conteúdos
+      // Para cada pasta, procurar conteúdos
       const pastasComConteudos = [];
       
       for (const pasta of pastas) {
         const pastaObj = pasta.toJSON();
         pastaObj.expanded = false; // inicialmente fechada 
         
-        // Buscar conteúdos para esta pasta
+        // Procurar conteúdos para esta pasta
         const conteudos = await ConteudoCurso.findAll({
           where: { 
             id_pasta: pasta.id_pasta,
@@ -63,8 +63,8 @@ const getTopicosByCurso = async (req, res) => {
 
     res.json(topicosFormatados);
   } catch (error) {
-    console.error("Erro ao buscar tópicos do curso:", error);
-    res.status(500).json({ message: "Erro ao buscar tópicos" });
+    console.error("Erro ao procurar tópicos do curso:", error);
+    res.status(500).json({ message: "Erro ao procurar tópicos" });
   }
 };
 
@@ -77,7 +77,7 @@ const createTopico = async (req, res) => {
       return res.status(400).json({ message: "Nome e ID do curso são obrigatórios" });
     }
 
-    // Buscar informações do curso para obter o nome do diretório
+    // Procurar informações do curso para obter o nome do diretório
     const curso = await Curso.findByPk(id_curso);
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
@@ -98,8 +98,8 @@ const createTopico = async (req, res) => {
       nome,
       id_curso,
       ordem: ordem || 1,
-      dir_path: topicoUrlPath, // Salvar o caminho relativo para o banco de dados
-      arquivo_path: topicoUrlPath, // Mesma coisa para manter consistência
+      dir_path: topicoUrlPath, // Guardar o caminho relativo para a base de dados
+      arquivo_path: topicoUrlPath, // A mesma coisa para manter consistência
       ativo: true
     });
 
@@ -118,7 +118,7 @@ const getTopicoById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar o tópico
+    // Procurar o tópico
     const topico = await TopicoCurso.findByPk(id);
 
     if (!topico) {
@@ -127,7 +127,7 @@ const getTopicoById = async (req, res) => {
 
     const topicoObj = topico.toJSON();
     
-    // Buscar pastas para este tópico
+    // Procurar pastas para este tópico
     const pastas = await PastaCurso.findAll({
       where: { 
         id_topico: id,
@@ -136,13 +136,13 @@ const getTopicoById = async (req, res) => {
       order: [['ordem', 'ASC']]
     });
     
-    // Para cada pasta, buscar conteúdos
+    // Para cada pasta, procurar conteúdos
     const pastasComConteudos = [];
     
     for (const pasta of pastas) {
       const pastaObj = pasta.toJSON();
       
-      // Buscar conteúdos para esta pasta
+      // Procurar conteúdos para esta pasta
       const conteudos = await ConteudoCurso.findAll({
         where: { 
           id_pasta: pasta.id_pasta,
@@ -159,8 +159,8 @@ const getTopicoById = async (req, res) => {
 
     res.json(topicoObj);
   } catch (error) {
-    console.error("Erro ao buscar tópico:", error);
-    res.status(500).json({ message: "Erro ao buscar tópico" });
+    console.error("Erro ao procurar tópico:", error);
+    res.status(500).json({ message: "Erro ao procurar tópico" });
   }
 };
 
@@ -176,9 +176,9 @@ const updateTopico = async (req, res) => {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
 
-    // Se estiver mudando o nome, atualizar também o diretório
+    // Se estiver a mudar o nome, atualizar também o diretório
     if (nome !== undefined && nome !== topico.nome) {
-      // Buscar o curso para obter o caminho completo
+      // Procurar o curso para obter o caminho completo
       const curso = await Curso.findByPk(topico.id_curso);
       if (curso) {
         const cursoSlug = uploadUtils.normalizarNome(curso.nome);
@@ -189,7 +189,7 @@ const updateTopico = async (req, res) => {
         const topicoAntigoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugAntigo);
         const topicoNovoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugNovo);
         
-        // Caminhos relativos para o banco de dados
+        // Caminhos relativos para a base de dados
         const topicoAntigoPath = `uploads/cursos/${cursoSlug}/${topicoSlugAntigo}`;
         const topicoNovoPath = `uploads/cursos/${cursoSlug}/${topicoSlugNovo}`;
         
@@ -201,7 +201,7 @@ const updateTopico = async (req, res) => {
           uploadUtils.ensureDir(topicoNovoDir);
         }
         
-        // Atualizar os caminhos no banco de dados
+        // Atualizar os caminhos na base de dados
         topico.dir_path = topicoNovoPath;
         topico.arquivo_path = topicoNovoPath;
       }
@@ -242,7 +242,7 @@ const deleteTopico = async (req, res) => {
       { where: { id_topico: id } }
     );
 
-    // Buscar todas as pastas deste tópico
+    // Procurar todas as pastas deste tópico
     const pastas = await PastaCurso.findAll({
       where: { id_topico: id },
       attributes: ['id_pasta']

@@ -7,9 +7,9 @@ const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOA
 
 function apagarDiretorio(diretorio) {
   if (fs.existsSync(diretorio)) {
-    const arquivos = fs.readdirSync(diretorio);
-    for (const arquivo of arquivos) {
-      const caminhoCompleto = path.join(diretorio, arquivo);
+    const ficheiros = fs.readdirSync(diretorio);
+    for (const ficheiro of ficheiros) {
+      const caminhoCompleto = path.join(diretorio, ficheiro);
       if (fs.statSync(caminhoCompleto).isDirectory()) {
         apagarDiretorio(caminhoCompleto);
       } else {
@@ -22,12 +22,12 @@ function apagarDiretorio(diretorio) {
 }
 
 function criarPastasCompletas() {
-  console.log("\n===== APAGANDO E RECRIANDO ESTRUTURA DE DIRETÓRIOS =====");
+  console.log("\n===== A APAGAR E RECRIAR ESTRUTURA DE DIRETÓRIOS =====");
   console.log(`Diretório base: ${BASE_UPLOAD_DIR}`);
 
   const directories = [
     path.join(BASE_UPLOAD_DIR, 'cursos'),
-    path.join(BASE_UPLOAD_DIR, 'users'),
+    path.join(BASE_UPLOAD_DIR, 'utilizadores'),
     path.join(BASE_UPLOAD_DIR, 'chat'),
     path.join(BASE_UPLOAD_DIR, 'temp')
   ];
@@ -53,15 +53,15 @@ function criarPastasCompletas() {
   const capaPath = path.join(BASE_UPLOAD_DIR, 'CAPA.png');
 
   try {
-    fs.writeFileSync(avatarPath, 'Este é um placeholder para AVATAR.png. Substitua por uma imagem real.');
-    console.log('✅ Arquivo placeholder AVATAR.png criado');
+    fs.writeFileSync(avatarPath, 'Este é um espaço reservado para AVATAR.png. Substitua por uma imagem real.');
+    console.log('✅ Ficheiro espaço reservado AVATAR.png criado');
   } catch (error) {
     console.error(`❌ Erro ao criar AVATAR.png: ${error.message}`);
   }
 
   try {
-    fs.writeFileSync(capaPath, 'Este é um placeholder para CAPA.png. Substitua por uma imagem real.');
-    console.log('✅ Arquivo placeholder CAPA.png criado');
+    fs.writeFileSync(capaPath, 'Este é um espaço reservado para CAPA.png. Substitua por uma imagem real.');
+    console.log('✅ Ficheiro espaço reservado CAPA.png criado');
   } catch (error) {
     console.error(`❌ Erro ao criar CAPA.png: ${error.message}`);
   }

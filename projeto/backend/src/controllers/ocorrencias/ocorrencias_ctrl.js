@@ -15,7 +15,7 @@ const criarNovaOcorrencia = async (req, res) => {
       return res.status(400).json({ message: "Dados incompletos para criar nova ocorrência" });
     }
     
-    // Buscar curso original
+    // Procurar curso original
     const cursoOriginal = await Curso.findByPk(id_curso_original, { transaction });
     if (!cursoOriginal) {
       await transaction.rollback();
@@ -46,7 +46,7 @@ const criarNovaOcorrencia = async (req, res) => {
       imagem_path: cursoOriginal.imagem_path
     }, { transaction });
     
-    // Registrar ocorrência
+    // Registar ocorrência
     const novaOcorrencia = await OcorrenciaCurso.create({
       id_curso_original,
       id_curso_nova_ocorrencia: novoCurso.id_curso,
@@ -72,7 +72,7 @@ const listarOcorrencias = async (req, res) => {
   try {
     const { id_curso } = req.params;
     
-    // Buscar todas as ocorrências do curso
+    // Procurar todas as ocorrências do curso
     const ocorrencias = await OcorrenciaCurso.findAll({
       where: { id_curso_original: id_curso },
       include: [
@@ -118,8 +118,8 @@ const getOcorrenciaById = async (req, res) => {
     
     res.json(ocorrencia);
   } catch (error) {
-    console.error("Erro ao buscar ocorrência:", error);
-    res.status(500).json({ message: "Erro ao buscar ocorrência" });
+    console.error("Erro ao procurar ocorrência:", error);
+    res.status(500).json({ message: "Erro ao procurar ocorrência" });
   }
 };
 

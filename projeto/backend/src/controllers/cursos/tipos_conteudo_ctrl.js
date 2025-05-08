@@ -9,8 +9,8 @@ const getAllTiposConteudo = async (req, res) => {
     });
     res.json(tipos);
   } catch (error) {
-    console.error("Erro ao buscar tipos de conteúdo:", error);
-    res.status(500).json({ message: "Erro ao buscar tipos de conteúdo" });
+    console.error("Erro ao procurar tipos de conteúdo:", error);
+    res.status(500).json({ message: "Erro ao procurar tipos de conteúdo" });
   }
 };
 
@@ -84,7 +84,7 @@ const deleteTipoConteudo = async (req, res) => {
       return res.status(404).json({ message: "Tipo de conteúdo não encontrado" });
     }
     
-    // Desativar em vez de excluir permanentemente
+    // Desativar em vez de eliminar permanentemente
     await tipo.update({ ativo: false });
     
     res.json({

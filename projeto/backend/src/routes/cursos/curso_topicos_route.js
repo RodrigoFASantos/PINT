@@ -3,13 +3,7 @@ const router = express.Router();
 
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
-const { 
-  getTopicosByCurso, 
-  createTopico, 
-  getTopicoById, 
-  updateTopico, 
-  deleteTopico 
-} = require("../../controllers/cursos/curso_topicos_ctrl");
+const { getTopicosByCurso, createTopico, getTopicoById, updateTopico, deleteTopico } = require("../../controllers/cursos/curso_topicos_ctrl");
 
 // Rota para obter todos os tópicos de um curso com suas pastas e conteúdos
 router.get("/curso/:id_curso", verificarToken, getTopicosByCurso);

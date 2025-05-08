@@ -8,7 +8,7 @@ const verificarToken = require('../../middleware/auth');
 const verificarCargo = (cargosPermitidos) => {
   return async (req, res, next) => {
     try {
-      // Verificar se o usuário tem o cargo necessário
+      // Verificar se o utilizador tem o cargo necessário
       const cargo = req.user.id_cargo || 0;
       
       // Mapear ID do cargo para nome do cargo
@@ -22,7 +22,7 @@ const verificarCargo = (cargosPermitidos) => {
       
       if (!cargosPermitidos.includes(cargoNome)) {
         return res.status(403).json({ 
-          message: "Acesso negado. Você não tem permissão para acessar este recurso." 
+          message: "Acesso negado. Não tens permissão para aceder a este recurso." 
         });
       }
       
@@ -37,19 +37,19 @@ const verificarCargo = (cargosPermitidos) => {
 // Rotas públicas (sem autenticação)
 router.get('/', formadorController.getAllFormadores);
 
-// Adicionadas novas rotas de registro com confirmação 
+// Adicionadas novas rotas de registo com confirmação 
 router.post('/register', formadorController.registerFormador);
 
 router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 
-// Rotas para gerenciar categorias de formadores
+// Rotas para gerir categorias de formadores
 router.get('/:id', formadorController.getFormadorById);
 router.get('/:id/cursos', formadorController.getCursosFormador);
 router.get('/:id/categorias', formadorController.getCategoriasFormador);
 router.post('/:id/categorias', verificarToken, verificarCargo(['admin', 'formador']), formadorController.addCategoriasFormador);
 router.delete('/:id/categorias/:categoriaId', verificarToken, verificarCargo(['admin', 'formador']), formadorController.removeFormadorCategoria);
 
-// Rotas para gerenciar áreas de formadores
+// Rotas para gerir áreas de formadores
 router.get('/:id/areas', formadorController.getAreasFormador);
 router.post('/:id/areas', verificarToken, verificarCargo(['admin', 'formador']), formadorController.addAreasFormador);
 router.delete('/:id/areas/:areaId', verificarToken, verificarCargo(['admin', 'formador']), formadorController.removeFormadorArea);
@@ -57,7 +57,5 @@ router.delete('/:id/areas/:areaId', verificarToken, verificarCargo(['admin', 'fo
 // Rotas protegidas - apenas administradores podem atualizar/excluir formadores
 router.put('/:id', verificarToken, verificarCargo(['admin']), formadorController.updateFormador);
 router.delete('/:id', verificarToken, verificarCargo(['admin']), formadorController.deleteFormador);
-
-
 
 module.exports = router;

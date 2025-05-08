@@ -12,7 +12,7 @@ const deleteConteudo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar o conteúdo
+    // Procurar o conteúdo
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
@@ -38,26 +38,26 @@ const deleteConteudoPermanently = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar o conteúdo
+    // Procurar o conteúdo
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Se for um arquivo, remover do sistema de arquivos
+    // Se for um ficheiro, remover do sistema de ficheiros
     if (conteudo.arquivo_path) {
       const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
       if (fs.existsSync(arquivoPath)) {
         try {
           fs.unlinkSync(arquivoPath);
-          console.log(`Arquivo físico removido: ${arquivoPath}`);
+          console.log(`Ficheiro físico removido: ${arquivoPath}`);
         } catch (fileError) {
-          console.error(`Erro ao remover arquivo físico: ${fileError.message}`);
+          console.error(`Erro ao remover ficheiro físico: ${fileError.message}`);
         }
       }
     }
 
-    // Excluir o registro do banco de dados
+    // Excluir o registo da base de dados
     await conteudo.destroy();
 
     res.status(200).json({
@@ -77,7 +77,7 @@ const restoreConteudo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar o conteúdo
+    // Procurar o conteúdo
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
@@ -196,7 +196,7 @@ const reordenarConteudos = async (req, res) => {
       );
     }
 
-    // Buscar os conteúdos atualizados
+    // Procurar os conteúdos atualizados
     const conteudosAtualizados = await ConteudoCurso.findAll({
       where: { id_pasta: pastaId },
       order: [['ordem', 'ASC']]
@@ -266,9 +266,9 @@ const getAllConteudos = async (req, res) => {
 
     res.status(200).json(formattedConteudos);
   } catch (error) {
-    console.error('Erro ao buscar todos os conteúdos:', error);
+    console.error('Erro ao procurar todos os conteúdos:', error);
     res.status(500).json({
-      message: 'Erro ao buscar conteúdos',
+      message: 'Erro ao procurar conteúdos',
       error: error.message
     });
   }
@@ -328,9 +328,9 @@ const getConteudoById = async (req, res) => {
 
     res.status(200).json(formattedConteudo);
   } catch (error) {
-    console.error('Erro ao buscar conteúdo por ID:', error);
+    console.error('Erro ao procurar conteúdo por ID:', error);
     res.status(500).json({
-      message: 'Erro ao buscar conteúdo',
+      message: 'Erro ao procurar conteúdo',
       error: error.message
     });
   }
@@ -347,7 +347,7 @@ const getConteudosByCurso = async (req, res) => {
       return res.status(404).json({ message: 'Curso não encontrado' });
     }
 
-    // Buscar conteúdos sem usar associações
+    // Procurar conteúdos sem usar associações
     const conteudos = await ConteudoCurso.findAll({
       where: {
         id_curso: cursoId,
@@ -375,7 +375,7 @@ const getConteudosByCurso = async (req, res) => {
       return res.status(200).json([]);
     }
 
-    // Em seguida, buscar as informações das pastas separadamente
+    // Em seguida, procurar as informações das pastas separadamente
     const pastaIds = [...new Set(conteudos.map(c => c.id_pasta))];
     const pastas = await PastaCurso.findAll({
       where: {
@@ -416,9 +416,9 @@ const getConteudosByCurso = async (req, res) => {
 
     res.status(200).json(formattedConteudos);
   } catch (error) {
-    console.error('Erro ao buscar conteúdos do curso:', error);
+    console.error('Erro ao procurar conteúdos do curso:', error);
     res.status(500).json({
-      message: 'Erro ao buscar conteúdos do curso',
+      message: 'Erro ao procurar conteúdos do curso',
       error: error.message
     });
   }
@@ -447,9 +447,9 @@ const getConteudosByPasta = async (req, res) => {
 
     res.status(200).json(conteudos);
   } catch (error) {
-    console.error('Erro ao buscar conteúdos da pasta:', error);
+    console.error('Erro ao procurar conteúdos da pasta:', error);
     res.status(500).json({
-      message: 'Erro ao buscar conteúdos da pasta',
+      message: 'Erro ao procurar conteúdos da pasta',
       error: error.message
     });
   }
@@ -515,7 +515,7 @@ const createConteudo = async (req, res) => {
     const conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug, 'conteudos');
     uploadUtils.ensureDir(conteudosDir);
 
-    // Caminho relativo para o banco de dados
+    // Caminho relativo para a base de dados
     const conteudosPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/conteudos`;
 
     let conteudoData = {
@@ -525,40 +525,40 @@ const createConteudo = async (req, res) => {
       id_pasta,
       id_curso,
       ativo: true,
-      dir_path: conteudosPath
+      dir_path: conteudosPath // Guardar o caminho relativo na base de dados
     };
 
     const timestamp = Date.now();
     const tituloBase = uploadUtils.normalizarNome(titulo);
 
     if (tipo === 'file') {
-      if (!req.file) return res.status(400).json({ message: 'Arquivo não enviado' });
+      if (!req.file) return res.status(400).json({ message: 'Ficheiro não enviado' });
 
       const tempPath = req.file.path;
       const fileName = `${timestamp}-${tituloBase}${path.extname(req.file.originalname)}`;
       const destPath = path.join(conteudosDir, fileName);
 
-      // Mover o arquivo
-      console.log(`Movendo arquivo de ${tempPath} para ${destPath}`);
+      // Mover o ficheiro
+      console.log(`A mover ficheiro de ${tempPath} para ${destPath}`);
       const movido = uploadUtils.moverArquivo(tempPath, destPath);
       if (!movido) {
-        return res.status(500).json({ message: 'Erro ao mover o arquivo do conteúdo' });
+        return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
       }
 
       conteudoData.arquivo_path = `${conteudosPath}/${fileName}`;
     } else if (tipo === 'link' || tipo === 'video') {
       if (!url) return res.status(400).json({ message: 'URL é obrigatória para tipos link e video' });
 
-      // Para links e vídeos, criar um arquivo de referência
+      // Para links e vídeos, criar um ficheiro de referência
       const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
       const fakeFilePath = path.join(conteudosDir, fakeFileName);
 
-      // Escrever a URL no arquivo
+      // Escrever a URL no ficheiro
       try {
         fs.writeFileSync(fakeFilePath, url);
       } catch (error) {
-        console.error('Erro ao criar arquivo de referência:', error);
-        return res.status(500).json({ message: 'Erro ao salvar referência de URL' });
+        console.error('Erro ao criar ficheiro de referência:', error);
+        return res.status(500).json({ message: 'Erro ao guardar referência de URL' });
       }
 
       conteudoData.url = url;
@@ -576,7 +576,7 @@ const createConteudo = async (req, res) => {
       conteudoData.ordem = ultimoConteudo ? ultimoConteudo.ordem + 1 : 1;
     }
 
-    // Criar o conteúdo no banco de dados
+    // Criar o conteúdo na base de dados
     const novoConteudo = await ConteudoCurso.create(conteudoData);
 
     res.status(201).json({
@@ -593,21 +593,22 @@ const createConteudo = async (req, res) => {
   }
 };
 
+
 // Atualizar um conteúdo existente
 const updateConteudo = async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, descricao, tipo, url, id_pasta, id_curso, ordem, ativo } = req.body;
 
-    console.log(`Iniciando atualização do conteúdo ID ${id}`);
+    console.log(`A iniciar atualização do conteúdo ID ${id}`);
 
-    // Buscar o conteúdo existente
+    // Procurar o conteúdo existente
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Buscar informações para o diretório
+    // Procurar informações para o diretório
     const pastaAtual = await PastaCurso.findByPk(conteudo.id_pasta);
     const topicoAtual = pastaAtual ? await TopicoCurso.findByPk(pastaAtual.id_topico) : null;
     const cursoAtual = await Curso.findByPk(conteudo.id_curso);
@@ -622,7 +623,7 @@ const updateConteudo = async (req, res) => {
     let cursoAlvo = cursoAtual;
     let precisaMoverArquivo = false;
 
-    // Verificar se está mudando de pasta
+    // Verificar se está a mudar de pasta
     if (id_pasta && id_pasta !== conteudo.id_pasta) {
       pastaAlvo = await PastaCurso.findByPk(id_pasta);
       if (!pastaAlvo) {
@@ -641,7 +642,7 @@ const updateConteudo = async (req, res) => {
 
       precisaMoverArquivo = true;
     }
-    // Verificar se está mudando de curso (e a pasta não foi alterada)
+    // Verificar se está a mudar de curso (e a pasta não foi alterada)
     else if (id_curso && id_curso !== conteudo.id_curso) {
       cursoAlvo = await Curso.findByPk(id_curso);
       if (!cursoAlvo) {
@@ -687,11 +688,11 @@ const updateConteudo = async (req, res) => {
     // Garantir que os diretórios existam
     uploadUtils.ensureDir(conteudoDirAlvo);
 
-    // Se precisa mover o arquivo ou estamos mudando o tipo
+    // Se precisa mover o ficheiro ou estamos a mudar o tipo
     if (precisaMoverArquivo || (tipo !== undefined && tipo !== conteudo.tipo)) {
-      console.log('Movendo arquivo ou alterando tipo de conteúdo');
+      console.log('A mover ficheiro ou alterar tipo de conteúdo');
       
-      // Se estiver mudando o tipo, verificar os campos necessários
+      // Se estiver a mudar o tipo, verificar os campos necessários
       if (tipo !== undefined && tipo !== conteudo.tipo) {
         if (!['file', 'link', 'video'].includes(tipo)) {
           return res.status(400).json({
@@ -708,47 +709,47 @@ const updateConteudo = async (req, res) => {
         if (tipo === 'file') {
           if (!req.file && !conteudo.arquivo_path) {
             return res.status(400).json({
-              message: 'Arquivo é obrigatório para o tipo file'
+              message: 'Ficheiro é obrigatório para o tipo file'
             });
           }
           dadosAtualizacao.url = null;
 
           if (req.file) {
-            // Se já existe um arquivo, remover o antigo
+            // Se já existe um ficheiro, remover o antigo
             if (conteudo.arquivo_path) {
               const arquivoAntigoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
               if (fs.existsSync(arquivoAntigoPath)) {
                 try {
                   fs.unlinkSync(arquivoAntigoPath);
-                  console.log(`Arquivo antigo removido: ${arquivoAntigoPath}`);
+                  console.log(`Ficheiro antigo removido: ${arquivoAntigoPath}`);
                 } catch (fileError) {
-                  console.error(`Erro ao remover arquivo antigo: ${fileError.message}`);
+                  console.error(`Erro ao remover ficheiro antigo: ${fileError.message}`);
                 }
               }
             }
 
-            // Mover o novo arquivo para o diretório correto
+            // Mover o novo ficheiro para o diretório correto
             const tempPath = req.file.path;
             const fileName = `${timestamp}-${tituloBase}${path.extname(req.file.originalname)}`;
             const destPath = path.join(conteudoDirAlvo, fileName);
 
-            console.log(`Movendo arquivo de ${tempPath} para ${destPath}`);
+            console.log(`A mover ficheiro de ${tempPath} para ${destPath}`);
             const movido = uploadUtils.moverArquivo(tempPath, destPath);
             if (!movido) {
-              return res.status(500).json({ message: 'Erro ao mover o arquivo do conteúdo' });
+              return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
             }
 
             dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fileName}`;
           } else if (precisaMoverArquivo && conteudo.arquivo_path) {
-            // Mover o arquivo existente para nova localização
+            // Mover o ficheiro existente para nova localização
             const fileName = path.basename(conteudo.arquivo_path);
             const arquivoOrigem = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
             const arquivoDestino = path.join(conteudoDirAlvo, fileName);
 
-            console.log(`Movendo arquivo existente de ${arquivoOrigem} para ${arquivoDestino}`);
+            console.log(`A mover ficheiro existente de ${arquivoOrigem} para ${arquivoDestino}`);
             const movido = uploadUtils.moverArquivo(arquivoOrigem, arquivoDestino);
             if (!movido) {
-              return res.status(500).json({ message: 'Erro ao mover o arquivo existente' });
+              return res.status(500).json({ message: 'Erro ao mover o ficheiro existente' });
             }
 
             dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fileName}`;
@@ -760,102 +761,102 @@ const updateConteudo = async (req, res) => {
             });
           }
 
-          // Se tinha arquivo, remover
+          // Se tinha ficheiro, remover
           if (conteudo.arquivo_path) {
             const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
             if (fs.existsSync(arquivoPath)) {
               try {
                 fs.unlinkSync(arquivoPath);
-                console.log(`Arquivo removido: ${arquivoPath}`);
+                console.log(`Ficheiro removido: ${arquivoPath}`);
               } catch (fileError) {
-                console.error(`Erro ao remover arquivo: ${fileError.message}`);
+                console.error(`Erro ao remover ficheiro: ${fileError.message}`);
               }
             }
           }
 
-          // Criar novo arquivo de referência
+          // Criar novo ficheiro de referência
           const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
           const fakeFilePath = path.join(conteudoDirAlvo, fakeFileName);
 
-          // Escrever a URL no arquivo
+          // Escrever a URL no ficheiro
           fs.writeFileSync(fakeFilePath, url || conteudo.url || '');
 
           dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fakeFileName}`;
           if (url) dadosAtualizacao.url = url;
         }
       } else {
-        // Mesmo tipo, mas precisa mover o arquivo
+        // Mesmo tipo, mas precisa mover o ficheiro
         if (conteudo.arquivo_path) {
           const fileName = path.basename(conteudo.arquivo_path);
           const arquivoOrigem = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
           const arquivoDestino = path.join(conteudoDirAlvo, fileName);
 
-          console.log(`Movendo arquivo existente de ${arquivoOrigem} para ${arquivoDestino}`);
+          console.log(`A mover ficheiro existente de ${arquivoOrigem} para ${arquivoDestino}`);
           const movido = uploadUtils.moverArquivo(arquivoOrigem, arquivoDestino);
           if (!movido) {
-            return res.status(500).json({ message: 'Erro ao mover o arquivo existente' });
+            return res.status(500).json({ message: 'Erro ao mover o ficheiro existente' });
           }
 
           dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fileName}`;
         }
       }
     } else if (req.file) {
-      // Mesmo local, mas arquivo atualizado
-      console.log('Atualizando arquivo no mesmo local');
+      // Mesmo local, mas ficheiro atualizado
+      console.log('A atualizar ficheiro no mesmo local');
       
       if (conteudo.tipo === 'file') {
-        // Se já existe um arquivo, remover o antigo
+        // Se já existe um ficheiro, remover o antigo
         if (conteudo.arquivo_path) {
           const arquivoAntigoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
           if (fs.existsSync(arquivoAntigoPath)) {
             try {
               fs.unlinkSync(arquivoAntigoPath);
-              console.log(`Arquivo antigo removido: ${arquivoAntigoPath}`);
+              console.log(`Ficheiro antigo removido: ${arquivoAntigoPath}`);
             } catch (fileError) {
-              console.error(`Erro ao remover arquivo antigo: ${fileError.message}`);
+              console.error(`Erro ao remover ficheiro antigo: ${fileError.message}`);
             }
           }
         }
 
-        // Mover o novo arquivo
+        // Mover o novo ficheiro
         const tempPath = req.file.path;
         const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
         const fileName = `${Date.now()}-${tituloBase}${path.extname(req.file.originalname)}`;
         const destPath = path.join(conteudoDirAtual, fileName);
 
-        console.log(`Movendo novo arquivo de ${tempPath} para ${destPath}`);
+        console.log(`A mover novo ficheiro de ${tempPath} para ${destPath}`);
         const movido = uploadUtils.moverArquivo(tempPath, destPath);
         if (!movido) {
-          return res.status(500).json({ message: 'Erro ao mover o arquivo do conteúdo' });
+          return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
         }
 
         dadosAtualizacao.arquivo_path = `${conteudoPathAtual}/${fileName}`;
       }
     } else if (url !== undefined && (conteudo.tipo === 'link' || conteudo.tipo === 'video')) {
-      // Atualizar URL e arquivo de referência
-      console.log('Atualizando URL para conteúdo tipo link/video');
+      // Atualizar URL e ficheiro de referência
+      console.log('A atualizar URL para conteúdo tipo link/video');
       
       if (conteudo.arquivo_path) {
-        // Atualizar o conteúdo do arquivo de referência
+        // Atualizar o conteúdo do ficheiro de referência
         const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
         if (fs.existsSync(arquivoPath)) {
           try {
             fs.writeFileSync(arquivoPath, url);
-            console.log(`Arquivo de referência atualizado: ${arquivoPath}`);
+            console.log(`Ficheiro de referência atualizado: ${arquivoPath}`);
           } catch (fileError) {
-            console.error(`Erro ao atualizar arquivo de referência: ${fileError.message}`);
+            console.error(`Erro ao atualizar ficheiro de referência: ${fileError.message}`);
           }
         } else {
-          // Criar novo arquivo de referência
+          // Criar novo ficheiro de referência
           const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
           const fakeFileName = `${Date.now()}-${conteudo.tipo}-${tituloBase}.txt`;
           const fakeFilePath = path.join(conteudoDirAtual, fakeFileName);
 
           try {
             fs.writeFileSync(fakeFilePath, url);
-            console.log(`Novo arquivo de referência criado: ${fakeFilePath}`);
+            console.log(`Novo ficheiro de referência criado: ${fakeFilePath}`);
           } catch (fileError) {
-            console.error(`Erro ao criar novo arquivo de referência: ${fileError.message}`);
+            console.error(`Erro ao criar novo ficheiro de referência: ${fileError.message}`);
           }
           
           dadosAtualizacao.arquivo_path = `${conteudoPathAtual}/${fakeFileName}`;
@@ -871,10 +872,10 @@ const updateConteudo = async (req, res) => {
     }
 
     // Atualizar o conteúdo
-    console.log('Atualizando registro no banco de dados:', dadosAtualizacao);
+    console.log('A atualizar registo na base de dados:', dadosAtualizacao);
     await conteudo.update(dadosAtualizacao);
 
-    // Buscar o conteúdo atualizado com dados relacionados
+    // Procurar o conteúdo atualizado com dados relacionados
     const conteudoAtualizado = await ConteudoCurso.findByPk(id, {
       include: [
         {

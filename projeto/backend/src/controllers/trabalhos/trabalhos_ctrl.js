@@ -6,7 +6,7 @@ const getAllTrabalhos = async (req, res) => {
     const trabalhos = await Trabalho_Entregue.findAll();
     res.json(trabalhos);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar trabalhos" });
+    res.status(500).json({ message: "Erro ao procurar trabalhos" });
   }
 };
 

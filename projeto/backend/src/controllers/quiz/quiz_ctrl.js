@@ -4,13 +4,13 @@ const { sequelize } = require("../../config/db");
 // Funções do controlador
 const getAllQuizzes = async (req, res) => {
   try {
-    // Buscar quizzes de uma forma compatível com PostgreSQL
+    // Procurar quizzes de uma forma compatível com PostgreSQL
     const [quizzes] = await sequelize.query('SELECT * FROM quizzes');
     return res.json(quizzes);
   } catch (error) {
-    console.error('Erro ao buscar quizzes:', error);
+    console.error('Erro ao procurar quizzes:', error);
     return res.status(500).json({ 
-      message: 'Erro ao buscar quizzes',
+      message: 'Erro ao procurar quizzes',
       error: error.message 
     });
   }
@@ -33,9 +33,9 @@ const getQuizById = async (req, res) => {
     
     return res.json(quiz);
   } catch (error) {
-    console.error('Erro ao buscar quiz por ID:', error);
+    console.error('Erro ao procurar quiz por ID:', error);
     return res.status(500).json({ 
-      message: 'Erro ao buscar quiz',
+      message: 'Erro ao procurar quiz',
       error: error.message 
     });
   }
@@ -139,7 +139,7 @@ const iniciarQuiz = async (req, res) => {
     
     if (respostaExistente) {
       return res.status(400).json({ 
-        message: 'Você já iniciou este quiz',
+        message: 'Já iniciou este quiz',
         id_resposta: respostaExistente.id
       });
     }
@@ -154,7 +154,7 @@ const iniciarQuiz = async (req, res) => {
       }
     );
     
-    // Buscar a primeira pergunta do quiz
+    // Procurar a primeira pergunta do quiz
     const [primeiraPergunta] = await sequelize.query(
       'SELECT id, texto FROM perguntas WHERE id_quiz = $1 ORDER BY id ASC LIMIT 1',
       {
@@ -225,7 +225,7 @@ const responderPergunta = async (req, res) => {
       return res.status(404).json({ message: 'Opção não encontrada ou não pertence a esta pergunta' });
     }
     
-    // Gravar resposta do utilizador
+    // Registar resposta do utilizador
     await sequelize.query(
       `INSERT INTO respostas_pergunta (id_resposta_quiz, id_pergunta, id_opcao, created_at, updated_at) 
        VALUES ($1, $2, $3, NOW(), NOW())`,
@@ -246,7 +246,7 @@ const responderPergunta = async (req, res) => {
       );
     }
     
-    // Buscar próxima pergunta
+    // Procurar próxima pergunta
     const [proximaPergunta] = await sequelize.query(
       `SELECT p.id, p.texto 
        FROM perguntas p 
@@ -308,7 +308,7 @@ const finalizarQuiz = async (req, res) => {
       }
     );
     
-    // Buscar todas as respostas para calcular estatísticas
+    // Procurar todas as respostas para calcular estatísticas
     const [respostas] = await sequelize.query(
       `SELECT rp.id_pergunta, p.texto as pergunta_texto, o.id as id_opcao, o.texto as opcao_texto, o.correta
        FROM respostas_pergunta rp

@@ -14,13 +14,13 @@ const FormadorAssociacoesPendentes = require("../../database/models/Formador_Ass
 // Obter todos os formadores com paginação
 const getAllFormadores = async (req, res) => {
   try {
-    console.log("📋 Buscando lista de formadores");
+    console.log("📋 Procurar lista de formadores");
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Busca usuários com cargo de formador (id_cargo = 2)
-    console.log("🔍 Buscando na tabela User com id_cargo = 2");
+    // Procura utilizadores com cargo de formador (id_cargo = 2)
+    console.log("🔍 Procurar na tabela User com id_cargo = 2");
 
     const formadores = await User.findAll({
       where: { id_cargo: 2 },
@@ -70,13 +70,13 @@ const getAllFormadores = async (req, res) => {
 const getFormadorById = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`🔍 Buscando formador com ID: ${id}`);
+    console.log(`🔍 Procurar formador com ID: ${id}`);
 
-    // Verifica se existe um usuário com esse ID e que seja formador
-    let usuario = null;
+    // Verifica se existe um utilizador com esse ID e que seja formador
+    let Utilizador = null;
     try {
-      console.log(`🔍 Buscando usuário com ID: ${id}`);
-      usuario = await User.findByPk(id, {
+      console.log(`🔍 Procurar utilizador com ID: ${id}`);
+      Utilizador = await User.findByPk(id, {
         include: [
           {
             model: Categoria,
@@ -93,24 +93,24 @@ const getFormadorById = async (req, res) => {
         ]
       });
 
-      if (!usuario) {
+      if (!Utilizador) {
         return res.status(404).json({ message: "Formador não encontrado" });
       }
 
-      // Se o usuário NÃO for um formador (id_cargo != 2), retorna erro
-      if (usuario.id_cargo !== 2) {
-        console.log("⚠️ ATENÇÃO: O usuário encontrado NÃO é um formador (id_cargo != 2)");
+      // Se o utilizador NÃO for um formador (id_cargo != 2), retorna erro
+      if (Utilizador.id_cargo !== 2) {
+        console.log("⚠️ ATENÇÃO: O utilizador encontrado NÃO é um formador (id_cargo != 2)");
         return res.status(404).json({ message: "Formador não encontrado" });
       }
 
     } catch (userError) {
-      console.error("❌ Erro ao buscar usuário:", userError.message);
+      console.error("❌ Erro ao procurar utilizador:", userError.message);
       console.error(userError.stack);
-      return res.status(500).json({ message: "Erro ao buscar formador", error: userError.message });
+      return res.status(500).json({ message: "Erro ao procurar formador", error: userError.message });
     }
 
-    // Busca os cursos do formador
-    console.log(`🔍 Buscando cursos para o formador ID: ${id}`);
+    // Procurar os cursos do formador
+    console.log(`🔍 Procurar cursos para o formador ID: ${id}`);
 
     let cursos = [];
     try {
@@ -121,21 +121,21 @@ const getFormadorById = async (req, res) => {
       });
       console.log(`✅ Encontrados ${cursos.length} cursos para o formador`);
     } catch (cursosError) {
-      console.error("❌ Erro ao buscar cursos:", cursosError.message);
+      console.error("❌ Erro ao procurar cursos:", cursosError.message);
       console.error(cursosError.stack);
       cursos = [];
     }
 
     console.log("✅ Retornando dados do formador a partir da tabela User");
     return res.json({
-      ...usuario.toJSON(),
+      ...Utilizador.toJSON(),
       cursos_ministrados: cursos
     });
 
   } catch (error) {
-    console.error("❌ Erro geral ao buscar formador:", error);
+    console.error("❌ Erro geral ao procurar formador:", error);
     console.error(error.stack);
-    return res.status(500).json({ message: "Erro ao buscar formador", error: error.message });
+    return res.status(500).json({ message: "Erro ao procurar formador", error: error.message });
   }
 };
 
@@ -144,17 +144,17 @@ const getFormadorProfile = async (req, res) => {
   try {
     const userId = req.user.id_utilizador;
 
-    // Verificar se o usuário é um formador
+    // Verificar se o utilizador é um formador
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado" });
+      return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
     if (user.id_cargo !== 2) {
-      return res.status(400).json({ message: "Este usuário não é um formador" });
+      return res.status(400).json({ message: "Este utilizador não é um formador" });
     }
 
-    // Buscar o formador com suas categorias e áreas
+    // Procurar o formador com suas categorias e áreas
     const formador = await User.findByPk(userId, {
       include: [
         {
@@ -184,7 +184,7 @@ const getFormadorProfile = async (req, res) => {
       ]
     });
 
-    // Buscar cursos em que o formador está inscrito
+    // Procurar cursos em que o formador está inscrito
     const inscricoes = await Inscricao_Curso.findAll({
       where: {
         id_utilizador: userId,
@@ -210,7 +210,7 @@ const getFormadorProfile = async (req, res) => {
       ]
     });
 
-    // Buscar cursos ministrados pelo formador
+    // Procurar cursos ministrados pelo formador
     const cursosMinistrados = await Curso.findAll({
       where: { id_formador: userId },
       include: [
@@ -290,9 +290,9 @@ const getFormadorProfile = async (req, res) => {
       cursosMinistrados: cursosMinistradosFormatados
     });
   } catch (error) {
-    console.error("Erro ao buscar perfil do formador:", error);
+    console.error("Erro ao procurar perfil do formador:", error);
     return res.status(500).json({
-      message: "Erro ao buscar perfil do formador",
+      message: "Erro ao procurar perfil do formador",
       error: error.message
     });
   }
@@ -303,11 +303,11 @@ const getFormadorProfile = async (req, res) => {
 const getCursosFormador = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`🔍 Buscando cursos do formador ID: ${id}`);
+    console.log(`🔍 Procurar cursos do formador ID: ${id}`);
 
-    // Verificar primeiro se o usuário é um formador
-    const usuario = await User.findByPk(id);
-    if (!usuario || usuario.id_cargo !== 2) {
+    // Verificar primeiro se o utilizador é um formador
+    const Utilizador = await User.findByPk(id);
+    if (!Utilizador || Utilizador.id_cargo !== 2) {
       return res.status(404).json({ message: "Formador não encontrado" });
     }
 
@@ -321,16 +321,16 @@ const getCursosFormador = async (req, res) => {
       });
       console.log(`✅ Encontrados ${cursos.length} cursos para o formador ${id}`);
     } catch (error) {
-      console.error("❌ Erro ao buscar cursos:", error.message);
+      console.error("❌ Erro ao procurar cursos:", error.message);
       console.error(error.stack);
       cursos = [];
     }
 
     return res.json(cursos);
   } catch (error) {
-    console.error("❌ Erro geral ao buscar cursos do formador:", error);
+    console.error("❌ Erro geral ao procurar cursos do formador:", error);
     console.error(error.stack);
-    return res.status(500).json({ message: "Erro ao buscar cursos do formador", error: error.message });
+    return res.status(500).json({ message: "Erro ao procurar cursos do formador", error: error.message });
   }
 };
 
@@ -339,7 +339,7 @@ const getCursosFormador = async (req, res) => {
 // Função para registrar um novo formador (pendente de confirmação)
 const registerFormador = async (req, res) => {
   try {
-    console.log("📋 Iniciando registro de formador pendente");
+    console.log("📋 Iniciando registo de formador pendente");
     const {
       nome,
       email,
@@ -357,26 +357,26 @@ const registerFormador = async (req, res) => {
     // Validar campos obrigatórios
     if (!nome || !email || !password || !idade || !telefone || !morada || !codigo_postal) {
       return res.status(400).json({
-        message: "Dados incompletos para registrar formador",
+        message: "Dados incompletos para registar formador",
         campos_necessarios: "nome, email, password, idade, telefone, morada, codigo_postal"
       });
     }
 
-    // Verificar se o email já existe em usuários ativos
+    // Verificar se o email já existe em utilizadores ativos
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: "Este email já está registrado. Por favor, use outro email." });
+      return res.status(400).json({ message: "Este email já está registado. Por favor, use outro email." });
     }
 
-    // Verificar se há um registro pendente com este email
+    // Verificar se há um registo pendente com este email
     const pendingUser = await User_Pendente.findOne({ where: { email } });
     if (pendingUser) {
-      // Se o registro estiver expirado, podemos removê-lo e permitir um novo
+      // Se o registo estiver expirado, podemos removê-lo e permitir um novo
       if (new Date() > new Date(pendingUser.expires_at)) {
         await pendingUser.destroy();
       } else {
         return res.status(400).json({
-          message: "Já existe um registro pendente com este email. Verifique a caixa de entrada para ativar a conta ou aguarde o prazo de expiração para tentar novamente."
+          message: "Já existe um registo pendente com este email. Verifique a caixa de entrada para ativar a conta ou aguarde o prazo de expiração para tentar novamente."
         });
       }
     }
@@ -396,7 +396,7 @@ const registerFormador = async (req, res) => {
     const expires_at = new Date();
     expires_at.setHours(expires_at.getHours() + 24);
 
-    // Criar registro pendente
+    // Criar registo pendente
     const novoPendente = await User_Pendente.create({
       id_cargo: 2, // Cargo de formador
       nome,
@@ -410,7 +410,7 @@ const registerFormador = async (req, res) => {
       expires_at
     });
 
-    // NOVO: Salvar as associações pendentes se foram fornecidas
+    // NOVO: Guardar as associações pendentes se foram fornecidas
     if (categorias?.length > 0 || areas?.length > 0 || curso) {
       try {
         await FormadorAssociacoesPendentes.create({
@@ -419,10 +419,10 @@ const registerFormador = async (req, res) => {
           areas: areas || [],
           cursos: curso ? [curso] : []
         });
-        console.log("✅ Associações pendentes salvas para confirmação posterior");
+        console.log("✅ Associações pendentes guardadas para confirmação posterior");
       } catch (assocError) {
-        console.error("⚠️ Erro ao salvar associações pendentes:", assocError);
-        // Não falharemos o registro por causa disso
+        console.error("⚠️ Erro ao guardar associações pendentes:", assocError);
+        // Não falharemos o registo por causa disso
       }
     }
 
@@ -447,23 +447,23 @@ const registerFormador = async (req, res) => {
     } catch (emailError) {
       console.error("❌ Erro ao enviar email de confirmação:", emailError);
 
-      // Mesmo com erro no email, mantemos o registro pendente, mas informamos o problema
+      // Mesmo com erro no email, mantemos o registo pendente, mas informamos o problema
       return res.status(200).json({
-        message: "Formador registrado, mas houve um problema ao enviar o email de confirmação. Por favor, use a opção 'Reenviar confirmação' na tela de login.",
+        message: "Formador registado, mas houve um problema ao enviar o email de confirmação. Por favor, use a opção 'Reenviar confirmação' no ecrã de login.",
         pendingId: novoPendente.id,
         warning: "Problema ao enviar email"
       });
     }
 
     return res.status(201).json({
-      message: "Formador registrado com sucesso! Um email de confirmação foi enviado.",
+      message: "Formador registado com sucesso! Um email de confirmação foi enviado.",
       pendingId: novoPendente.id
     });
 
   } catch (error) {
-    console.error("❌ Erro ao registrar formador:", error);
+    console.error("❌ Erro ao registar formador:", error);
     console.error(error.stack);
-    return res.status(500).json({ message: "Erro ao registrar formador", error: error.message });
+    return res.status(500).json({ message: "Erro ao registar formador", error: error.message });
   }
 };
 
@@ -475,19 +475,19 @@ const updateFormador = async (req, res) => {
     const { id } = req.params;
     const { nome, email, foto_perfil, telefone, data_nascimento, biografia } = req.body;
 
-    // Verificar se o usuário existe e é um formador
-    const usuario = await User.findByPk(id);
+    // Verificar se o utilizador existe e é um formador
+    const Utilizador = await User.findByPk(id);
 
-    if (!usuario) {
+    if (!Utilizador) {
       return res.status(404).json({ message: "Formador não encontrado" });
     }
 
-    if (usuario.id_cargo !== 2) {
-      return res.status(400).json({ message: "Este usuário não é um formador" });
+    if (Utilizador.id_cargo !== 2) {
+      return res.status(400).json({ message: "Este utilizador não é um formador" });
     }
 
     // Atualizar informações
-    await usuario.update({
+    await Utilizador.update({
       ...(nome && { nome }),
       ...(email && { email }),
       ...(foto_perfil && { foto_perfil }),
@@ -496,7 +496,7 @@ const updateFormador = async (req, res) => {
       ...(biografia && { biografia })
     });
 
-    return res.json(usuario);
+    return res.json(Utilizador);
   } catch (error) {
     console.error("❌ Erro ao atualizar formador:", error);
     console.error(error.stack);
@@ -504,20 +504,20 @@ const updateFormador = async (req, res) => {
   }
 };
 
-// Remover status de formador (alterar id_cargo)
+// Remover estatuto de formador (alterar id_cargo)
 const deleteFormador = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verificar se o usuário existe e é um formador
-    const usuario = await User.findByPk(id);
+    // Verificar se o utilizador existe e é um formador
+    const Utilizador = await User.findByPk(id);
 
-    if (!usuario) {
+    if (!Utilizador) {
       return res.status(404).json({ message: "Formador não encontrado" });
     }
 
-    if (usuario.id_cargo !== 2) {
-      return res.status(400).json({ message: "Este usuário não é um formador" });
+    if (Utilizador.id_cargo !== 2) {
+      return res.status(400).json({ message: "Este utilizador não é um formador" });
     }
 
     // Verificar se há cursos associados a este formador
@@ -545,12 +545,12 @@ const deleteFormador = async (req, res) => {
       console.error("⚠️ Erro ao remover associações do formador:", associationError);
     }
 
-    // Alterar cargo para usuário normal (formando)
-    await usuario.update({ id_cargo: 3 });
+    // Alterar cargo para utilizador normal (formando)
+    await Utilizador.update({ id_cargo: 3 });
 
     return res.json({
-      message: "Status de formador removido com sucesso",
-      usuario
+      message: "Estatuto de formador removido com sucesso",
+      Utilizador
     });
   } catch (error) {
     console.error("❌ Erro ao excluir formador:", error);
@@ -558,11 +558,6 @@ const deleteFormador = async (req, res) => {
     return res.status(500).json({ message: "Erro ao excluir formador", error: error.message });
   }
 };
-
-
-
-
-
 
 /*
  FUNÇÕES PARA GERIR CATEGORIAS E ÁREAS DOS FORMADORES
@@ -593,8 +588,8 @@ const getCategoriasFormador = async (req, res) => {
 
     return res.json(categorias);
   } catch (error) {
-    console.error("❌ Erro ao buscar categorias do formador:", error);
-    return res.status(500).json({ message: "Erro ao buscar categorias do formador", error: error.message });
+    console.error("❌ Erro ao procurar categorias do formador:", error);
+    return res.status(500).json({ message: "Erro ao procurar categorias do formador", error: error.message });
   }
 };
 
@@ -627,8 +622,8 @@ const getAreasFormador = async (req, res) => {
 
     return res.json(areas);
   } catch (error) {
-    console.error("❌ Erro ao buscar áreas do formador:", error);
-    return res.status(500).json({ message: "Erro ao buscar áreas do formador", error: error.message });
+    console.error("❌ Erro ao procurar áreas do formador:", error);
+    return res.status(500).json({ message: "Erro ao procurar áreas do formador", error: error.message });
   }
 };
 
@@ -688,7 +683,7 @@ const addCategoriasFormador = async (req, res) => {
       }
     }
 
-    // Buscar todas as categorias atualizadas do formador
+    // Procurar todas as categorias atualizadas do formador
     const categoriasAtualizadas = await Categoria.findAll({
       include: [
         {
@@ -818,7 +813,7 @@ const addAreasFormador = async (req, res) => {
       }
     }
 
-    // Buscar todas as áreas atualizadas do formador
+    // Procurar todas as áreas atualizadas do formador
     const areasAtualizadas = await Area.findAll({
       include: [
         {

@@ -5,7 +5,7 @@ const getAllCargos = async (req, res) => {
       const cargo = await Cargo.findAll();
       res.json(cargo);
     } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar Cargos" });
+      res.status(500).json({ message: "Erro ao procurar Cargos" });
     }
 };
 

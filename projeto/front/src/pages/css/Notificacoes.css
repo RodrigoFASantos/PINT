@@ -1,0 +1,249 @@
+.notificacoes-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .notificacoes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 15px;
+  }
+  
+  .notificacoes-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+  
+  .badge {
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 14px;
+    margin-left: 10px;
+    font-weight: normal;
+  }
+  
+  .mark-all-button {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+  
+  .mark-all-button:hover {
+    background: #f8f8f8;
+    border-color: #aaa;
+  }
+  
+  .notificacoes-empty {
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    text-align: center;
+    font-size: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .notificacoes-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    text-align: center;
+    font-size: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .notificacoes-loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+  }
+  
+  .notificacoes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .notificacao-item {
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    position: relative;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid transparent;
+  }
+  
+  .notificacao-item.nao-lida {
+    background: #f5f9ff;
+    border-left-color: #4285f4;
+  }
+  
+  .notificacao-item:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .notificacao-conteudo {
+    display: flex;
+    align-items: flex-start;
+  }
+  
+  .notificacao-icone {
+    font-size: 24px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+  }
+  
+  .notificacao-texto {
+    flex: 1;
+  }
+  
+  .notificacao-titulo {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: #333;
+  }
+  
+  .notificacao-titulo.nao-lida {
+    font-weight: 600;
+  }
+  
+  .notificacao-mensagem {
+    margin: 0 0 10px 0;
+    color: #555;
+    line-height: 1.5;
+  }
+  
+  .notificacao-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+  
+  .notificacao-time {
+    color: #777;
+  }
+  
+  .notificacao-action {
+    background: transparent;
+    border: none;
+    color: #1976d2;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+  }
+  
+  .notificacao-action:hover {
+    color: #0d47a1;
+    text-decoration: underline;
+  }
+  
+  .notificacao-mark-read {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #4caf50;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+  }
+  
+  .notificacao-mark-read:hover {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .toast-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Cores específicas para tipos de notificações */
+  .notificacao-curso {
+    border-left-color: #4285f4;
+  }
+  
+  .notificacao-formador {
+    border-left-color: #34a853;
+  }
+  
+  .notificacao-admin {
+    border-left-color: #fbbc05;
+  }
+  
+  .notificacao-data {
+    border-left-color: #ea4335;
+  }
+  
+  /* Responsividade */
+  @media (max-width: 600px) {
+    .notificacoes-container {
+      padding: 10px;
+    }
+    
+    .notificacoes-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .mark-all-button {
+      margin-top: 10px;
+      width: 100%;
+    }
+    
+    .notificacao-footer {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .notificacao-action {
+      margin-top: 5px;
+    }
+  }

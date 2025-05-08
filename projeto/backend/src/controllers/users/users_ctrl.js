@@ -32,7 +32,7 @@ const getAllUsers = async (req, res) => {
     const users = await User.findAll();
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar utilizadores" });
+    res.status(500).json({ message: "Erro ao procurar utilizadores" });
   }
 };
 
@@ -54,8 +54,8 @@ const getUserById = async (req, res) => {
 
     res.json(userWithoutPassword);
   } catch (error) {
-    console.error("Erro ao buscar utilizador:", error);
-    res.status(500).json({ message: "Erro ao buscar utilizador" });
+    console.error("Erro ao procurar utilizador:", error);
+    res.status(500).json({ message: "Erro ao procurar utilizador" });
   }
 };
 
@@ -64,7 +64,7 @@ const getFormadores = async (req, res) => {
     const users = await User.findAll({ where: { id_cargo: 2 } });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar formadores" });
+    res.status(500).json({ message: "Erro ao procurar formadores" });
   }
 };
 
@@ -73,7 +73,7 @@ const getFormandos = async (req, res) => {
     const users = await User.findAll({ where: { id_cargo: 3 } });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar formandos" });
+    res.status(500).json({ message: "Erro ao procurar formandos" });
   }
 };
 
@@ -82,21 +82,9 @@ const getGestores = async (req, res) => {
     const users = await User.findAll({ where: { id_cargo: 1 } });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar gestores" });
+    res.status(500).json({ message: "Erro ao procurar gestores" });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * FUNÇÕES DE UPLOAD DE IMAGENS
@@ -110,15 +98,15 @@ const initDefaultUserImages = () => {
     const usersDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users');
     uploadUtils.ensureDir(usersDir);
 
-    // Caminhos para os arquivos padrão
+    // Caminhos para os ficheiros padrão
     const avatarPath = path.join(usersDir, 'AVATAR.png');
     const capaPath = path.join(usersDir, 'CAPA.png');
 
-    // Verificar se os arquivos padrão já existem
+    // Verificar se os ficheiros padrão já existem
     if (!fs.existsSync(avatarPath) || !fs.existsSync(capaPath)) {
-      console.log('Criando arquivos de imagem padrão para usuários...');
+      console.log('A criar ficheiros de imagem padrão para utilizadores...');
 
-      // Se os arquivos não existirem, pode usar um método para criá-los
+      // Se os ficheiros não existirem, pode usar um método para criá-los
       // Isso pode envolver copiar de uma pasta de recursos ou criar imagens padrão
 
       // Exemplo: Se as imagens estiverem em uma pasta 'resources'
@@ -139,7 +127,7 @@ const initDefaultUserImages = () => {
 
         console.log('Imagens padrão copiadas com sucesso.');
       } else {
-        console.warn('Arquivos de imagem padrão não encontrados em resources!');
+        console.warn('Ficheiros de imagem padrão não encontrados em resources!');
         // Aqui você poderia criar imagens em branco ou usar outra estratégia
       }
     }
@@ -150,12 +138,12 @@ const initDefaultUserImages = () => {
 
 
 /**
- * Função auxiliar para migrar e limpar arquivos de imagem do usuário
- * Esta função garante que apenas os arquivos mais recentes permaneçam
- * @param {string} userDir - Diretório do usuário
- * @param {string} userEmail - Email do usuário
+ * Função auxiliar para migrar e limpar ficheiros de imagem do utilizador
+ * Esta função garante que apenas os ficheiros mais recentes permaneçam
+ * @param {string} userDir - Diretório do utilizador
+ * @param {string} userEmail - Email do utilizador
  * @param {string} tipo - Tipo de imagem (AVATAR ou CAPA)
- * @returns {Object} Informações sobre o arquivo mais recente
+ * @returns {Object} Informações sobre o ficheiro mais recente
  */
 
 const uploadImagemPerfil = async (req, res) => {
@@ -165,58 +153,58 @@ const uploadImagemPerfil = async (req, res) => {
       return res.status(400).json({ success: false, message: "Nenhuma imagem enviada" });
     }
 
-    // 2. Verificar se o usuário existe
+    // 2. Verificar se o utilizador existe
     const userId = req.user.id_utilizador;
     const userEmail = req.user.email;
 
     if (!userId || !userEmail) {
-      return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
+      return res.status(401).json({ success: false, message: "Utilizador não autenticado corretamente" });
     }
 
-    // 3. Buscar o usuário para garantir que existe
+    // 3. Procurar o utilizador para garantir que existe
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "Usuário não encontrado" });
+      return res.status(404).json({ success: false, message: "Utilizador não encontrado" });
     }
 
-    // 4. Preparar o diretório e caminho do arquivo
+    // 4. Preparar o diretório e caminho do ficheiro
     const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
     const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
 
     // Garantir que o diretório exista
     uploadUtils.ensureDir(userDir);
 
-    // Nome fixo do arquivo (sem timestamp)
+    // Nome fixo do ficheiro (sem timestamp)
     const fileName = `${userEmail}_AVATAR.png`;
     const filePath = path.join(userDir, fileName);
 
-    // Caminho relativo para o banco de dados
+    // Caminho relativo para a base de dados
     const dbPath = `uploads/users/${userSlug}/${fileName}`;
 
-    // 5. Remover qualquer arquivo existente com mesmo nome base
+    // 5. Remover qualquer ficheiro existente com mesmo nome base
     const files = fs.readdirSync(userDir);
     files.forEach(file => {
-      // Encontrar TODOS os arquivos que correspondem ao padrão email_AVATAR*.png
+      // Encontrar TODOS os ficheiros que correspondem ao padrão email_AVATAR*.png
       if (file.startsWith(`${userEmail}_AVATAR`) && file.endsWith('.png')) {
         const oldFilePath = path.join(userDir, file);
         try {
           fs.unlinkSync(oldFilePath);
-          console.log(`Arquivo antigo removido: ${oldFilePath}`);
+          console.log(`Ficheiro antigo removido: ${oldFilePath}`);
         } catch (err) {
-          console.error(`Erro ao remover arquivo antigo: ${oldFilePath}`, err);
+          console.error(`Erro ao remover ficheiro antigo: ${oldFilePath}`, err);
         }
       }
     });
 
-    // 6. Mover o arquivo temporário para o destino final
+    // 6. Mover o ficheiro temporário para o destino final
     fs.copyFileSync(req.file.path, filePath);
 
-    // Remover o arquivo temporário
+    // Remover o ficheiro temporário
     if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    // 7. Atualizar o caminho no banco de dados
+    // 7. Atualizar o caminho na base de dados
     await User.update(
       { foto_perfil: dbPath },
       { where: { id_utilizador: userId } }
@@ -247,58 +235,58 @@ const uploadImagemCapa = async (req, res) => {
       return res.status(400).json({ success: false, message: "Nenhuma imagem enviada" });
     }
 
-    // 2. Verificar se o usuário existe
+    // 2. Verificar se o utilizador existe
     const userId = req.user.id_utilizador;
     const userEmail = req.user.email;
 
     if (!userId || !userEmail) {
-      return res.status(401).json({ success: false, message: "Usuário não autenticado corretamente" });
+      return res.status(401).json({ success: false, message: "Utilizador não autenticado corretamente" });
     }
 
-    // 3. Buscar o usuário para garantir que existe
+    // 3. Procurar o utilizador para garantir que existe
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "Usuário não encontrado" });
+      return res.status(404).json({ success: false, message: "Utilizador não encontrado" });
     }
 
-    // 4. Preparar o diretório e caminho do arquivo
+    // 4. Preparar o diretório e caminho do ficheiro
     const userSlug = userEmail.replace(/@/g, '_at_').replace(/\./g, '_');
     const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
 
     // Garantir que o diretório exista
     uploadUtils.ensureDir(userDir);
 
-    // Nome fixo do arquivo (sem timestamp)
+    // Nome fixo do ficheiro (sem timestamp)
     const fileName = `${userEmail}_CAPA.png`;
     const filePath = path.join(userDir, fileName);
 
-    // Caminho relativo para o banco de dados
+    // Caminho relativo para a base de dados
     const dbPath = `uploads/users/${userSlug}/${fileName}`;
 
-    // 5. Remover qualquer arquivo existente com mesmo nome base
+    // 5. Remover qualquer ficheiro existente com mesmo nome base
     const files = fs.readdirSync(userDir);
     files.forEach(file => {
-      // Encontrar TODOS os arquivos que correspondem ao padrão email_CAPA*.png
+      // Encontrar TODOS os ficheiros que correspondem ao padrão email_CAPA*.png
       if (file.startsWith(`${userEmail}_CAPA`) && file.endsWith('.png')) {
         const oldFilePath = path.join(userDir, file);
         try {
           fs.unlinkSync(oldFilePath);
-          console.log(`Arquivo antigo removido: ${oldFilePath}`);
+          console.log(`Ficheiro antigo removido: ${oldFilePath}`);
         } catch (err) {
-          console.error(`Erro ao remover arquivo antigo: ${oldFilePath}`, err);
+          console.error(`Erro ao remover ficheiro antigo: ${oldFilePath}`, err);
         }
       }
     });
 
-    // 6. Mover o arquivo temporário para o destino final
+    // 6. Mover o ficheiro temporário para o destino final
     fs.copyFileSync(req.file.path, filePath);
 
-    // Remover o arquivo temporário
+    // Remover o ficheiro temporário
     if (req.file.path !== filePath && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    // 7. Atualizar o caminho no banco de dados
+    // 7. Atualizar o caminho na base de dados
     await User.update(
       { foto_capa: dbPath },
       { where: { id_utilizador: userId } }
@@ -322,37 +310,35 @@ const uploadImagemCapa = async (req, res) => {
 };
 
 
-
-
 /**
  * FUNÇÕES DE GESTÃO DE PERFIL
  */
 
 const perfilUser = async (req, res) => {
   try {
-    console.log('Usuário autenticado:', req.user);
+    console.log('Utilizador autenticado:', req.user);
 
     const userId = req.user.id_utilizador;
-    console.log('ID do usuário:', userId);
+    console.log('ID do utilizador:', userId);
 
     const user = await User.findByPk(userId, {
       include: [{ model: Cargo, as: 'cargo' }]
     });
 
-    console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+    console.log('Utilizador encontrado:', user ? 'Sim' : 'Não');
 
     if (!user) {
-      console.log('Usuário não encontrado');
+      console.log('Utilizador não encontrado');
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
-    // Adicionar imagem default se não existir
+    // Adicionar imagem predefinida se não existir
     if (!user.foto_perfil) {
-      console.log('Definindo foto de perfil padrão');
+      console.log('A definir foto de perfil padrão');
       user.foto_perfil = "AVATAR.png";
     }
     if (!user.foto_capa) {
-      console.log('Definindo foto de capa padrão');
+      console.log('A definir foto de capa padrão');
       user.foto_capa = "CAPA.png";
     }
 
@@ -373,7 +359,7 @@ const perfilUser = async (req, res) => {
 
 const updatePerfilUser = async (req, res) => {
   try {
-    // Utilizar o ID dos parâmetros, não do usuário autenticado, pois é o admin a atualizar o perfil de outro utilizador
+    // Utilizar o ID dos parâmetros, não do utilizador autenticado, pois é o admin a atualizar o perfil de outro utilizador
     const userId = req.params.id;
     const {
       nome,
@@ -422,14 +408,14 @@ const updatePerfilUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   try {
-    console.log('Requisição de alteração de senha recebida:', req.body);
+    console.log('Requisição de alteração de palavra-passe recebida:', req.body);
 
     // Extrair dados da requisição
     const { token, password, id_utilizador, senha_atual, nova_senha } = req.body;
 
-    // Caso 1: Alteração via token (recuperação de senha)
+    // Caso 1: Alteração via token (recuperação de palavra-passe)
     if (token) {
-      console.log('Alteração via token de recuperação de senha');
+      console.log('Alteração via token de recuperação de palavra-passe');
 
       let decoded;
       try {
@@ -451,9 +437,9 @@ const changePassword = async (req, res) => {
         { where: { id_utilizador: userId } }
       );
 
-      console.log('Senha alterada com sucesso via token de recuperação');
+      console.log('Palavra-passe alterada com sucesso via token de recuperação');
       return res.json({
-        message: "Senha alterada com sucesso",
+        message: "Palavra-passe alterada com sucesso",
         primeiro_login: 0
       });
     }
@@ -464,48 +450,48 @@ const changePassword = async (req, res) => {
 
     // Se não foi fornecido ID explicitamente mas está autenticado
     if (!userIdToUse && req.user && req.user.id_utilizador) {
-      console.log('Usando ID do usuário do token:', req.user.id_utilizador);
+      console.log('A usar ID do utilizador do token:', req.user.id_utilizador);
       userIdToUse = req.user.id_utilizador;
     }
 
     if (!userIdToUse) {
-      console.error('ID do usuário não fornecido');
-      return res.status(400).json({ message: "ID do usuário é obrigatório" });
+      console.error('ID do utilizador não fornecido');
+      return res.status(400).json({ message: "ID do utilizador é obrigatório" });
     }
 
-    console.log('Buscando usuário com ID:', userIdToUse);
+    console.log('Procurar utilizador com ID:', userIdToUse);
     const user = await User.findByPk(userIdToUse);
 
     if (!user) {
-      console.error('Usuário não encontrado');
-      return res.status(404).json({ message: "Usuário não encontrado" });
+      console.error('Utilizador não encontrado');
+      return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
-    // Verificar senha atual a menos que seja primeiro login
+    // Verificar palavra-passe atual a menos que seja primeiro login
     if (user.primeiro_login !== 1 && senha_atual) {
-      console.log('Verificando senha atual (não é primeiro login)');
+      console.log('A verificar palavra-passe atual (não é primeiro login)');
       const validPassword = await bcrypt.compare(senha_atual, user.password);
       if (!validPassword) {
-        console.error('Senha atual incorreta');
-        return res.status(401).json({ message: "Senha atual incorreta" });
+        console.error('Palavra-passe atual incorreta');
+        return res.status(401).json({ message: "Palavra-passe atual incorreta" });
       }
     } else {
-      console.log('Primeiro login ou senha atual não fornecida');
+      console.log('Primeiro login ou palavra-passe atual não fornecida');
     }
 
-    // Determinar qual senha usar
+    // Determinar qual palavra-passe usar
     const senhaParaAtualizar = nova_senha || password;
 
     if (!senhaParaAtualizar) {
-      console.error('Nova senha não fornecida');
-      return res.status(400).json({ message: "Nova senha é obrigatória" });
+      console.error('Nova palavra-passe não fornecida');
+      return res.status(400).json({ message: "Nova palavra-passe é obrigatória" });
     }
 
-    console.log('Gerando hash da nova senha');
+    console.log('A gerar hash da nova palavra-passe');
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(senhaParaAtualizar, salt);
 
-    console.log('Atualizando senha e definindo primeiro_login como 0');
+    console.log('A atualizar palavra-passe e definir primeiro_login como 0');
     const updateResult = await User.update(
       {
         password: hashedPassword,
@@ -517,38 +503,23 @@ const changePassword = async (req, res) => {
     console.log('Resultado da atualização:', updateResult);
 
     return res.json({
-      message: "Senha alterada com sucesso",
+      message: "Palavra-passe alterada com sucesso",
       primeiro_login: 0
     });
   } catch (error) {
-    console.error("Erro ao alterar senha:", error);
-    res.status(500).json({ message: "Erro no servidor ao alterar senha" });
+    console.error("Erro ao alterar palavra-passe:", error);
+    res.status(500).json({ message: "Erro no servidor ao alterar palavra-passe" });
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
- * Criar um user
+ * Criar um utilizador
  * @param {object} req - Objeto de requisição
  * @param {object} res - Objeto de resposta
  */
 const createUser = async (req, res) => {
   try {
-    console.log("🔍 Iniciando criação de usuário pendente");
+    console.log("🔍 A iniciar criação de utilizador pendente");
     const { nome, email, password, idade, telefone, morada, codigo_postal, cargo } = req.body;
 
     // Validar campos obrigatórios
@@ -556,7 +527,7 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: "Campos obrigatórios: nome, email e password" });
     }
 
-    // Verificar se o e-mail já está em uso (tanto em usuários ativos quanto pendentes)
+    // Verificar se o e-mail já está em uso (tanto em utilizadores ativos quanto pendentes)
     const emailExistenteAtivo = await User.findOne({ where: { email } });
     if (emailExistenteAtivo) {
       return res.status(400).json({ message: "Este e-mail já está em uso por um utilizador ativo" });
@@ -595,11 +566,11 @@ const createUser = async (req, res) => {
     const expires_at = new Date();
     expires_at.setHours(expires_at.getHours() + 24);
 
-    // Hash da senha
+    // Hash da palavra-passe
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Criar usuário pendente
+    // Criar utilizador pendente
     const novoPendente = await User_Pendente.create({
       nome,
       email,
@@ -611,7 +582,7 @@ const createUser = async (req, res) => {
       expires_at
     });
 
-    console.log(`✅ Usuário pendente criado com ID: ${novoPendente.id}`);
+    console.log(`✅ Utilizador pendente criado com ID: ${novoPendente.id}`);
 
     // Verificar se há informações adicionais (associações) para formadores
     if (cargo === 'formador' && req.body.categorias) {
@@ -626,7 +597,7 @@ const createUser = async (req, res) => {
         console.log(`✅ Associações pendentes criadas para formador: ${novoPendente.id}`);
       } catch (assocError) {
         console.error(`⚠️ Erro ao criar associações pendentes: ${assocError.message}`);
-        // Não falhar o registro por causa disso
+        // Não falhar o registo por causa disso
       }
     }
 
@@ -642,7 +613,7 @@ const createUser = async (req, res) => {
         morada: morada || 'Não informado',
         codigo_postal: codigo_postal || 'Não informado',
         cargo_descricao: cargoDescricao,
-        senha_temporaria: password, // Enviar a senha em texto puro no email
+        senha_temporaria: password, // Enviar a palavra-passe em texto simples no email
         token: token
       };
 
@@ -671,14 +642,14 @@ const createUser = async (req, res) => {
     delete pendenteSemSenha.token;
 
     return res.status(201).json({
-      message: `Utilizador ${cargoDescricao} registrado com sucesso! Um email de confirmação foi enviado.`,
+      message: `Utilizador ${cargoDescricao} registado com sucesso! Um email de confirmação foi enviado.`,
       utilizador: pendenteSemSenha
     });
 
   } catch (error) {
-    console.error("❌ Erro ao criar usuário:", error);
+    console.error("❌ Erro ao criar utilizador:", error);
     return res.status(500).json({
-      message: "Erro ao criar usuário",
+      message: "Erro ao criar utilizador",
       error: error.message,
       detalhes: error.stack
     });
@@ -701,7 +672,7 @@ const confirmAccount = async (req, res) => {
       return res.status(401).json({ message: "Token inválido ou expirado" });
     }
 
-    // Buscar o registro pendente
+    // Procurar o registo pendente
     const pendingUser = await User_Pendente.findOne({
       where: {
         email: decoded.email,
@@ -710,29 +681,29 @@ const confirmAccount = async (req, res) => {
     });
 
     if (!pendingUser) {
-      return res.status(404).json({ message: "Registro pendente não encontrado" });
+      return res.status(404).json({ message: "Registo pendente não encontrado" });
     }
 
     // Verificar se o token não expirou (dupla verificação)
     if (new Date() > new Date(pendingUser.expires_at)) {
       await pendingUser.destroy();
-      return res.status(401).json({ message: "Link de confirmação expirado. Por favor, registre-se novamente." });
+      return res.status(401).json({ message: "Link de confirmação expirado. Por favor, registe-se novamente." });
     }
 
-    // Criar o usuário definitivo
+    // Criar o utilizador definitivo
     const newUser = await User.create({
       id_cargo: pendingUser.id_cargo,
       nome: pendingUser.nome,
       idade: pendingUser.idade,
       email: pendingUser.email,
       telefone: pendingUser.telefone,
-      password: pendingUser.password, // Já está hasheada
+      password: pendingUser.password, // Já está em hash
       primeiro_login: 1,
       foto_perfil: "AVATAR.png",
       foto_capa: "CAPA.png"
     });
 
-    // NOVO: Buscar e processar associações pendentes
+    // NOVO: Procurar e processar associações pendentes
     try {
       const associacoesPendentes = await FormadorAssociacoesPendentes.findOne({
         where: { id_pendente: pendingUser.id }
@@ -743,7 +714,7 @@ const confirmAccount = async (req, res) => {
 
         // Processar categorias
         if (associacoesPendentes.categorias && associacoesPendentes.categorias.length > 0) {
-          console.log(`✅ Processando ${associacoesPendentes.categorias.length} categorias`);
+          console.log(`✅ A processar ${associacoesPendentes.categorias.length} categorias`);
           const dataAtual = new Date();
 
           for (const categoria of associacoesPendentes.categorias) {
@@ -757,7 +728,7 @@ const confirmAccount = async (req, res) => {
 
         // Processar áreas
         if (associacoesPendentes.areas && associacoesPendentes.areas.length > 0) {
-          console.log(`✅ Processando ${associacoesPendentes.areas.length} áreas`);
+          console.log(`✅ A processar ${associacoesPendentes.areas.length} áreas`);
           const dataAtual = new Date();
 
           for (const area of associacoesPendentes.areas) {
@@ -771,7 +742,7 @@ const confirmAccount = async (req, res) => {
 
         // Processar cursos
         if (associacoesPendentes.cursos && associacoesPendentes.cursos.length > 0) {
-          console.log(`✅ Processando ${associacoesPendentes.cursos.length} cursos`);
+          console.log(`✅ A processar ${associacoesPendentes.cursos.length} cursos`);
 
           for (const cursoId of associacoesPendentes.cursos) {
             try {
@@ -801,18 +772,18 @@ const confirmAccount = async (req, res) => {
       // Não falharemos a confirmação por causa disso
     }
 
-    // Criar pasta do usuário após confirmar a conta
+    // Criar pasta do utilizador após confirmar a conta
     try {
-      // Criar diretório do usuário baseado no email
+      // Criar diretório do utilizador baseado no email
       const userSlug = pendingUser.email.replace(/@/g, '_at_').replace(/\./g, '_');
       const userDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', userSlug);
 
       // Garantir que o diretório exista
       uploadUtils.ensureDir(userDir);
 
-      console.log(`Diretório do usuário criado em: ${userDir}`);
+      console.log(`Diretório do utilizador criado em: ${userDir}`);
 
-      // Copiar imagens padrão para a pasta do usuário, se necessário
+      // Copiar imagens padrão para a pasta do utilizador, se necessário
       const avatarSource = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', 'AVATAR.png');
       const capaSource = path.join(uploadUtils.BASE_UPLOAD_DIR, 'users', 'CAPA.png');
 
@@ -830,7 +801,7 @@ const confirmAccount = async (req, res) => {
         console.log(`Capa padrão copiada para ${capaDest}`);
       }
 
-      // Atualizar os caminhos das imagens no banco de dados
+      // Atualizar os caminhos das imagens na base de dados
       const dbPathAvatar = `uploads/users/${userSlug}/${pendingUser.email}_AVATAR.png`;
       const dbPathCapa = `uploads/users/${userSlug}/${pendingUser.email}_CAPA.png`;
 
@@ -842,13 +813,13 @@ const confirmAccount = async (req, res) => {
         { where: { id_utilizador: newUser.id_utilizador } }
       );
 
-      console.log('Caminhos das imagens atualizados no banco de dados');
+      console.log('Caminhos das imagens atualizados na base de dados');
     } catch (dirError) {
-      console.error("Erro ao criar diretório do usuário:", dirError);
+      console.error("Erro ao criar diretório do utilizador:", dirError);
       // Não interromper o processo se a criação da pasta falhar
     }
 
-    // Remover o registro pendente
+    // Remover o registo pendente
     await pendingUser.destroy();
 
     // Gerar um token de autenticação para login automático
@@ -877,7 +848,6 @@ const confirmAccount = async (req, res) => {
   }
 };
 
-
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -892,7 +862,7 @@ const loginUser = async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
 
-    // MODIFICAÇÃO: Incluir o email do usuário no token
+    // MODIFICAÇÃO: Incluir o email do utilizador no token
     const token = jwt.sign(
       {
         id_utilizador: user.id_utilizador,
@@ -945,19 +915,19 @@ const resendConfirmation = async (req, res) => {
       return res.status(400).json({ message: "Email não fornecido" });
     }
 
-    // Buscar registro pendente
+    // Procurar registo pendente
     const pendingUser = await User_Pendente.findOne({ where: { email } });
 
     if (!pendingUser) {
-      return res.status(404).json({ message: "Registro pendente não encontrado para este email" });
+      return res.status(404).json({ message: "Registo pendente não encontrado para este email" });
     }
 
-    // Verificar se o usuário já está registrado
+    // Verificar se o utilizador já está registado
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      await pendingUser.destroy(); // Remover registro pendente obsoleto
+      await pendingUser.destroy(); // Remover registo pendente obsoleto
       return res.status(400).json({
-        message: "Este email já está registrado como usuário ativo. Por favor, faça login ou recupere sua senha."
+        message: "Este email já está registado como utilizador ativo. Por favor, faça login ou recupere a sua palavra-passe."
       });
     }
 
@@ -1004,7 +974,7 @@ const resendConfirmation = async (req, res) => {
 
 
 /**
- * Apagar um user
+ * Apagar um utilizador
 **/
 
 const deleteUser = async (req, res) => {
@@ -1068,7 +1038,7 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    console.log('Iniciando exclusão do utilizador...');
+    console.log('A iniciar eliminação do utilizador...');
     // Proceder com a exclusão (o delete cascade é tratado no modelo)
     await user.destroy();
 

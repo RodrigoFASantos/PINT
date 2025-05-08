@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config();
 
-// Configurar o transportador de email diretamente com variáveis de ambiente
+// Configurar o "transportador" de email diretamente com variáveis definidas no .env
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -14,18 +14,18 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Envia email de confirmação de registro para o usuário
- * @param {Object} user - Objeto com informações do usuário
+ * Envia email de confirmação de registo para o user
+ * @param {Object} user - Objeto com informações do user
  * @returns {Promise} - Promessa que resolve quando o email é enviado
  */
 const sendRegistrationEmail = async (user) => {
   try {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    // Usar o token fornecido pelo usuário pendente
+    // Usar o token fornecido pelo user pendente
     const confirmationUrl = `${frontendUrl}/confirm-account?token=${user.token}`;
-    
+
     console.log(`Enviando email para ${user.email} com link: ${confirmationUrl}`);
-    
+
     // Criar tabela com os dados da conta
     const accountDetailsTable = `
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e0e0e0;">
@@ -64,16 +64,16 @@ const sendRegistrationEmail = async (user) => {
         </tr>
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Senha Provisória</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-family: monospace; background-color: #f8fafc; color: #2563eb;">${user.senha_temporaria || 'Senha definida pelo usuário'}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-family: monospace; background-color: #f8fafc; color: #2563eb;">${user.senha_temporaria || 'Senha definida pelo user'}</td>
         </tr>
       </table>
     `;
-    
+
     // Template do email de confirmação
     const mailOptions = {
       from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
       to: user.email,
-      subject: 'Confirme seu registro na Plataforma de Cursos',
+      subject: 'Confirme seu registo na Plataforma de Cursos',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -93,7 +93,7 @@ const sendRegistrationEmail = async (user) => {
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Confirmar Registro</a>
+            <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Confirmar registo</a>
           </div>
           
           <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
@@ -109,20 +109,20 @@ const sendRegistrationEmail = async (user) => {
         </div>
       `
     };
-    
+
     // Enviar o email
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email enviado: ${info.messageId}`);
     return info;
   } catch (error) {
-    console.error('Erro ao enviar email de registro:', error);
+    console.error('Erro ao enviar email de registo:', error);
     throw error;
   }
 };
 
 /**
- * Envia email de recuperação de senha para o usuário
- * @param {Object} user - Objeto com informações do usuário
+ * Envia email de recuperação de senha para o user
+ * @param {Object} user - Objeto com informações do user
  * @param {String} token - Token para redefinição de senha
  * @returns {Promise} - Promessa que resolve quando o email é enviado
  */
@@ -130,9 +130,9 @@ const sendPasswordResetEmail = async (user, token) => {
   try {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    
+
     console.log(`Enviando email de recuperação para ${user.email}`);
-    
+
     // Template do email de recuperação de senha
     const mailOptions = {
       from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
@@ -167,7 +167,7 @@ const sendPasswordResetEmail = async (user, token) => {
         </div>
       `
     };
-    
+
     // Enviar o email
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email de recuperação enviado: ${info.messageId}`);
@@ -201,12 +201,12 @@ const sendMailingList = async (formandos, cursos, area = null) => {
         </a>
       </div>
     `).join('');
-    
+
     // Título personalizado com base na divulgação (geral ou por área)
-    const tituloDivulgacao = area 
-      ? `Novos Cursos na Área de ${area.nome}` 
+    const tituloDivulgacao = area
+      ? `Novos Cursos na Área de ${area.nome}`
       : 'Novos Cursos Disponíveis';
-    
+
     // Enviar email para cada formando
     const promises = formandos.map(async (formando) => {
       const mailOptions = {
@@ -239,14 +239,14 @@ const sendMailingList = async (formandos, cursos, area = null) => {
           </div>
         `
       };
-      
+
       // Enviar email para este formando
       const info = await transporter.sendMail(mailOptions);
       console.log(`Email de divulgação enviado para ${formando.email}: ${info.messageId}`);
       return info;
     });
-    
-    // Aguardar todos os emails serem enviados
+
+    // Esperar que todos os emails sejam enviados
     await Promise.all(promises);
     console.log(`Divulgação enviada para ${formandos.length} formandos.`);
   } catch (error) {

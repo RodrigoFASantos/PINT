@@ -1,24 +1,24 @@
 /**
- * Middleware para verificar token e garantir que o email do usuário esteja disponível
- * Este arquivo deve ser colocado na pasta utils
+ * Middleware para verificar token e garantir que o email do utilizador esteja disponível
+ * Este ficheiro deve ser colocado na pasta utils
  */
 
 const jwt = require('jsonwebtoken');
 const User = require('../database/models/User');
 
 /**
- * Middleware para verificar token e adicionar o email do usuário ao objeto req.user
+ * Middleware para verificar token e adicionar o email do utilizador ao objeto req.utilizador
  * @param {Object} req - Objeto de requisição
  * @param {Object} res - Objeto de resposta
  * @param {Function} next - Função para passar para o próximo middleware
  */
 const verificarTokenComEmail = async (req, res, next) => {
   try {
-    console.log('🔍 Iniciando verificação de token com complemento de email');
+    console.log('🔍 A iniciar verificação de token com complemento de email');
     
-    // URL acessada para log
+    // URL acedida para registo
     const url = req.originalUrl;
-    console.log('URL acessada:', url);
+    console.log('URL acedida:', url);
     
     // Verificar cabeçalho de autorização
     const authHeader = req.headers['authorization']; // Usando colchetes como no auth.js original
@@ -42,50 +42,50 @@ const verificarTokenComEmail = async (req, res, next) => {
       }
 
       console.log('✅ Token validado com sucesso');
-      console.log('Usuário autenticado:', decoded);
+      console.log('Utilizador autenticado:', decoded);
       
-      // Adicionar dados do usuário à requisição
-      req.user = decoded;
+      // Adicionar dados do utilizador à requisição
+      req.utilizador = decoded;
       
-      // Se o usuário já tiver email no token, não precisamos consultar o banco
-      if (req.user.email) {
-        console.log('Email já presente no token:', req.user.email);
+      // Se o utilizador já tiver email no token, não precisamos consultar o banco
+      if (req.utilizador.email) {
+        console.log('Email já presente no token:', req.utilizador.email);
         return next();
       }
 
       // Verificar se o email está no body ou query
       if (req.body && req.body.email) {
         console.log('Email encontrado no body da requisição:', req.body.email);
-        req.user.email = req.body.email;
+        req.utilizador.email = req.body.email;
         return next();
       }
       
       if (req.query && req.query.email) {
         console.log('Email encontrado na query:', req.query.email);
-        req.user.email = req.query.email;
+        req.utilizador.email = req.query.email;
         return next();
       }
 
-      // COMPLEMENTO: Buscar email do usuário no banco de dados como último recurso
+      // COMPLEMENTO: Procurar email do utilizador no banco de dados como último recurso
       try {
-        console.log('Buscando email no banco de dados para o usuário ID:', req.user.id_utilizador);
-        const usuario = await User.findByPk(req.user.id_utilizador);
+        console.log('A procurar email na base de dados para o utilizador ID:', req.utilizador.id_utilizador);
+        const utilizador = await User.findByPk(req.utilizador.id_utilizador);
         
-        if (usuario && usuario.email) {
-          console.log('Email do usuário obtido do banco de dados:', usuario.email);
-          // Adicionar email ao objeto req.user
-          req.user.email = usuario.email;
+        if (utilizador && utilizador.email) {
+          console.log('Email do utilizador obtido da base de dados:', utilizador.email);
+          // Adicionar email ao objeto req.utilizador
+          req.utilizador.email = utilizador.email;
           return next();
         } else {
-          console.log('⚠️ Não foi possível encontrar o email do usuário no banco de dados');
+          console.log('⚠️ Não foi possível encontrar o email do utilizador na base de dados');
           return res.status(400).json({ 
-            message: "Email do usuário não encontrado. Por favor, forneça o email ou faça login novamente." 
+            message: "Email do utilizador não encontrado. Por favor, forneça o email ou inicie sessão novamente." 
           });
         }
       } catch (dbError) {
-        console.error('Erro ao buscar email do usuário:', dbError);
+        console.error('Erro ao procurar email do utilizador:', dbError);
         return res.status(500).json({ 
-          message: "Erro interno ao tentar identificar o usuário. Por favor, tente novamente." 
+          message: "Erro interno ao tentar identificar o utilizador. Por favor, tente novamente." 
         });
       }
     });

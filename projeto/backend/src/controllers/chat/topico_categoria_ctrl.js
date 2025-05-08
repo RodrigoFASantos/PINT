@@ -33,10 +33,10 @@ const getAllTopicosCategoria = async (req, res) => {
       data: topicos
     });
   } catch (error) {
-    console.error('Erro ao buscar tópicos:', error);
+    console.error('Erro ao procurar tópicos:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar tópicos',
+      message: 'Erro ao procurar tópicos',
       error: error.message
     });
   }
@@ -75,10 +75,10 @@ const getTopicoById = async (req, res) => {
       data: topico
     });
   } catch (error) {
-    console.error('Erro ao buscar tópico:', error);
+    console.error('Erro ao procurar tópico:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar tópico',
+      message: 'Erro ao procurar tópico',
       error: error.message
     });
   }
@@ -89,7 +89,7 @@ const getTopicosByCategoria = async (req, res) => {
   try {
     const { id_categoria } = req.params;
 
-    console.log(`Buscando tópicos para categoria ID: ${id_categoria}`);
+    console.log(`Procurando tópicos para categoria ID: ${id_categoria}`);
 
     // Primeiro, verificamos se a categoria existe
     const categoriaExiste = await Categoria.findByPk(id_categoria);
@@ -122,10 +122,10 @@ const getTopicosByCategoria = async (req, res) => {
       data: topicos
     });
   } catch (error) {
-    console.error(`Erro ao buscar tópicos para categoria ${req.params.id_categoria}:`, error);
+    console.error(`Erro ao procurar tópicos para categoria ${req.params.id_categoria}:`, error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar tópicos por categoria',
+      message: 'Erro ao procurar tópicos por categoria',
       error: error.message
     });
   }
@@ -149,7 +149,7 @@ const getComentariosByTopico = async (req, res) => {
       });
     }
 
-    // Buscar comentários com paginação
+    // Procurar comentários com paginação
     // CORREÇÃO: Alterando a ordenação para ASC (mais antigos primeiro)
     const { count, rows: comentarios } = await Comentario_Topico.findAndCountAll({
       where: { id_topico: id },
@@ -173,10 +173,10 @@ const getComentariosByTopico = async (req, res) => {
       data: comentarios
     });
   } catch (error) {
-    console.error('Erro ao buscar comentários:', error);
+    console.error('Erro ao procurar comentários:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar comentários',
+      message: 'Erro ao procurar comentários',
       error: error.message
     });
   }
@@ -195,7 +195,7 @@ const createComentario = async (req, res) => {
     let anexoNome = null;
     let tipoAnexo = null;
 
-    console.log(`Enviando mensagem para tópico ${id} pelo usuário ${id_utilizador}`);
+    console.log(`Enviando mensagem para tópico ${id} pelo utilizador ${id_utilizador}`);
     console.log(`Texto da mensagem: ${texto}`);
 
     // Verificar se o tópico existe e obter suas informações, incluindo categoria
@@ -227,7 +227,7 @@ const createComentario = async (req, res) => {
 
     // Processar anexo, se existir
     if (req.file) {
-      console.log('Arquivo anexo recebido:', req.file);
+      console.log('Ficheiro anexo recebido:', req.file);
       
       // Obter nomes para categorias e tópicos
       const categoriaNome = topico.categoria?.nome || 'sem_categoria';
@@ -240,7 +240,7 @@ const createComentario = async (req, res) => {
       // Criar estrutura de diretórios para o chat
       const { dirPath, conteudosPath } = uploadUtils.criarDiretoriosChat(categoriaNome, topicoNome);
 
-      // Detalhes do arquivo
+      // Detalhes do ficheiro
       anexoNome = req.file.originalname;
       const fileExtension = path.extname(anexoNome);
       const newFileName = `${Date.now()}_${id_utilizador}${fileExtension}`;
@@ -249,12 +249,12 @@ const createComentario = async (req, res) => {
       const sourceFile = req.file.path;
       const targetFile = path.join(dirPath, 'conteudos', newFileName);
 
-      // Mover o arquivo para o local correto
+      // Mover o ficheiro para o local correto
       const movido = uploadUtils.moverArquivo(sourceFile, targetFile);
       if (!movido) {
         return res.status(500).json({
           success: false,
-          message: 'Erro ao mover o arquivo anexado'
+          message: 'Erro ao mover o ficheiro anexado'
         });
       }
 
@@ -265,8 +265,8 @@ const createComentario = async (req, res) => {
       const mimeType = req.file.mimetype;
       tipoAnexo = uploadUtils.getFileType(mimeType);
       
-      console.log(`Arquivo movido com sucesso para ${targetFile}`);
-      console.log(`Caminho salvo no BD: ${anexoUrl}`);
+      console.log(`Ficheiro movido com sucesso para ${targetFile}`);
+      console.log(`Caminho guardado na BD: ${anexoUrl}`);
     }
 
     // Criar o comentário
@@ -283,8 +283,8 @@ const createComentario = async (req, res) => {
       denuncias: 0
     });
 
-    // Carregar informações do usuário para retornar na resposta
-    const comentarioComUsuario = await Comentario_Topico.findOne({
+    // Carregar informações do utilizador para retornar na resposta
+    const comentarioComUtilizador = await Comentario_Topico.findOne({
       where: { id_comentario: novoComentario.id_comentario },
       include: [
         {
@@ -295,15 +295,15 @@ const createComentario = async (req, res) => {
       ]
     });
 
-    // Notificar os usuários conectados via Socket.IO
+    // Notificar os utilizadores conectados via Socket.IO
     if (req.io) {
-      req.io.to(`topico_${id}`).emit('novoComentario', comentarioComUsuario);
+      req.io.to(`topico_${id}`).emit('novoComentario', comentarioComUtilizador);
     }
 
     res.status(201).json({
       success: true,
       message: 'Comentário criado com sucesso',
-      data: comentarioComUsuario
+      data: comentarioComUtilizador
     });
   } catch (error) {
     console.error('Erro ao criar comentário:', error);
@@ -315,7 +315,7 @@ const createComentario = async (req, res) => {
   }
 };
 
-// Controller para avaliar um comentário (curtir/descurtir)
+// Controller para avaliar um comentário (gostar/não gostar)
 const avaliarComentario = async (req, res) => {
   try {
     const { id_topico, id_comentario } = req.params;
@@ -347,8 +347,8 @@ const avaliarComentario = async (req, res) => {
       });
     }
 
-    // Verificar se o usuário já avaliou este comentário
-    // Nota: Aqui você precisaria de uma tabela de relação para armazenar quem avaliou o quê
+    // Verificar se o utilizador já avaliou este comentário
+    // Nota: Aqui precisarias de uma tabela de relação para armazenar quem avaliou o quê
     // Por simplicidade, vamos apenas incrementar o contador
 
     if (tipo === 'like') {
@@ -361,7 +361,7 @@ const avaliarComentario = async (req, res) => {
       });
     }
 
-    // Notificar os usuários conectados via Socket.IO
+    // Notificar os utilizadores conectados via Socket.IO
     if (req.io) {
       req.io.to(`topico_${id_topico}`).emit('comentarioAvaliado', {
         id_comentario,
@@ -372,7 +372,7 @@ const avaliarComentario = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Comentário ${tipo === 'like' ? 'curtido' : 'descurtido'} com sucesso`,
+      message: `Comentário ${tipo === 'like' ? 'gostado' : 'não gostado'} com sucesso`,
       data: {
         likes: comentario.likes,
         dislikes: comentario.dislikes

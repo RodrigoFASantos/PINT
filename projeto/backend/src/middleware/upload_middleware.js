@@ -1,7 +1,5 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 const uploadUtils = require('./upload');
 
 // Usar as funções do uploadUtils
@@ -21,13 +19,13 @@ const tempStorage = multer.diskStorage({
     cb(null, tempDir);
   },
   filename: (req, file, cb) => {
-    // Gerar nome de arquivo único para evitar colisões
+    // Gerar nome de ficheiro único para evitar colisões
     const uniqueName = gerarNomeUnico(file.originalname);
     cb(null, uniqueName);
   }
 });
 
-// Função para filtrar tipos de arquivos
+// Função para filtrar tipos de ficheiros
 const fileFilter = (req, file, cb) => {
   // Lista de tipos MIME permitidos
   const allowedMimeTypes = [
@@ -58,7 +56,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Tipo de arquivo não permitido (${file.mimetype}). Apenas imagens, documentos, vídeos e áudios são aceitos.`), false);
+    cb(new Error(`Tipo de ficheiro não permitido (${file.mimetype}). Apenas imagens, documentos, vídeos e áudios são aceites.`), false);
   }
 };
 
@@ -80,21 +78,21 @@ const uploadChatFile = (req, res, next) => {
     if (err) {
       return handleUploadErrors(err, req, res, next);
     }
-    
-    // Se não houver arquivo, continue
+
+    // Se não houver ficheiro, continue
     if (!req.file) {
       return next();
     }
-    
+
     try {
-      // Loggar informações do arquivo para debug
-      console.log(`Arquivo chat recebido: ${req.file.originalname}, salvo temporariamente como: ${req.file.filename}`);
+      // Registar informações do ficheiro para depuração
+      console.log(`Ficheiro de chat recebido: ${req.file.originalname}, guardado temporariamente como: ${req.file.filename}`);
       next();
     } catch (error) {
       console.error('Erro ao processar upload de chat:', error);
       return res.status(500).json({
         success: false,
-        message: 'Erro ao processar o arquivo'
+        message: 'Erro ao processar o ficheiro'
       });
     }
   });
@@ -102,25 +100,25 @@ const uploadChatFile = (req, res, next) => {
 
 // Middleware para tratar uploads de conteúdo de curso
 const uploadCursoConteudo = (req, res, next) => {
-  upload.single('arquivo')(req, res, async (err) => {
+  upload.single('ficheiro')(req, res, async (err) => {
     if (err) {
       return handleUploadErrors(err, req, res, next);
     }
-    
-    // Se não houver arquivo, continue
+
+    // Se não houver ficheiro, continue
     if (!req.file) {
       return next();
     }
-    
+
     try {
-      // Loggar informações do arquivo para debug
-      console.log(`Arquivo de curso recebido: ${req.file.originalname}, salvo temporariamente como: ${req.file.filename}`);
+      // Registar informações do ficheiro para depuração
+      console.log(`Ficheiro de curso recebido: ${req.file.originalname}, guardado temporariamente como: ${req.file.filename}`);
       next();
     } catch (error) {
       console.error('Erro ao processar upload de conteúdo:', error);
       return res.status(500).json({
         success: false,
-        message: 'Erro ao processar o arquivo'
+        message: 'Erro ao processar o ficheiro'
       });
     }
   });
@@ -129,18 +127,18 @@ const uploadCursoConteudo = (req, res, next) => {
 // Middleware para tratamento de erros de upload
 const handleUploadErrors = (err, req, res, next) => {
   console.error('Erro no upload:', err);
-  
+
   if (err instanceof multer.MulterError) {
     // Erro Multer ocorreu durante o upload
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'Arquivo muito grande. O tamanho máximo permitido é 15MB.'
+        message: 'Ficheiro muito grande. O tamanho máximo permitido é 15MB.'
       });
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       return res.status(400).json({
         success: false,
-        message: 'Campo de arquivo inesperado. Verifique o nome do campo no formulário.'
+        message: 'Campo de ficheiro inesperado. Verifique o nome do campo no formulário.'
       });
     }
     return res.status(400).json({
@@ -154,7 +152,7 @@ const handleUploadErrors = (err, req, res, next) => {
       message: err.message
     });
   }
-  
+
   // Se não houver erro, continua
   next();
 };

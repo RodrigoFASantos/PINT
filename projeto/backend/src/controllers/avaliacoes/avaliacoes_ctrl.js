@@ -46,8 +46,8 @@ const getAllAvaliacoes = async (req, res) => {
 
     res.status(200).json(formattedAvaliacoes);
   } catch (error) {
-    console.error("Erro ao buscar avaliações:", error);
-    res.status(500).json({ message: "Erro ao buscar avaliações", error: error.message });
+    console.error("Erro ao procurar avaliações:", error);
+    res.status(500).json({ message: "Erro ao procurar avaliações", error: error.message });
   }
 };
 
@@ -182,8 +182,8 @@ const getAvaliacaoById = async (req, res) => {
 
     res.status(200).json(formattedAvaliacao);
   } catch (error) {
-    console.error("Erro ao buscar avaliação:", error);
-    res.status(500).json({ message: "Erro ao buscar avaliação", error: error.message });
+    console.error("Erro ao procurar avaliação:", error);
+    res.status(500).json({ message: "Erro ao procurar avaliação", error: error.message });
   }
 };
 
@@ -193,7 +193,7 @@ const updateAvaliacao = async (req, res) => {
     const { id } = req.params;
     const { nota, certificado, horas_totais, horas_presenca } = req.body;
 
-    // Buscar a avaliação
+    // Procurar a avaliação
     const avaliacao = await Avaliacao.findByPk(id);
     if (!avaliacao) {
       return res.status(404).json({ message: "Avaliação não encontrada!" });
@@ -209,7 +209,7 @@ const updateAvaliacao = async (req, res) => {
     // Aplicar atualização
     await avaliacao.update(dadosAtualizacao);
 
-    // Buscar a avaliação atualizada com relacionamentos
+    // Procurar a avaliação atualizada com relacionamentos
     const avaliacaoAtualizada = await Avaliacao.findByPk(id, {
       include: [
         {
@@ -261,7 +261,7 @@ const deleteAvaliacao = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar a avaliação
+    // Procurar a avaliação
     const avaliacao = await Avaliacao.findByPk(id);
     if (!avaliacao) {
       return res.status(404).json({ message: "Avaliação não encontrada!" });

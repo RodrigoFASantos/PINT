@@ -15,7 +15,7 @@ const createPasta = async (req, res) => {
       return res.status(400).json({ message: "Nome e ID do tópico são obrigatórios" });
     }
 
-    // Buscar informações do tópico e curso para criar o caminho do diretório
+    // Procurar informações do tópico e curso para criar o caminho do diretório
     const topico = await TopicoCurso.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
@@ -33,7 +33,7 @@ const createPasta = async (req, res) => {
     
     // Caminho completo do diretório
     const pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
-    // Caminho relativo para o banco de dados
+    // Caminho relativo para a base de dados
     const pastaUrlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`;
     
     // Criar diretório se não existir
@@ -50,7 +50,7 @@ const createPasta = async (req, res) => {
       nome,
       id_topico,
       ordem: ordem || 1,
-      dir_path: pastaUrlPath, // Salvar o caminho relativo no banco de dados
+      dir_path: pastaUrlPath, // Guardar o caminho relativo na base de dados
       arquivo_path: pastaUrlPath, // Mesmo caminho para manter consistência
       ativo: true
     });
@@ -78,12 +78,12 @@ const getPastasByTopico = async (req, res) => {
     // Array para armazenar pastas com seus conteúdos
     const pastasComConteudos = [];
     
-    // Para cada pasta, buscar seus conteúdos
+    // Para cada pasta, procurar seus conteúdos
     for (const pasta of pastas) {
       const pastaObj = pasta.toJSON();
       pastaObj.expanded = false; // inicialmente fechado
       
-      // Buscar conteúdos desta pasta
+      // Procurar conteúdos desta pasta
       const conteudos = await ConteudoCurso.findAll({
         where: { 
           id_pasta: pasta.id_pasta,
@@ -98,8 +98,8 @@ const getPastasByTopico = async (req, res) => {
 
     res.json(pastasComConteudos);
   } catch (error) {
-    console.error("Erro ao buscar pastas do tópico:", error);
-    res.status(500).json({ message: "Erro ao buscar pastas" });
+    console.error("Erro ao procurar pastas do tópico:", error);
+    res.status(500).json({ message: "Erro ao procurar pastas" });
   }
 };
 
@@ -116,7 +116,7 @@ const getPastaById = async (req, res) => {
 
     const pastaObj = pasta.toJSON();
     
-    // Buscar conteúdos desta pasta
+    // Procurar conteúdos desta pasta
     const conteudos = await ConteudoCurso.findAll({
       where: { 
         id_pasta: id,
@@ -129,8 +129,8 @@ const getPastaById = async (req, res) => {
 
     res.json(pastaObj);
   } catch (error) {
-    console.error("Erro ao buscar pasta:", error);
-    res.status(500).json({ message: "Erro ao buscar pasta" });
+    console.error("Erro ao procurar pasta:", error);
+    res.status(500).json({ message: "Erro ao procurar pasta" });
   }
 };
 
@@ -146,9 +146,9 @@ const updatePasta = async (req, res) => {
       return res.status(404).json({ message: "Pasta não encontrada" });
     }
 
-    // Se estiver mudando o nome, atualizar também o diretório
+    // Se estiver a mudar o nome, atualizar também o diretório
     if (nome !== undefined && nome !== pasta.nome) {
-      // Buscar o tópico e curso para obter o caminho completo
+      // Procurar o tópico e curso para obter o caminho completo
       const topico = await TopicoCurso.findByPk(pasta.id_topico);
       if (topico) {
         const curso = await Curso.findByPk(topico.id_curso);
@@ -162,7 +162,7 @@ const updatePasta = async (req, res) => {
           const pastaAntigaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlugAntigo);
           const pastaNovaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlugNovo);
           
-          // Caminhos relativos para o banco de dados
+          // Caminhos relativos para a base de dados
           const pastaAntigaPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlugAntigo}`;
           const pastaNovaPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlugNovo}`;
           
@@ -176,7 +176,7 @@ const updatePasta = async (req, res) => {
             uploadUtils.ensureDir(path.join(pastaNovaDir, 'quizes'));
           }
           
-          // Atualizar caminhos no banco de dados
+          // Atualizar caminhos na base de dados
           pasta.dir_path = pastaNovaPath;
           pasta.arquivo_path = pastaNovaPath;
         }

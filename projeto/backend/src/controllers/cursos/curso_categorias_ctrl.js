@@ -6,7 +6,7 @@ const getAllCategorias = async (req, res) => {
     const categorias = await Categoria.findAll();
     res.json(categorias);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar categorias" });
+    res.status(500).json({ message: "Erro ao procurar categorias" });
   }
 };
 
@@ -14,17 +14,17 @@ const getAllCategorias = async (req, res) => {
 const getCategoriaById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const categoria = await Categoria.findByPk(id);
-    
+
     if (!categoria) {
       return res.status(404).json({ message: "Categoria não encontrada!" });
     }
-    
+
     res.json(categoria);
   } catch (error) {
-    console.error("Erro ao buscar categoria por ID:", error);
-    res.status(500).json({ message: "Erro no servidor ao buscar categoria." });
+    console.error("Erro ao procurar categoria por ID:", error);
+    res.status(500).json({ message: "Erro no servidor ao procurar categoria." });
   }
 };
 
@@ -89,4 +89,10 @@ const deleteCategoria = async (req, res) => {
   }
 };
 
-module.exports = { getAllCategorias, getCategoriaById, createCategoria, updateCategoria, deleteCategoria };
+module.exports = {
+  getAllCategorias,
+  getCategoriaById,
+  createCategoria,
+  updateCategoria,
+  deleteCategoria
+};

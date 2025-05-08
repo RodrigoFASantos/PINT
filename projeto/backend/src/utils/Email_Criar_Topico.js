@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
  * @param {string} categoriaNome - Nome da categoria do tópico solicitado.
  * @param {string} titulo - Título do tópico solicitado.
  * @param {string} descricao - Descrição do tópico solicitado.
- * @param {Object} solicitante - Objeto com dados do usuário solicitante (nome e email).
+ * @param {Object} solicitante - Objeto com dados do utilizador solicitante (nome e email).
  */
 const sendTopicRequestEmail = async (categoriaNome, titulo, descricao, solicitante) => {
   try {
@@ -30,9 +30,9 @@ const sendTopicRequestEmail = async (categoriaNome, titulo, descricao, solicitan
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: adminEmail,
-      subject: `Solicitação de Criação de Tópico: ${titulo}`,
+      subject: `Pedido de Criação de Tópico: ${titulo}`,
       html: `
-        <h2>Solicitação de Novo Tópico</h2>
+        <h2>Pedido de Novo Tópico</h2>
         <p><strong>Categoria:</strong> ${categoriaNome}</p>
         <p><strong>Título:</strong> ${titulo}</p>
         <p><strong>Descrição:</strong> ${descricao || 'N/A'}</p>
@@ -42,10 +42,10 @@ const sendTopicRequestEmail = async (categoriaNome, titulo, descricao, solicitan
 
     // Enviar o email
     await transporter.sendMail(mailOptions);
-    console.log(`Email de solicitação de tópico enviado para ${adminEmail} (Tópico: "${titulo}")`);
+    console.log(`Email de pedido de tópico enviado para ${adminEmail} (Tópico: "${titulo}")`);
     return true;
   } catch (error) {
-    console.error('Erro ao enviar email de solicitação de tópico:', error);
+    console.error('Erro ao enviar email de pedido de tópico:', error);
     throw error;
   }
 };

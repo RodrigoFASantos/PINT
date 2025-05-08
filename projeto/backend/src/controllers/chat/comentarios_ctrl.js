@@ -6,7 +6,7 @@ const getAllComentarios = async (req, res) => {
     const comentarios = await Comentario_Topico.findAll();
     res.json(comentarios);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar comentários" });
+    res.status(500).json({ message: "Erro ao procurar comentários" });
   }
 };
 
@@ -32,4 +32,7 @@ const createComentario = async (req, res) => {
   }
 };
 
-module.exports = { getAllComentarios, createComentario };
+module.exports = { 
+  getAllComentarios, 
+  createComentario 
+};

@@ -3,7 +3,7 @@ const Curso = require("../../database/models/Curso");
 const Area = require("../../database/models/Area");
 const { sendMailingList } = require("../../utils/emailService");
 
-// Enviar divulgação de cursos para todos os usuários
+// Enviar divulgação de cursos para todos os utilizadores
 const enviarDivulgacaoGeral = async (req, res) => {
   try {
     const { id_cursos } = req.body;
@@ -12,7 +12,7 @@ const enviarDivulgacaoGeral = async (req, res) => {
       return res.status(400).json({ message: "Selecione pelo menos um curso para divulgar" });
     }
     
-    // Buscar cursos
+    // Procurar cursos
     const cursos = await Curso.findAll({
       where: { id_curso: id_cursos },
       include: [{
@@ -25,7 +25,7 @@ const enviarDivulgacaoGeral = async (req, res) => {
       return res.status(404).json({ message: "Nenhum curso encontrado com os IDs fornecidos" });
     }
     
-    // Buscar todos os formandos
+    // Procurar todos os formandos
     const formandos = await User.findAll({
       where: { id_cargo: 3 } // ID 3 = Formando
     });
@@ -58,13 +58,13 @@ const enviarDivulgacaoPorArea = async (req, res) => {
       return res.status(400).json({ message: "Selecione pelo menos um curso para divulgar" });
     }
     
-    // Buscar área
+    // Procurar área
     const area = await Area.findByPk(id_area);
     if (!area) {
       return res.status(404).json({ message: "Área não encontrada" });
     }
     
-    // Buscar cursos da área específica
+    // Procurar cursos da área específica
     const cursos = await Curso.findAll({
       where: { 
         id_curso: id_cursos,
@@ -80,10 +80,10 @@ const enviarDivulgacaoPorArea = async (req, res) => {
       return res.status(404).json({ message: "Nenhum curso encontrado com os IDs fornecidos nesta área" });
     }
     
-    // Buscar formandos com interesse na área (lógica simplificada - em uma implementação real, seria baseado em preferências do usuário)
+    // Procurar formandos com interesse na área (lógica simplificada - numa implementação real, seria baseado em preferências do utilizador)
     const formandos = await User.findAll({
       where: { id_cargo: 3 } // ID 3 = Formando
-      // Em uma implementação real, adicionar filtro por área de interesse
+      // Numa implementação real, adicionar filtro por área de interesse
     });
     
     if (formandos.length === 0) {

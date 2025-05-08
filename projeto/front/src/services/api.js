@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Exportar a URL base da API para uso em outros arquivos
+export const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
+
 // Criar uma instância do axios com configurações padrão
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -43,6 +46,30 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Função para formatar email para URL
+export const formatarEmailParaURL = (email) => {
+  if (!email) return '';
+  return email.replace(/@/g, '_at_').replace(/\./g, '_');
+};
+
+// URLs para imagens
+export const IMAGES = {
+  DEFAULT_AVATAR: `${API_BASE}/uploads/AVATAR.png`,
+  DEFAULT_CAPA: `${API_BASE}/uploads/CAPA.png`,
+   
+  // URLs para imagens de users com nomes fixos
+  USER_AVATAR: (email) => {
+    // Adicionamos um parâmetro de query para evitar cache do navegador
+    const timestamp = Date.now();
+    return `${API_BASE}/uploads/users/${formatarEmailParaURL(email)}/${email}_AVATAR.png?t=${timestamp}`;
+  },
+  USER_CAPA: (email) => {
+    // Adicionamos um parâmetro de query para evitar cache do navegador
+    const timestamp = Date.now();
+    return `${API_BASE}/uploads/users/${formatarEmailParaURL(email)}/${email}_CAPA.png?t=${timestamp}`;
+  }
+};
 
 // Serviços específicos
 
@@ -131,30 +158,12 @@ export const inscricoesService = {
   getAlunosInscritos: (cursoId) => api.get(`/cursos/${cursoId}/inscricoes`)
 };
 
-// Conteúdos (novo serviço)
-export const conteudosService = {
-  getConteudosCurso: (cursoId) => api.get(`/conteudos/curso/${cursoId}`),
-  createConteudo: (data) => {
-    // Se contém arquivo, usar FormData
-    if (data.arquivo && typeof data.arquivo !== 'string') {
-      const formData = new FormData();
-      
-      Object.keys(data).forEach(key => {
-        if (key === 'arquivo') {
-          formData.append('arquivo', data.arquivo);
-        } else {
-          formData.append(key, data[key]);
-        }
-      });
-      
-      return api.post('/conteudos', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-    } else {
-      return api.post('/conteudos', data);
-    }
-  },
-  deleteConteudo: (id) => api.delete(`/conteudos/${id}`)
+// Notificações (novo serviço)
+export const notificacoesService = {
+  getNotificacoes: () => api.get('/notificacoes'),
+  getNotificacoesNaoLidasContagem: () => api.get('/notificacoes/nao-lidas/contagem'),
+  marcarComoLida: (idNotificacao) => api.put(`/notificacoes/${idNotificacao}/lida`),
+  marcarTodasComoLidas: () => api.put('/notificacoes/marcar-todas-como-lidas')
 };
 
 export default api;
