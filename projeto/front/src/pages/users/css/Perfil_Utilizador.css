@@ -1,0 +1,720 @@
+/* ==========================================================================
+   1. RESET E CONFIGURAÇÕES BASE
+   ========================================================================== */
+.perfil-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.perfil-content {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  /* Espaço no final para não sobrepor o botão de logout */
+  padding-bottom: 90px;
+}
+
+/* Estado de carregamento */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  color: #666;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #007bff;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.reload-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+/* ==========================================================================
+   2. CAPA E CABEÇALHO
+   ========================================================================== */
+/* Estilo da capa do perfil */
+.perfil-capa {
+  height: 300px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  background-color: #e0e5ec;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  overflow: visible;
+  min-height: 300px;
+}
+
+.perfil-capa:hover {
+  filter: brightness(60%);
+}
+
+.perfil-capa:hover::after {
+  content: "✏️";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 42px;
+  z-index: 2;
+}
+
+/* Botão de engrenagem para edição - POSICIONADO POR CIMA DA CAPA */
+.btn-settings-gear {
+  position: absolute;
+  top: 40%;
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+/* Fallback para o caso do FontAwesome não estar disponível */
+.btn-settings-gear::after {
+  content: "⚙️";
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* Se o FontAwesome estiver carregado, ocultar o emoji */
+.btn-settings-gear i {
+  font-size: 24px;
+  color: #333;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.btn-settings-gear:hover {
+  background-color: #ffffff;
+  transform: rotate(45deg);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Melhorar visibilidade do overlay durante upload */
+.uploading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  z-index: 50;
+}
+
+/* ==========================================================================
+   3. AVATAR E INFORMAÇÕES DE PERFIL
+   ========================================================================== */
+/* Área de informações do perfil */
+.perfil-info {
+  background-color: white;
+  padding: 70px 30px 30px;
+  position: relative;
+  width: 100%;
+}
+
+/* Container do avatar */
+.perfil-avatar-container {
+  position: absolute;
+  top: -80px;
+  left: 40px;
+  z-index: 10;
+}
+
+/* Avatar do usuário */
+.perfil-avatar {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 5px solid white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  background-color: #e0e5ec;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.perfil-avatar:hover {
+  filter: brightness(60%);
+}
+
+.perfil-avatar:hover::after {
+  content: "✏️";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 30px;
+  z-index: 2;
+}
+
+.uploading-avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 50%;
+  z-index: 11;
+}
+
+/* Cabeçalho do perfil com nome e cargo */
+.perfil-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 25px;
+  padding-left: 180px;
+  /* Espaço para o avatar */
+}
+
+.perfil-header h2 {
+  margin: 0 0 5px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.cargo-badge {
+  display: inline-block;
+  background-color: #e9f5ff;
+  color: #007bff;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 0;
+  max-width: fit-content;
+}
+
+/* ==========================================================================
+   4. FORMULÁRIOS E INPUTS
+   ========================================================================== */
+/* Modo de visualização */
+.perfil-dados {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Itens de informação (modo visualização) */
+.info-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.info-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Layout de colunas para o formulário com classes específicas */
+.colunas-input {
+  display: flex;
+  width: 100%;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: flex-end; /* Alinha os itens na base */
+}
+
+/* Classes base para todas as colunas */
+.coluna {
+  position: relative;
+}
+
+/* Classes específicas para cada coluna - personalize conforme necessário */
+.coluna-nome {
+  width: 35%; /* Personalize a largura conforme desejado */
+}
+
+.coluna-email {
+  width: 35%; /* Personalize a largura conforme desejado */
+}
+
+.coluna-telefone {
+  width: 20%; /* Personalize a largura conforme desejado */
+}
+
+.coluna-idade {
+  width: 10%; /* Personalize a largura conforme desejado */
+}
+
+.coluna-botoes {
+  width: 15%; /* Personalize a largura conforme desejado */
+  display: flex;
+  flex-direction: row; /* Botões lado a lado */
+  justify-content: flex-end; /* Alinha à direita */
+  gap: 10px; /* Espaço entre os botões */
+  align-items: center;
+}
+
+/* Ajustes para os inputs nas colunas */
+.coluna .form-group {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.coluna input {
+  width: 100%; /* Ocupar toda a largura da coluna */
+  box-sizing: border-box;
+  padding: 12px 15px;
+  height: 45px; /* Altura padrão - personalize em cada classe se necessário */
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: #333;
+  color: white;
+}
+
+.coluna input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+
+/* ==========================================================================
+   5. BOTÕES E CONTROLES
+   ========================================================================== */
+/* Botões de ação com ícones */
+.btn-action-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-save-icon {
+  background-color: #4CAF50;
+}
+
+.btn-save-icon:hover {
+  background-color: #388E3C;
+  transform: scale(1.05);
+}
+
+.btn-cancel-icon {
+  background-color: #F44336;
+}
+
+.btn-cancel-icon:hover {
+  background-color: #D32F2F;
+  transform: scale(1.05);
+}
+
+/* Área de botões (para outros botões fora do formulário de edição) */
+.perfil-acoes {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* Botões estilizados */
+.btn-edit,
+.btn-save,
+.btn-cancel,
+.btn-logout {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  color: white !important;
+}
+
+.btn-edit {
+  background-color: #007bff;
+}
+
+.btn-edit:hover {
+  background-color: #0056b3;
+}
+
+.btn-save {
+  background-color: #4285f4;
+  padding: 12px 25px;
+  border-radius: 4px;
+  min-width: 120px;
+}
+
+.btn-save:hover {
+  background-color: #3367d6;
+}
+
+.btn-cancel {
+  background-color: transparent;
+  color: #333 !important;
+  border: 1px solid #ddd;
+  padding: 12px 25px;
+  border-radius: 4px;
+  min-width: 120px;
+}
+
+.btn-cancel:hover {
+  background-color: #e2e6ea;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Botão de logout no canto inferior direito */
+.logout-button-container {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+}
+
+.btn-logout {
+  background-color: #f44336;
+  color: white !important;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout:hover {
+  background-color: #d32f2f;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   6. SEÇÃO DE ESPECIALIZAÇÕES (FORMADOR)
+   ========================================================================== */
+/* Estilos para a seção de categorias e áreas */
+.formador-categorias-areas {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.formador-categorias-areas h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 8px;
+}
+
+.categorias-areas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.categoria-item {
+  background-color: white;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 4px solid #4285f4;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.categoria-item strong {
+  color: #333;
+  margin-right: 5px;
+}
+
+.admin-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
+   7. SEÇÃO DE CURSOS
+   ========================================================================== */
+/* Estilos para a seção de cursos */
+.formador-cursos-section {
+  margin: 30px 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.cursos-tabs {
+  display: flex;
+  border-bottom: 1px solid #e1e4e8;
+  background-color: #f8f9fa;
+}
+
+.cursos-tab {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.cursos-tab.active {
+  color: #4285f4;
+  border-bottom: 2px solid #4285f4;
+  background-color: white;
+}
+
+.cursos-tab:hover:not(.active) {
+  background-color: #eaeaea;
+}
+
+.cursos-content {
+  padding: 20px;
+}
+
+.cursos-table-container {
+  margin-bottom: 20px;
+}
+
+.cursos-table-container h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+}
+
+.cursos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cursos-table th,
+.cursos-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.cursos-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.cursos-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.no-data-message {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   8. RESPONSIVIDADE
+   ========================================================================== */
+/* Adaptação para tablets e ecrans médios */
+@media (max-width: 768px) {
+  .colunas-input {
+    flex-direction: column;
+  }
+  
+  .coluna-nome,
+  .coluna-email,
+  .coluna-telefone,
+  .coluna-idade,
+  .coluna-botoes {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .perfil-capa {
+    height: 200px;
+  }
+
+  .perfil-avatar-container {
+    left: 30px;
+  }
+
+  .perfil-avatar {
+    width: 140px;
+    height: 140px;
+  }
+
+  .perfil-header {
+    padding-left: 180px;
+  }
+
+  .perfil-acoes {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-edit,
+  .btn-save,
+  .btn-cancel {
+    width: 100%;
+  }
+
+  .btn-settings-gear {
+    width: 45px;
+    height: 45px;
+    right: 15px;
+  }
+
+  .btn-settings-gear::after {
+    font-size: 20px;
+  }
+
+  .btn-settings-gear i {
+    font-size: 20px;
+  }
+
+  .logout-button-container {
+    bottom: 20px;
+    right: 20px;
+  }
+
+  .btn-logout {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  /* Responsividade para tabelas */
+  .cursos-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .cursos-tab {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+}
+
+/* Adaptação para celulares e ecrans pequenos */
+@media (max-width: 480px) {
+  .perfil-avatar-container {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .perfil-header {
+    padding-left: 0;
+    padding-top: 90px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .btn-settings-gear {
+    width: 40px;
+    height: 40px;
+    right: 10px;
+  }
+
+  .logout-button-container {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    width: calc(100% - 30px);
+    max-width: 250px;
+  }
+
+  .btn-logout {
+    width: 100%;
+    text-align: center;
+  }
+}

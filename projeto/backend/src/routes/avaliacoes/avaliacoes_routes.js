@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { listarTopicos, obterTopico, criarTopico, atualizarTopico, excluirTopico } = require('../../controllers/cursos/topico_ctrl');
-const authMiddleware = require('../../middlewares/authMiddleware');
+const verificarToken = require('../../middleware/auth');
 
 // Aplicar middleware de autenticação em todas as rotas
-router.use(authMiddleware);
+router.use(verificarToken);
 
 // Rotas para tópicos
 router.get('/', listarTopicos);

@@ -207,17 +207,26 @@ const createCurso = async (req, res) => {
 // Função updateCurso
 const updateCurso = async (req, res) => {
   try {
-    const { id_curso } = req.params;
+    console.log("Update course request received:");
+    console.log("Request params:", req.params);
+    console.log("Request body:", req.body);
+    
+    // Fix: Get the id directly from req.params
+    const id = req.params.id;  // This matches the route parameter /:id
+    
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
 
     // Procurar dados atuais do curso para comparação
-    const cursoAtual = await Curso.findByPk(id_curso, {
+    const cursoAtual = await Curso.findByPk(id, {
       include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
     });
 
     if (!cursoAtual) {
+      console.log(`Course with ID ${id} not found`);
       return res.status(404).json({ message: "Curso não encontrado" });
     }
+
+    console.log(`Course found: ${cursoAtual.nome} (ID: ${id})`);
 
     // Guardar os dados antigos para comparação
     const dataInicioAntiga = cursoAtual.data_inicio;
@@ -242,7 +251,7 @@ const updateCurso = async (req, res) => {
     });
 
     // Recarregar o curso atualizado com as suas relações
-    const cursoAtualizado = await Curso.findByPk(id_curso, {
+    const cursoAtualizado = await Curso.findByPk(id, {
       include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
     });
 

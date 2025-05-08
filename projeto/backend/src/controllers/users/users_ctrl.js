@@ -154,8 +154,8 @@ const uploadImagemPerfil = async (req, res) => {
     }
 
     // 2. Verificar se o utilizador existe
-    const userId = req.user.id_utilizador;
-    const userEmail = req.user.email;
+    const userId = req.utilizador.id_utilizador;
+    const userEmail = req.utilizador.email;
 
     if (!userId || !userEmail) {
       return res.status(401).json({ success: false, message: "Utilizador não autenticado corretamente" });
@@ -236,8 +236,8 @@ const uploadImagemCapa = async (req, res) => {
     }
 
     // 2. Verificar se o utilizador existe
-    const userId = req.user.id_utilizador;
-    const userEmail = req.user.email;
+    const userId = req.utilizador.id_utilizador;
+    const userEmail = req.utilizador.email;
 
     if (!userId || !userEmail) {
       return res.status(401).json({ success: false, message: "Utilizador não autenticado corretamente" });
@@ -318,7 +318,7 @@ const perfilUser = async (req, res) => {
   try {
     console.log('Utilizador autenticado:', req.user);
 
-    const userId = req.user.id_utilizador;
+    const userId = req.utilizador.id_utilizador;
     console.log('ID do utilizador:', userId);
 
     const user = await User.findByPk(userId, {
@@ -357,7 +357,7 @@ const perfilUser = async (req, res) => {
   }
 };
 
-const updatePerfilUser = async (req, res) => {
+/* const updatePerfilUser = async (req, res) => {
   try {
     // Utilizar o ID dos parâmetros, não do utilizador autenticado, pois é o admin a atualizar o perfil de outro utilizador
     const userId = req.params.id;
@@ -405,6 +405,59 @@ const updatePerfilUser = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
   }
 };
+ */
+
+const updatePerfilUser = async (req, res) => {
+  try {
+    // Verificar se é atualização do próprio perfil ou de outro utilizador (admin)
+    const userId = req.params.id || req.utilizador.id_utilizador;
+    
+    const {
+      nome,
+      email,
+      telefone,
+      idade,
+      morada,
+      cidade,
+      distrito,
+      freguesia,
+      codigo_postal,
+      descricao,
+      id_cargo
+    } = req.body;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    // Criar objeto com os campos para atualizar
+    const updateData = {
+      ...(nome && { nome }),
+      ...(email && { email }),
+      ...(telefone && { telefone }),
+      ...(idade && { idade }),
+      ...(morada && { morada }),
+      ...(cidade && { cidade }),
+      ...(distrito && { distrito }),
+      ...(freguesia && { freguesia }),
+      ...(codigo_postal && { codigo_postal }),
+      ...(descricao && { descricao }),
+      ...(id_cargo && { id_cargo })
+    };
+
+    // Atualizar os campos
+    await User.update(updateData, { where: { id_utilizador: userId } });
+
+    const updatedUser = await User.findByPk(userId);
+    res.json(updatedUser);
+  } catch (error) {
+    console.error("Erro ao atualizar perfil:", error);
+    res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
+  }
+};
+
+
 
 const changePassword = async (req, res) => {
   try {

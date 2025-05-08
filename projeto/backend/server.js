@@ -170,7 +170,6 @@ const rotas = [
 
   // Resto das Rotas
   { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },
-  { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
   { caminho: "./src/routes/mailing/mailing_route", prefixo: "/api/mailing" },
   { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" },
   { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" }
