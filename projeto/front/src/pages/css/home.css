@@ -1,7 +1,8 @@
 .home-container {
   width: 100%;
   min-height: 100vh;
-  padding-top: 60px;  /* altura da navbar */
+  padding-top: 60px;
+  /* altura da navbar */
   background-color: white;
   display: flex;
   flex-direction: column;
@@ -118,12 +119,6 @@
   object-fit: cover;
 }
 
-.curso-info {
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
 
 .cartao-curso h3 {
   font-size: 1.1rem;
@@ -132,35 +127,57 @@
   color: #ff8000;
 }
 
+
 /* Status dos cursos */
+.curso-info {
+  padding: 12px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 120px;
+}
+
 .status-badge {
-  display: inline-block;
-  padding: 4px 8px;
+  position: absolute;
+  bottom: 12px;
+  right: 20px;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  margin-top: auto;
-  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  text-align: center;
 }
 
-.status-agendado {
-  background-color: #e3f2fd;
-  color: #1976d2;
+.curso-detalhe:last-of-type {
+  margin-bottom: 40px;
 }
 
-.status-em-curso {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+.cartao-curso .status-agendado {
+  color: #92400e;
+  background-color: #fef3c7;
 }
 
-.status-terminado {
-  background-color: #fafafa;
-  color: #757575;
+.cartao-curso .status-terminado {
+  color: red;
+  background-color: #fee2e2 !important;
 }
+
+.cartao-curso .status-em-curso {
+  color: #166534;
+  background-color: #dcfce7;
+}
+
+
+
+
+
+
 
 /* Mensagens */
-.loading, 
-.error-message, 
+.loading,
+.error-message,
 .sem-inscricoes,
 .info-message {
   text-align: center;
@@ -194,15 +211,16 @@
 
 /* Tablet */
 @media (max-width: 1024px) {
+
   .cursos-grid,
   .topicos-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .overlay-text h1 {
     font-size: 50px;
   }
-  
+
   .overlay-text p {
     font-size: 24px;
   }
@@ -210,15 +228,16 @@
 
 /* Mobile */
 @media (max-width: 768px) {
+
   .cursos-grid,
   .topicos-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .overlay-text h1 {
     font-size: 40px;
   }
-  
+
   .overlay-text p {
     font-size: 20px;
     padding-left: 20px;
@@ -227,15 +246,16 @@
 
 /* Mobile pequeno */
 @media (max-width: 600px) {
+
   .cursos-grid,
   .topicos-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .overlay-text h1 {
     font-size: 32px;
   }
-  
+
   .overlay-text p {
     font-size: 16px;
     padding-left: 10px;
@@ -338,7 +358,8 @@
   margin-top: 20px;
 }
 
-.sem-inscricoes, .info-message {
+.sem-inscricoes,
+.info-message {
   text-align: center;
   padding: 20px;
   color: #666;
@@ -382,17 +403,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 .cursor {
   display: inline-block;
   width: 2px;
@@ -420,16 +430,41 @@
   animation: jump 1s infinite;
 }
 
-.dot:nth-child(2) { animation-delay: 0.1s; }
-.dot:nth-child(3) { animation-delay: 0.3s; }
-.dot:nth-child(4) { animation-delay: 0.5s; }
+.dot:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.dot:nth-child(4) {
+  animation-delay: 0.5s;
+}
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes jump {
-  0%, 100% { transform: translateY(0); opacity: 0; }
-  50% { transform: translateY(-5px); opacity: 1; }
+
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
 }

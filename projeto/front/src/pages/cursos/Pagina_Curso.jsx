@@ -13,6 +13,7 @@ export default function CursoPagina() {
   const [inscrito, setInscrito] = useState(false);
   const [conteudos, setConteudos] = useState([]);
   const [userRole, setUserRole] = useState(null);
+  const [acessoNegado, setAcessoNegado] = useState(false);
 
   // Estados para exibir seções específicas
   const [activeTab, setActiveTab] = useState('detalhes');
@@ -40,7 +41,22 @@ export default function CursoPagina() {
         const data = await response.json();
         setCurso(data);
 
-        // Verificar se o usuário está inscrito
+        // Verificar se o curso é assíncrono e terminou
+        const dataAtual = new Date();
+        const dataFimCurso = new Date(data.data_fim);
+        const cursoTerminado = dataFimCurso < dataAtual;
+
+        // Verificar acesso a cursos assíncronos terminados
+        if (data.tipo === 'assincrono' && cursoTerminado) {
+          // Se não for admin (role 1), negar acesso
+          if (userRole !== 1) {
+            setAcessoNegado(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Verificar se o utilizador está inscrito
         const userToken = localStorage.getItem('token');
         if (userToken) {
           const inscricaoResponse = await fetch(`${API_BASE}/inscricoes/verificar`, {
@@ -76,7 +92,7 @@ export default function CursoPagina() {
     };
 
     fetchCursoDetails();
-  }, [cursoId]);
+  }, [cursoId, userRole]);
 
   const handleInscrever = async () => {
     try {
@@ -148,6 +164,21 @@ export default function CursoPagina() {
     );
   }
 
+  if (acessoNegado) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h2 className="text-xl text-red-600 mb-4">Acesso Negado</h2>
+        <p>Este curso assíncrono já foi encerrado e apenas administradores podem aceder ao seu conteúdo.</p>
+        <button
+          onClick={() => navigate('/cursos')}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Voltar para lista de cursos
+        </button>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -179,7 +210,6 @@ export default function CursoPagina() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmation && userRole === 1 && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -208,9 +238,6 @@ export default function CursoPagina() {
       )}
 
 
-
-
-
       {/* Cabeçalho do curso */}
       <div
         className="w-full h-64 bg-cover bg-center rounded-lg mb-6 relative"
@@ -234,16 +261,20 @@ export default function CursoPagina() {
               {curso.categoria}
             </span>
             <span className={`px-3 py-1 rounded text-sm ${curso.estado === 'Em curso'
-              ? 'bg-green-600 text-white'
-              : curso.estado === 'Terminado'
-                ? 'bg-red-600 text-white'
-                : 'bg-yellow-600 text-white'
+                ? 'bg-green-600 text-white'
+                : curso.estado === 'Terminado'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-blue-600 text-white'
               }`}>
               {curso.estado}
+            </span>
+            <span className="bg-gray-600 text-white px-3 py-1 rounded text-sm ml-3">
+              {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
             </span>
           </div>
         </div>
       </div>
+
 
       {/* Informações do curso e abas */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -424,6 +455,12 @@ export default function CursoPagina() {
                         Este curso já foi encerrado
                       </div>
                     )}
+
+                    {curso.tipo === 'assincrono' && curso.estado === 'Terminado' && userRole === 1 && (
+                      <div className="mt-6 bg-red-100 text-red-800 p-3 rounded-lg text-center">
+                        Como administrador, você tem acesso a este curso assíncrono mesmo após seu término
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -487,7 +524,7 @@ export default function CursoPagina() {
               )}
 
               {/* Se for um curso síncrono, mostrar área de upload de trabalhos */}
-              {curso.tipo === 'síncrono' && (
+              {curso.tipo === 'sincrono' && (
                 <div className="mt-10 border-t pt-6">
                   <h3 className="text-xl font-semibold mb-4">Envio de Trabalhos</h3>
 

@@ -48,27 +48,27 @@ export default function Home() {
       if (token) {
         try {
           console.log('Verificando primeiro login...');
-          
+
           // Decodificar o token para obter as informações do usuário
           const decodedToken = JSON.parse(atob(token.split('.')[1]));
           setUserId(decodedToken.id_utilizador);
-          
+
           // Verificar perfil do usuário para saber se é primeiro login
           const config = {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           };
-          
+
           const response = await axios.get(`${API_BASE}/users/perfil`, config);
           console.log('Dados do perfil recebidos:', response.data);
-          
+
           // Verificação mais robusta, aceitando tanto 1 como true ou '1'
           const primeiroLogin = response.data.primeiro_login;
           const isPrimeiroLogin = primeiroLogin === 1 || primeiroLogin === '1' || primeiroLogin === true;
-          
+
           console.log('Valor de primeiro_login:', primeiroLogin, 'É primeiro login?', isPrimeiroLogin);
-          
+
           if (isPrimeiroLogin) {
             console.log('Primeiro login detectado, exibindo modal de troca de senha');
             setShowPasswordModal(true);
@@ -83,7 +83,7 @@ export default function Home() {
         }
       }
     };
-    
+
     verificarPrimeiroLogin();
   }, []);
 
@@ -91,7 +91,7 @@ export default function Home() {
   const handleClosePasswordModal = () => {
     console.log('Modal de senha fechado, atualizando estado');
     setShowPasswordModal(false);
-    
+
     // Após fechar o modal, buscar inscrições
     buscarInscricoes();
   };
@@ -100,31 +100,31 @@ export default function Home() {
     let index = 0;
     let charIndex = 0;
     let state = "typing"; // typing, waitingAfterTyping, deleting
-  
+
     function animateText() {
       const current = texts[index];
-  
+
       if (!textRef.current) return;
-  
+
       if (state === "typing") {
         textRef.current.textContent = current.substring(0, charIndex + 1);
         charIndex++;
-  
+
         if (charIndex === current.length) {
           state = "waitingAfterTyping";
           setTimeout(animateText, 1500); // espera antes de apagar
         } else {
           setTimeout(animateText, 100); // escrever
         }
-      } 
+      }
       else if (state === "waitingAfterTyping") {
         state = "deleting";
         setTimeout(animateText, 100);
-      } 
+      }
       else if (state === "deleting") {
         textRef.current.textContent = current.substring(0, charIndex - 1);
         charIndex--;
-  
+
         if (charIndex === 0) {
           index = (index + 1) % texts.length;
           state = "typing";
@@ -134,15 +134,15 @@ export default function Home() {
         }
       }
     }
-  
+
     animateText();
-  
+
     return () => {
       // Cleanup se o componente desmontar
       clearTimeout();
     };
   }, []);
-  
+
   const getImageUrl = (inscricao) => {
     if (inscricao && inscricao.imagem_path) {
       return `${API_BASE}/${inscricao.imagem_path}`;
@@ -199,9 +199,9 @@ export default function Home() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Modal de alteração de senha para primeiro login */}
-      <Trocar_Senha_Modal 
-        isOpen={showPasswordModal} 
-        onClose={handleClosePasswordModal} 
+      <Trocar_Senha_Modal
+        isOpen={showPasswordModal}
+        onClose={handleClosePasswordModal}
         userId={userId}
       />
 
@@ -224,6 +224,7 @@ export default function Home() {
             <div className="error-message">{error}</div>
           ) : inscricoes.length > 0 ? (
             <div className="cursos-grid">
+
               {inscricoes.map((inscricao) => (
                 <div
                   key={inscricao.id}
@@ -244,13 +245,17 @@ export default function Home() {
                     <p className="curso-titulo">{inscricao.nomeCurso}</p>
                     <p className="curso-detalhe">Categoria: {inscricao.categoria}</p>
                     <p className="curso-detalhe">Área: {inscricao.area}</p>
-                    <div className={`status-badge status-${inscricao.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                      {inscricao.status}
+
+                    
+                    <div className={`status-badge status-${inscricao.status ? inscricao.status.toLowerCase().replace(/\s+/g, '-') : 'agendado'}`}>
+                      {inscricao.status || 'Agendado'}
                     </div>
                   </div>
                 </div>
               ))}
+
             </div>
+
           ) : (
             <div className="sem-inscricoes">
               <p>Você não está inscrito em nenhum curso.</p>
@@ -261,7 +266,7 @@ export default function Home() {
         <section className="cursos-section">
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
-          <Cursos_Sugeridos />
+            <Cursos_Sugeridos />
           </div>
         </section>
 

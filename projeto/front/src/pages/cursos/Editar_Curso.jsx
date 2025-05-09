@@ -23,6 +23,7 @@ const EditarCurso = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formadorNome, setFormadorNome] = useState('');
+  const [dataInicioUltrapassada, setDataInicioUltrapassada] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -61,6 +62,18 @@ const EditarCurso = () => {
           return data.toISOString().split('T')[0];
         };
 
+        // Verificar se a data de início já passou
+        const dataAtual = new Date();
+        const dataInicio = new Date(cursoData.data_inicio);
+        const dataInicioPassou = dataInicio <= dataAtual;
+        setDataInicioUltrapassada(dataInicioPassou);
+        
+        if (dataInicioPassou) {
+          toast.info('A data limite de inscrição já passou. Não é possível alterar as vagas.', {
+            autoClose: 5000
+          });
+        }
+
         // Preencher o formulário com os dados do curso
         setFormData({
           nome: cursoData.nome || '',
@@ -72,7 +85,7 @@ const EditarCurso = () => {
           id_formador: cursoData.id_formador || '',
           id_area: cursoData.id_area || '',
           id_categoria: cursoData.id_categoria || '',
-          imagem: null // A imagem não vem preenchida, apenas o usuário pode escolher uma nova
+          imagem: null // A imagem não vem preenchida, apenas o utilizador pode escolher uma nova
         });
 
         // Se tiver imagem, mostrar a pré-visualização
@@ -164,6 +177,10 @@ const EditarCurso = () => {
     } else if (name === 'id_categoria') {
       // Quando mudar a categoria, limpar a área selecionada
       setFormData({ ...formData, [name]: value, id_area: '' });
+    } else if (name === 'vagas' && dataInicioUltrapassada) {
+      // Não permitir alteração de vagas se a data de início já passou
+      toast.warning('Não é possível alterar as vagas após a data limite de inscrição.');
+      // Manter o valor antigo
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -180,7 +197,11 @@ const EditarCurso = () => {
 
     const data = new FormData();
     for (let key in formData) {
-      if (formData[key] !== null && formData[key] !== '' && key !== 'imagem_path') {
+      // Não enviar vagas atualizadas se a data de início já passou
+      if (key === 'vagas' && dataInicioUltrapassada) {
+        // Usar o valor original das vagas
+        data.append(key, formData.vagas);
+      } else if (formData[key] !== null && formData[key] !== '' && key !== 'imagem_path') {
         data.append(key, formData[key]);
       }
     }
@@ -327,9 +348,16 @@ const EditarCurso = () => {
               placeholder="Vagas" 
               value={formData.vagas} 
               onChange={handleChange} 
-              disabled={formData.tipo === 'assincrono'} 
+              disabled={formData.tipo === 'assincrono' || dataInicioUltrapassada} 
               required={formData.tipo === 'sincrono'}
+              title={dataInicioUltrapassada ? "Não é possível alterar vagas após a data limite de inscrição" : ""}
             />
+            {dataInicioUltrapassada && formData.tipo === 'sincrono' && (
+              <div className="info-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+                A data limite de inscrição já passou. As vagas não podem ser alteradas.
+              </div>
+            )}
           </div>
 
           <div className="row">

@@ -4,6 +4,7 @@ import API_BASE, { IMAGES } from "../../api";
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Sidebar from "../../components/Sidebar";
+import { useAuth } from "../../contexts/AuthContext";
 import "./css/Lista_Cursos.css";
 
 export default function CursosPage() {
@@ -12,11 +13,19 @@ export default function CursosPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCursos, setTotalCursos] = useState(0);
   const cursosPerPage = 12;
+  const { currentUser } = useAuth();
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id_cargo) {
+      setUserRole(currentUser.id_cargo);
+    }
+  }, [currentUser]);
 
   // Estados para a barra de pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Estados para os filtros
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -24,7 +33,7 @@ export default function CursosPage() {
   const [categoriaId, setCategoriaId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState('todos'); // 'todos', 'sincrono', 'assincrono'
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
@@ -37,11 +46,11 @@ export default function CursosPage() {
     if (area.categoria_id !== undefined) return area.categoria_id;
     if (area.idCategoria !== undefined) return area.idCategoria;
     if (area.categoriaId !== undefined) return area.categoriaId;
-    
-    const categoriaKey = Object.keys(area).find(k => 
+
+    const categoriaKey = Object.keys(area).find(k =>
       k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
     );
-    
+
     return categoriaKey ? area[categoriaKey] : null;
   };
 
@@ -65,7 +74,7 @@ export default function CursosPage() {
   const fetchCursos = async () => {
     try {
       setIsLoading(true);
-      
+
       // Construir parâmetros da query
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -89,7 +98,7 @@ export default function CursosPage() {
       const url = `${API_BASE}/cursos?${params.toString()}`;
       const response = await fetch(url);
       const data = await response.json();
-      
+
       setCursos(data.cursos || []);
       setTotalPages(data.totalPages || 1);
       setTotalCursos(data.totalCursos || 0);
@@ -161,16 +170,16 @@ export default function CursosPage() {
       const response = await axios.get(`${API_BASE}/cursos/${cursoId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const cursoData = response.data;
       const dataAtual = new Date();
       const dataFimCurso = new Date(cursoData.data_fim);
       const cursoTerminado = dataFimCurso < dataAtual;
-      
-      // Verificar acesso
-      if (cursoTerminado && !cursoData.acessoPermitido) {
+
+      // Verificar acesso - permitir se for admin (role 1)
+      if (cursoTerminado && !cursoData.acessoPermitido && userRole !== 1) {
         toast.error(
-          "Este curso já terminou e só está disponível para alunos inscritos.", 
+          "Este curso já terminou e só está disponível para alunos inscritos.",
           {
             position: "top-center",
             autoClose: 5000,
@@ -182,7 +191,7 @@ export default function CursosPage() {
         );
         return; // Impede a navegação
       }
-      
+
       // Se passou pela verificação, navega para a página
       navigate(`/cursos/${cursoId}`);
     } catch (error) {
@@ -214,7 +223,7 @@ export default function CursosPage() {
     if (curso && curso.imagem_path) {
       return `${API_BASE}/${curso.imagem_path}`;
     }
-    
+
     if (curso && curso.nome) {
       const nomeCursoSlug = curso.nome
         .toLowerCase()
@@ -222,7 +231,7 @@ export default function CursosPage() {
         .replace(/[^\w-]+/g, "");
       return IMAGES.CURSO(nomeCursoSlug);
     }
-    
+
     return '/placeholder-curso.jpg';
   };
 
@@ -232,14 +241,14 @@ export default function CursosPage() {
     setAreaId('');
     setTipoFiltro('todos');
   };
-  
+
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Título da página Cursos */}
       <h1 className="page-title">Cursos</h1>
-      
+
       {/* Barra de pesquisa e filtros */}
       <div className="cursos-search-container">
         <div className="cursos-search-input-container">
@@ -252,8 +261,8 @@ export default function CursosPage() {
             className="cursos-search-input"
           />
         </div>
-        
-        <button 
+
+        <button
           className="cursos-filter-button"
           onClick={toggleFilters}
         >
@@ -261,7 +270,7 @@ export default function CursosPage() {
           <span>Filtros</span>
         </button>
       </div>
-      
+
       {/* Área de filtros expandida */}
       {showFilters && (
         <div className="cursos-filter-options">
@@ -282,7 +291,7 @@ export default function CursosPage() {
               </select>
               <i className="fas fa-folder custom-select-icon"></i>
             </div>
-            
+
             {/* Select para área */}
             {categoriaId && (
               <div className="custom-select-wrapper">
@@ -299,7 +308,7 @@ export default function CursosPage() {
                     areasFiltradas.map(area => {
                       const areaIdValue = area.id_area || area.id || area.idArea || area.area_id;
                       const areaNomeValue = area.nome || area.name || area.descricao || area.description;
-                      
+
                       return (
                         <option key={areaIdValue} value={areaIdValue}>
                           {areaNomeValue}
@@ -313,26 +322,26 @@ export default function CursosPage() {
                 <i className="fas fa-bookmark custom-select-icon"></i>
               </div>
             )}
-            
+
             {/* Botões para filtrar por tipo de curso */}
             <div className="cursos-filter-tipo">
-              <button 
+              <button
                 className={`cursos-filter-tipo-button ${tipoFiltro === 'todos' ? 'cursos-filter-tipo-active' : ''}`}
                 onClick={() => setTipoFiltro('todos')}
               >
                 <i className="fas fa-th-list cursos-filter-button-icon"></i>
                 <span>Todos</span>
               </button>
-              
-              <button 
+
+              <button
                 className={`cursos-filter-tipo-button ${tipoFiltro === 'sincrono' ? 'cursos-filter-tipo-active' : ''}`}
                 onClick={() => setTipoFiltro('sincrono')}
               >
                 <i className="fas fa-users cursos-filter-button-icon"></i>
                 <span>Síncronos</span>
               </button>
-              
-              <button 
+
+              <button
                 className={`cursos-filter-tipo-button ${tipoFiltro === 'assincrono' ? 'cursos-filter-tipo-active' : ''}`}
                 onClick={() => setTipoFiltro('assincrono')}
               >
@@ -340,10 +349,10 @@ export default function CursosPage() {
                 <span>Assíncronos</span>
               </button>
             </div>
-            
+
             {/* Botão para limpar todos os filtros */}
             {(searchTerm || categoriaId || areaId || tipoFiltro !== 'todos') && (
-              <button 
+              <button
                 className="cursos-filter-clear-button"
                 onClick={clearFilters}
               >
