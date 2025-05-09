@@ -28,7 +28,7 @@ const FormadorAssociacoesPendentes = require('./models/Formador_Associacoes_Pend
 
 const Notificacao = require('./models/Notificacao');
 const NotificacaoUtilizador = require('./models/NotificacaoUtilizador');
-const AssociarCursos = require('./models/AssociarCursos');
+const AssociarCursos = require('./models/AssociarCurso');
 
 // Coleção de todos os modelos para uso nas funções associate
 const models = {

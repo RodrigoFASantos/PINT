@@ -1,4 +1,4 @@
-const AssociarCursos = require('../../database/models/AssociarCursos');
+const AssociarCursos = require('../../database/models/AssociarCurso');
 const Curso = require('../../database/models/Curso');
 const { Op } = require('sequelize');
 

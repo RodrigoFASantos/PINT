@@ -8,7 +8,7 @@ import axios from 'axios';
 import Sidebar from '../../components/Sidebar';
 import FormadorModal from '../../components/users/Formador_Modal';
 import './css/Criar_Curso.css';
-import CursoAssociacaoModal from '../../components/cursos/CursoAssociacaoModal';
+import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 
 const CriarCurso = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -22,28 +22,28 @@ const CriarCurso = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
-const [cursosAssociados, setCursosAssociados] = useState([]);
+  const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
+  const [cursosAssociados, setCursosAssociados] = useState([]);
 
-const abrirModalAssociacao = () => {
-  setModalAssociacaoAberto(true);
-};
+  const abrirModalAssociacao = () => {
+    setModalAssociacaoAberto(true);
+  };
 
 
-const handleAssociarCurso = (cursoSelecionado) => {
-  // Verificar se o curso já está na lista
-  if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
-    setCursosAssociados([...cursosAssociados, cursoSelecionado]);
-    toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
-  } else {
-    toast.info(`Curso "${cursoSelecionado.nome}" já está na lista de associações`);
-  }
-};
+  const handleAssociarCurso = (cursoSelecionado) => {
+    // Verificar se o curso já está na lista
+    if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
+      setCursosAssociados([...cursosAssociados, cursoSelecionado]);
+      toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
+    } else {
+      toast.info(`Curso "${cursoSelecionado.nome}" já está na lista de associações`);
+    }
+  };
 
-const removerAssociacao = (cursoId) => {
-  setCursosAssociados(cursosAssociados.filter(c => c.id_curso !== cursoId));
-  toast.info("Curso removido da lista de associações");
-};
+  const removerAssociacao = (cursoId) => {
+    setCursosAssociados(cursosAssociados.filter(c => c.id_curso !== cursoId));
+    toast.info("Curso removido da lista de associações");
+  };
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -61,7 +61,7 @@ const removerAssociacao = (cursoId) => {
   useEffect(() => {
     // Definir loading state
     setIsLoading(true);
-    
+
     // Carregar formadores
     axios.get(`${API_BASE}/users/formadores`, {
       headers: {
@@ -100,13 +100,13 @@ const removerAssociacao = (cursoId) => {
     })
       .then(res => {
         console.log("Áreas carregadas:", res.data);
-        
+
         // Verificar a estrutura dos dados para debugging
         if (res.data && res.data.length > 0) {
           console.log("Exemplo de área:", res.data[0]);
           console.log("Propriedades da área:", Object.keys(res.data[0]));
         }
-        
+
         setAreas(res.data);
         setIsLoading(false);
       })
@@ -124,12 +124,12 @@ const removerAssociacao = (cursoId) => {
     if (area.categoria_id !== undefined) return area.categoria_id;
     if (area.idCategoria !== undefined) return area.idCategoria;
     if (area.categoriaId !== undefined) return area.categoriaId;
-    
+
     // Se não encontrar, procurar qualquer chave que contenha "categoria" e "id"
-    const categoriaKey = Object.keys(area).find(k => 
+    const categoriaKey = Object.keys(area).find(k =>
       k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
     );
-    
+
     return categoriaKey ? area[categoriaKey] : null;
   };
 
@@ -138,17 +138,17 @@ const removerAssociacao = (cursoId) => {
     if (formData.id_categoria) {
       // Converter para string para garantir comparação consistente
       const categoriaId = String(formData.id_categoria);
-      
+
       // Filtragem mais flexível para lidar com diferentes estruturas de dados
       const areasFiltered = areas.filter(area => {
         const areaCategoriaId = getCategoriaId(area);
         return areaCategoriaId !== null && String(areaCategoriaId) === categoriaId;
       });
-      
+
       console.log("Categoria selecionada:", categoriaId);
       console.log("Áreas filtradas:", areasFiltered);
       setAreasFiltradas(areasFiltered);
-      
+
       // Limpar área selecionada se a categoria mudar
       setFormData(prev => ({ ...prev, id_area: '' }));
     } else {
@@ -199,35 +199,35 @@ const removerAssociacao = (cursoId) => {
     const dataInicio = new Date(formData.data_inicio);
     const dataFim = new Date(formData.data_fim);
     const hoje = new Date();
-    
+
     if (dataInicio < hoje) {
       toast.error("A data de início não pode ser anterior à data atual");
       return false;
     }
-    
+
     if (dataFim <= dataInicio) {
       toast.error("A data de fim deve ser posterior à data de início");
       return false;
     }
-    
+
     // Validar formador para cursos síncronos
     if (formData.tipo === 'sincrono' && !formData.id_formador) {
       toast.error("Selecione um formador para o curso síncrono");
       return false;
     }
-    
+
     // Validar número de vagas para cursos síncronos
     if (formData.tipo === 'sincrono' && (!formData.vagas || parseInt(formData.vagas) <= 0)) {
       toast.error("Defina um número válido de vagas para o curso síncrono");
       return false;
     }
-    
+
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -248,36 +248,36 @@ const removerAssociacao = (cursoId) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
       });
-      
+
       toast.success('Curso criado com sucesso!');
 
       // Se houver cursos a associar, criar as associações
-    if (cursosAssociados.length > 0 && response.data.curso) {
-      const novoCursoId = response.data.curso.id_curso;
-      
-      // Criar cada associação
-      for (const cursoAssociado of cursosAssociados) {
-        try {
-          await axios.post(`${API_BASE}/associar-cursos`, {
-            id_curso_origem: novoCursoId,
-            id_curso_destino: cursoAssociado.id_curso
-          }, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
-        } catch (assocError) {
-          console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
-          toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
+      if (cursosAssociados.length > 0 && response.data.curso) {
+        const novoCursoId = response.data.curso.id_curso;
+
+        // Criar cada associação
+        for (const cursoAssociado of cursosAssociados) {
+          try {
+            await axios.post(`${API_BASE}/associar-cursos`, {
+              id_curso_origem: novoCursoId,
+              id_curso_destino: cursoAssociado.id_curso
+            }, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
+          } catch (assocError) {
+            console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
+            toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
+          }
         }
+
+        toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
       }
-      
-      toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
-    }
 
 
-      
+
       // Limpar o formulário após envio bem-sucedido
       setFormData({
         nome: '',
@@ -292,7 +292,7 @@ const removerAssociacao = (cursoId) => {
         imagem: null,
       });
       setPreviewImage(null);
-      
+
       // Opcional: redirecionar para a lista de cursos após sucesso
       // navigate('/cursos');
     } catch (error) {
@@ -307,19 +307,19 @@ const removerAssociacao = (cursoId) => {
   // Encontrar o formador atual pelos dados
   const getFormadorNome = () => {
     if (!formData.id_formador || !formadores.length) return null;
-    
+
     const formador = formadores.find(f => {
       // Verificar diferentes propriedades possíveis para o ID
       const formadorId = f.id_utilizador || f.id_user || f.id || f.idUser || f.userId;
       return String(formadorId) === String(formData.id_formador);
     });
-    
+
     // Verificar diferentes propriedades possíveis para o nome
     return formador ? (formador.nome || formador.name || formador.fullName || `ID: ${formData.id_formador}`) : `ID: ${formData.id_formador}`;
   };
 
   const formadorNome = getFormadorNome();
-  
+
   // Determinar a data mínima para os campos de data (hoje)
   const getMinDate = () => {
     const hoje = new Date();
@@ -327,232 +327,230 @@ const removerAssociacao = (cursoId) => {
   };
 
 
-  
+
 
   return (
-    <div className="form-container">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+    <div className="criar-curso-container">
+      <div className="form-container">
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
-
-
-
-
-
-<div className="course-image-container">
-  <div 
-    className="course-image-upload" 
-    style={{ backgroundImage: previewImage ? `url('${previewImage}')` : 'none' }}
-    onClick={() => document.querySelector('input[type="file"][name="imagem"]').click()}
-  >
-    {!previewImage && <div className="upload-placeholder">Clique para adicionar imagem do curso</div>}
-    <input
-      type="file"
-      name="imagem"
-      accept="image/*"
-      onChange={handleChange}
-      style={{ display: 'none' }}
-    />
-    {isLoading && <div className="uploading-overlay">A carregar imagem...</div>}
-  </div>
-</div>
-
-
-        <div className="inputs">
-          <div className="row">
-            <input
-              type="text"
-              name="nome"
-              placeholder="Nome do Curso"
-              value={formData.nome}
-              onChange={handleChange}
-              required
-              maxLength={100}
-            />
-            <select
-              name="tipo"
-              value={formData.tipo}
-              onChange={handleChange}
-              required
+        <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
+          <div className="course-image-container">
+            <div
+              className="course-image-upload"
+              style={{ backgroundImage: previewImage ? `url('${previewImage}')` : 'none' }}
+              onClick={() => document.querySelector('input[type="file"][name="imagem"]').click()}
             >
-              <option value="">Selecione o Tipo</option>
-              <option value="sincrono">Síncrono</option>
-              <option value="assincrono">Assíncrono</option>
-            </select>
+              {!previewImage && <div className="upload-placeholder">Clique para adicionar imagem do curso</div>}
+              <input
+                type="file"
+                name="imagem"
+                accept="image/*"
+                onChange={handleChange}
+                style={{ display: 'none' }}
+              />
+              {isLoading && <div className="uploading-overlay">A carregar imagem...</div>}
+            </div>
           </div>
 
-          <div className="row">
-            <select
-              name="id_categoria"
-              value={formData.id_categoria}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Selecione a Categoria</option>
-              {categorias.map(categoria => (
-                <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                  {categoria.nome}
-                </option>
-              ))}
-            </select>
-
-            <select
-              name="id_area"
-              value={formData.id_area}
-              onChange={handleChange}
-              required
-              disabled={!formData.id_categoria || isLoading}
-            >
-              <option value="">Selecione a Área</option>
-              {isLoading ? (
-                <option value="" disabled>A carregar áreas...</option>
-              ) : areasFiltradas.length > 0 ? (
-                areasFiltradas.map(area => {
-                  // Obter ID da área de maneira flexível
-                  const areaId = area.id_area || area.id || area.idArea || area.area_id;
-                  // Obter nome da área de maneira flexível
-                  const areaNome = area.nome || area.name || area.descricao || area.description;
-                  
-                  return (
-                    <option key={areaId} value={areaId}>
-                      {areaNome}
-                    </option>
-                  );
-                })
-              ) : (
-                <option value="" disabled>Nenhuma área disponível para esta categoria</option>
-              )}
-            </select>
-          </div>
-
-          <div className="row">
-            {formData.tipo === 'sincrono' && (
-              <button
-                type="button"
-                className="select-formador-button"
-                onClick={() => setModalAberto(true)}
+          <div className="inputs">
+            <div className="row">
+              <input
+                type="text"
+                name="nome"
+                placeholder="Nome do Curso"
+                value={formData.nome}
+                onChange={handleChange}
+                required
+                maxLength={100}
+              />
+              <select
+                name="tipo"
+                value={formData.tipo}
+                onChange={handleChange}
+                required
               >
-                <i className="fas fa-user-plus"></i> 
-                {formData.id_formador 
-                  ? `Formador: ${formadorNome} (Clique para alterar)`
-                  : "Selecionar Formador"}
-              </button>
-            )}
+                <option value="">Selecione o Tipo</option>
+                <option value="sincrono">Síncrono</option>
+                <option value="assincrono">Assíncrono</option>
+              </select>
+            </div>
 
-            {formData.tipo === 'assincrono' && (
-              <div className="info-box">
-                <i className="fas fa-info-circle"></i>
-                Cursos assíncronos não precisam de formador
+            <div className="row">
+              <select
+                name="id_categoria"
+                value={formData.id_categoria}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione a Categoria</option>
+                {categorias.map(categoria => (
+                  <option key={categoria.id_categoria} value={categoria.id_categoria}>
+                    {categoria.nome}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="id_area"
+                value={formData.id_area}
+                onChange={handleChange}
+                required
+                disabled={!formData.id_categoria || isLoading}
+              >
+                <option value="">Selecione a Área</option>
+                {isLoading ? (
+                  <option value="" disabled>A carregar áreas...</option>
+                ) : areasFiltradas.length > 0 ? (
+                  areasFiltradas.map(area => {
+                    // Obter ID da área de maneira flexível
+                    const areaId = area.id_area || area.id || area.idArea || area.area_id;
+                    // Obter nome da área de maneira flexível
+                    const areaNome = area.nome || area.name || area.descricao || area.description;
+
+                    return (
+                      <option key={areaId} value={areaId}>
+                        {areaNome}
+                      </option>
+                    );
+                  })
+                ) : (
+                  <option value="" disabled>Nenhuma área disponível para esta categoria</option>
+                )}
+              </select>
+            </div>
+
+            <div className="row">
+              {formData.tipo === 'sincrono' && (
+                <button
+                  type="button"
+                  className="select-formador-button"
+                  onClick={() => setModalAberto(true)}
+                >
+                  <i className="fas fa-user-plus"></i>
+                  {formData.id_formador
+                    ? `Formador: ${formadorNome} (Clique para alterar)`
+                    : "Selecionar Formador"}
+                </button>
+              )}
+
+              {formData.tipo === 'assincrono' && (
+                <div className="info-box">
+                  <i className="fas fa-info-circle"></i>
+                  Cursos assíncronos não precisam de formador
+                </div>
+              )}
+
+              <input
+                type="number"
+                name="vagas"
+                placeholder="Vagas"
+                value={formData.vagas}
+                onChange={handleChange}
+                disabled={formData.tipo === 'assincrono'}
+                required={formData.tipo === 'sincrono'}
+                min="1"
+              />
+            </div>
+
+            <div className="row">
+              <div className="input-group">
+                <label>Data de Início</label>
+                <input
+                  type="date"
+                  name="data_inicio"
+                  value={formData.data_inicio}
+                  onChange={handleChange}
+                  min={getMinDate()}
+                  required
+                />
               </div>
-            )}
 
-            <input
-              type="number"
-              name="vagas"
-              placeholder="Vagas"
-              value={formData.vagas}
+              <div className="input-group">
+                <label>Data de Término</label>
+                <input
+                  type="date"
+                  name="data_fim"
+                  value={formData.data_fim}
+                  onChange={handleChange}
+                  min={formData.data_inicio || getMinDate()}
+                  required
+                />
+              </div>
+            </div>
+
+            <textarea
+              name="descricao"
+              placeholder="Descrição do curso"
+              value={formData.descricao}
               onChange={handleChange}
-              disabled={formData.tipo === 'assincrono'}
-              required={formData.tipo === 'sincrono'}
-              min="1"
-            />
+              rows="4"
+              maxLength={500}
+              required
+            ></textarea>
+
+                  <div className="associacoes-container">
+        <h3 className="associacoes-titulo">Cursos Associados</h3>
+
+        <button
+          type="button"
+          className="associar-curso-button"
+          onClick={abrirModalAssociacao}
+        >
+          <i className="fas fa-link"></i> Associar Curso
+        </button>
+
+        {cursosAssociados.length > 0 ? (
+          <div className="lista-cursos-associados">
+            {cursosAssociados.map(curso => (
+              <div key={curso.id_curso} className="curso-associado-item">
+                <span>{curso.nome}</span>
+                <button
+                  type="button"
+                  className="remover-associacao"
+                  onClick={() => removerAssociacao(curso.id_curso)}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            ))}
           </div>
+        ) : (
+          <p className="sem-associacoes">Nenhum curso associado</p>
+        )}
+      </div>
 
-          <div className="row">
-            <div className="input-group">
-              <label>Data de Início</label>
-              <input
-                type="date"
-                name="data_inicio"
-                value={formData.data_inicio}
-                onChange={handleChange}
-                min={getMinDate()}
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Data de Término</label>
-              <input
-                type="date"
-                name="data_fim"
-                value={formData.data_fim}
-                onChange={handleChange}
-                min={formData.data_inicio || getMinDate()}
-                required
-              />
-            </div>
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Criando...' : 'Criar'}
+            </button>
           </div>
+        </form>
 
-          <textarea
-            name="descricao"
-            placeholder="Descrição do curso"
-            value={formData.descricao}
-            onChange={handleChange}
-            rows="4"
-            maxLength={500}
-            required
-          ></textarea>
+        <FormadorModal
+          isOpen={modalAberto}
+          onClose={() => setModalAberto(false)}
+          setFormador={handleFormadorSelection}
+          users={formadores}
+          currentFormadorId={formData.id_formador}
+        />
 
-          <button 
-            type="submit" 
-            className="submit-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Criando...' : 'Criar'}
-          </button>
-        </div>
-      </form>
+        <ToastContainer />
+      </div>
 
-      <FormadorModal
-        isOpen={modalAberto}
-        onClose={() => setModalAberto(false)}
-        setFormador={handleFormadorSelection}
-        users={formadores}
-        currentFormadorId={formData.id_formador}
+
+
+      {/* Modal de associação de cursos */}
+      <CursoAssociacaoModal
+        isOpen={modalAssociacaoAberto}
+        onClose={() => setModalAssociacaoAberto(false)}
+        onSelectCurso={handleAssociarCurso}
+        cursoAtualId={null}
       />
-
-      <ToastContainer />
     </div>
-
-    <div className="associacoes-container">
-  <h3 className="associacoes-titulo">Cursos Associados</h3>
-  
-  <button 
-    type="button" 
-    className="associar-curso-button"
-    onClick={abrirModalAssociacao}
-  >
-    <i className="fas fa-link"></i> Associar Curso
-  </button>
-  
-  {cursosAssociados.length > 0 ? (
-    <div className="lista-cursos-associados">
-      {cursosAssociados.map(curso => (
-        <div key={curso.id_curso} className="curso-associado-item">
-          <span>{curso.nome}</span>
-          <button 
-            type="button" 
-            className="remover-associacao"
-            onClick={() => removerAssociacao(curso.id_curso)}
-          >
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p className="sem-associacoes">Nenhum curso associado</p>
-  )}
-</div>
-
-// Adicionar o componente modal
-<CursoAssociacaoModal
-  isOpen={modalAssociacaoAberto}
-  onClose={() => setModalAssociacaoAberto(false)}
-  onSelectCurso={handleAssociarCurso}
-  cursoAtualId={null}
-/>
   );
 };
 

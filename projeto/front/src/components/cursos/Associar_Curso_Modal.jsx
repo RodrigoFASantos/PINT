@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE from "../../api";
-import './css/Modal.css';
+import './css/Associar_Curso_Modal.css';
 
 const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) => {
   const [cursos, setCursos] = useState([]);
