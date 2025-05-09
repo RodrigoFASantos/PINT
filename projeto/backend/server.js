@@ -159,6 +159,7 @@ const rotas = [
   { caminho: "./src/routes/cursos/tipos_conteudo_route", prefixo: "/api/tipos-conteudo" },
   { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
   { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
+  { caminho: "./src/routes/cursos/associar_cursos_route", prefixo: "/api/associar-cursos" },
 
   // Chat
   { caminho: "./src/routes/chat/Topico_routes", prefixo: "/api/topicos" },

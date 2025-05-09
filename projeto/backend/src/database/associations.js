@@ -28,10 +28,12 @@ const FormadorAssociacoesPendentes = require('./models/Formador_Associacoes_Pend
 
 const Notificacao = require('./models/Notificacao');
 const NotificacaoUtilizador = require('./models/NotificacaoUtilizador');
+const AssociarCursos = require('./models/AssociarCursos');
 
 // Coleção de todos os modelos para uso nas funções associate
 const models = {
   Area,
+  AssociarCursos,
   Avaliacao,
   Cargo,
   Categoria,
@@ -106,6 +108,31 @@ User.belongsToMany(Curso, {
   otherKey: "id_curso",
   as: "cursos"
 });
+
+
+
+// === Associações AssociarCursos ===
+AssociarCursos.belongsTo(Curso, {
+  foreignKey: "id_curso_origem",
+  as: "cursoOrigem"
+});
+
+AssociarCursos.belongsTo(Curso, {
+  foreignKey: "id_curso_destino",
+  as: "cursoDestino"
+});
+
+// Adicionar associações bidirecionais em Curso
+Curso.hasMany(AssociarCursos, {
+  foreignKey: "id_curso_origem",
+  as: "cursosAssociadosOrigem"
+});
+
+Curso.hasMany(AssociarCursos, {
+  foreignKey: "id_curso_destino",
+  as: "cursosAssociadosDestino"
+});
+
 
 // Novas associações para formadores com categorias e áreas
 User.belongsToMany(Categoria, {

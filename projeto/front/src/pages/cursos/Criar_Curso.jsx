@@ -8,6 +8,7 @@ import axios from 'axios';
 import Sidebar from '../../components/Sidebar';
 import FormadorModal from '../../components/users/Formador_Modal';
 import './css/Criar_Curso.css';
+import CursoAssociacaoModal from '../../components/cursos/CursoAssociacaoModal';
 
 const CriarCurso = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -21,6 +22,28 @@ const CriarCurso = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
+const [cursosAssociados, setCursosAssociados] = useState([]);
+
+const abrirModalAssociacao = () => {
+  setModalAssociacaoAberto(true);
+};
+
+
+const handleAssociarCurso = (cursoSelecionado) => {
+  // Verificar se o curso já está na lista
+  if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
+    setCursosAssociados([...cursosAssociados, cursoSelecionado]);
+    toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
+  } else {
+    toast.info(`Curso "${cursoSelecionado.nome}" já está na lista de associações`);
+  }
+};
+
+const removerAssociacao = (cursoId) => {
+  setCursosAssociados(cursosAssociados.filter(c => c.id_curso !== cursoId));
+  toast.info("Curso removido da lista de associações");
+};
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -227,7 +250,33 @@ const CriarCurso = () => {
       });
       
       toast.success('Curso criado com sucesso!');
-      console.log("Resposta da API:", response.data);
+
+      // Se houver cursos a associar, criar as associações
+    if (cursosAssociados.length > 0 && response.data.curso) {
+      const novoCursoId = response.data.curso.id_curso;
+      
+      // Criar cada associação
+      for (const cursoAssociado of cursosAssociados) {
+        try {
+          await axios.post(`${API_BASE}/associar-cursos`, {
+            id_curso_origem: novoCursoId,
+            id_curso_destino: cursoAssociado.id_curso
+          }, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
+        } catch (assocError) {
+          console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
+          toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
+        }
+      }
+      
+      toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
+    }
+
+
       
       // Limpar o formulário após envio bem-sucedido
       setFormData({
@@ -276,6 +325,9 @@ const CriarCurso = () => {
     const hoje = new Date();
     return hoje.toISOString().split('T')[0]; // Formato YYYY-MM-DD
   };
+
+
+  
 
   return (
     <div className="form-container">
@@ -462,6 +514,45 @@ const CriarCurso = () => {
 
       <ToastContainer />
     </div>
+
+    <div className="associacoes-container">
+  <h3 className="associacoes-titulo">Cursos Associados</h3>
+  
+  <button 
+    type="button" 
+    className="associar-curso-button"
+    onClick={abrirModalAssociacao}
+  >
+    <i className="fas fa-link"></i> Associar Curso
+  </button>
+  
+  {cursosAssociados.length > 0 ? (
+    <div className="lista-cursos-associados">
+      {cursosAssociados.map(curso => (
+        <div key={curso.id_curso} className="curso-associado-item">
+          <span>{curso.nome}</span>
+          <button 
+            type="button" 
+            className="remover-associacao"
+            onClick={() => removerAssociacao(curso.id_curso)}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="sem-associacoes">Nenhum curso associado</p>
+  )}
+</div>
+
+// Adicionar o componente modal
+<CursoAssociacaoModal
+  isOpen={modalAssociacaoAberto}
+  onClose={() => setModalAssociacaoAberto(false)}
+  onSelectCurso={handleAssociarCurso}
+  cursoAtualId={null}
+/>
   );
 };
 

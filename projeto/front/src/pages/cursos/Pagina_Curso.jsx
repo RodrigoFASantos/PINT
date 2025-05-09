@@ -14,6 +14,7 @@ export default function CursoPagina() {
   const [conteudos, setConteudos] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [acessoNegado, setAcessoNegado] = useState(false);
+const [cursosAssociados, setCursosAssociados] = useState([]);
 
   // Estados para exibir seções específicas
   const [activeTab, setActiveTab] = useState('detalhes');
@@ -83,6 +84,30 @@ export default function CursoPagina() {
             setConteudos(conteudosData);
           }
         }
+
+        // Buscar cursos associados
+      try {
+        const associacoesResponse = await fetch(`${API_BASE}/associar-cursos/curso/${cursoId}`);
+        if (associacoesResponse.ok) {
+          const associacoesData = await associacoesResponse.json();
+          
+          // Transformar os dados das associações em lista de cursos
+          const cursosAssociadosArray = associacoesData.map(associacao => {
+            // Se o curso atual é a origem, o destino é o associado e vice-versa
+            if (associacao.id_curso_origem === parseInt(cursoId)) {
+              return associacao.cursoDestino;
+            } else {
+              return associacao.cursoOrigem;
+            }
+          });
+          
+          setCursosAssociados(cursosAssociadosArray);
+        }
+      } catch (assocError) {
+        console.error("Erro ao carregar associações do curso:", assocError);
+      }
+
+
       } catch (err) {
         setError(err.message);
         console.error("Erro ao carregar detalhes do curso:", err);
@@ -462,6 +487,36 @@ export default function CursoPagina() {
                       </div>
                     )}
                   </div>
+                  {cursosAssociados.length > 0 && (
+  <div className="mt-8 col-span-2">
+    <h3 className="text-xl font-medium mb-4">Cursos Relacionados</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {cursosAssociados.map(cursoAssociado => (
+        <div key={cursoAssociado.id_curso} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+          <div 
+            className="h-32 bg-cover bg-center"
+            style={{ backgroundImage: `url(${cursoAssociado.imagem_path || '/placeholder-curso.jpg'})` }}
+          ></div>
+          <div className="p-4">
+            <h4 className="font-medium">{cursoAssociado.nome}</h4>
+            <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+              {cursoAssociado.descricao && cursoAssociado.descricao.length > 100 
+                ? cursoAssociado.descricao.substring(0, 100) + '...' 
+                : cursoAssociado.descricao}
+            </p>
+            <a 
+              href={`/curso/${cursoAssociado.id_curso}`}
+              className="mt-3 inline-block text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Ver curso →
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
                 </div>
               </div>
             </div>
