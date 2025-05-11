@@ -15,7 +15,7 @@ const TopicoCurso = sequelize.define("curso_topico", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "curso", // Alterado para "curso" em vez de "cursos"
+      model: "curso",
       key: "id_curso",
     },
   },

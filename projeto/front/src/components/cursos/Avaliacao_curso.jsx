@@ -7,6 +7,28 @@ import Curso_Conteudo_ficheiro_Modal from './Curso_Conteudo_Ficheiro_Modal';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
 
+// Componente reutilizável para modal de confirmação
+const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel = "Confirmar" }) => {
+  if (!show) return null;
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-confirm">
+        <h3>{title}</h3>
+        <p>{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancelar" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button className="btn-confirmar" onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [topicoAvaliacao, setTopicoAvaliacao] = useState(null);
   const [expandedPastas, setExpandedPastas] = useState([]);
@@ -48,15 +70,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       setCarregando(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/topicos-curso/curso/${cursoId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await axios.get(`${API_BASE}/topicos-curso/curso/${cursoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error('Erro ao buscar tópicos.');
-
-      const data = await response.json();
+      const data = response.data;
       const topico = data.find(t => t.nome.toLowerCase() === 'avaliação');
 
       if (topico) {
@@ -77,32 +95,22 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const carregarSubmissoes = async (topico) => {
     try {
       const token = localStorage.getItem('token');
-      // Aqui seria a chamada para a API que busca submissões
-      // Como não existe essa API no código fornecido, estou simulando
       const submissoesData = {};
       
       if (topico && topico.pastas) {
         for (const pasta of topico.pastas) {
-          // Simular submissões para cada pasta
-          // Na implementação real, isso seria substituído pela chamada API
           submissoesData[pasta.id_pasta] = [];
           
-          // Tentar buscar as submissões reais da API
           try {
-            const response = await fetch(`${API_BASE}/submissoes/pasta/${pasta.id_pasta}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
+            const response = await axios.get(`${API_BASE}/submissoes/pasta/${pasta.id_pasta}`, {
+              headers: { Authorization: `Bearer ${token}` }
             });
             
-            if (response.ok) {
-              const data = await response.json();
-              if (Array.isArray(data)) {
-                submissoesData[pasta.id_pasta] = data;
-              }
+            if (response.status === 200) {
+              submissoesData[pasta.id_pasta] = response.data;
             }
           } catch (submissaoError) {
-            console.log('API de submissões pode não estar implementada ainda');
+            console.log('API de submissões pode não estar implementada ainda', submissaoError);
           }
         }
       }
@@ -181,18 +189,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE}/topicos-curso/${topicoAvaliacao.id_topico}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await axios.delete(`${API_BASE}/topicos-curso/${topicoAvaliacao.id_topico}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.ok) {
-        setTopicoAvaliacao(null);
-      } else {
-        throw new Error('Erro ao remover tópico');
-      }
+      setTopicoAvaliacao(null);
     } catch (error) {
       console.error('Erro ao remover tópico:', error);
       setErro('Erro ao remover tópico de avaliação. Por favor, tente novamente.');
@@ -204,18 +205,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE}/pastas-curso/${pastaId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      await axios.delete(`${API_BASE}/pastas-curso/${pastaId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.ok) {
-        await carregarTopicos();
-      } else {
-        throw new Error('Erro ao remover pasta');
-      }
+      await carregarTopicos();
     } catch (error) {
       console.error('Erro ao remover pasta:', error);
       setErro('Erro ao remover pasta. Por favor, tente novamente.');
@@ -227,18 +221,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE}/conteudos-curso/${conteudoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      await axios.delete(`${API_BASE}/conteudos-curso/${conteudoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.ok) {
-        await carregarTopicos();
-      } else {
-        throw new Error('Erro ao remover conteúdo');
-      }
+      await carregarTopicos();
     } catch (error) {
       console.error('Erro ao remover conteúdo:', error);
       setErro('Erro ao remover conteúdo. Por favor, tente novamente.');
@@ -302,32 +289,22 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       formData.append('id_pasta', enviarSubmissaoModal.pastaId);
       formData.append('id_curso', cursoId);
       
-      // Aqui seria a chamada para a API que salva submissões
-      // Como não existe essa API no código fornecido, estou simulando
+      const response = await axios.post(`${API_BASE}/submissoes`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
-      // Simulando uma chamada de API
-      // Na implementação real, substituir pelo endpoint correto
-      try {
-        const response = await axios.post(`${API_BASE}/submissoes`, formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        // Se a API existir e funcionar
-        await carregarTopicos();
-        setEnviarSubmissaoModal({ show: false, pastaId: null });
-      } catch (apiError) {
-        console.log('API de submissões pode não estar implementada ainda');
-        // Simulando sucesso
-        alert('Submissão enviada com sucesso! (Simulado)');
-        await carregarTopicos();
-        setEnviarSubmissaoModal({ show: false, pastaId: null });
-      }
+      // Handle successful submission
+      await carregarTopicos();
+      setEnviarSubmissaoModal({ show: false, pastaId: null });
+      alert('Submissão enviada com sucesso!');
     } catch (error) {
+      // Better error handling with specific messages
+      const errorMsg = error.response?.data?.message || 'Erro ao enviar submissão. Por favor, tente novamente.';
       console.error('Erro ao enviar submissão:', error);
-      alert('Erro ao enviar submissão. Por favor, tente novamente.');
+      alert(errorMsg);
     } finally {
       setEnviandoArquivo(false);
     }
@@ -592,28 +569,13 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       )}
 
       {/* Modal de confirmação para ações */}
-      {confirmModal.show && (
-        <div className="modal-overlay">
-          <div className="modal-confirm">
-            <h3>Confirmação</h3>
-            <p>{confirmModal.message}</p>
-            <div className="confirm-actions">
-              <button 
-                className="btn-cancelar"
-                onClick={() => setConfirmModal({ show: false, message: '', action: null, targetId: null })}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="btn-confirmar"
-                onClick={executarAcaoConfirmada}
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        show={confirmModal.show}
+        title="Confirmação"
+        message={confirmModal.message}
+        onCancel={() => setConfirmModal({ show: false, message: '', action: null, targetId: null })}
+        onConfirm={executarAcaoConfirmada}
+      />
 
       {/* Modal para enviar submissão */}
       {enviarSubmissaoModal.show && (

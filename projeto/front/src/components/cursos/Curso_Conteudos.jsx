@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import API_BASE from "../../api";
 import CriarTopicoModal from './Criar_Topico_Modal';
 import CriarPastaModal from './Criar_Pasta_Modal';
@@ -63,20 +64,12 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
             return;
           }
           
-          const response = await fetch(`${API_BASE}/cursos/${courseId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+          const response = await axios.get(`${API_BASE}/cursos/${courseId}`, {
+            headers: { Authorization: `Bearer ${token}` }
           });
           
-          if (!response.ok) {
-            throw new Error(`Erro ao procurar dados do curso: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          setCursoInfo(data);
-          console.log("Dados do curso carregados:", data);
-          
+          setCursoInfo(response.data);
+          console.log("Dados do curso carregados:", response.data);
         } catch (error) {
           console.error("Erro ao carregar dados do curso:", error);
           setError(`Falha ao carregar informações do curso: ${error.message}`);
@@ -118,22 +111,13 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
         console.error('Erro ao analisar token:', tokenError);
       }
 
-      const url = `${API_BASE}/topicos-curso/curso/${courseId}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await axios.get(`${API_BASE}/topicos-curso/curso/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) {
-        throw new Error(`Erro ao procurar tópicos: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
+      if (Array.isArray(response.data)) {
         // Definir todos os tópicos e pastas como fechados por padrão
-        const collapsedTopicos = data.map(topico => ({
+        const collapsedTopicos = response.data.map(topico => ({
           ...topico,
           expanded: false,
           pastas: topico.pastas ? topico.pastas.map(pasta => ({
@@ -233,15 +217,65 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
   };
 
   // ===== Handlers para edição =====
-
-  // Editar nome do tópico
   const handleEditTopico = async (topicoId, currentName) => {
-    // Lógica para editar tópico
+    const newName = prompt("Editar nome do tópico:", currentName);
+    
+    if (!newName || newName === currentName) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.put(`${API_BASE}/topicos-curso/${topicoId}`, 
+        { nome: newName },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      
+      if (response.status === 200) {
+        // Update local state to avoid refetching
+        setTopicos(prevTopicos => 
+          prevTopicos.map(topico => 
+            topico.id_topico === topicoId 
+              ? { ...topico, nome: newName } 
+              : topico
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao editar tópico:", error);
+      alert("Erro ao editar tópico. Por favor, tente novamente.");
+    }
   };
 
-  // Editar nome da pasta
   const handleEditPasta = async (pastaId, currentName) => {
-    // Lógica para editar pasta
+    const newName = prompt("Editar nome da pasta:", currentName);
+    
+    if (!newName || newName === currentName) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.put(`${API_BASE}/pastas-curso/${pastaId}`, 
+        { nome: newName },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      
+      if (response.status === 200) {
+        // Update local state
+        setTopicos(prevTopicos => 
+          prevTopicos.map(topico => ({
+            ...topico,
+            pastas: topico.pastas.map(pasta => 
+              pasta.id_pasta === pastaId 
+                ? { ...pasta, nome: newName } 
+                : pasta
+            )
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao editar pasta:", error);
+      alert("Erro ao editar pasta. Por favor, tente novamente.");
+    }
   };
 
   // ===== Handlers para confirmação de exclusão =====
@@ -259,22 +293,15 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`${API_BASE}/topicos-curso/${topicoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      await axios.delete(`${API_BASE}/topicos-curso/${topicoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover tópico');
-      }
 
       // Atualizar lista de tópicos
       fetchTopicos();
     } catch (error) {
       console.error('Erro ao remover tópico:', error);
-      alert(`Erro: ${error.message}`);
+      alert(`Erro: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -291,22 +318,15 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`${API_BASE}/pastas-curso/${pastaId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      await axios.delete(`${API_BASE}/pastas-curso/${pastaId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover pasta');
-      }
 
       // Atualizar lista de tópicos
       fetchTopicos();
     } catch (error) {
       console.error('Erro ao remover pasta:', error);
-      alert(`Erro: ${error.message}`);
+      alert(`Erro: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -323,22 +343,15 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`${API_BASE}/conteudos-curso/${conteudoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      await axios.delete(`${API_BASE}/conteudos-curso/${conteudoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao remover conteúdo');
-      }
 
       // Atualizar lista de tópicos
       fetchTopicos();
     } catch (error) {
       console.error('Erro ao remover conteúdo:', error);
-      alert(`Erro: ${error.message}`);
+      alert(`Erro: ${error.response?.data?.message || error.message}`);
     }
   };
 
