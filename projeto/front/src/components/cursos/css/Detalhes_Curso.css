@@ -1,0 +1,475 @@
+/* ==========================================
+   CONTAINER PRINCIPAL
+   ========================================== */
+.curso-detalhes-wrapper {
+  width: 100%;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+/* ==========================================
+   CAPA DO CURSO
+   ========================================== */
+.curso-cabecalho {
+  position: relative;
+  padding: 2rem;
+  color: white;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px 12px 0 0;
+  text-align: left;
+}
+
+/* Overlay gradiente da esquerda para direita */
+.curso-cabecalho::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.2));
+  z-index: 1;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Conteúdo da capa */
+.curso-cabecalho > * {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+}
+
+/* Título do curso */
+.titulo {
+  font-size: 2.25rem;
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  line-height: 1.2;
+  text-align: left;
+}
+
+/* Subtítulo do curso */
+.subtitulo {
+  color: #ffffffb0;
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  text-align: left;
+}
+
+/* Badge de estado do curso */
+.badge-estado {
+  display: block;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  width: fit-content;
+  text-align: left;
+}
+
+.badge-estado.agendado {
+  color: #92400e;
+  background-color: #fef3c7 !important;
+}
+
+.badge-estado.em-curso {
+  color: #166534;
+  background-color: #dcfce7 !important;
+}
+
+.badge-estado.terminado {
+  color: red;
+  background-color: #fee2e2 !important;
+}
+
+.badge-estado.indisponivel {
+  background-color: #fef2f2 !important;
+  color: #b91c1c;
+}
+
+/* ==========================================
+   BOTÃO DE INFORMAÇÃO
+   ========================================== */
+.icones-acao-container {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.botao-info {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: #ff9800;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border: none;
+}
+
+.botao-info:hover {
+  background-color: #ea580c;
+  transform: scale(1.05);
+}
+
+.botao-info i {
+  font-size: 1.25rem;
+}
+
+/* ==========================================
+   DETALHES DO CURSO (ÁREA EXPANSÍVEL)
+   ========================================== */
+.curso-detalhes {
+  padding: 0;
+  animation: fadeIn 0.3s ease-in-out;
+  background-color: #f0f0f0;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  width: 100%;
+}
+
+.campos-layout {
+  background-color: #e5e5e5;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+/* ==========================================
+   CAMPOS DE INFORMAÇÃO
+   ========================================== */
+.campo-container {
+  display: flex;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.campo {
+  background-color: white;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  color: #333;
+  width: 100%;
+}
+
+.campo label {
+  font-size: 0.7rem;
+  color: #666;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+.campo-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-left: 5px;
+  text-align: left;
+}
+
+/* Campos específicos */
+.campo-formador, .campo-estado, .campo-vagas, .campo-area, .campo-tipo, .campo-categoria {
+  flex: 1;
+}
+
+.campo-inscricao {
+  width: 120px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.campo-inicio, .campo-fim {
+  width: 120px;
+}
+
+.campo-descricao {
+  flex: 1;
+  min-height: 100px;
+}
+
+.texto-descricao {
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-weight: normal;
+}
+
+/* Status de inscrição */
+.status-inscricao {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: white;
+  border: none;
+}
+
+.status-inscricao.inscrito {
+  background-color: #333;
+}
+
+.status-inscricao.nao-inscrito {
+  background-color: #0a8314;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+/* ==========================================
+   ÁREA DE BOTÕES ADMIN
+   ========================================== */
+.botoes-admin {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.botoes-admin > div {
+  display: flex;
+  flex-wrap: nowrap; /* Força os botões a ficarem na mesma linha */
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Estilo base para todos os botões */
+.botao-editar,
+.botao-apagar-admin,
+.botao-inscricoes,
+.botao-avaliacoes {
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex: 1; /* Distribuir espaço igualmente */
+  max-width: 200px; /* Limitar largura máxima */
+  height: 45px; /* Altura fixa para todos os botões */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Editar Curso - Azul */
+.botao-editar {
+  background-color: #2563eb;
+}
+
+.botao-editar:hover {
+  background-color: #1e40af;
+  transform: translateY(-2px);
+}
+
+/* Excluir Curso - Vermelho */
+.botao-apagar-admin {
+  background-color: #dc2626;
+}
+
+.botao-apagar-admin:hover {
+  background-color: #b91c1c;
+  transform: translateY(-2px);
+}
+
+.botao-apagar-admin:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Inscrições - Laranja */
+.botao-inscricoes {
+  background-color: #f59e0b;
+}
+
+.botao-inscricoes:hover {
+  background-color: #d97706;
+  transform: translateY(-2px);
+}
+
+/* Avaliações - Roxo */
+.botao-avaliacoes {
+  background-color: #8b5cf6;
+}
+
+.botao-avaliacoes:hover {
+  background-color: #7c3aed;
+  transform: translateY(-2px);
+}
+
+/* ==========================================
+   MODAIS
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-conteudo {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 500px;
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 60;
+  text-align: center;
+}
+
+.modal-titulo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ea580c;
+  margin-bottom: 1rem;
+}
+
+.modal-texto {
+  font-size: 1rem;
+  color: #374151;
+  margin-bottom: 2rem;
+}
+
+.modal-botoes {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.modal-botoes .botao-cancelar {
+  background-color: #e5e7eb;
+  color: #111827;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.modal-botoes .botao-cancelar:hover {
+  background-color: #d1d5db;
+  transform: translateY(-2px);
+}
+
+.modal-botoes .botao-confirmar {
+  background-color: #f97316;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.modal-botoes .botao-confirmar:hover {
+  background-color: #ea580c;
+  transform: translateY(-2px);
+}
+
+/* ==========================================
+   COMPONENTES DE FEEDBACK
+   ========================================== */
+/* Indicador de carregamento */
+.carregamento-spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid #3498db;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+/* Estados de loading e erro */
+.detalhes-loading,
+.detalhes-error,
+.detalhes-not-found {
+  text-align: center;
+  padding: 2rem;
+}
+
+/* ==========================================
+   ANIMAÇÕES
+   ========================================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   RESPONSIVIDADE
+   ========================================== */
+@media screen and (max-width: 768px) {
+  .campo-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .campo-inicio, .campo-fim {
+    width: 100%;
+  }
+  
+  .campos-layout {
+    padding: 10px;
+  }
+  
+  .campo {
+    padding: 8px;
+  }
+  
+  /* Layout para botões em telas menores */
+  .botoes-admin > div {
+    flex-wrap: wrap;
+  }
+  
+  .botao-editar,
+  .botao-apagar-admin,
+  .botao-inscricoes,
+  .botao-avaliacoes {
+    width: calc(50% - 5px); /* 2 botões por linha com gap de 10px */
+    max-width: none;
+    flex: none;
+    margin-bottom: 10px;
+  }
+}

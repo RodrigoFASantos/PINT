@@ -6,17 +6,29 @@ const { Op } = require('sequelize');
 const associarCursos = async (req, res) => {
   try {
     const { id_curso_origem, id_curso_destino, descricao } = req.body;
+    
+    console.log("Dados recebidos para associação:", { id_curso_origem, id_curso_destino, descricao });
 
     if (!id_curso_origem || !id_curso_destino) {
-      return res.status(400).json({ message: "IDs dos cursos são obrigatórios" });
+      console.log("❌ Erro: IDs dos cursos são obrigatórios");
+      return res.status(400).json({ message: "IDs dos cursos são obrigatórios", error: "IDS_MISSING" });
     }
 
     // Verificar se os cursos existem
     const cursoOrigem = await Curso.findByPk(id_curso_origem);
     const cursoDestino = await Curso.findByPk(id_curso_destino);
 
+    console.log("Curso origem encontrado:", !!cursoOrigem, cursoOrigem ? cursoOrigem.nome : "N/A");
+    console.log("Curso destino encontrado:", !!cursoDestino, cursoDestino ? cursoDestino.nome : "N/A");
+
     if (!cursoOrigem || !cursoDestino) {
-      return res.status(404).json({ message: "Um ou ambos os cursos não foram encontrados" });
+      console.log("❌ Erro: Um ou ambos os cursos não foram encontrados");
+      return res.status(404).json({ 
+        message: "Um ou ambos os cursos não foram encontrados",
+        error: "CURSO_NOT_FOUND",
+        origemExiste: !!cursoOrigem,
+        destinoExiste: !!cursoDestino
+      });
     }
 
     // Verificar se a associação já existe
@@ -35,8 +47,14 @@ const associarCursos = async (req, res) => {
       }
     });
 
+    console.log("Associação já existe:", !!associacaoExistente);
+
     if (associacaoExistente) {
-      return res.status(400).json({ message: "Associação já existe entre estes cursos" });
+      console.log("❌ Erro: Associação já existe entre estes cursos");
+      return res.status(400).json({ 
+        message: "Associação já existe entre estes cursos",
+        error: "ASSOCIATION_EXISTS"
+      });
     }
 
     // Criar a associação
@@ -55,6 +73,11 @@ const associarCursos = async (req, res) => {
     res.status(500).json({ message: "Erro ao associar cursos", error: error.message });
   }
 };
+
+
+
+
+
 
 // Obter associações de um curso
 const getAssociacoesCurso = async (req, res) => {

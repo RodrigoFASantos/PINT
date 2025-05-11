@@ -9,18 +9,27 @@ const AssociarCursos = sequelize.define('associar_cursos', {
   },
   id_curso_origem: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    references: {
+      model: 'curso',
+      key: 'id_curso'
+    }
   },
   id_curso_destino: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    references: {
+      model: 'curso',
+      key: 'id_curso'
+    }
   },
   descricao: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: true
   }
 }, {
-  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   tableName: 'associar_cursos'
 });
 

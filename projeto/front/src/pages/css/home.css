@@ -156,7 +156,7 @@
 
 .cartao-curso .status-agendado {
   color: #92400e;
-  background-color: #fef3c7;
+  background-color: #fef3c7 !important;
 }
 
 .cartao-curso .status-terminado {
@@ -166,7 +166,7 @@
 
 .cartao-curso .status-em-curso {
   color: #166534;
-  background-color: #dcfce7;
+  background-color: #dcfce7 !important;
 }
 
 

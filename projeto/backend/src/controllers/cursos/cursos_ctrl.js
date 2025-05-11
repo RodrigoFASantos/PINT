@@ -152,6 +152,15 @@ const createCurso = async (req, res) => {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
 
+    // Verificar se já existe um curso com o mesmo nome
+    const cursoExistente = await Curso.findOne({ where: { nome } });
+    if (cursoExistente) {
+      return res.status(400).json({
+        message: "Já existe um curso com este nome. Por favor, escolha um nome diferente.",
+        error: "NOME_DUPLICADO"
+      });
+    }
+
     // Criar nome do diretório para o curso
     const cursoSlug = uploadUtils.normalizarNome(nome);
     const cursoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
@@ -197,7 +206,7 @@ const createCurso = async (req, res) => {
       // Continuar mesmo com erro na notificação
     }
 
-    res.status(201).json({ message: "Curso criado com sucesso!", curso: novoCurso.nome });
+    res.status(201).json({ message: "Curso criado com sucesso!", curso: { id_curso: novoCurso.id_curso, nome: novoCurso.nome } });
   } catch (error) {
     console.error("Erro ao criar curso:", error);
     res.status(500).json({ message: "Erro no servidor ao criar curso." });
@@ -210,10 +219,10 @@ const updateCurso = async (req, res) => {
     console.log("Update course request received:");
     console.log("Request params:", req.params);
     console.log("Request body:", req.body);
-    
+
     // Fix: Get the id directly from req.params
     const id = req.params.id;  // This matches the route parameter /:id
-    
+
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
 
     // Procurar dados atuais do curso para comparação
@@ -231,9 +240,9 @@ const updateCurso = async (req, res) => {
     // Guardar os dados antigos para comparação
     const dataInicioAntiga = cursoAtual.data_inicio;
     const dataFimAntiga = cursoAtual.data_fim;
-    const formadorAntigo = cursoAtual.formador ? { 
-      id_utilizador: cursoAtual.formador.id_utilizador, 
-      nome: cursoAtual.formador.nome 
+    const formadorAntigo = cursoAtual.formador ? {
+      id_utilizador: cursoAtual.formador.id_utilizador,
+      nome: cursoAtual.formador.nome
     } : null;
 
     // Atualizar o curso
@@ -272,9 +281,9 @@ const updateCurso = async (req, res) => {
     }
 
     // Verificar se as datas foram alteradas
-    const dataInicioAlterada = data_inicio && 
+    const dataInicioAlterada = data_inicio &&
       new Date(data_inicio).getTime() !== new Date(dataInicioAntiga).getTime();
-    const dataFimAlterada = data_fim && 
+    const dataFimAlterada = data_fim &&
       new Date(data_fim).getTime() !== new Date(dataFimAntiga).getTime();
 
     if (dataInicioAlterada || dataFimAlterada) {
@@ -450,7 +459,7 @@ const associarFormadorCurso = async (req, res) => {
     }
 
     // Guardar formador antigo para notificação
-    const formadorAntigo = curso.id_formador ? 
+    const formadorAntigo = curso.id_formador ?
       await User.findByPk(curso.id_formador, { attributes: ['id_utilizador', 'nome'] }) : null;
 
     // Atualizar o curso com o novo formador

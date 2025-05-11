@@ -15,8 +15,9 @@ import Home from './pages/home';
 // Páginas de Cursos
 import Lista_Cursos from './pages/cursos/Lista_Cursos';
 import Criar_Curso from './pages/cursos/Criar_Curso';
-import Detalhes_Curso from './pages/cursos/Detalhes_Curso';
+import CursoPagina from './pages/cursos/Pagina_Curso';
 import Editar_Curso from './pages/cursos/Editar_Curso';
+import Detalhes_Curso from './components/cursos/Detalhes_Curso';
 
 // Páginas de Utilizadores
 import PerfilUser from './pages/users/Perfil_Utilizador';
@@ -158,7 +159,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/cursos/:id">
                     <ProtectedRoute allowedRoles={[1, 2, 3]}>
-                      <Detalhes_Curso />
+                      <CursoPagina />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }

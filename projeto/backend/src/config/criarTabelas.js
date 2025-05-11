@@ -269,6 +269,17 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_notificacao_utilizador UNIQUE (id_notificacao, id_utilizador)
     );`,
 
+    // Nova tabela para associação de cursos
+    `CREATE TABLE IF NOT EXISTS associar_cursos (
+      id_associacao SERIAL PRIMARY KEY,
+      id_curso_origem INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
+      id_curso_destino INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
+      descricao TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      CONSTRAINT unique_associacao_cursos UNIQUE (id_curso_origem, id_curso_destino)
+    );`,
+
     // Tabelas para conteúdos de cursos
     `CREATE TABLE IF NOT EXISTS curso_topico (
       id_topico SERIAL PRIMARY KEY,
