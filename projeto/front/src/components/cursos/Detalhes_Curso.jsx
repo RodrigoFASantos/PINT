@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import './css/Detalhes_Curso.css';
-import Sidebar from '../../components/Sidebar';
-import CursoConteudos from '../../components/cursos/Curso_Conteudos';
+import Sidebar from '../Sidebar';
+import CursoConteudos from './Curso_Conteudos';
 import API_BASE, { IMAGES } from "../../api";
-import Avaliacao_curso from '../../components/cursos/Avaliacao_curso';
+import Avaliacao_curso from './Avaliacao_curso';
 
 const DetalhesCurso = () => {
   const { id } = useParams();
@@ -328,13 +328,33 @@ const DetalhesCurso = () => {
     }
   };
 
-  const getImageUrl = (curso) => {
-    // Se não tiver curso ou a imagem não estiver definida, usar imagem padrão
-    if (!curso || !curso.imagem_path) return '/placeholder-curso.jpg';
 
-    // Usar o caminho da imagem que veio do backend
+const getImageUrl = (curso) => {
+  // Se não tiver curso, usar imagem padrão
+  if (!curso) return '/placeholder-curso.jpg';
+  
+  // Usar dir_path se disponível (prioridade 1)
+  if (curso.dir_path) {
+    return `${API_BASE}/${curso.dir_path}/capa.png`;
+  }
+  
+  // Usar imagem_path se disponível (prioridade 2)
+  if (curso.imagem_path) {
     return `${API_BASE}/${curso.imagem_path}`;
-  };
+  }
+  
+  // Usar a função IMAGES.CURSO baseada no nome (prioridade 3)
+  if (curso.nome && typeof IMAGES.CURSO === 'function') {
+    const nomeCursoSlug = curso.nome
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    return IMAGES.CURSO(nomeCursoSlug);
+  }
+  
+  // Fallback para imagem padrão
+  return '/placeholder-curso.jpg';
+};
 
   // Função para gerenciar inscrições
   const handleGerenciarInscricoes = () => {
@@ -361,8 +381,6 @@ const DetalhesCurso = () => {
   if (!curso) {
     return <div className="not-found">Curso não encontrado</div>;
   }
-
-
 
   if (loading) {
     return (
@@ -464,11 +482,11 @@ const DetalhesCurso = () => {
 
         <div className="flex-1 overflow-y-auto">
           <div className="curso-container">
-            {/* Cabeçalho do curso */}
+            {/* Cabeçalho do curso - REMOVIDO O LINEAR GRADIENT */}
             <div
               className="curso-cabecalho"
               style={{
-                backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%), url(${getImageUrl(curso)})`,
+                backgroundImage: `url(${getImageUrl(curso)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
               }}

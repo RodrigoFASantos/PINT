@@ -23,12 +23,21 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
-      // Filtrar o curso atual, se estiver em modo de edição
-      const filteredCursos = cursoAtualId 
-        ? response.data.cursos.filter(curso => curso.id_curso !== cursoAtualId)
-        : response.data.cursos;
-      
+
+      // Verificar se há cursos disponíveis
+      if (!response.data.cursos || response.data.cursos.length === 0) {
+        setCursos([]);
+        setLoading(false);
+        return;
+      }
+
+      // Filtrar o curso atual e cursos inativos
+      const filteredCursos = cursoAtualId
+        ? response.data.cursos.filter(curso =>
+          curso.id_curso !== cursoAtualId && curso.ativo === true)
+        : response.data.cursos.filter(curso => curso.ativo === true);
+
+      console.log("Cursos carregados:", filteredCursos.map(c => ({ id: c.id_curso, nome: c.nome })));
       setCursos(filteredCursos);
     } catch (error) {
       console.error("Erro ao carregar cursos:", error);
@@ -52,7 +61,7 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
     }
   };
 
-  const filteredCursos = cursos.filter(curso => 
+  const filteredCursos = cursos.filter(curso =>
     curso.nome.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -65,7 +74,7 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
           <h2>Selecionar Curso para Associar</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
-        
+
         <div className="modal-body">
           <div className="search-container">
             <input
@@ -76,7 +85,7 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
               className="search-input"
             />
           </div>
-          
+
           {loading ? (
             <div className="loading-spinner">A carregar cursos...</div>
           ) : (
@@ -85,7 +94,7 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
                 <p className="no-results">Nenhum curso encontrado</p>
               ) : (
                 filteredCursos.map(curso => (
-                  <div 
+                  <div
                     key={curso.id_curso}
                     className={`curso-item ${selectedCurso?.id_curso === curso.id_curso ? 'selected' : ''}`}
                     onClick={() => handleSelectCurso(curso)}
@@ -101,16 +110,16 @@ const CursoAssociacaoModal = ({ isOpen, onClose, onSelectCurso, cursoAtualId }) 
             </div>
           )}
         </div>
-        
+
         <div className="modal-footer">
-          <button 
-            className="cancel-button" 
+          <button
+            className="cancel-button"
             onClick={onClose}
           >
             Cancelar
           </button>
-          <button 
-            className="confirm-button" 
+          <button
+            className="confirm-button"
             onClick={handleConfirm}
             disabled={!selectedCurso}
           >

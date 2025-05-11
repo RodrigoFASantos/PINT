@@ -11,14 +11,16 @@ const IMAGES = {
    
   // URLs para imagens de users com nomes fixos
   USER_AVATAR: (email) => {
-    // Adicionamos um parâmetro de query para evitar cache do navegador
     const timestamp = Date.now();
     return `${API_BASE}/uploads/users/${formatarEmailParaURL(email)}/${email}_AVATAR.png?t=${timestamp}`;
   },
   USER_CAPA: (email) => {
-    // Adicionamos um parâmetro de query para evitar cache do navegador
     const timestamp = Date.now();
     return `${API_BASE}/uploads/users/${formatarEmailParaURL(email)}/${email}_CAPA.png?t=${timestamp}`;
+  },
+
+  CURSO: (nomeCurso) => {
+    return `${API_BASE}/uploads/cursos/${nomeCurso}/capa.png`;
   }
 };
 

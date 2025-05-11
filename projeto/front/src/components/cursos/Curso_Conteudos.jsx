@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE from "../../api";
-import CriarTopicoModal from '../forum/Criar_Topico_Modal';
+import CriarTopicoModal from './Criar_Topico_Modal';
 import CriarPastaModal from './Criar_Pasta_Modal';
 import CriarConteudoModal from './Criar_Conteudo_Modal';
 import Curso_Conteudo_ficheiro_Modal from "./Curso_Conteudo_Ficheiro_Modal";
@@ -11,11 +11,14 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
   const { id } = useParams();
   const courseId = cursoId || id;
   const navigate = useNavigate();
-
+  
+  // Estados principais
+  const [cursoInfo, setCursoInfo] = useState(null);
   const [topicos, setTopicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState('user');
+  const [loadingCursoInfo, setLoadingCursoInfo] = useState(false);
 
   // Estados para modais de confirmação
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -34,7 +37,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
   const [conteudoSelecionado, setConteudoSelecionado] = useState(null);
   const [mostrarConteudoModal, setMostrarConteudoModal] = useState(false);
 
-  // Verificar permissões do usuário
+  // Verificar permissões do utilizador
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -42,10 +45,49 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
         const userData = JSON.parse(atob(token.split('.')[1]));
         setUserRole(userData.id_cargo === 1 ? 'admin' : userData.id_cargo === 2 ? 'formador' : 'user');
       } catch (error) {
-        console.error("Erro ao decodificar token:", error);
+        console.error("Erro ao descodificar token:", error);
       }
     }
   }, []);
+
+  // Carregar os dados do curso uma vez no início
+  useEffect(() => {
+    if (courseId) {
+      const carregarDadosCurso = async () => {
+        try {
+          setLoadingCursoInfo(true);
+          const token = localStorage.getItem('token');
+          
+          if (!token) {
+            setError('Token não encontrado. Inicie sessão novamente.');
+            return;
+          }
+          
+          const response = await fetch(`${API_BASE}/cursos/${courseId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao procurar dados do curso: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          setCursoInfo(data);
+          console.log("Dados do curso carregados:", data);
+          
+        } catch (error) {
+          console.error("Erro ao carregar dados do curso:", error);
+          setError(`Falha ao carregar informações do curso: ${error.message}`);
+        } finally {
+          setLoadingCursoInfo(false);
+        }
+      };
+      
+      carregarDadosCurso();
+    }
+  }, [courseId]);
 
   // Buscar tópicos e conteúdos do curso
   const fetchTopicos = useCallback(async () => {
@@ -55,7 +97,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
       const token = localStorage.getItem('token');
 
       if (!token) {
-        setError('Token não encontrado. Faça login novamente.');
+        setError('Token não encontrado. Inicie sessão novamente.');
         navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
         setLoading(false);
         return;
@@ -68,7 +110,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
         const now = new Date();
 
         if (now > expDate) {
-          setError('Sua sessão expirou. Faça login novamente.');
+          setError('A sua sessão expirou. Inicie sessão novamente.');
           setLoading(false);
           return;
         }
@@ -84,7 +126,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
       });
 
       if (!response.ok) {
-        throw new Error(`Erro ao buscar tópicos: ${response.status}`);
+        throw new Error(`Erro ao procurar tópicos: ${response.status}`);
       }
 
       const data = await response.json();
@@ -107,12 +149,13 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
 
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar tópicos:', error);
+      console.error('Erro ao procurar tópicos:', error);
       setError('Falha ao carregar os tópicos. Por favor, tente novamente mais tarde.');
       setLoading(false);
     }
   }, [courseId, navigate]);
 
+  // Carregar tópicos ao iniciar
   useEffect(() => {
     if (courseId) {
       fetchTopicos();
@@ -169,39 +212,8 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
 
   // Abrir modal para criar tópico
   const handleCreateTopico = () => {
-    console.log("Abrindo modal para criar tópico");
-
-    // Se não existem tópicos, buscar informações do curso
-    if (topicos.length === 0) {
-      const fetchCursoInfo = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            console.error('Token não encontrado');
-            return;
-          }
-
-          const response = await fetch(`${API_BASE}/cursos/${courseId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-
-          if (response.ok) {
-            const cursoData = await response.json();
-            setShowTopicoModal(true);
-          } else {
-            console.error('Erro ao buscar dados do curso:', response.statusText);
-            setShowTopicoModal(true);
-          }
-        } catch (error) {
-          console.error('Erro ao buscar informações do curso:', error);
-          setShowTopicoModal(true);
-        }
-      };
-
-      fetchCursoInfo();
-    } else {
-      setShowTopicoModal(true);
-    }
+    console.log("A abrir modal para criar tópico");
+    setShowTopicoModal(true);
   };
 
   // Abrir modal para criar pasta
@@ -370,7 +382,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     return (
       <div className="conteudos-loading">
         <div className="loading-spinner"></div>
-        <p>Carregando conteúdos do curso...</p>
+        <p>A carregar conteúdos do curso...</p>
       </div>
     );
   }
@@ -395,14 +407,15 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
           <button
             onClick={handleCreateTopico}
             className="btn-add-first"
+            disabled={loadingCursoInfo}
           >
-            Adicionar primeiro tópico
+            {loadingCursoInfo ? 'A carregar...' : 'Adicionar primeiro tópico'}
           </button>
         )}
 
-        {showTopicoModal && (
+        {showTopicoModal && cursoInfo && (
           <CriarTopicoModal
-            curso={{ id_curso: courseId, nome: "Curso" }}
+            curso={cursoInfo}
             onClose={() => setShowTopicoModal(false)}
             onSuccess={handleTopicoCreated}
           />
@@ -419,15 +432,20 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
           <button
             className="btn-add-topico"
             onClick={handleCreateTopico}
+            disabled={loadingCursoInfo}
           >
-            <i className="fas fa-plus"></i> Adicionar Tópico
+            {loadingCursoInfo ? (
+              <>
+                <i className="fas fa-spinner fa-spin"></i> A carregar...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-plus"></i> Adicionar Tópico
+              </>
+            )}
           </button>
         )}
       </div>
-
-
-
-      
 
       <div className="conteudo-list-estruturada">
         {topicos.map((topico) => (
@@ -521,7 +539,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                                   className={`conteudo-titulo ${!inscrito ? 'bloqueado' : ''}`}
                                   onClick={() => {
                                     if (!inscrito) {
-                                      alert("Você precisa estar inscrito no curso para acessar este conteúdo.");
+                                      alert("Precisa de estar inscrito no curso para aceder a este conteúdo.");
                                       return;
                                     }
 
@@ -621,9 +639,9 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
       )}
 
       {/* Modais para criar tópicos, pastas e conteúdos */}
-      {showTopicoModal && (
+      {showTopicoModal && cursoInfo && (
         <CriarTopicoModal
-          curso={{ id_curso: courseId, nome: "Curso" }}
+          curso={cursoInfo}
           onClose={() => setShowTopicoModal(false)}
           onSuccess={handleTopicoCreated}
         />

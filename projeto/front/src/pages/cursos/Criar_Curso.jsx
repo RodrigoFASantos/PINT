@@ -269,8 +269,22 @@ const CriarCurso = () => {
             console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
           } catch (assocError) {
             console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
-            toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
+
+            const errorData = assocError.response?.data;
+            let errorMessage = `Não foi possível associar o curso "${cursoAssociado.nome}"`;
+
+            // Personalizar a mensagem com base no tipo de erro
+            if (errorData?.error === "CURSO_NOT_FOUND") {
+              errorMessage += `: Curso não encontrado na base de dados`;
+            } else if (errorData?.error === "ASSOCIATION_EXISTS") {
+              errorMessage += `: Já existe uma associação entre estes cursos`;
+            } else if (errorData?.message) {
+              errorMessage += `: ${errorData.message}`;
+            }
+
+            toast.error(errorMessage);
           }
+
         }
 
         toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
@@ -489,36 +503,36 @@ const CriarCurso = () => {
               required
             ></textarea>
 
-                  <div className="associacoes-container">
-        <h3 className="associacoes-titulo">Cursos Associados</h3>
+            <div className="associacoes-container">
+              <h3 className="associacoes-titulo">Cursos Associados</h3>
 
-        <button
-          type="button"
-          className="associar-curso-button"
-          onClick={abrirModalAssociacao}
-        >
-          <i className="fas fa-link"></i> Associar Curso
-        </button>
+              <button
+                type="button"
+                className="associar-curso-button"
+                onClick={abrirModalAssociacao}
+              >
+                <i className="fas fa-link"></i> Associar Curso
+              </button>
 
-        {cursosAssociados.length > 0 ? (
-          <div className="lista-cursos-associados">
-            {cursosAssociados.map(curso => (
-              <div key={curso.id_curso} className="curso-associado-item">
-                <span>{curso.nome}</span>
-                <button
-                  type="button"
-                  className="remover-associacao"
-                  onClick={() => removerAssociacao(curso.id_curso)}
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="sem-associacoes">Nenhum curso associado</p>
-        )}
-      </div>
+              {cursosAssociados.length > 0 ? (
+                <div className="lista-cursos-associados">
+                  {cursosAssociados.map(curso => (
+                    <div key={curso.id_curso} className="curso-associado-item">
+                      <span>{curso.nome}</span>
+                      <button
+                        type="button"
+                        className="remover-associacao"
+                        onClick={() => removerAssociacao(curso.id_curso)}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="sem-associacoes">Nenhum curso associado</p>
+              )}
+            </div>
 
             <button
               type="submit"

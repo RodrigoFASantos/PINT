@@ -15,7 +15,7 @@ import Home from './pages/home';
 // Páginas de Cursos
 import Lista_Cursos from './pages/cursos/Lista_Cursos';
 import Criar_Curso from './pages/cursos/Criar_Curso';
-import Detalhes_Curso from './pages/cursos/Detalhes_Curso';
+import Detalhes_Curso from './components/cursos/Detalhes_Curso';
 import Editar_Curso from './pages/cursos/Editar_Curso';
 
 // Páginas de Utilizadores
