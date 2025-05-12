@@ -213,16 +213,134 @@ VALUES
    (SELECT id_area FROM areas WHERE nome = 'Nutrição' LIMIT 1),
    NOW());
 
+-- =============================================
+-- 4.1 TÓPICOS ORGANIZACIONAIS POR ÁREA E CATEGORIA
+-- =============================================
+INSERT INTO topicos_categorias (id_categoria, id_area, titulo, descricao, criado_por, data_criacao)
+VALUES
+  -- Tópicos para Tecnologia/Desenvolvimento Web
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia'), 
+   (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web'),
+   'Frameworks Frontend', 
+   'Tópicos relacionados a frameworks frontend',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Soft Skills/Comunicação Interpessoal
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills'), 
+   (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal'),
+   'Comunicação Efetiva', 
+   'Tópicos sobre comunicação eficaz',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Gestão/Liderança
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Gestão'), 
+   (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas'),
+   'Metodologias Ágeis', 
+   'Discussões sobre métodos ágeis',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Programação/React Native
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Programação'), 
+   (SELECT id_area FROM areas WHERE nome = 'React Native'),
+   'Desenvolvimento Mobile', 
+   'Tópicos sobre desenvolvimento mobile',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Programação/Python
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Programação'), 
+   (SELECT id_area FROM areas WHERE nome = 'Python'),
+   'Análise de Dados', 
+   'Tópicos sobre análise de dados',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Programação/JavaScript
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Programação'), 
+   (SELECT id_area FROM areas WHERE nome = 'JavaScript'),
+   'JavaScript Moderno', 
+   'Tópicos sobre JavaScript moderno',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Marketing Digital/Redes Sociais
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital'), 
+   (SELECT id_area FROM areas WHERE nome = 'Redes Sociais'),
+   'Estratégias para Redes Sociais', 
+   'Discussões sobre estratégias em plataformas sociais',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Marketing Digital/SEO
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital'), 
+   (SELECT id_area FROM areas WHERE nome = 'SEO'),
+   'Otimização para Buscadores', 
+   'Tópicos sobre SEO e otimização',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Design/UI/UX
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Design'), 
+   (SELECT id_area FROM areas WHERE nome = 'UI/UX Design'),
+   'Design de Interfaces', 
+   'Tópicos sobre design de interfaces',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Finanças/Investimentos
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Finanças'), 
+   (SELECT id_area FROM areas WHERE nome = 'Investimentos'),
+   'Educação Financeira', 
+   'Tópicos sobre educação financeira',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Finanças/Contabilidade
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Finanças'), 
+   (SELECT id_area FROM areas WHERE nome = 'Contabilidade'),
+   'Contabilidade Básica', 
+   'Tópicos sobre fundamentos contábeis',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Saúde/Meditação
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar'), 
+   (SELECT id_area FROM areas WHERE nome = 'Meditação'),
+   'Práticas Meditativas', 
+   'Discussões sobre técnicas de meditação',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+  
+  -- Tópicos para Saúde/Nutrição
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar'), 
+   (SELECT id_area FROM areas WHERE nome = 'Nutrição'),
+   'Alimentação Saudável', 
+   'Tópicos sobre nutrição e alimentação',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW()),
+   
+  -- Tópicos para Marketing Digital/Marketing de Conteúdo
+  ((SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital'), 
+   (SELECT id_area FROM areas WHERE nome = 'Marketing de Conteúdo'),
+   'Criação de Conteúdo', 
+   'Estratégias para criação de conteúdo',
+   (SELECT id_utilizador FROM utilizadores WHERE nome = 'Administrador'),
+   NOW());
+
 
 -- =============================================
 -- 5. CURSOS
 -- =============================================
-INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria, imagem_path, dir_path)
+INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_area, id_categoria, id_topico_organizacional, imagem_path, dir_path)
 VALUES
   ('Curso de Vue.js', 'Curso prático sobre Vue.js para iniciantes.', 'sincrono', 20, '2025-04-01', '2025-04-30', 'planeado', true,
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Frameworks Frontend' LIMIT 1),
    'uploads/cursos/curso-de-vuejs/capa.png',
    'uploads/cursos/curso-de-vuejs'),
 
@@ -230,6 +348,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Comunicação Efetiva' LIMIT 1),
    'uploads/cursos/comunicacao-assertiva/capa.png',
    'uploads/cursos/comunicacao-assertiva'),
 
@@ -237,6 +356,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Metodologias Ágeis' LIMIT 1),
    'uploads/cursos/gestao-de-equipas-ageis/capa.png',
    'uploads/cursos/gestao-de-equipas-ageis'),
 
@@ -244,6 +364,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'React Native' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Desenvolvimento Mobile' LIMIT 1),
    'uploads/cursos/desenvolvimento-react-native/capa.png',
    'uploads/cursos/desenvolvimento-react-native'),
 
@@ -251,6 +372,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Análise de Dados' LIMIT 1),
    'uploads/cursos/python-para-analise-de-dados/capa.png',
    'uploads/cursos/python-para-analise-de-dados'),
 
@@ -258,6 +380,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'JavaScript Moderno' LIMIT 1),
    'uploads/cursos/javascript-avancado/capa.png',
    'uploads/cursos/javascript-avancado'),
 
@@ -265,6 +388,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Redes Sociais' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Estratégias para Redes Sociais' LIMIT 1),
    'uploads/cursos/marketing-nas-redes-sociais/capa.png',
    'uploads/cursos/marketing-nas-redes-sociais'),
 
@@ -272,6 +396,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rodrigo' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'SEO' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Otimização para Buscadores' LIMIT 1),
    'uploads/cursos/seo-para-iniciantes/capa.png',
    'uploads/cursos/seo-para-iniciantes'),
 
@@ -279,6 +404,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Design de Interfaces' LIMIT 1),
    'uploads/cursos/uiux-design-para-iniciantes/capa.png',
    'uploads/cursos/uiux-design-para-iniciantes'),
 
@@ -286,6 +412,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Investimentos' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Finanças' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Educação Financeira' LIMIT 1),
    'uploads/cursos/introducao-a-investimentos/capa.png',
    'uploads/cursos/introducao-a-investimentos'),
 
@@ -293,6 +420,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Contabilidade' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Finanças' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Contabilidade Básica' LIMIT 1),
    'uploads/cursos/contabilidade-para-pequenos-negocios/capa.png',
    'uploads/cursos/contabilidade-para-pequenos-negocios'),
 
@@ -300,6 +428,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Meditação' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Práticas Meditativas' LIMIT 1),
    'uploads/cursos/meditacao-para-o-dia-a-dia/capa.png',
    'uploads/cursos/meditacao-para-o-dia-a-dia'),
    
@@ -307,6 +436,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Análise de Dados' LIMIT 1),
    'uploads/cursos/curso-de-inteligencia-artificial/capa.png',
    'uploads/cursos/curso-de-inteligencia-artificial'),
 
@@ -314,6 +444,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Análise de Dados' LIMIT 1),
    'uploads/cursos/curso-de-robotica-avancada/capa.png',
    'uploads/cursos/curso-de-robotica-avancada'),
 
@@ -321,6 +452,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Marketing de Conteúdo' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Criação de Conteúdo' LIMIT 1),
    'uploads/cursos/curso-de-marketing-digital/capa.png',
    'uploads/cursos/curso-de-marketing-digital'),
 
@@ -328,6 +460,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Frameworks Frontend' LIMIT 1),
    'uploads/cursos/curso-de-desenvolvimento-web/capa.png',
    'uploads/cursos/curso-de-desenvolvimento-web'),
 
@@ -335,6 +468,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'SEO' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Marketing Digital' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Otimização para Buscadores' LIMIT 1),
    'uploads/cursos/curso-de-ciberseguranca/capa.png',
    'uploads/cursos/curso-de-ciberseguranca'),
 
@@ -342,6 +476,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'JavaScript' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'JavaScript Moderno' LIMIT 1),
    'uploads/cursos/curso-de-engenharia-de-software/capa.png',
    'uploads/cursos/curso-de-engenharia-de-software'),
 
@@ -349,6 +484,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Liderança e Gestão de Equipas' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Gestão' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Metodologias Ágeis' LIMIT 1),
    'uploads/cursos/curso-de-gestao-de-projetos/capa.png',
    'uploads/cursos/curso-de-gestao-de-projetos'),
 
@@ -356,6 +492,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Análise de Dados' LIMIT 1),
    'uploads/cursos/curso-de-machine-learning/capa.png',
    'uploads/cursos/curso-de-machine-learning'),
 
@@ -363,6 +500,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Python' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Programação' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Análise de Dados' LIMIT 1),
    'uploads/cursos/curso-de-big-data/capa.png',
    'uploads/cursos/curso-de-big-data'),
 
@@ -370,6 +508,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Miguel Santos' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'UI/UX Design' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Design' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Design de Interfaces' LIMIT 1),
    'uploads/cursos/curso-de-realidade-virtual/capa.png',
    'uploads/cursos/curso-de-realidade-virtual'),
 
@@ -377,6 +516,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Sara Oliveira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Desenvolvimento Web' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Tecnologia' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Frameworks Frontend' LIMIT 1),
    'uploads/cursos/curso-de-engenharia-mecanica/capa.png',
    'uploads/cursos/curso-de-engenharia-mecanica'),
 
@@ -384,6 +524,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Carla Pereira' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Comunicação Interpessoal' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Soft Skills' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Comunicação Efetiva' LIMIT 1),
    'uploads/cursos/curso-extra-50/capa.png',
    'uploads/cursos/curso-extra-50'),
 
@@ -391,6 +532,7 @@ VALUES
    (SELECT id_utilizador FROM utilizadores WHERE nome = 'Formador Rareura' LIMIT 1),
    (SELECT id_area FROM areas WHERE nome = 'Nutrição' LIMIT 1),
    (SELECT id_categoria FROM categorias WHERE nome = 'Saúde e Bem-estar' LIMIT 1),
+   (SELECT id_topico FROM topicos_categorias WHERE titulo = 'Alimentação Saudável' LIMIT 1),
    'uploads/cursos/nutricao-funcional/capa.png',
    'uploads/cursos/nutricao-funcional');
 

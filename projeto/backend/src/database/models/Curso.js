@@ -1,3 +1,6 @@
+const { DataTypes } = require("sequelize");
+const sequelize = require("../../config/db");
+
 const Curso = sequelize.define("curso", {
   id_curso: {
     type: DataTypes.INTEGER,
@@ -82,3 +85,5 @@ const Curso = sequelize.define("curso", {
   tableName: "curso",
   timestamps: false,
 });
+
+module.exports = Curso;

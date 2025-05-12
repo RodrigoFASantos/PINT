@@ -84,6 +84,18 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_formador_area UNIQUE (id_formador, id_area)
     );`,
 
+    `CREATE TABLE IF NOT EXISTS topicos_categorias (
+      id_topico SERIAL PRIMARY KEY,
+      id_categoria INTEGER REFERENCES categorias(id_categoria),
+      id_area INTEGER NOT NULL REFERENCES areas(id_area),
+      titulo VARCHAR(255) NOT NULL,
+      descricao TEXT,
+      criado_por INTEGER REFERENCES utilizadores(id_utilizador),
+      data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      ativo BOOLEAN DEFAULT TRUE,
+      CONSTRAINT unique_topico_categoria_titulo UNIQUE (id_categoria, titulo)
+    );`,
+
     `CREATE TABLE IF NOT EXISTS curso (
       id_curso SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL UNIQUE,
@@ -97,11 +109,12 @@ const createTablesInOrder = async () => {
       id_formador INTEGER REFERENCES utilizadores(id_utilizador),
       id_area INTEGER REFERENCES areas(id_area),
       id_categoria INTEGER REFERENCES categorias(id_categoria),
+      id_topico_organizacional INTEGER NOT NULL REFERENCES topicos_categorias(id_topico),
       imagem_path VARCHAR(500),
       dir_path VARCHAR(500)
     );`,
 
-    // NOVA TABELA ADICIONADA AQUI
+
     `CREATE TABLE IF NOT EXISTS associar_cursos (
       id_associacao SERIAL PRIMARY KEY,
       id_curso_origem INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -135,17 +148,7 @@ const createTablesInOrder = async () => {
       avaliacao TEXT
     );`,
 
-    `CREATE TABLE IF NOT EXISTS topicos_categorias (
-      id_topico SERIAL PRIMARY KEY,
-      id_categoria INTEGER REFERENCES categorias(id_categoria),
-      id_area INTEGER REFERENCES areas(id_area),  /* Adicionada coluna id_area */
-      titulo VARCHAR(255) NOT NULL,
-      descricao TEXT,
-      criado_por INTEGER REFERENCES utilizadores(id_utilizador),
-      data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      ativo BOOLEAN DEFAULT TRUE,
-      CONSTRAINT unique_topico_categoria_titulo UNIQUE (id_categoria, titulo)
-    );`,
+
 
     `CREATE TABLE IF NOT EXISTS comentarios_topico (
       id_comentario SERIAL PRIMARY KEY,
