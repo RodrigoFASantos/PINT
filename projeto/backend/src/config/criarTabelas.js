@@ -101,6 +101,16 @@ const createTablesInOrder = async () => {
       dir_path VARCHAR(500)
     );`,
 
+    // NOVA TABELA ADICIONADA AQUI
+    `CREATE TABLE IF NOT EXISTS associar_cursos (
+      id_associacao SERIAL PRIMARY KEY,
+      id_curso_origem INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
+      id_curso_destino INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
+      descricao TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );`,
+
     `CREATE TABLE IF NOT EXISTS inscricoes_cursos (
       id_inscricao SERIAL PRIMARY KEY,
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
