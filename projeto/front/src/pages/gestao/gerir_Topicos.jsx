@@ -247,10 +247,10 @@ const TopicoModal = ({ isOpen, onClose, topico, categorias, areas, onSave }) => 
 // Modal de confirmação para eliminar tópicos
 const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, topico }) => {
     if (!isOpen || !topico) return null;
-    
+
     // Obter o ID correto do tópico, tentando diferentes propriedades possíveis
     const topicoId = topico.id_topico || topico.id || topico.id_categoria_topico;
-    
+
     console.log('Objeto tópico na modal de confirmação:', topico);
     console.log('ID identificado para exclusão:', topicoId);
 
@@ -344,20 +344,24 @@ const Gerir_Topicos = () => {
                     }
                 });
 
-                console.log('Categorias carregadas:', categoriasRes.data);
-                console.log('Áreas carregadas:', areasRes.data);
-                console.log('Tópicos carregados:', topicosRes.data);
+                console.log('Tópicos carregados com sucesso:', topicosRes.data?.length || 0);
 
                 // Verificar e normalizar a estrutura de dados dos tópicos
                 let topicosNormalizados = [];
                 if (Array.isArray(topicosRes.data)) {
                     topicosNormalizados = topicosRes.data;
+                    console.log('Dados já estão em formato de array');
                 } else if (topicosRes.data && topicosRes.data.data && Array.isArray(topicosRes.data.data)) {
                     topicosNormalizados = topicosRes.data.data;
+                    console.log('Dados extraídos da propriedade data');
                 } else if (topicosRes.data && typeof topicosRes.data === 'object') {
-                    // Se não for um array mas for um objeto, pode ser que a API esteja retornando um objeto wrapper
+                    // Se não for um array mas for um objeto, pode ser um objeto wrapper
                     topicosNormalizados = [topicosRes.data];
+                    console.log('Dados eram um objeto único, convertido para array');
                 }
+
+                console.log('Estrutura das categorias:', categoriasRes.data ? 'OK' : 'Vazia');
+                console.log('Estrutura das áreas:', areasRes.data ? 'OK' : 'Vazia');
 
                 setCategorias(Array.isArray(categoriasRes.data) ? categoriasRes.data : []);
                 setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
@@ -365,7 +369,13 @@ const Gerir_Topicos = () => {
 
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
-                toast.error('Erro ao carregar dados. Por favor, tente novamente.');
+                console.error('Detalhes do erro:', error.response?.data || error.message);
+                toast.error('Erro ao carregar dados. Por favor, tenta novamente.');
+
+                // Definir arrays vazios para evitar erros de nulo
+                setCategorias([]);
+                setAreas([]);
+                setTopicos([]);
             } finally {
                 setIsLoading(false);
             }
@@ -377,12 +387,15 @@ const Gerir_Topicos = () => {
     // Função para filtrar tópicos com base nos filtros atuais
     const filtrarTopicos = () => {
         return topicos.filter(topico => {
+            // Usar id_topico como identificador principal, com fallback para id
+            const topicoId = topico.id_topico || topico.id;
+
             // Filtro por categoria
             if (filtroCategoria && topico.id_categoria !== parseInt(filtroCategoria)) {
                 return false;
             }
 
-            // Filtro por pesquisa de texto (titulo ou descrição)
+            // Filtro por pesquisa de texto
             if (filtroPesquisa) {
                 const termoPesquisa = filtroPesquisa.toLowerCase();
                 return (
@@ -477,54 +490,64 @@ const Gerir_Topicos = () => {
         }
     };
 
-    const excluirTopico = async (id) => {
-    try {
-        setIsLoading(true);
-        
-        // Log para depuração
-        console.log('Tentando excluir tópico com ID:', id);
-        
-        if (!id) {
-            console.error('ID do tópico é undefined ou null');
-            toast.error('Erro ao eliminar tópico: ID inválido');
-            setIsLoading(false);
-            return;
-        }
-
-        const response = await axios.delete(`${API_BASE}/topicos/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        console.log('Resposta da API (exclusão):', response.data);
-
-        // Remover tópico da lista localmente - usar a propriedade correta para identificar o tópico
-        setTopicos(prevTopicos => prevTopicos.filter(t => {
-            // Verificar todas as possíveis propriedades de ID
-            const topicoId = t.id || t.id_topico || t.id_categoria_topico;
-            return topicoId !== id;
-        }));
-
-        toast.success('Tópico eliminado com sucesso!');
-    } catch (error) {
-        console.error('Erro ao eliminar tópico:', error);
-        toast.error(error.response?.data?.message || 'Erro ao eliminar tópico');
-    } finally {
-        setIsLoading(false);
-    }
-};
-
     // Encontrar nome da categoria ou área pelo ID
     const getCategoriaName = (id) => {
-        const categoria = categorias.find(c => c.id_categoria === id);
+        if (!id) return 'N/A';
+        const categoria = categorias.find(c => c.id_categoria === id || c.id === id);
         return categoria ? categoria.nome : 'N/A';
     };
 
     const getAreaName = (id) => {
-        const area = areas.find(a => a.id_area === id);
+        if (!id) return 'N/A';
+        const area = areas.find(a => a.id_area === id || a.id === id);
         return area ? area.nome : 'N/A';
     };
+
+    // Função para excluir tópico mais robusta
+    const excluirTopico = async (id) => {
+        try {
+            setIsLoading(true);
+
+            console.log('A tentar eliminar tópico com ID:', id);
+
+            if (!id) {
+                console.error('ID do tópico é inválido ou nulo');
+                toast.error('Erro ao eliminar tópico: ID inválido');
+                setIsLoading(false);
+                return;
+            }
+
+            const response = await axios.delete(`${API_BASE}/topicos/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            console.log('Resposta da API (exclusão):', response.data);
+
+            // Atualização mais robusta da lista
+            setTopicos(prevTopicos => {
+                return prevTopicos.filter(t => {
+                    // Verificar todas as propriedades possíveis de ID
+                    const topicoId = t.id_topico || t.id;
+                    return topicoId !== id;
+                });
+            });
+
+            toast.success('Tópico eliminado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao eliminar tópico:', error);
+            toast.error(error.response?.data?.message || 'Erro ao eliminar tópico');
+        } finally {
+            setIsLoading(false);
+            setConfirmDeleteModal(false);
+            setTopicoParaExcluir(null);
+        }
+    };
+
+
+
+
 
     // Formatar data para exibição
     const formatarData = (dataString) => {
@@ -605,37 +628,37 @@ const Gerir_Topicos = () => {
                             </thead>
                             <tbody>
                                 {topicosFiltrados.map(topico => {
-    // Identificar o ID correto do tópico
-    const topicoId = topico.id_topico || topico.id || topico.id_categoria_topico;
-    
-    return (
-        <tr key={topicoId}>
-            <td className="titulo-cell">{topico.titulo}</td>
-            <td>{getCategoriaName(topico.id_categoria)}</td>
-            <td>{getAreaName(topico.id_area)}</td>
-            <td>{formatarData(topico.data_criacao || topico.dataCriacao)}</td>
-            <td className="acoes">
-                <button
-                    className="edit-btn"
-                    onClick={() => abrirModalEditar(topico)}
-                    title="Editar"
-                >
-                    <i className="fas fa-edit"></i>
-                </button>
-                <button
-                    className="delete-btn"
-                    onClick={() => {
-                        console.log('Abrindo modal para excluir tópico:', topico);
-                        abrirModalExcluir(topico);
-                    }}
-                    title="Eliminar"
-                >
-                    <i className="fas fa-trash-alt"></i>
-                </button>
-            </td>
-        </tr>
-    );
-})}
+                                    // Identificar o ID correto do tópico
+                                    const topicoId = topico.id_topico || topico.id || topico.id_categoria_topico;
+
+                                    return (
+                                        <tr key={topicoId}>
+                                            <td className="titulo-cell">{topico.titulo}</td>
+                                            <td>{getCategoriaName(topico.id_categoria)}</td>
+                                            <td>{getAreaName(topico.id_area)}</td>
+                                            <td>{formatarData(topico.data_criacao || topico.dataCriacao)}</td>
+                                            <td className="acoes">
+                                                <button
+                                                    className="edit-btn"
+                                                    onClick={() => abrirModalEditar(topico)}
+                                                    title="Editar"
+                                                >
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                                <button
+                                                    className="delete-btn"
+                                                    onClick={() => {
+                                                        console.log('Abrindo modal para excluir tópico:', topico);
+                                                        abrirModalExcluir(topico);
+                                                    }}
+                                                    title="Eliminar"
+                                                >
+                                                    <i className="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

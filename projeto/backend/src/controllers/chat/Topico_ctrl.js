@@ -7,80 +7,54 @@ const path = require('path');
 
 const getAllTopicos = async (req, res) => {
   try {
-    console.log('Iniciando busca de tópicos com includes graduais...');
+    console.log('A iniciar busca de tópicos com includes completos...');
     
-    // Tentativa 1: Apenas com categoria
+    // Abordagem mais robusta com includes e tratamento de erros
     const topicos = await Topico_Categoria.findAll({
       include: [
         {
           model: Categoria,
           as: "categoria",
-          attributes: ['id_categoria', 'nome']
+          attributes: ['id_categoria', 'nome'],
+          required: false
+        },
+        {
+          model: Area,
+          as: "area",
+          attributes: ['id_area', 'nome'],
+          required: false
+        },
+        {
+          model: User,
+          as: "criador",
+          attributes: ['id_utilizador', 'nome', 'email'],
+          required: false
         }
       ],
       order: [['data_criacao', 'DESC']]
     });
     
-    console.log('Tópicos encontrados com categoria:', topicos.length);
+    console.log(`Encontrados ${topicos.length} tópicos com informações completas.`);
     
-    // Se funcionar, tente o próximo include
-    try {
-      console.log('Testando include de Area...');
-      const topicosComArea = await Topico_Categoria.findAll({
-        include: [
-          {
-            model: Categoria,
-            as: "categoria",
-            attributes: ['id_categoria', 'nome']
-          },
-          {
-            model: Area,
-            as: "area",
-            attributes: ['id_area', 'nome'],
-            required: false
-          }
-        ],
-        limit: 1, // Limita a 1 resultado para teste
-        order: [['data_criacao', 'DESC']]
-      });
+    // Converter para formato JSON plano com tratamento de valores nulos
+    const topicosMapeados = topicos.map(topico => {
+      const t = topico.get({ plain: true });
       
-      console.log('Include de Area bem-sucedido!');
+      // Adicionar campo id para compatibilidade com frontend
+      t.id = t.id_topico;
       
-      // Se chegou aqui, os includes estão funcionando
-      // Agora busca com todos os includes
-      const todosTopicos = await Topico_Categoria.findAll({
-        include: [
-          {
-            model: Categoria,
-            as: "categoria",
-            attributes: ['id_categoria', 'nome']
-          },
-          {
-            model: Area,
-            as: "area",
-            attributes: ['id_area', 'nome'],
-            required: false
-          },
-          {
-            model: User,
-            as: "criador",
-            attributes: ['id_utilizador', 'nome', 'email'],
-            required: false
-          }
-        ],
-        order: [['data_criacao', 'DESC']]
-      });
+      // Garantir que propriedades estejam sempre presentes
+      if (!t.categoria) t.categoria = { nome: 'Não disponível' };
+      if (!t.area) t.area = { nome: 'Não disponível' };
+      if (!t.criador) t.criador = { nome: 'Utilizador desconhecido' };
       
-      console.log('Tópicos encontrados (completo):', todosTopicos.length);
-      
-      return res.status(200).json(todosTopicos);
-    } catch (areaError) {
-      console.error('Erro no include de Area:', areaError);
-      // Se falhar no include de Area, retorna apenas os tópicos com categoria
-      return res.status(200).json(topicos);
-    }
+      return t;
+    });
+    
+    return res.status(200).json(topicosMapeados);
   } catch (error) {
     console.error('Erro ao listar tópicos:', error);
+    console.error('Stack de erro completo:', error.stack);
     return res.status(500).json({
       success: false,
       message: 'Erro ao carregar tópicos',

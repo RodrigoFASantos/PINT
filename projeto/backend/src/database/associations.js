@@ -235,6 +235,18 @@ Curso.belongsTo(Categoria, {
   as: "categoria"
 });
 
+
+Curso.belongsTo(Topico_Categoria, {
+  foreignKey: "id_topico_organizacional",
+  as: "topico_organizacional"
+});
+
+
+Topico_Categoria.hasMany(Curso, {
+  foreignKey: "id_topico_organizacional",
+  as: "cursos_associados"
+});
+
 Curso.belongsToMany(User, {
   through: Inscricao_Curso,
   foreignKey: "id_curso",
@@ -401,11 +413,10 @@ Topico_Categoria.belongsTo(User, {
   as: "criador"
 });
 
-// NOVA ASSOCIAÇÃO ADICIONADA AQUI
 Topico_Categoria.belongsTo(Area, {
   foreignKey: "id_area",
   as: "area",
-  required: false // Para permitir LEFT JOIN (tópicos sem área)
+  required: true
 });
 
 // Associação recíproca opcional

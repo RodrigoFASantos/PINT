@@ -1,6 +1,3 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../../config/db");
-
 const Curso = sequelize.define("curso", {
   id_curso: {
     type: DataTypes.INTEGER,
@@ -65,6 +62,14 @@ const Curso = sequelize.define("curso", {
       key: "id_categoria",
     },
   },
+  id_topico_organizacional: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "topicos_categorias",
+      key: "id_topico",
+    },
+  },
   imagem_path: {
     type: DataTypes.STRING(500),
     allowNull: true,
@@ -77,5 +82,3 @@ const Curso = sequelize.define("curso", {
   tableName: "curso",
   timestamps: false,
 });
-
-module.exports = Curso;
