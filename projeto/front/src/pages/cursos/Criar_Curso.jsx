@@ -13,7 +13,22 @@ import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 const CriarCurso = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+  const navigate = useNavigate();
+  
+  // Declarar formData ANTES de quaisquer funções que o utilizem
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    tipo: '',
+    vagas: '',
+    data_inicio: '',
+    data_fim: '',
+    id_formador: '',
+    id_area: '',
+    id_categoria: '',
+    imagem: null,
+  });
+  
   const [modalAberto, setModalAberto] = useState(false);
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -21,14 +36,16 @@ const CriarCurso = () => {
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
   const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
   const [cursosAssociados, setCursosAssociados] = useState([]);
+  
+  // Estados para tópicos
+  const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
+  const [topicosAdicionados, setTopicosAdicionados] = useState([]);
 
   const abrirModalAssociacao = () => {
     setModalAssociacaoAberto(true);
   };
-
 
   const handleAssociarCurso = (cursoSelecionado) => {
     // Verificar se o curso já está na lista
@@ -45,18 +62,59 @@ const CriarCurso = () => {
     toast.info("Curso removido da lista de associações");
   };
 
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    tipo: '',
-    vagas: '',
-    data_inicio: '',
-    data_fim: '',
-    id_formador: '',
-    id_area: '',
-    id_categoria: '',
-    imagem: null,
-  });
+  // Carregar tópicos quando a categoria é selecionada
+  useEffect(() => {
+    if (formData.id_categoria) {
+      setIsLoading(true);
+      // Buscar tópicos baseados na categoria selecionada
+      axios.get(`${API_BASE}/topicos/categoria/${formData.id_categoria}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+        .then(res => {
+          console.log("Tópicos carregados:", res.data);
+          setTopicosDisponiveis(res.data);
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error("Erro ao carregar tópicos:", err);
+          toast.error("Não foi possível carregar os tópicos para esta categoria");
+          setIsLoading(false);
+        });
+    } else {
+      // Se nenhuma categoria estiver selecionada, limpar tópicos
+      setTopicosDisponiveis([]);
+      setTopicosAdicionados([]);
+    }
+  }, [formData.id_categoria]);
+
+  // Função para adicionar um tópico à lista de tópicos selecionados
+  const handleAdicionarTopico = (e) => {
+    const topicoId = e.target.value;
+    
+    if (!topicoId) return;
+    
+    if (!formData.id_categoria) {
+      toast.error("É necessário selecionar uma categoria primeiro");
+      return;
+    }
+    
+    const topicoSelecionado = topicosDisponiveis.find(t => t.id === parseInt(topicoId));
+    
+    if (topicoSelecionado && !topicosAdicionados.some(t => t.id === topicoSelecionado.id)) {
+      setTopicosAdicionados([...topicosAdicionados, topicoSelecionado]);
+      // Resetar o valor do select após adicionar
+      e.target.value = "";
+    }
+  };
+
+  // Função para remover um tópico
+  const handleRemoverTopico = (index) => {
+    const novosTopicos = [...topicosAdicionados];
+    novosTopicos.splice(index, 1);
+    setTopicosAdicionados(novosTopicos);
+  };
 
   useEffect(() => {
     // Definir loading state
@@ -100,13 +158,6 @@ const CriarCurso = () => {
     })
       .then(res => {
         console.log("Áreas carregadas:", res.data);
-
-        // Verificar a estrutura dos dados para debugging
-        if (res.data && res.data.length > 0) {
-          console.log("Exemplo de área:", res.data[0]);
-          console.log("Propriedades da área:", Object.keys(res.data[0]));
-        }
-
         setAreas(res.data);
         setIsLoading(false);
       })
@@ -239,9 +290,13 @@ const CriarCurso = () => {
       }
     }
 
+    // Adicionar tópicos ao FormData
+    if (topicosAdicionados.length > 0) {
+      data.append('topicos', JSON.stringify(topicosAdicionados));
+    }
+
     setIsLoading(true);
     try {
-      // Usar a variável API_BASE em vez de hardcoded URL
       const response = await axios.post(`${API_BASE}/cursos`, data, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -269,28 +324,12 @@ const CriarCurso = () => {
             console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
           } catch (assocError) {
             console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
-
-            const errorData = assocError.response?.data;
-            let errorMessage = `Não foi possível associar o curso "${cursoAssociado.nome}"`;
-
-            // Personalizar a mensagem com base no tipo de erro
-            if (errorData?.error === "CURSO_NOT_FOUND") {
-              errorMessage += `: Curso não encontrado na base de dados`;
-            } else if (errorData?.error === "ASSOCIATION_EXISTS") {
-              errorMessage += `: Já existe uma associação entre estes cursos`;
-            } else if (errorData?.message) {
-              errorMessage += `: ${errorData.message}`;
-            }
-
-            toast.error(errorMessage);
+            toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
           }
-
         }
 
         toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
       }
-
-
 
       // Limpar o formulário após envio bem-sucedido
       setFormData({
@@ -306,6 +345,8 @@ const CriarCurso = () => {
         imagem: null,
       });
       setPreviewImage(null);
+      setTopicosAdicionados([]);
+      setCursosAssociados([]);
 
       // Opcional: redirecionar para a lista de cursos após sucesso
       // navigate('/cursos');
@@ -339,9 +380,6 @@ const CriarCurso = () => {
     const hoje = new Date();
     return hoje.toISOString().split('T')[0]; // Formato YYYY-MM-DD
   };
-
-
-
 
   return (
     <div className="criar-curso-container">
@@ -432,6 +470,52 @@ const CriarCurso = () => {
                   <option value="" disabled>Nenhuma área disponível para esta categoria</option>
                 )}
               </select>
+            </div>
+
+            {/* Secção de tópicos - sempre visível */}
+            <div className="topicos-section">
+              <h3>Tópicos do Curso</h3>
+              <div className="row">
+                <select
+                  onChange={handleAdicionarTopico}
+                  value=""
+                  disabled={!formData.id_categoria}
+                >
+                  <option value="">
+                    {!formData.id_categoria 
+                      ? "Selecione uma categoria primeiro" 
+                      : "Selecionar tópico para adicionar"}
+                  </option>
+                  {topicosDisponiveis.map(topico => (
+                    <option
+                      key={topico.id}
+                      value={topico.id}
+                      disabled={topicosAdicionados.some(t => t.id === topico.id)}
+                    >
+                      {topico.titulo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {topicosAdicionados.length > 0 ? (
+                <ul className="topicos-adicionados">
+                  {topicosAdicionados.map((topico, index) => (
+                    <li key={index} className="topico-item">
+                      <span>{topico.titulo}</span>
+                      <button type="button" onClick={() => handleRemoverTopico(index)}>
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="sem-topicos">
+                  {formData.id_categoria 
+                    ? "Nenhum tópico adicionado. Selecione tópicos acima." 
+                    : "Selecione uma categoria para ver tópicos disponíveis."}
+                </p>
+              )}
             </div>
 
             <div className="row">
@@ -554,8 +638,6 @@ const CriarCurso = () => {
 
         <ToastContainer />
       </div>
-
-
 
       {/* Modal de associação de cursos */}
       <CursoAssociacaoModal

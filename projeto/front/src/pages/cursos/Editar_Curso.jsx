@@ -24,6 +24,10 @@ const EditarCurso = () => {
   const [loading, setLoading] = useState(true);
   const [formadorNome, setFormadorNome] = useState('');
   const [dataInicioUltrapassada, setDataInicioUltrapassada] = useState(false);
+  const [topicos, setTopicos] = useState([]);
+  const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
+  const [topicosCurso, setTopicosCurso] = useState([]);
+  const [novoTopico, setNovoTopico] = useState('');
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -37,7 +41,6 @@ const EditarCurso = () => {
     id_categoria: '',
     imagem: null,
   });
-
   useEffect(() => {
     // Carregar dados do curso
     const fetchCursoDetails = async () => {
@@ -55,7 +58,7 @@ const EditarCurso = () => {
         });
 
         const cursoData = responseCurso.data;
-        
+
         // Formatar as datas para o formato YYYY-MM-DD para os campos de data
         const formatarData = (dataString) => {
           const data = new Date(dataString);
@@ -67,7 +70,7 @@ const EditarCurso = () => {
         const dataInicio = new Date(cursoData.data_inicio);
         const dataInicioPassou = dataInicio <= dataAtual;
         setDataInicioUltrapassada(dataInicioPassou);
-        
+
         if (dataInicioPassou) {
           toast.info('A data limite de inscrição já passou. Não é possível alterar as vagas.', {
             autoClose: 5000
@@ -90,7 +93,7 @@ const EditarCurso = () => {
 
         // Se tiver imagem, mostrar a pré-visualização
         if (cursoData.imagem_path) {
-          setPreviewImage(`${IMAGES}/${cursoData.imagem_path}`);
+          setPreviewImage(`${API_BASE}/${cursoData.imagem_path}`);
         }
 
         // Se tiver formador, guardar o nome para exibição
@@ -103,6 +106,23 @@ const EditarCurso = () => {
         console.error('Erro ao carregar dados do curso:', error);
         toast.error('Erro ao carregar dados do curso. Tente novamente mais tarde.');
         navigate('/admin/cursos');
+      }
+    };
+
+    // Carregar tópicos do curso
+    const fetchTopicosCurso = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE}/cursos/${id}/topicos`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        setTopicosCurso(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar tópicos do curso:', error);
+        toast.error('Não foi possível carregar os tópicos do curso.');
       }
     };
 
@@ -140,7 +160,66 @@ const EditarCurso = () => {
 
     fetchCursoDetails();
     fetchResources();
+    fetchTopicosCurso();
   }, [id, navigate]);
+
+
+
+
+  // Adicionar useEffect para carregar tópicos disponíveis quando a área é selecionada
+  useEffect(() => {
+    const carregarTopicosArea = async () => {
+      if (!formData.id_area) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE}/topicos-curso/area/${formData.id_area}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        // Filtrar tópicos já adicionados
+        const topicosNaoAdicionados = response.data.filter(topico =>
+          !topicosCurso.some(t => t.id_topico === topico.id_topico)
+        );
+
+        setTopicosDisponiveis(topicosNaoAdicionados);
+      } catch (error) {
+        console.error('Erro ao carregar tópicos disponíveis:', error);
+      }
+    };
+
+    carregarTopicosArea();
+  }, [formData.id_area, topicosCurso]);
+
+
+  // Adicionar funções para manipular tópicos
+  const adicionarTopico = (id_topico) => {
+    if (!id_topico) return;
+
+    const topicoSelecionado = topicosDisponiveis.find(t => t.id_topico === parseInt(id_topico));
+    if (topicoSelecionado && !topicosCurso.some(t => t.id_topico === topicoSelecionado.id_topico)) {
+      setTopicosCurso([...topicosCurso, topicoSelecionado]);
+    }
+  };
+
+  const adicionarNovoTopico = () => {
+    if (novoTopico.trim() === '') return;
+
+    setTopicosCurso([...topicosCurso, {
+      nome: novoTopico,
+      novo: true
+    }]);
+    setNovoTopico('');
+  };
+
+  const removerTopico = (index) => {
+    const novosTopicos = [...topicosCurso];
+    novosTopicos.splice(index, 1);
+    setTopicosCurso(novosTopicos);
+  };
+
+
+
 
   // Filtrar áreas com base na categoria selecionada
   useEffect(() => {
@@ -157,7 +236,7 @@ const EditarCurso = () => {
     if (name === 'imagem') {
       const file = files[0];
       setFormData({ ...formData, imagem: file });
-      
+
       // Criar uma prévia da imagem
       if (file) {
         const reader = new FileReader();
@@ -199,23 +278,26 @@ const EditarCurso = () => {
     for (let key in formData) {
       // Não enviar vagas atualizadas se a data de início já passou
       if (key === 'vagas' && dataInicioUltrapassada) {
-        // Usar o valor original das vagas
         data.append(key, formData.vagas);
       } else if (formData[key] !== null && formData[key] !== '' && key !== 'imagem_path') {
         data.append(key, formData[key]);
       }
     }
 
+    if (topicosCurso.length > 0) {
+      data.append('topicos', JSON.stringify(topicosCurso));
+    }
+
     try {
       // Atualizar o curso
       await axios.put(`${API_BASE}/cursos/${id}`, data, {
-        headers: { 
+        headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
       });
       toast.success('Curso atualizado com sucesso!');
-      
+
       // Redirecionar para a página de detalhes depois de 2 segundos
       setTimeout(() => {
         navigate(`/cursos/${id}`);
@@ -246,7 +328,7 @@ const EditarCurso = () => {
 
       <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
         <h2>Editar Curso</h2>
-        
+
         <div className="image-upload-container">
           <label className="custom-file-upload">
             <input
@@ -261,7 +343,7 @@ const EditarCurso = () => {
             </div>
             <span>Alterar Imagem</span>
           </label>
-          
+
           {previewImage && (
             <div className="image-preview">
               <img src={previewImage} alt="Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
@@ -271,18 +353,18 @@ const EditarCurso = () => {
 
         <div className="inputs">
           <div className="row">
-            <input 
-              type="text" 
-              name="nome" 
-              placeholder="Nome do Curso" 
-              value={formData.nome} 
-              onChange={handleChange} 
-              required 
+            <input
+              type="text"
+              name="nome"
+              placeholder="Nome do Curso"
+              value={formData.nome}
+              onChange={handleChange}
+              required
             />
-            <select 
-              name="tipo" 
-              value={formData.tipo} 
-              onChange={handleChange} 
+            <select
+              name="tipo"
+              value={formData.tipo}
+              onChange={handleChange}
               required
             >
               <option value="">Selecione o Tipo</option>
@@ -292,10 +374,10 @@ const EditarCurso = () => {
           </div>
 
           <div className="row">
-            <select 
-              name="id_categoria" 
-              value={formData.id_categoria} 
-              onChange={handleChange} 
+            <select
+              name="id_categoria"
+              value={formData.id_categoria}
+              onChange={handleChange}
               required
             >
               <option value="">Selecione a Categoria</option>
@@ -305,11 +387,11 @@ const EditarCurso = () => {
                 </option>
               ))}
             </select>
-            
-            <select 
-              name="id_area" 
-              value={formData.id_area} 
-              onChange={handleChange} 
+
+            <select
+              name="id_area"
+              value={formData.id_area}
+              onChange={handleChange}
               required
               disabled={!formData.id_categoria}
             >
@@ -320,6 +402,60 @@ const EditarCurso = () => {
                 </option>
               ))}
             </select>
+
+            {formData.id_area && (
+              <div className="topicos-section">
+                <h3>Tópicos do Curso</h3>
+
+                <div className="row">
+                  <select
+                    onChange={(e) => adicionarTopico(e.target.value)}
+                    value=""
+                  >
+                    <option value="">Selecionar tópico existente</option>
+                    {topicosDisponiveis.map(topico => (
+                      <option
+                        key={topico.id_topico}
+                        value={topico.id_topico}
+                      >
+                        {topico.nome}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="novo-topico-input">
+                    <input
+                      type="text"
+                      placeholder="Adicionar novo tópico"
+                      value={novoTopico}
+                      onChange={(e) => setNovoTopico(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={adicionarNovoTopico}
+                      disabled={!novoTopico.trim()}
+                    >
+                      <i className="fas fa-plus"></i>
+                    </button>
+                  </div>
+                </div>
+
+                {topicosCurso.length > 0 ? (
+                  <ul className="topicos-adicionados">
+                    {topicosCurso.map((topico, index) => (
+                      <li key={index} className="topico-item">
+                        <span>{topico.nome}</span>
+                        <button type="button" onClick={() => removerTopico(index)}>
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="sem-topicos">Nenhum tópico adicionado</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="row">
@@ -329,12 +465,12 @@ const EditarCurso = () => {
                 className="select-formador-button"
                 onClick={() => setModalAberto(true)}
               >
-                {formData.id_formador && formadorNome 
-                  ? `Formador: ${formadorNome}` 
+                {formData.id_formador && formadorNome
+                  ? `Formador: ${formadorNome}`
                   : "Selecionar Formador"}
               </button>
             )}
-            
+
             {formData.tipo === 'assincrono' && (
               <div className="info-box">
                 <i className="fas fa-info-circle"></i>
@@ -342,13 +478,13 @@ const EditarCurso = () => {
               </div>
             )}
 
-            <input 
-              type="number" 
-              name="vagas" 
-              placeholder="Vagas" 
-              value={formData.vagas} 
-              onChange={handleChange} 
-              disabled={formData.tipo === 'assincrono' || dataInicioUltrapassada} 
+            <input
+              type="number"
+              name="vagas"
+              placeholder="Vagas"
+              value={formData.vagas}
+              onChange={handleChange}
+              disabled={formData.tipo === 'assincrono' || dataInicioUltrapassada}
               required={formData.tipo === 'sincrono'}
               title={dataInicioUltrapassada ? "Não é possível alterar vagas após a data limite de inscrição" : ""}
             />
@@ -363,39 +499,39 @@ const EditarCurso = () => {
           <div className="row">
             <div className="input-group">
               <label>Data de Início</label>
-              <input 
-                type="date" 
-                name="data_inicio" 
-                value={formData.data_inicio} 
-                onChange={handleChange} 
-                required 
+              <input
+                type="date"
+                name="data_inicio"
+                value={formData.data_inicio}
+                onChange={handleChange}
+                required
               />
             </div>
-            
+
             <div className="input-group">
               <label>Data de Término</label>
-              <input 
-                type="date" 
-                name="data_fim" 
-                value={formData.data_fim} 
-                onChange={handleChange} 
-                required 
+              <input
+                type="date"
+                name="data_fim"
+                value={formData.data_fim}
+                onChange={handleChange}
+                required
               />
             </div>
           </div>
 
-          <textarea 
-            name="descricao" 
-            placeholder="Descrição do curso" 
-            value={formData.descricao} 
+          <textarea
+            name="descricao"
+            placeholder="Descrição do curso"
+            value={formData.descricao}
             onChange={handleChange}
             rows="4"
           ></textarea>
-          
+
           <div className="buttons-row">
-            <button 
-              type="button" 
-              className="cancel-button" 
+            <button
+              type="button"
+              className="cancel-button"
               onClick={() => navigate(`/cursos/${id}`)}
             >
               Cancelar

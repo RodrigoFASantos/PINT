@@ -128,6 +128,7 @@ const createTablesInOrder = async () => {
     `CREATE TABLE IF NOT EXISTS topicos_categorias (
       id_topico SERIAL PRIMARY KEY,
       id_categoria INTEGER REFERENCES categorias(id_categoria),
+      id_area INTEGER REFERENCES areas(id_area),  /* Adicionada coluna id_area */
       titulo VARCHAR(255) NOT NULL,
       descricao TEXT,
       criado_por INTEGER REFERENCES utilizadores(id_utilizador),

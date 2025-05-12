@@ -18,7 +18,7 @@ const Topico = sequelize.define('topicos', {
   },
   id_area: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'areas',
       key: 'id_area'

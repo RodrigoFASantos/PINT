@@ -401,6 +401,19 @@ Topico_Categoria.belongsTo(User, {
   as: "criador"
 });
 
+// NOVA ASSOCIAÇÃO ADICIONADA AQUI
+Topico_Categoria.belongsTo(Area, {
+  foreignKey: "id_area",
+  as: "area",
+  required: false // Para permitir LEFT JOIN (tópicos sem área)
+});
+
+// Associação recíproca opcional
+Area.hasMany(Topico_Categoria, {
+  foreignKey: "id_area",
+  as: "topicos_categoria"
+});
+
 Topico_Categoria.hasMany(Comentario_Topico, {
   foreignKey: "id_topico",
   as: "comentarios"

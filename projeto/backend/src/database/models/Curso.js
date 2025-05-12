@@ -74,7 +74,7 @@ const Curso = sequelize.define("curso", {
     allowNull: true,
   },
 }, {
-  tableName: "curso", // Changed from "cursos" to match the model name
+  tableName: "curso",
   timestamps: false,
 });
 

@@ -394,3 +394,102 @@ button[type="submit"]:hover {
 .remove-formador:hover {
   background-color: #fee2e2;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* TÓPICOS*/
+.topicos-section {
+  margin-top: 1.5rem;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+}
+
+.topicos-section h3 {
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.novo-topico-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.novo-topico-input input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+}
+
+.novo-topico-input button {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.novo-topico-input button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.topicos-adicionados {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.topico-item {
+  display: flex;
+  align-items: center;
+  background-color: #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 2rem;
+  gap: 0.5rem;
+}
+
+.topico-item button {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.topico-item button:hover {
+  color: #ef4444;
+}
+
+.sem-topicos {
+  margin-top: 1rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Estilos para o filtro de tópicos na lista de cursos */
+.select-topico {
+  background-color: #f1f5f9;
+}
+
+.lista-topicos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

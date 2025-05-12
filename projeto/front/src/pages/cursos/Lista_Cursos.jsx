@@ -26,6 +26,7 @@ export default function CursosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+
   // Estados para os filtros
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -33,12 +34,35 @@ export default function CursosPage() {
   const [categoriaId, setCategoriaId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState('todos'); // 'todos', 'sincrono', 'assincrono'
+  const [topicos, setTopicos] = useState([]);
+  const [topicosFiltrados, setTopicosFiltrados] = useState([]);
+  const [topicoId, setTopicoId] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+// Carregar tópicos
+useEffect(() => {
+  const fetchTopicos = async () => {
+    if (areaId) {
+      try {
+        const response = await axios.get(`${API_BASE}/topicos-curso/area/${areaId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setTopicos(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar tópicos:", error);
+      }
+    }
+  };
+
+  fetchTopicos();
+}, [areaId]);
 
   // Função para verificar os diferentes campos possíveis de id_categoria
   const getCategoriaId = (area) => {
@@ -53,6 +77,39 @@ export default function CursosPage() {
 
     return categoriaKey ? area[categoriaKey] : null;
   };
+
+  // Carregar tópicos junto com categorias e áreas
+  useEffect(() => {
+    const fetchTopicos = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/topicos-curso`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setTopicos(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar tópicos:", error);
+      }
+    };
+
+    fetchTopicos();
+  }, []);
+
+  // Filtrar tópicos com base na área selecionada
+  useEffect(() => {
+    if (areaId) {
+      const areId = String(areaId);
+      const topicosFiltered = topicos.filter(topico =>
+        String(topico.id_area) === areId
+      );
+      setTopicosFiltrados(topicosFiltered);
+      setTopicoId('');
+    } else {
+      setTopicosFiltrados([]);
+      setTopicoId('');
+    }
+  }, [areaId, topicos]);
 
   // Filtrar áreas com base na categoria selecionada
   useEffect(() => {
@@ -70,44 +127,52 @@ export default function CursosPage() {
     }
   }, [categoriaId, areas]);
 
+
+
   // Função para buscar cursos com filtros
-  const fetchCursos = async () => {
-    try {
-      setIsLoading(true);
+const fetchCursos = async () => {
+  try {
+    setIsLoading(true);
 
-      // Construir parâmetros da query
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: cursosPerPage.toString()
-      });
+    // Construir parâmetros da query
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: cursosPerPage.toString()
+    });
 
-      // Adicionar filtros se estiverem ativos
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-      if (categoriaId) {
-        params.append('categoria', categoriaId);
-      }
-      if (areaId) {
-        params.append('area', areaId);
-      }
-      if (tipoFiltro !== 'todos') {
-        params.append('tipo', tipoFiltro);
-      }
-
-      const url = `${API_BASE}/cursos?${params.toString()}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      setCursos(data.cursos || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalCursos(data.totalCursos || 0);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Erro ao carregar cursos:", error);
-      setIsLoading(false);
+    // Adicionar filtros se estiverem ativos
+    if (searchTerm) {
+      params.append('search', searchTerm);
     }
-  };
+    if (categoriaId) {
+      params.append('categoria', categoriaId);
+    }
+    if (areaId) {
+      params.append('area', areaId);
+    }
+    if (topicoId) {
+      params.append('topico', topicoId);
+    }
+    if (tipoFiltro !== 'todos') {
+      params.append('tipo', tipoFiltro);
+    }
+
+    const url = `${API_BASE}/cursos?${params.toString()}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    setCursos(data.cursos || []);
+    setTotalPages(data.totalPages || 1);
+    setTotalCursos(data.total || 0);
+    setIsLoading(false);
+  } catch (error) {
+    console.error("Erro ao carregar cursos:", error);
+    setIsLoading(false);
+  }
+};
+
+
+
 
   // Buscar cursos sempre que a página ou filtros mudarem
   useEffect(() => {
@@ -239,6 +304,7 @@ export default function CursosPage() {
     setSearchTerm('');
     setCategoriaId('');
     setAreaId('');
+    setTopicoId('');
     setTipoFiltro('todos');
   };
 
@@ -323,6 +389,36 @@ export default function CursosPage() {
               </div>
             )}
 
+            {areaId && (
+              <div className="custom-select-wrapper">
+                <select
+                  className="custom-select-button select-topico"
+                  value={topicoId}
+                  onChange={(e) => setTopicoId(e.target.value)}
+                  disabled={!areaId || isLoading}
+                >
+                  <option value="">Selecionar Tópico</option>
+                  {isLoading ? (
+                    <option value="" disabled>A carregar tópicos...</option>
+                  ) : topicosFiltrados.length > 0 ? (
+                    topicosFiltrados.map(topico => {
+                      const topicoIdValue = topico.id_topico || topico.id || topico.idTopico;
+                      const topicoNomeValue = topico.nome || topico.name || topico.titulo;
+
+                      return (
+                        <option key={topicoIdValue} value={topicoIdValue}>
+                          {topicoNomeValue}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <option value="" disabled>Nenhum tópico disponível</option>
+                  )}
+                </select>
+                <i className="fas fa-tag custom-select-icon"></i>
+              </div>
+            )}
+
             {/* Botões para filtrar por tipo de curso */}
             <div className="cursos-filter-tipo">
               <button
@@ -363,6 +459,36 @@ export default function CursosPage() {
           </div>
         </div>
       )}
+
+      {areaId && (
+  <div className="custom-select-wrapper">
+    <select
+      className="custom-select-button select-topico"
+      value={topicoId}
+      onChange={(e) => setTopicoId(e.target.value)}
+      disabled={!areaId || isLoading}
+    >
+      <option value="">Selecionar Tópico</option>
+      {isLoading ? (
+        <option value="" disabled>A carregar tópicos...</option>
+      ) : topicos.length > 0 ? (
+        topicos.map(topico => {
+          const topicoIdValue = topico.id_topico || topico.id;
+          const topicoNomeValue = topico.nome || topico.titulo;
+
+          return (
+            <option key={topicoIdValue} value={topicoIdValue}>
+              {topicoNomeValue}
+            </option>
+          );
+        })
+      ) : (
+        <option value="" disabled>Nenhum tópico disponível</option>
+      )}
+    </select>
+    <i className="fas fa-tag custom-select-icon"></i>
+  </div>
+)}
 
       {/* Indicador de carregamento */}
       {isLoading && (

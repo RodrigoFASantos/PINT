@@ -1,10 +1,108 @@
-const { Topico_Categoria, Categoria } = require('../../database/associations');
+const { Topico_Categoria, Categoria, Comentario_Topico, User, Area } = require('../../database/associations');
 const { sendTopicRequestEmail } = require('../../utils/Email_Criar_Topico');
+const uploadUtils = require('../../middleware/upload');
+const fs = require('fs');
+const path = require('path');
+
+
+const getAllTopicos = async (req, res) => {
+  try {
+    console.log('Iniciando busca de tópicos com includes graduais...');
+    
+    // Tentativa 1: Apenas com categoria
+    const topicos = await Topico_Categoria.findAll({
+      include: [
+        {
+          model: Categoria,
+          as: "categoria",
+          attributes: ['id_categoria', 'nome']
+        }
+      ],
+      order: [['data_criacao', 'DESC']]
+    });
+    
+    console.log('Tópicos encontrados com categoria:', topicos.length);
+    
+    // Se funcionar, tente o próximo include
+    try {
+      console.log('Testando include de Area...');
+      const topicosComArea = await Topico_Categoria.findAll({
+        include: [
+          {
+            model: Categoria,
+            as: "categoria",
+            attributes: ['id_categoria', 'nome']
+          },
+          {
+            model: Area,
+            as: "area",
+            attributes: ['id_area', 'nome'],
+            required: false
+          }
+        ],
+        limit: 1, // Limita a 1 resultado para teste
+        order: [['data_criacao', 'DESC']]
+      });
+      
+      console.log('Include de Area bem-sucedido!');
+      
+      // Se chegou aqui, os includes estão funcionando
+      // Agora busca com todos os includes
+      const todosTopicos = await Topico_Categoria.findAll({
+        include: [
+          {
+            model: Categoria,
+            as: "categoria",
+            attributes: ['id_categoria', 'nome']
+          },
+          {
+            model: Area,
+            as: "area",
+            attributes: ['id_area', 'nome'],
+            required: false
+          },
+          {
+            model: User,
+            as: "criador",
+            attributes: ['id_utilizador', 'nome', 'email'],
+            required: false
+          }
+        ],
+        order: [['data_criacao', 'DESC']]
+      });
+      
+      console.log('Tópicos encontrados (completo):', todosTopicos.length);
+      
+      return res.status(200).json(todosTopicos);
+    } catch (areaError) {
+      console.error('Erro no include de Area:', areaError);
+      // Se falhar no include de Area, retorna apenas os tópicos com categoria
+      return res.status(200).json(topicos);
+    }
+  } catch (error) {
+    console.error('Erro ao listar tópicos:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar tópicos',
+      error: error.message
+    });
+  }
+};
+
 
 const createTopico = async (req, res) => {
   try {
+    console.log('=== DADOS DA REQUISIÇÃO PARA CRIAR TÓPICO ===');
+    console.log('Corpo da requisição:', JSON.stringify(req.body, null, 2));
+    console.log('User:', req.user.id_utilizador || req.user.id);
+    console.log('================================');
+
     const userId = req.user.id_utilizador || req.user.id;
-    const { id_categoria, titulo, descricao } = req.body;
+    const { id_categoria, id_area, titulo, descricao } = req.body; // Adicionado id_area aqui
+
+
+    console.log(`Valores extraídos: id_categoria=${id_categoria}, id_area=${id_area}, titulo="${titulo}", desc="${descricao?.substring(0, 20)}..."`);
+
 
     // Validação básica dos dados de entrada
     if (!id_categoria || !titulo) {
@@ -23,16 +121,16 @@ const createTopico = async (req, res) => {
       });
     }
 
-    console.log(`A criar tópico "${titulo}" na categoria ${id_categoria} pelo utilizador ${userId}`);
+    console.log(`A criar tópico "${titulo}" na categoria ${id_categoria}${id_area ? ', área ' + id_area : ''} pelo utilizador ${userId}`);
 
-    // CORREÇÃO: Usar criado_por em vez de id_utilizador
+    // Criar o tópico incluindo id_area
     const novoTopico = await Topico_Categoria.create({
       id_categoria: id_categoria,
+      id_area: id_area || null,
       criado_por: userId,
       titulo: titulo,
       descricao: descricao || '',
       data_criacao: new Date()
-      // Remover comentarios: 0, se esse campo não existir no modelo
     });
 
     // Retornar o tópico criado
@@ -51,7 +149,7 @@ const createTopico = async (req, res) => {
   }
 };
 
-// Controlador para solicitar a criação de um novo tópico (para utilizadores não admin/gestor)
+// Solicitar a criação de um novo tópico (para utilizadores não admin/gestor)
 const solicitarTopico = async (req, res) => {
   try {
     const userId = req.user.id_utilizador || req.user.id;
@@ -98,7 +196,7 @@ const solicitarTopico = async (req, res) => {
 };
 
 
-// Controller para atualizar um tópico existente
+// Atualizar um tópico existente
 const updateTopico = async (req, res) => {
   try {
     const { id } = req.params;
@@ -154,7 +252,7 @@ const updateTopico = async (req, res) => {
   }
 };
 
-// Controller para excluir um tópico
+// Remover um tópico
 const deleteTopico = async (req, res) => {
   try {
     const { id } = req.params;
@@ -179,30 +277,52 @@ const deleteTopico = async (req, res) => {
       });
     }
 
-    // Procurar todos os comentários do tópico para remover anexos
-    const comentarios = await Comentario_Topico.findAll({
-      where: { id_topico: id }
-    });
+    // Verificar se o modelo Comentario_Topico está disponível
+    if (typeof Comentario_Topico === 'undefined') {
+      console.error('Modelo Comentario_Topico não está definido');
+      // Continuar mesmo sem poder eliminar comentários
+    } else {
+      try {
+        // Procurar todos os comentários do tópico para remover anexos
+        const comentarios = await Comentario_Topico.findAll({
+          where: { id_topico: id }
+        });
 
-    // Remover anexos dos comentários
-    for (const comentario of comentarios) {
-      if (comentario.anexo_url) {
-        const filePath = path.join(uploadUtils.BASE_UPLOAD_DIR, comentario.anexo_url.replace(/^\/?(uploads|backend\/uploads)\//, ''));
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-            console.log(`Ficheiro anexo removido: ${filePath}`);
-          } catch (err) {
-            console.error(`Erro ao remover anexo: ${err.message}`);
+        // Remover anexos dos comentários, se houver
+        if (comentarios && comentarios.length > 0) {
+          for (const comentario of comentarios) {
+            if (comentario.anexo_url) {
+              try {
+                const filePath = path.join(
+                  uploadUtils.BASE_UPLOAD_DIR || process.env.CAMINHO_PASTA_UPLOADS || 'uploads',
+                  comentario.anexo_url.replace(/^\/?(uploads|backend\/uploads)\//, '')
+                );
+
+                if (fs.existsSync(filePath)) {
+                  try {
+                    fs.unlinkSync(filePath);
+                    console.log(`Ficheiro anexo removido: ${filePath}`);
+                  } catch (err) {
+                    console.error(`Erro ao remover anexo: ${err.message}`);
+                  }
+                }
+              } catch (error) {
+                console.error('Erro ao processar anexo:', error);
+                // Continuar mesmo com erro no processamento de anexos
+              }
+            }
           }
         }
+
+        // Eliminar todos os comentários relacionados ao tópico
+        await Comentario_Topico.destroy({
+          where: { id_topico: id }
+        });
+      } catch (error) {
+        console.error('Erro ao eliminar comentários do tópico:', error);
+        // Continuar mesmo com erro na eliminação de comentários
       }
     }
-
-    // Eliminar todos os comentários relacionados ao tópico
-    await Comentario_Topico.destroy({
-      where: { id_topico: id }
-    });
 
     // Eliminar o tópico
     await topico.destroy();
@@ -229,6 +349,7 @@ const deleteTopico = async (req, res) => {
 };
 
 module.exports = {
+  getAllTopicos,
   createTopico,
   solicitarTopico,
   updateTopico,

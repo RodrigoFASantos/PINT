@@ -142,11 +142,129 @@ const getCursosByCategoria = async (req, res) => {
   }
 };
 
+// Procurar curso por ID com detalhes
+const getCursoById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user?.id_utilizador;
+
+    // Procurar o curso com todas as relações
+    const curso = await Curso.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "formador",
+          attributes: ['id_utilizador', 'nome', 'email']
+        },
+        {
+          model: Area,
+          as: "area"
+        },
+        {
+          model: Categoria,
+          as: "categoria"
+        },
+        {
+          model: TopicoCurso,
+          as: "topicos",
+          where: { ativo: true },
+          required: false,
+          order: [['ordem', 'ASC']]
+        }
+      ]
+    });
+
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado!" });
+    }
+
+    // Crie uma cópia do curso para modificar
+    const cursoComInscritos = curso.toJSON();
+
+    // Verificar se o curso já terminou
+    const dataAtual = new Date();
+    const dataFimCurso = new Date(curso.data_fim);
+    const cursoTerminado = dataFimCurso < dataAtual;
+
+    // Adicionar estado de acesso para cursos terminados
+    cursoComInscritos.terminado = cursoTerminado;
+
+    // Se o curso terminou e um utilizador está a tentar aceder, verificar se está inscrito
+    if (cursoTerminado && userId) {
+      try {
+        // Verificar se o utilizador está inscrito neste curso
+        const inscricao = await Inscricao_Curso.findOne({
+          where: {
+            id_utilizador: userId,
+            id_curso: id,
+            estado: 'inscrito' // Considera apenas inscrições ativas
+          }
+        });
+
+        // Adicionar logs para diagnóstico
+        console.log(`A verificar inscrição para utilizador ${userId} no curso ${id}`);
+        console.log(`Resultado da procura de inscrição:`, inscricao);
+
+        // Indicar se o utilizador tem acesso ao curso
+        cursoComInscritos.acessoPermitido = !!inscricao;
+        console.log(`Acesso permitido: ${cursoComInscritos.acessoPermitido}`);
+      } catch (error) {
+        console.error("Erro ao verificar inscrição:", error);
+        // Em caso de erro, vamos considerar que o utilizador não tem acesso
+        cursoComInscritos.acessoPermitido = false;
+      }
+    } else if (cursoTerminado) {
+      // Se não há utilizador autenticado e o curso terminou, não permitir acesso
+      cursoComInscritos.acessoPermitido = false;
+    } else {
+      // Se o curso não terminou, permitir acesso
+      cursoComInscritos.acessoPermitido = true;
+    }
+
+    // Adicionar contagem de inscrições ativas (código existente)
+    try {
+      if (curso.tipo === 'sincrono' && curso.vagas) {
+        let where = { id_curso: id };
+
+        try {
+          const inscricao = await Inscricao_Curso.findOne({ where: { id_curso: id } });
+          if (inscricao) {
+            if ('ativo' in inscricao.dataValues) {
+              where.ativo = true;
+            } else if ('status' in inscricao.dataValues) {
+              where.status = 'ativo';
+            }
+          }
+        } catch (e) {
+          console.log("Aviso: Não foi possível determinar coluna de estado de inscrição", e.message);
+        }
+
+        const inscricoesAtivas = await Inscricao_Curso.count({ where });
+        cursoComInscritos.inscricoesAtivas = inscricoesAtivas;
+      }
+    } catch (inscricoesError) {
+      console.error("Erro ao contar inscrições (não fatal):", inscricoesError);
+      cursoComInscritos.inscricoesAtivas = 0;
+    }
+
+    res.json(cursoComInscritos);
+  } catch (error) {
+    console.error("Erro ao procurar curso:", error);
+    res.status(500).json({ message: "Erro ao procurar curso", error: error.message });
+  }
+};
+
+
+
+
 // Função para criar um novo curso
 const createCurso = async (req, res) => {
   try {
     console.log("A iniciar criação de curso");
-    const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria } = req.body;
+    const { 
+      nome, descricao, tipo, vagas, data_inicio, data_fim, 
+      id_formador, id_area, id_categoria, topicos 
+    } = req.body;
 
     if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
@@ -161,14 +279,10 @@ const createCurso = async (req, res) => {
       });
     }
 
-    // Criar nome do diretório para o curso
+    // Criar diretórios para o curso
     const cursoSlug = uploadUtils.normalizarNome(nome);
     const cursoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
-
-    // Garantir que o diretório exista
     uploadUtils.ensureDir(cursoDir);
-
-    // Caminho para a base de dados
     const dirPath = `uploads/cursos/${cursoSlug}`;
 
     // Verificar se foi enviada uma imagem
@@ -179,34 +293,63 @@ const createCurso = async (req, res) => {
       console.log(`Caminho da imagem guardado na BD: ${imagemPath}`);
     }
 
-    const novoCurso = await Curso.create({
-      nome,
-      descricao,
-      tipo,
-      vagas: tipo === "sincrono" ? vagas : null,
-      data_inicio,
-      data_fim,
-      id_formador,
-      id_area,
-      id_categoria,
-      imagem_path: imagemPath,
-      dir_path: dirPath,
-      ativo: true
-    });
+    // Iniciar uma transação
+    const t = await sequelize.transaction();
 
-    console.log(`Curso criado com sucesso: ${novoCurso.id_curso} - ${novoCurso.nome}`);
-
-    // Notificar sobre o novo curso usando o controller diretamente
     try {
-      console.log("A chamar função de notificação diretamente");
-      await notificacaoController.notificarNovoCurso(novoCurso);
-      console.log("Notificação de curso criado enviada com sucesso");
-    } catch (notificationError) {
-      console.error("Erro ao enviar notificação de curso criado:", notificationError);
-      // Continuar mesmo com erro na notificação
-    }
+      // Criar o curso
+      const novoCurso = await Curso.create({
+        nome,
+        descricao,
+        tipo,
+        vagas: tipo === "sincrono" ? vagas : null,
+        data_inicio,
+        data_fim,
+        id_formador,
+        id_area,
+        id_categoria,
+        imagem_path: imagemPath,
+        dir_path: dirPath,
+        ativo: true
+      }, { transaction: t });
 
-    res.status(201).json({ message: "Curso criado com sucesso!", curso: { id_curso: novoCurso.id_curso, nome: novoCurso.nome } });
+      // Se foram fornecidos tópicos, criar cada um deles
+      if (topicos && Array.isArray(topicos) && topicos.length > 0) {
+        for (let i = 0; i < topicos.length; i++) {
+          await TopicoCurso.create({
+            nome: topicos[i].nome,
+            id_curso: novoCurso.id_curso,
+            ordem: i + 1,
+            ativo: true
+          }, { transaction: t });
+        }
+      }
+
+      // Confirmar a transação
+      await t.commit();
+
+      console.log(`Curso criado com sucesso: ${novoCurso.id_curso} - ${novoCurso.nome}`);
+
+      // Notificar sobre o novo curso
+      try {
+        await notificacaoController.notificarNovoCurso(novoCurso);
+        console.log("Notificação de curso criado enviada com sucesso");
+      } catch (notificationError) {
+        console.error("Erro ao enviar notificação de curso criado:", notificationError);
+      }
+
+      res.status(201).json({ 
+        message: "Curso criado com sucesso!", 
+        curso: { 
+          id_curso: novoCurso.id_curso, 
+          nome: novoCurso.nome 
+        } 
+      });
+    } catch (error) {
+      // Reverter a transação em caso de erro
+      await t.rollback();
+      throw error;
+    }
   } catch (error) {
     console.error("Erro ao criar curso:", error);
     res.status(500).json({ message: "Erro no servidor ao criar curso." });
@@ -315,110 +458,7 @@ const updateCurso = async (req, res) => {
   }
 };
 
-// Procurar curso por ID com detalhes
-const getCursoById = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const userId = req.user?.id_utilizador; // ID do utilizador atual, se estiver autenticado
 
-    // Procurar o curso com as suas relações
-    const curso = await Curso.findByPk(id, {
-      include: [
-        {
-          model: User,
-          as: "formador",
-          attributes: ['id_utilizador', 'nome', 'email']
-        },
-        {
-          model: Area,
-          as: "area"
-        },
-        {
-          model: Categoria,
-          as: "categoria"
-        }
-      ]
-    });
-
-    if (!curso) {
-      return res.status(404).json({ message: "Curso não encontrado!" });
-    }
-
-    // Crie uma cópia do curso para modificar
-    const cursoComInscritos = curso.toJSON();
-
-    // Verificar se o curso já terminou
-    const dataAtual = new Date();
-    const dataFimCurso = new Date(curso.data_fim);
-    const cursoTerminado = dataFimCurso < dataAtual;
-
-    // Adicionar estado de acesso para cursos terminados
-    cursoComInscritos.terminado = cursoTerminado;
-
-    // Se o curso terminou e um utilizador está a tentar aceder, verificar se está inscrito
-    if (cursoTerminado && userId) {
-      try {
-        // Verificar se o utilizador está inscrito neste curso
-        const inscricao = await Inscricao_Curso.findOne({
-          where: {
-            id_utilizador: userId,
-            id_curso: id,
-            estado: 'inscrito' // Considera apenas inscrições ativas
-          }
-        });
-
-        // Adicionar logs para diagnóstico
-        console.log(`A verificar inscrição para utilizador ${userId} no curso ${id}`);
-        console.log(`Resultado da procura de inscrição:`, inscricao);
-
-        // Indicar se o utilizador tem acesso ao curso
-        cursoComInscritos.acessoPermitido = !!inscricao;
-        console.log(`Acesso permitido: ${cursoComInscritos.acessoPermitido}`);
-      } catch (error) {
-        console.error("Erro ao verificar inscrição:", error);
-        // Em caso de erro, vamos considerar que o utilizador não tem acesso
-        cursoComInscritos.acessoPermitido = false;
-      }
-    } else if (cursoTerminado) {
-      // Se não há utilizador autenticado e o curso terminou, não permitir acesso
-      cursoComInscritos.acessoPermitido = false;
-    } else {
-      // Se o curso não terminou, permitir acesso
-      cursoComInscritos.acessoPermitido = true;
-    }
-
-    // Adicionar contagem de inscrições ativas (código existente)
-    try {
-      if (curso.tipo === 'sincrono' && curso.vagas) {
-        let where = { id_curso: id };
-
-        try {
-          const inscricao = await Inscricao_Curso.findOne({ where: { id_curso: id } });
-          if (inscricao) {
-            if ('ativo' in inscricao.dataValues) {
-              where.ativo = true;
-            } else if ('status' in inscricao.dataValues) {
-              where.status = 'ativo';
-            }
-          }
-        } catch (e) {
-          console.log("Aviso: Não foi possível determinar coluna de estado de inscrição", e.message);
-        }
-
-        const inscricoesAtivas = await Inscricao_Curso.count({ where });
-        cursoComInscritos.inscricoesAtivas = inscricoesAtivas;
-      }
-    } catch (inscricoesError) {
-      console.error("Erro ao contar inscrições (não fatal):", inscricoesError);
-      cursoComInscritos.inscricoesAtivas = 0;
-    }
-
-    res.json(cursoComInscritos);
-  } catch (error) {
-    console.error("Erro ao procurar curso:", error);
-    res.status(500).json({ message: "Erro ao procurar curso", error: error.message });
-  }
-};
 
 // Nova função: Associar formador a um curso
 const associarFormadorCurso = async (req, res) => {
@@ -705,6 +745,132 @@ const getCursosSugeridos = async (req, res) => {
 };
 
 
+
+
+
+/*TÓPICOS*/
+// Obter tópicos de um curso
+const getTopicosCurso = async (req, res) => {
+  try {
+    const id_curso = req.params.id;
+    
+    const topicos = await TopicoCurso.findAll({
+      where: { id_curso, ativo: true },
+      order: [['ordem', 'ASC']]
+    });
+    
+    res.json(topicos);
+  } catch (error) {
+    console.error("Erro ao obter tópicos do curso:", error);
+    res.status(500).json({ message: "Erro ao obter tópicos do curso" });
+  }
+};
+
+// Criar um novo tópico para um curso
+const createTopicoCurso = async (req, res) => {
+  try {
+    const id_curso = req.params.id;
+    const { nome, ordem } = req.body;
+    
+    if (!nome) {
+      return res.status(400).json({ message: "Nome do tópico é obrigatório" });
+    }
+    
+    // Verificar se o curso existe
+    const curso = await Curso.findByPk(id_curso);
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado" });
+    }
+    
+    // Obter a ordem máxima atual
+    const ultimaOrdem = await TopicoCurso.max('ordem', { 
+      where: { id_curso } 
+    }) || 0;
+    
+    // Criar o tópico
+    const novoTopico = await TopicoCurso.create({
+      nome,
+      id_curso,
+      ordem: ordem || ultimaOrdem + 1,
+      ativo: true
+    });
+    
+    res.status(201).json({
+      message: "Tópico criado com sucesso",
+      topico: novoTopico
+    });
+  } catch (error) {
+    console.error("Erro ao criar tópico:", error);
+    res.status(500).json({ message: "Erro ao criar tópico" });
+  }
+};
+
+// Atualizar um tópico
+const updateTopicoCurso = async (req, res) => {
+  try {
+    const id_topico = req.params.id;
+    const { nome, ordem, ativo } = req.body;
+    
+    // Verificar se o tópico existe
+    const topico = await TopicoCurso.findByPk(id_topico);
+    if (!topico) {
+      return res.status(404).json({ message: "Tópico não encontrado" });
+    }
+    
+    // Atualizar o tópico
+    await topico.update({
+      nome: nome !== undefined ? nome : topico.nome,
+      ordem: ordem !== undefined ? ordem : topico.ordem,
+      ativo: ativo !== undefined ? ativo : topico.ativo
+    });
+    
+    res.json({
+      message: "Tópico atualizado com sucesso",
+      topico
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar tópico:", error);
+    res.status(500).json({ message: "Erro ao atualizar tópico" });
+  }
+};
+
+// Eliminar um tópico
+const deleteTopicoCurso = async (req, res) => {
+  try {
+    const id_topico = req.params.id;
+    
+    // Verificar se o tópico existe
+    const topico = await TopicoCurso.findByPk(id_topico);
+    if (!topico) {
+      return res.status(404).json({ message: "Tópico não encontrado" });
+    }
+    
+    // Verificar se há pastas associadas a este tópico
+    const pastas = await PastaCurso.findAll({
+      where: { id_topico }
+    });
+    
+    if (pastas.length > 0) {
+      // Em vez de eliminar, marcar como inativo
+      await topico.update({ ativo: false });
+      return res.json({ 
+        message: "Tópico desativado com sucesso. Não foi possível eliminar pois possui pastas associadas.",
+        desativado: true
+      });
+    }
+    
+    // Se não há pastas, eliminar o tópico
+    await topico.destroy();
+    
+    res.json({ message: "Tópico eliminado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao eliminar tópico:", error);
+    res.status(500).json({ message: "Erro ao eliminar tópico" });
+  }
+};
+
+
+
 module.exports = {
   getAllCursos,
   getCursosByCategoria,
@@ -714,5 +880,9 @@ module.exports = {
   updateCurso,
   deleteCurso,
   getCursosSugeridos,
-  associarFormadorCurso
+  associarFormadorCurso,
+  getTopicosCurso,
+  createTopicoCurso,
+  updateTopicoCurso,
+  deleteTopicoCurso
 };

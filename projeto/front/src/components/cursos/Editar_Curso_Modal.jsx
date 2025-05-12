@@ -9,12 +9,8 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
   const [area, setArea] = useState(curso.area || '');
   const [tipo, setTipo] = useState(curso.formador ? 'sincrono' : 'assincrono');
   const [formador, setFormador] = useState(curso.formador?.id || '');
-  const [dataInicio, setDataInicio] = useState(
-    curso.dataInicio ? new Date(curso.dataInicio).toISOString().split('T')[0] : ''
-  );
-  const [dataFim, setDataFim] = useState(
-    curso.dataFim ? new Date(curso.dataFim).toISOString().split('T')[0] : ''
-  );
+  const [dataInicio, setDataInicio] = useState(curso.dataInicio ? new Date(curso.dataInicio).toISOString().split('T')[0] : '');
+  const [dataFim, setDataFim] = useState(curso.dataFim ? new Date(curso.dataFim).toISOString().split('T')[0] : '');
   const [horasCurso, setHorasCurso] = useState(curso.horasCurso || '');
   const [vagasTotal, setVagasTotal] = useState(curso.vagasTotal || '');
 
@@ -28,8 +24,18 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
 
-  useEffect(() => {
 
+  const [topicos, setTopicos] = useState([]);
+  const [topicosCurso, setTopicosCurso] = useState([]);
+  const [novoTopico, setNovoTopico] = useState('');
+
+
+
+
+
+
+
+  useEffect(() => {
     // Verificar se a data de início já passou
     const verificarDataInicio = () => {
       if (dataInicio) {
@@ -78,6 +84,7 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
     fetchDados();
   }, [categoria]);
 
+
   const handleCategoriaChange = (e) => {
     const novaCategoria = e.target.value;
     setCategoria(novaCategoria);
@@ -91,6 +98,79 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
       setAreas([]);
     }
   };
+
+  useEffect(() => {
+    const carregarTopicosCurso = async () => {
+      if (!curso.id) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/api/cursos/${curso.id}/topicos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setTopicosCurso(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar tópicos do curso:', error);
+      }
+    };
+
+    const carregarTopicosArea = async () => {
+      if (!area) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        const areaObj = areas.find(a => a.nome === area);
+
+        if (areaObj) {
+          const response = await axios.get(`/api/topicos-curso/area/${areaObj.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          setTopicos(response.data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tópicos da área:', error);
+      }
+    };
+
+    carregarTopicosCurso();
+
+    if (area) {
+      carregarTopicosArea();
+    }
+  }, [curso.id, area, areas]);
+
+  // Função para adicionar um tópico existente
+  const adicionarTopico = (id_topico) => {
+    if (!id_topico) return;
+
+    const topicoExistente = topicos.find(t => t.id_topico === parseInt(id_topico));
+    if (topicoExistente && !topicosCurso.some(t => t.id_topico === topicoExistente.id_topico)) {
+      setTopicosCurso([...topicosCurso, topicoExistente]);
+    }
+  };
+
+  // Função para adicionar um novo tópico
+  const adicionarNovoTopico = () => {
+    if (novoTopico.trim() === '') return;
+
+    setTopicosCurso([...topicosCurso, {
+      nome: novoTopico,
+      novo: true
+    }]);
+    setNovoTopico('');
+  };
+
+  // Função para remover um tópico
+  const removerTopico = (index) => {
+    const novosTopicos = [...topicosCurso];
+    novosTopicos.splice(index, 1);
+    setTopicosCurso(novosTopicos);
+  };
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -157,7 +237,8 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
           dataInicio,
           dataFim,
           horasCurso: Number(horasCurso),
-          vagasTotal: tipo === 'sincrono' ? Number(vagasTotal) : null
+          vagasTotal: tipo === 'sincrono' ? Number(vagasTotal) : null,
+          topicos: topicosCurso
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -169,6 +250,13 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
       setEnviando(false);
     }
   };
+
+
+
+
+
+
+
 
   return (
     <div className="editar-curso-overlay">
@@ -241,6 +329,75 @@ const EditarCursoModal = ({ curso, onClose, onSuccess }) => {
                 ))}
               </select>
             </div>
+
+
+
+
+            <div className="form-group">
+              <label>Tópicos do Curso:</label>
+
+              <div className="topicos-container">
+                <div className="topicos-input-row">
+                  <select
+                    onChange={(e) => adicionarTopico(e.target.value)}
+                    value=""
+                  >
+                    <option value="">Selecionar tópico existente</option>
+                    {topicos.map(topico => (
+                      <option
+                        key={topico.id_topico}
+                        value={topico.id_topico}
+                        disabled={topicosCurso.some(t => t.id_topico === topico.id_topico)}
+                      >
+                        {topico.nome}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="novo-topico-input">
+                    <input
+                      type="text"
+                      placeholder="Novo tópico"
+                      value={novoTopico}
+                      onChange={(e) => setNovoTopico(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={adicionarNovoTopico}
+                      className="btn-adicionar"
+                      disabled={!novoTopico.trim()}
+                    >
+                      <i className="fas fa-plus"></i>
+                    </button>
+                  </div>
+                </div>
+
+                {topicosCurso.length > 0 ? (
+                  <ul className="topicos-lista">
+                    {topicosCurso.map((topico, index) => (
+                      <li key={index} className="topico-item">
+                        <span>{topico.nome}</span>
+                        <button
+                          type="button"
+                          onClick={() => removerTopico(index)}
+                          className="btn-remover"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="sem-topicos">Nenhum tópico adicionado</p>
+                )}
+              </div>
+            </div>
+
+
+
+
+
+
           </div>
 
           <div className="form-group">

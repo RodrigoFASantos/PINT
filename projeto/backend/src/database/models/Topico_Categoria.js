@@ -6,6 +6,7 @@ const Topico_Categoria = sequelize.define("topicos_categorias", {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    allowNull: false
   },
   id_categoria: {
     type: DataTypes.INTEGER,
@@ -14,6 +15,14 @@ const Topico_Categoria = sequelize.define("topicos_categorias", {
       model: "categorias",
       key: "id_categoria",
     },
+  },
+  id_area: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'areas',
+      key: 'id_area'
+    }
   },
   titulo: {
     type: DataTypes.STRING(255),

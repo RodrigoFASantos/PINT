@@ -62,14 +62,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               </li>
               <li className={isActive('/forum') ? 'active' : ''}>
                 <Link to="/forum" onClick={toggleSidebar}>
-                  <i className="fas fa-comments"></i> Fórum de Partilha
+                  <i className="fas fa-comments"></i> Chats
                 </Link>
               </li>
-              <li className={isActive('/perfil') ? 'active' : ''}>
-                <Link to="/perfil" onClick={toggleSidebar}>
-                  <i className="fas fa-user"></i> Perfil
-                </Link>
-              </li>
+              
             </ul>
           </div>
 
@@ -126,6 +122,13 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     <i className="fas fa-users"></i> Gerir Utilizadores
                   </Link>
                 </li>
+                
+                <li className={isActive('/admin/topicos') ? 'active' : ''}>
+                  <Link to="/admin/topicos" onClick={toggleSidebar}>
+                    <i className="fas fa-pencil-ruler"></i> Gerir Topicos
+                  </Link>
+                </li>
+
                 <li className={isActive('/admin/criar-curso') ? 'active' : ''}>
                   <Link to="/admin/criar-curso" onClick={toggleSidebar}>
                     <i className="fas fa-plus-circle"></i> Criar Curso
@@ -141,9 +144,15 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           )}
 
           {/* Configurações */}
+          
           <div className="sidebar-section">
             <h3>Configurações</h3>
             <ul>
+              <li className={isActive('/perfil') ? 'active' : ''}>
+                <Link to="/perfil" onClick={toggleSidebar}>
+                  <i className="fas fa-user"></i> Perfil
+                </Link>
+              </li>
               <li className={isActive('/definicoes') ? 'active' : ''}>
                 <Link to="/definicoes" onClick={toggleSidebar}>
                   <i className="fas fa-cog"></i> Definições

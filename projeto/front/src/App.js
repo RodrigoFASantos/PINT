@@ -36,6 +36,7 @@ import ForumPartilha from './pages/forum/Forum';
 import AdminDashboard from './pages/gestao/Admin_Dashboard';
 import Gerir_Inscricoes from './pages/gestao/gerir_Inscricoes';
 import Gerir_Utilizadores from './pages/gestao/gerir_Utilizadores';
+import Gerir_Topicos from './pages/gestao/gerir_Topicos';
 import Gerir_Cursos from './pages/gestao/gerir_Cursos';
 
 // Páginas de Avaliações
@@ -256,6 +257,22 @@ const App = () => {
                   </RouteWrapper>
                 }
               />
+
+
+              <Route
+                path="/admin/topicos"
+                element={
+                  <RouteWrapper path="/admin/topicos">
+                    <ProtectedRoute allowedRoles={[1]}>
+                      <Gerir_Topicos />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+
+
+              
 
               <Route
                 path="/admin/cursos"

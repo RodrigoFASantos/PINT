@@ -21,9 +21,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Modificado: Inicializar mostrarDetalhes com base no status de inscrição
-  // Se o usuário estiver inscrito (!inscritoProp é false), os detalhes não aparecem
-  // Se o usuário não estiver inscrito (!inscritoProp é true), os detalhes aparecem
+
+  const [topicos, setTopicos] = useState([]);
+
+
+  // Se o user estiver inscrito (!inscritoProp é false), os detalhes não aparecem
+  // Se o user não estiver inscrito (!inscritoProp é true), os detalhes aparecem
   const [mostrarDetalhes, setMostrarDetalhes] = useState(!inscritoProp);
   const [categoria, setCategoria] = useState(null);
   const [carregarCategoria, setCarregarCategoria] = useState(false);
@@ -34,7 +37,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   // Carregar curso se não for fornecido via props
   useEffect(() => {
     let isMounted = true;
-    
+
     const carregarCurso = async () => {
       try {
         setLoading(true);
@@ -75,7 +78,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     if (!cursoProp && courseId) {
       carregarCurso();
     }
-    
+
     return () => {
       isMounted = false;
     };
@@ -108,7 +111,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     setShowInscricaoForm(true);
   };
 
-  // Verificar se o usuário já está inscrito no curso
+  // Verificar se o user já está inscrito no curso
   const verificarInscricao = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -120,17 +123,39 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
       const estadoInscrito = response.data.inscrito;
       setInscrito(estadoInscrito);
-      
+
       // Atualizar o estado mostrarDetalhes com base no status de inscrição
-      // Se o usuário estiver inscrito, fechar os detalhes
+      // Se o user estiver inscrito, fechar os detalhes
       if (estadoInscrito) {
         setMostrarDetalhes(false);
       }
-      
+
     } catch (error) {
       console.error('Erro ao verificar inscrição:', error);
     }
-  }, [courseId]);
+  }, [courseId]
+  );
+
+  // Carregar tópicos do curso
+  useEffect(() => {
+    const fetchTopicos = async () => {
+      if (!curso || !curso.id_curso) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE}/cursos/${curso.id_curso}/topicos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setTopicos(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar tópicos do curso:", error);
+      }
+    };
+
+    fetchTopicos();
+  }, [curso]);
+
 
   // Verificar o status do curso em relação às datas
   const verificarStatusCurso = (curso) => {
@@ -171,7 +196,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão com a internet.");
       }
 
-      const response = await axios.post(`${API_BASE}/inscricoes`, 
+      const response = await axios.post(`${API_BASE}/inscricoes`,
         {
           id_utilizador: userId,
           id_curso: courseId
@@ -302,11 +327,11 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                   navigate('/login');
                   return;
                 }
-                
+
                 const response = await axios.get(`${API_BASE}/cursos/${courseId}`, {
                   headers: { Authorization: `Bearer ${token}` }
                 });
-                
+
                 setCurso(response.data);
                 setLoading(false);
               } catch (error) {
@@ -375,11 +400,14 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           backgroundPosition: 'center'
         }}
       >
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start">\
           <div>
             <h1 className='titulo'>{curso.nome}</h1>
             <p className="subtitulo">
-              {curso.area?.nome} {categoria && `> ${categoria.nome}`}
+              {curso.categoria?.nome} {' > '} {curso.area?.nome}
+              {topicos.length > 0 && (
+                <> {' > '} {topicos.map(t => t.nome).join(', ')}</>
+              )}
             </p>
             {/* Estado do curso abaixo do subtítulo */}
             <span className={`badge-estado ${statusCurso.toLowerCase().replace(' ', '-')}`}>
@@ -387,7 +415,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
             </span>
           </div>
 
-          {/* Botão de excluir, se usuário for admin */}
+          {/* Botão de excluir, se user for admin */}
         </div>
 
         {/* Ícone de informação no canto inferior direito */}
@@ -490,6 +518,24 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                     : (categoria?.nome || "Não atribuída")}
                 </div>
               </div>
+              <div className="campo-container">
+                <div className="campo campo-topicos">
+                  <label>Tópicos</label>
+                  <div className="campo-valor">
+                    {topicos.length > 0 ? (
+                      <ul className="lista-topicos">
+                        {topicos.map((topico) => (
+                          <li key={topico.id_topico} className="topico-item">
+                            {topico.nome}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      "Sem tópicos associados"
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Descrição */}
@@ -502,7 +548,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Botões de administrador (se o usuário for admin) */}
+            {/* Botões de administrador (se o user for admin) */}
             {userRole === 1 && (
               <div className="botoes-admin">
                 <div className="flex flex-wrap gap-3">

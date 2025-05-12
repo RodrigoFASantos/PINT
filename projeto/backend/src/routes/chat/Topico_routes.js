@@ -4,6 +4,7 @@ const authMiddleware = require("../../middleware/auth");
 const autorizar = require("../../middleware/autorizar");
 
 const {
+  getAllTopicos,
   createTopico,
   solicitarTopico,
   updateTopico,
@@ -12,6 +13,9 @@ const {
 
 // Middleware para verificar autenticação
 router.use(authMiddleware);
+
+// Listar todos os tópicos
+router.get("/", getAllTopicos);
 
 // Rotas para criar e manipular tópicos
 router.post("/", autorizar([1, 2]), createTopico);
