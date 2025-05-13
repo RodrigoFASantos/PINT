@@ -34,8 +34,10 @@ import ForumPartilha from './pages/forum/Forum';
 
 // Páginas de Gestão
 import AdminDashboard from './pages/gestao/Admin_Dashboard';
-import Gerir_Inscricoes from './pages/gestao/gerir_Inscricoes';
 import Gerir_Utilizadores from './pages/gestao/gerir_Utilizadores';
+import Gerir_Inscricoes from './pages/gestao/gerir_Inscricoes';
+import Gerir_Categoria from './pages/gestao/gerir_Categoria';
+import Gerir_Area from './pages/gestao/gerir_Area';
 import Gerir_Topicos from './pages/gestao/gerir_Topicos';
 import Gerir_Cursos from './pages/gestao/gerir_Cursos';
 
@@ -260,6 +262,28 @@ const App = () => {
 
 
               <Route
+                path="/admin/categorias"
+                element={
+                  <RouteWrapper path="/admin/categorias">
+                    <ProtectedRoute allowedRoles={[1]}>
+                      <Gerir_Categoria />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
+                path="/admin/areas"
+                element={
+                  <RouteWrapper path="/admin/areas">
+                    <ProtectedRoute allowedRoles={[1]}>
+                      <Gerir_Area />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
                 path="/admin/topicos"
                 element={
                   <RouteWrapper path="/admin/topicos">
@@ -272,7 +296,8 @@ const App = () => {
 
 
 
-              
+
+
 
               <Route
                 path="/admin/cursos"
