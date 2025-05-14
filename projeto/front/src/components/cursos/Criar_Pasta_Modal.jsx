@@ -8,6 +8,9 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
 
+  // Verificar se a pasta a ser criada pertence a um tópico de avaliação
+  const isAvaliacao = topico.nome?.toLowerCase() === 'avaliação' || topico.isAvaliacao;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -25,7 +28,8 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
       const dadosEnvio = {
         nome: nome.trim(),
         id_topico: topico.id_topico,
-        ordem: topico.pastas?.length + 1 || 1
+        ordem: topico.pastas?.length + 1 || 1,
+        isAvaliacao: isAvaliacao // Adicionar flag para indicar se é uma pasta de avaliação
       };
       
       const response = await axios.post(`${API_BASE}/pastas-curso`, dadosEnvio, {
@@ -49,13 +53,14 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
     <div className="modal-overlay">
       <div className="criar-pasta-modal">
         <div className="modal-header">
-          <h2>Criar Nova Pasta</h2>
+          <h2>Criar Nova Pasta{isAvaliacao ? ' de Avaliação' : ''}</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         
         <div className="modal-body">
           <div className="topico-info">
             <span>Tópico:</span> {topico.nome}
+            {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
           </div>
           
           {erro && <div className="error-message">{erro}</div>}

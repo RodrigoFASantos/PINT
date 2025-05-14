@@ -468,7 +468,7 @@ const existeConteudoNaPasta = async (titulo, id_pasta) => {
   return !!conteudoExistente; // true se existir, false se não existir
 };
 
-// Criar um novo conteúdo
+// Criar um novo conteúdo - MODIFICADO para estrutura simplificada
 const createConteudo = async (req, res) => {
   try {
     const { titulo, descricao, tipo, url, id_pasta, id_curso, ordem } = req.body;
@@ -496,6 +496,14 @@ const createConteudo = async (req, res) => {
       return res.status(400).json({ message: 'A pasta selecionada não pertence a este curso' });
     }
 
+    // Verificação de avaliação - checando se o nome do tópico contém "avalia"
+    const isAvaliacaoTopico = 
+      topico.nome.toLowerCase() === 'avaliação' || 
+      topico.nome.toLowerCase() === 'avaliacao' || 
+      topico.nome.toLowerCase().includes('avalia');
+    
+    console.log(`Tópico "${topico.nome}" ${isAvaliacaoTopico ? 'identificado como avaliação' : 'não é de avaliação'}`);
+
     if (!['file', 'link', 'video'].includes(tipo)) {
       return res.status(400).json({ message: 'Tipo de conteúdo inválido. Use: file, link ou video' });
     }
@@ -506,17 +514,27 @@ const createConteudo = async (req, res) => {
       return res.status(409).json({ message: 'Já existe um conteúdo com esse título nesta pasta' });
     }
 
-    // Criar estrutura de diretórios para o conteúdo
+    // MODIFICADO: Estrutura de pastas simplificada
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
-    const topicoSlug = uploadUtils.normalizarNome(topico.nome);
-    const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
-
-    // Caminho para diretório de conteúdos
-    const conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug, 'conteudos');
+    
+    // Determinar pasta base de acordo com o tipo (avaliação ou conteúdo)
+    const pastaBase = isAvaliacaoTopico ? 'avaliacao' : 'conteudos';
+    
+    // Caminho simplificado - diretamente na pasta base
+    const conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, pastaBase);
+    const conteudosPath = `uploads/cursos/${cursoSlug}/${pastaBase}`;
+    
+    console.log(`Usando estrutura simplificada: ${conteudosDir}`);
+    
+    // Criar pasta se não existir
     uploadUtils.ensureDir(conteudosDir);
-
-    // Caminho relativo para a base de dados
-    const conteudosPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/conteudos`;
+    
+    // Se for avaliação, criar também pasta de submissões
+    if (isAvaliacaoTopico) {
+      const submissoesDir = path.join(conteudosDir, 'submissoes');
+      console.log(`Criando pasta de submissões: ${submissoesDir}`);
+      uploadUtils.ensureDir(submissoesDir);
+    }
 
     let conteudoData = {
       titulo,
@@ -525,7 +543,7 @@ const createConteudo = async (req, res) => {
       id_pasta,
       id_curso,
       ativo: true,
-      dir_path: conteudosPath // Guardar o caminho relativo na base de dados
+      dir_path: conteudosPath 
     };
 
     const timestamp = Date.now();
@@ -593,8 +611,7 @@ const createConteudo = async (req, res) => {
   }
 };
 
-
-// Atualizar um conteúdo existente
+// Atualizar um conteúdo existente - MODIFICADO para estrutura simplificada
 const updateConteudo = async (req, res) => {
   try {
     const { id } = req.params;
@@ -668,25 +685,44 @@ const updateConteudo = async (req, res) => {
     if (ordem !== undefined) dadosAtualizacao.ordem = ordem;
     if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
 
-    // Determinar os caminhos de origem e destino
+    // MODIFICADO: Determinar a estrutura de diretórios simplificada
+    
+    // Verificar se o tópico atual é de avaliação
+    const isAvaliacaoAtual = 
+      topicoAtual.nome.toLowerCase() === 'avaliação' || 
+      topicoAtual.nome.toLowerCase() === 'avaliacao' || 
+      topicoAtual.nome.toLowerCase().includes('avalia');
+    
+    // Verificar se o tópico alvo é de avaliação
+    const isAvaliacaoAlvo = 
+      topicoAlvo.nome.toLowerCase() === 'avaliação' || 
+      topicoAlvo.nome.toLowerCase() === 'avaliacao' || 
+      topicoAlvo.nome.toLowerCase().includes('avalia');
+    
     const cursoSlugAtual = uploadUtils.normalizarNome(cursoAtual.nome);
-    const topicoSlugAtual = uploadUtils.normalizarNome(topicoAtual.nome);
-    const pastaSlugAtual = uploadUtils.normalizarNome(pastaAtual.nome);
-
     const cursoSlugAlvo = uploadUtils.normalizarNome(cursoAlvo.nome);
-    const topicoSlugAlvo = uploadUtils.normalizarNome(topicoAlvo.nome);
-    const pastaSlugAlvo = uploadUtils.normalizarNome(pastaAlvo.nome);
-
-    // Diretórios atuais
-    const conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, topicoSlugAtual, pastaSlugAtual, 'conteudos');
-    const conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/${topicoSlugAtual}/${pastaSlugAtual}/conteudos`;
-
-    // Diretórios alvo
-    const conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, topicoSlugAlvo, pastaSlugAlvo, 'conteudos');
-    const conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/${topicoSlugAlvo}/${pastaSlugAlvo}/conteudos`;
+    
+    // Pastas base simplificadas
+    const pastaBaseAtual = isAvaliacaoAtual ? 'avaliacao' : 'conteudos';
+    const pastaBaseAlvo = isAvaliacaoAlvo ? 'avaliacao' : 'conteudos';
+    
+    // Diretórios atuais e alvo
+    const conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, pastaBaseAtual);
+    const conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/${pastaBaseAtual}`;
+    
+    const conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, pastaBaseAlvo);
+    const conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/${pastaBaseAlvo}`;
+    
+    console.log(`Diretório atual: ${conteudoDirAtual}, Diretório alvo: ${conteudoDirAlvo}`);
 
     // Garantir que os diretórios existam
     uploadUtils.ensureDir(conteudoDirAlvo);
+    
+    // Se for avaliação, garantir que a pasta de submissões exista
+    if (isAvaliacaoAlvo) {
+      const submissoesDir = path.join(conteudoDirAlvo, 'submissoes');
+      uploadUtils.ensureDir(submissoesDir);
+    }
 
     // Se precisa mover o ficheiro ou estamos a mudar o tipo
     if (precisaMoverArquivo || (tipo !== undefined && tipo !== conteudo.tipo)) {

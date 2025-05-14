@@ -52,7 +52,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [arquivo, setArquivo] = useState(null);
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
 
-  // Verifica se o usuário é formador
+  // Verifica se o utilizador é formador
   const isFormador = () => {
     const token = localStorage.getItem('token');
     if (!token) return false;
@@ -60,7 +60,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.id_utilizador === formadorId || payload.id_cargo === 1 || payload.id_cargo === 2;
     } catch (e) {
-      console.error('Erro ao decodificar token:', e);
+      console.error('Erro ao descodificar token:', e);
       return false;
     }
   };
@@ -78,8 +78,19 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       const topico = data.find(t => t.nome.toLowerCase() === 'avaliação');
 
       if (topico) {
-        setTopicoAvaliacao(topico);
-        await carregarSubmissoes(topico);
+        // Clonar o tópico para evitar referências
+        const topicoAvaliacao = { ...topico };
+        
+        // Marcar cada pasta como pertencente à avaliação
+        if (topicoAvaliacao.pastas) {
+          topicoAvaliacao.pastas = topicoAvaliacao.pastas.map(pasta => ({
+            ...pasta,
+            isAvaliacao: true
+          }));
+        }
+        
+        setTopicoAvaliacao(topicoAvaliacao);
+        await carregarSubmissoes(topicoAvaliacao);
       } else {
         setTopicoAvaliacao(null);
       }
@@ -91,7 +102,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-  // Carregar submissões dos formandos
+  // MODIFICADO: Carregar submissões dos formandos usando o endpoint correto
   const carregarSubmissoes = async (topico) => {
     try {
       const token = localStorage.getItem('token');
@@ -102,7 +113,8 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
           submissoesData[pasta.id_pasta] = [];
           
           try {
-            const response = await axios.get(`${API_BASE}/submissoes/pasta/${pasta.id_pasta}`, {
+            // Corrigido: usar trabalhos em vez de submissoes
+            const response = await axios.get(`${API_BASE}/trabalhos/pasta/${pasta.id_pasta}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -110,7 +122,20 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
               submissoesData[pasta.id_pasta] = response.data;
             }
           } catch (submissaoError) {
-            console.log('API de submissões pode não estar implementada ainda', submissaoError);
+            console.log('A verificar trabalhos submetidos para a pasta:', submissaoError);
+            
+            // Tentar endpoint alternativo caso o primeiro falhe
+            try {
+              const altResponse = await axios.get(`${API_BASE}/trabalhos/curso/${cursoId}/pasta/${pasta.id_pasta}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              
+              if (altResponse.status === 200) {
+                submissoesData[pasta.id_pasta] = altResponse.data;
+              }
+            } catch (altError) {
+              console.log('Nenhum trabalho encontrado para esta pasta', altError);
+            }
           }
         }
       }
@@ -271,12 +296,12 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-  // Enviar submissão do formando
+  // MODIFICADO: Enviar submissão do formando com endpoints corrigidos
   const enviarSubmissao = async (e) => {
     e.preventDefault();
     
     if (!arquivo) {
-      alert('Por favor, selecione um arquivo.');
+      alert('Por favor, selecione um ficheiro.');
       return;
     }
     
@@ -285,25 +310,78 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       const token = localStorage.getItem('token');
       
       const formData = new FormData();
-      formData.append('arquivo', arquivo);
+      formData.append('ficheiro', arquivo); // Alterado de 'arquivo' para 'ficheiro' (nome do campo correto)
       formData.append('id_pasta', enviarSubmissaoModal.pastaId);
       formData.append('id_curso', cursoId);
       
-      const response = await axios.post(`${API_BASE}/submissoes`, formData, {
+      // Obter ID do utilizador do token
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const idUtilizador = payload.id_utilizador;
+      formData.append('id_utilizador', idUtilizador);
+      
+      // Corrigido: usar trabalhos em vez de submissoes
+      const response = await axios.post(`${API_BASE}/trabalhos`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
       
-      // Handle successful submission
+      // Em caso de sucesso
       await carregarTopicos();
       setEnviarSubmissaoModal({ show: false, pastaId: null });
-      alert('Submissão enviada com sucesso!');
+      alert('Trabalho submetido com sucesso!');
     } catch (error) {
-      // Better error handling with specific messages
-      const errorMsg = error.response?.data?.message || 'Erro ao enviar submissão. Por favor, tente novamente.';
-      console.error('Erro ao enviar submissão:', error);
+      console.error('Erro ao enviar trabalho:', error);
+      
+      // Tentativa alternativa com outro endpoint
+      if (error.response && error.response.status === 404) {
+        try {
+          console.log("A tentar endpoint alternativo para submissão...");
+          const token = localStorage.getItem('token');
+          const formData = new FormData();
+          
+          formData.append('ficheiro', arquivo);
+          formData.append('id_pasta', enviarSubmissaoModal.pastaId);
+          formData.append('id_curso', cursoId);
+          
+          // Obter ID do utilizador do token
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const idUtilizador = payload.id_utilizador;
+          formData.append('id_utilizador', idUtilizador);
+          
+          // Tentando outro possível endpoint
+          const altResponse = await axios.post(`${API_BASE}/trabalhos/submeter`, formData, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+          
+          await carregarTopicos();
+          setEnviarSubmissaoModal({ show: false, pastaId: null });
+          alert('Trabalho submetido com sucesso!');
+          return;
+        } catch (altError) {
+          console.error('Falha na tentativa alternativa:', altError);
+        }
+      }
+      
+      // Melhor tratamento de erros com mensagens específicas
+      let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
+      
+      if (error.response) {
+        if (error.response.status === 404) {
+          errorMsg = 'O serviço de submissão de trabalhos não foi encontrado. Por favor, contacte o administrador.';
+        } else if (error.response.status === 400) {
+          errorMsg = error.response.data?.message || 'Erro de validação. Verifique os dados do ficheiro.';
+        } else if (error.response.status === 413) {
+          errorMsg = 'O ficheiro é demasiado grande. Por favor, escolha um ficheiro menor.';
+        } else if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+      }
+      
       alert(errorMsg);
     } finally {
       setEnviandoArquivo(false);
@@ -315,7 +393,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     return (
       <div className="avaliacao-loading">
         <div className="loading-spinner"></div>
-        <p>Carregando avaliações...</p>
+        <p>A carregar avaliações...</p>
       </div>
     );
   }
@@ -487,8 +565,14 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                               </span>
                               <button 
                                 className="btn-download"
-                                onClick={() => alert('Função para baixar submissão não implementada')}
-                                title="Baixar submissão"
+                                onClick={() => {
+                                  if (submissao.ficheiro_path) {
+                                    window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
+                                  } else {
+                                    alert('Caminho do ficheiro não disponível');
+                                  }
+                                }}
+                                title="Descarregar submissão"
                               >
                                 <i className="fas fa-download"></i>
                               </button>
@@ -509,8 +593,17 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                             <div key={submissao.id || index} className="submissao-item">
                               <i className="fas fa-file-upload"></i>
                               <span className="submissao-info">
-                                {submissao.nome_arquivo || "Arquivo"} - {submissao.data_submissao || "Data não disponível"}
+                                {submissao.nome_ficheiro || submissao.nome_arquivo || "Ficheiro"} - {submissao.data_submissao || "Data não disponível"}
                               </span>
+                              {submissao.ficheiro_path && (
+                                <button 
+                                  className="btn-download"
+                                  onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                                  title="Descarregar submissão"
+                                >
+                                  <i className="fas fa-download"></i>
+                                </button>
+                              )}
                             </div>
                           ))
                         ) : (
@@ -584,7 +677,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
             <h3>Enviar Submissão</h3>
             <form onSubmit={enviarSubmissao}>
               <div className="form-group">
-                <label htmlFor="arquivo-submissao">Selecione o arquivo:</label>
+                <label htmlFor="arquivo-submissao">Selecione o ficheiro:</label>
                 <input
                   type="file"
                   id="arquivo-submissao"
@@ -592,7 +685,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   required
                 />
                 {arquivo && (
-                  <p className="arquivo-info">Arquivo selecionado: {arquivo.name}</p>
+                  <p className="arquivo-info">Ficheiro selecionado: {arquivo.name}</p>
                 )}
               </div>
               <div className="submissao-actions">
@@ -609,7 +702,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   className="btn-enviar"
                   disabled={enviandoArquivo || !arquivo}
                 >
-                  {enviandoArquivo ? 'Enviando...' : 'Enviar'}
+                  {enviandoArquivo ? 'A enviar...' : 'Enviar'}
                 </button>
               </div>
             </form>

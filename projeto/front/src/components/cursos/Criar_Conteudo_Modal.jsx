@@ -9,6 +9,9 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
   const [modalAtual, setModalAtual] = useState('selecao-tipo');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
   
+  // Verificar se o conteúdo está associado a uma pasta de avaliação
+  const isAvaliacao = pasta.isAvaliacao;
+  
   // Função para fechar todos os modais
   const fecharTodosModais = () => {
     onClose();
@@ -32,8 +35,13 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
         <div className="criar-conteudo-modal">
           <button className="close-btn" onClick={fecharTodosModais} type="button">×</button>
           
-          <h2>Adicionar Conteúdo</h2>
-          {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
+          <h2>Adicionar Conteúdo{isAvaliacao ? ' de Avaliação' : ''}</h2>
+          {pasta && pasta.nome && (
+            <p className="pasta-info">
+              {pasta.nome}
+              {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
+            </p>
+          )}
           
           <div className="tipo-botoes">
             {/* Botão Link - Amarelo */}
@@ -77,6 +85,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
           onClose={fecharTodosModais}
           onVoltar={() => setModalAtual('selecao-tipo')}
           onSuccess={onSuccess}
+          isAvaliacao={isAvaliacao}
         />
       )}
 
@@ -88,6 +97,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
           onVoltar={() => setModalAtual('selecao-tipo')}
           onSuccess={onSuccess}
           tipo={tipoSelecionado}
+          isAvaliacao={isAvaliacao}
         />
       )}
     </div>
@@ -95,7 +105,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
 };
 
 // Modal para URL (Link)
-const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE }) => {
+const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isAvaliacao }) => {
   const [titulo, setTitulo] = useState('');
   const [url, setUrl] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -131,6 +141,11 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE }) =
       formData.append('id_curso', pasta.id_curso);
       formData.append('url', url.trim());
       
+      // Adicionar flag para indicar se é avaliação
+      if (isAvaliacao) {
+        formData.append('isAvaliacao', 'true');
+      }
+      
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -152,8 +167,13 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE }) =
     <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
       
-      <h2>Adicionar Link</h2>
-      {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
+      <h2>Adicionar Link{isAvaliacao ? ' de Avaliação' : ''}</h2>
+      {pasta && pasta.nome && (
+        <p className="pasta-info">
+          {pasta.nome}
+          {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
+        </p>
+      )}
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -208,7 +228,7 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE }) =
 };
 
 // Modal para Arquivo ou Vídeo
-const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo }) => {
+const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isAvaliacao }) => {
   const [arquivo, setArquivo] = useState(null);
   const [arquivoNome, setArquivoNome] = useState('');
   const [titulo, setTitulo] = useState('');
@@ -274,6 +294,11 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo }) =
       formData.append('id_curso', pasta.id_curso);
       formData.append('arquivo', arquivo);
       
+      // Adicionar flag para indicar se é avaliação
+      if (isAvaliacao) {
+        formData.append('isAvaliacao', 'true');
+      }
+      
       // Configura axios para monitorar o progresso do upload
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
         headers: {
@@ -308,8 +333,13 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo }) =
     <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
       
-      <h2>Adicionar {isVideo ? 'Vídeo' : 'Arquivo'}</h2>
-      {pasta && pasta.nome && <p className="pasta-info">{pasta.nome}</p>}
+      <h2>Adicionar {isVideo ? 'Vídeo' : 'Arquivo'}{isAvaliacao ? ' de Avaliação' : ''}</h2>
+      {pasta && pasta.nome && (
+        <p className="pasta-info">
+          {pasta.nome}
+          {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
+        </p>
+      )}
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">

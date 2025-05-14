@@ -157,9 +157,36 @@ const handleUploadErrors = (err, req, res, next) => {
   next();
 };
 
+const uploadAvaliacaoConteudo = (req, res, next) => {
+  upload.single('ficheiro')(req, res, async (err) => {
+    if (err) {
+      return handleUploadErrors(err, req, res, next);
+    }
+
+    // Se não houver ficheiro, continue
+    if (!req.file) {
+      return next();
+    }
+
+    try {
+      // Marcamos explicitamente que este ficheiro pertence a uma avaliação
+      req.isAvaliacaoUpload = true;
+      console.log(`Ficheiro de avaliação recebido: ${req.file.originalname}, guardado temporariamente como: ${req.file.filename}`);
+      next();
+    } catch (error) {
+      console.error('Erro ao processar upload de avaliação:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao processar o ficheiro de avaliação'
+      });
+    }
+  });
+};
+
 module.exports = {
   upload,
   uploadChatFile,
   uploadCursoConteudo,
+  uploadAvaliacaoConteudo,
   handleUploadErrors
 };

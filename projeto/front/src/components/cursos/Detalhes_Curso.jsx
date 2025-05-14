@@ -22,8 +22,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estado para os tópicos - adicionando loadingTopicos para melhor feedback
-  const [topicos, setTopicos] = useState([]);
+  // Estados para os tópicos - separando os dois tipos de tópicos
+  const [topicosCategoria, setTopicosCategoria] = useState([]);
+  const [topicosConteudo, setTopicosConteudo] = useState([]);
   const [loadingTopicos, setLoadingTopicos] = useState(false);
   
   // Se o user estiver inscrito (!inscritoProp é false), os detalhes não aparecem
@@ -50,7 +51,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
 
         console.log(`A carregar curso com ID: ${courseId}`);
-        // CORREÇÃO: Adicionar parâmetros para inclusão de relacionamentos
+        // Adicionar parâmetros para inclusão de relacionamentos
         const response = await axios.get(`${API_BASE}/cursos/${courseId}?include=topicos,categoria,area`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -75,23 +76,16 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
             await getCategoriaById(cursoData.id_categoria);
           }
 
-          // NOVA VERIFICAÇÃO: Se os tópicos já vieram com o curso, usar diretamente
+          // Se os tópicos já vieram com o curso, guardar como tópicos de conteúdo
           if (cursoData.topicos && Array.isArray(cursoData.topicos) && cursoData.topicos.length > 0) {
-            console.log("Tópicos já presentes no objeto curso:", cursoData.topicos);
-            setTopicos(cursoData.topicos);
+            console.log("Tópicos de conteúdo recebidos com o curso:", cursoData.topicos);
+            setTopicosConteudo(cursoData.topicos);
           }
-          // Caso contrário, buscar tópicos relacionados ao curso
-          else {
-            // Verificando se temos categoria para buscar seus tópicos
-            if (cursoData.id_categoria) {
-              console.log("A buscar tópicos pela categoria ID:", cursoData.id_categoria);
-              await getTopicosByCategoria(cursoData.id_categoria);
-            } 
-            // Alternativamente, poderíamos buscar tópicos relacionados diretamente ao curso
-            else if (cursoData.id_curso) {
-              console.log("A buscar tópicos pelo curso ID:", cursoData.id_curso);
-              await getTopicosByCurso(cursoData.id_curso);
-            }
+          
+          // Buscar sempre os tópicos de categoria, independentemente de já termos tópicos de conteúdo
+          if (cursoData.id_categoria) {
+            console.log("A buscar tópicos de categoria pelo ID:", cursoData.id_categoria);
+            await getTopicosCategoria(cursoData.id_categoria);
           }
 
           if (!inscritoProp) {
@@ -115,26 +109,24 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       // Se o curso já estiver disponível via props, ainda precisamos buscar categoria e tópicos
       console.log("Curso disponível via props:", cursoProp);
       
-      // Verificar se o curso já tem tópicos
+      // Verificar se o curso já tem tópicos e guardá-los como tópicos de conteúdo
       if (cursoProp.topicos && Array.isArray(cursoProp.topicos) && cursoProp.topicos.length > 0) {
-        console.log("Tópicos já presentes nas props:", cursoProp.topicos);
-        setTopicos(cursoProp.topicos);
-      } else {
-        // Similar ao caso anterior, verificamos fonte da categoria/tópicos
-        if (cursoProp.categoria && cursoProp.categoria.nome) {
-          console.log("A usar categoria das props:", cursoProp.categoria);
-          setCategoria(cursoProp.categoria);
-        } else if (cursoProp.id_categoria) {
-          console.log("A buscar categoria pelo ID (das props):", cursoProp.id_categoria);
-          getCategoriaById(cursoProp.id_categoria);
-        }
-        
-        // Buscar tópicos relacionados
-        if (cursoProp.id_categoria) {
-          getTopicosByCategoria(cursoProp.id_categoria);
-        } else if (cursoProp.id_curso) {
-          getTopicosByCurso(cursoProp.id_curso);
-        }
+        console.log("Tópicos de conteúdo já presentes nas props:", cursoProp.topicos);
+        setTopicosConteudo(cursoProp.topicos);
+      }
+      
+      // Similar ao caso anterior, verificamos fonte da categoria/tópicos
+      if (cursoProp.categoria && cursoProp.categoria.nome) {
+        console.log("A usar categoria das props:", cursoProp.categoria);
+        setCategoria(cursoProp.categoria);
+      } else if (cursoProp.id_categoria) {
+        console.log("A buscar categoria pelo ID (das props):", cursoProp.id_categoria);
+        getCategoriaById(cursoProp.id_categoria);
+      }
+      
+      // Buscar sempre os tópicos de categoria
+      if (cursoProp.id_categoria) {
+        getTopicosCategoria(cursoProp.id_categoria);
       }
     }
 
@@ -178,19 +170,18 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   };
 
-  // Função para buscar tópicos por categoria
-  const getTopicosByCategoria = async (categoriaId) => {
+  // Função especificamente para buscar tópicos de CATEGORIA
+  const getTopicosCategoria = async (categoriaId) => {
     try {
       setLoadingTopicos(true);
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      console.log(`A buscar tópicos da categoria: ${categoriaId}`);
+      console.log(`A buscar tópicos DA CATEGORIA com ID: ${categoriaId}`);
       
-      // CORREÇÃO: Tentar várias rotas possíveis para buscar tópicos de categoria
       let topicosDados = [];
       
-      // Tentativa 1: Endpoint original
+      // Tentativa 1: Endpoint para tópicos de categoria
       try {
         console.log("Tentativa 1: Buscar por /topicos-categoria/categoria/" + categoriaId);
         const response = await axios.get(`${API_BASE}/topicos-categoria/categoria/${categoriaId}`, {
@@ -214,7 +205,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         console.log("Endpoint /topicos-categoria/categoria/ falhou:", err.message);
       }
       
-      // Tentativa 2: Tentar endpoint alternativo
+      // Tentativa 2: Endpoint alternativo
       if (topicosDados.length === 0) {
         try {
           console.log("Tentativa 2: Buscar por /topicos/categoria/" + categoriaId);
@@ -259,39 +250,30 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
       }
       
-      // Se ainda não temos tópicos e temos o curso, tentar buscar por tópicos do curso
-      if (topicosDados.length === 0 && curso && curso.id_curso) {
-        await getTopicosByCurso(curso.id_curso);
-        return; // getTopicosByCurso já vai definir os tópicos
-      }
-      
-      // Definir os tópicos encontrados
+      // Definir os tópicos de categoria encontrados
       if (topicosDados.length > 0) {
-        console.log("Tópicos finais da categoria encontrados:", topicosDados);
-        setTopicos(topicosDados);
+        console.log("Tópicos de categoria finais encontrados:", topicosDados);
+        setTopicosCategoria(topicosDados);
       } else {
-        console.warn("Nenhum tópico da categoria encontrado após todas as tentativas");
-        setTopicos([]);
+        console.warn("Nenhum tópico de categoria encontrado após todas as tentativas");
+        setTopicosCategoria([]);
       }
     } catch (error) {
       console.error(`Erro ao buscar tópicos da categoria ${categoriaId}:`, error);
-      setTopicos([]);
+      setTopicosCategoria([]);
     } finally {
       setLoadingTopicos(false);
     }
   };
 
-  // Nova função para buscar tópicos diretamente pelo curso
+  // Função para buscar tópicos de conteúdo do curso (mantida por compatibilidade)
   const getTopicosByCurso = async (cursoId) => {
     try {
-      setLoadingTopicos(true);
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      console.log(`A buscar tópicos do curso: ${cursoId}`);
+      console.log(`A buscar tópicos de CONTEÚDO do curso: ${cursoId}`);
       
-      // CORREÇÃO: Tentar várias rotas possíveis para buscar tópicos
-      // Na documentação vimos que existem diferentes tipos de tópicos e endpoints
       let topicosDados = [];
       
       // Tentativa 1: Endpoint padrão para tópicos do curso
@@ -351,19 +333,17 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
       }
       
-      // Definir os tópicos encontrados
+      // Definir os tópicos de conteúdo encontrados
       if (topicosDados.length > 0) {
-        console.log("Tópicos finais encontrados:", topicosDados);
-        setTopicos(topicosDados);
+        console.log("Tópicos de conteúdo finais encontrados:", topicosDados);
+        setTopicosConteudo(topicosDados);
       } else {
-        console.warn("Nenhum tópico encontrado após todas as tentativas");
-        setTopicos([]);
+        console.warn("Nenhum tópico de conteúdo encontrado após todas as tentativas");
+        setTopicosConteudo([]);
       }
     } catch (error) {
       console.error(`Erro ao buscar tópicos do curso ${cursoId}:`, error);
-      setTopicos([]);
-    } finally {
-      setLoadingTopicos(false);
+      setTopicosConteudo([]);
     }
   };
 
@@ -395,8 +375,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     } catch (error) {
       console.error('Erro ao verificar inscrição:', error);
     }
-  }, [courseId]
-  );
+  }, [courseId]);
 
   // Verificar o status do curso em relação às datas
   const verificarStatusCurso = (curso) => {
@@ -645,15 +624,14 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           <div>
             <h1 className='titulo'>{curso.nome}</h1>
             <p className="subtitulo">
-              {/* Verificar múltiplas fontes possíveis para categoria e área */}
+              {/* Agora usando especificamente os tópicos de categoria */}
               {(categoria?.nome || curso.categoria?.nome || "Categoria não disponível")} 
               {' > '} 
               {(curso.area?.nome || "Área não disponível")}
-              {/* Melhor feedback para tópicos */}
               {loadingTopicos ? (
                 <> {' > '} A carregar tópicos...</>
-              ) : topicos.length > 0 ? (
-                <> {' > '} {topicos.map(t => t.titulo || t.nome || t.descricao || t.topic_title).join(', ')}</>
+              ) : topicosCategoria.length > 0 ? (
+                <> {' > '} {topicosCategoria.map(t => t.titulo || t.nome || t.descricao || t.topic_title).join(', ')}</>
               ) : (
                 <> {' > '} Sem tópicos associados</>
               )}
@@ -663,8 +641,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               {statusCurso}
             </span>
           </div>
-
-          {/* Botão de excluir, se user for admin */}
         </div>
 
         {/* Ícone de informação no canto inferior direito */}
@@ -751,7 +727,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Quarta linha - ALTERAÇÃO: Usando grid de 3 colunas iguais */}
+            {/* Quarta linha */}
             <div className="campos-grid-3">
               <div className="campo campo-tipo">
                 <label>Tipo Curso</label>
@@ -768,21 +744,20 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                 </div>
               </div>
               <div className="campo campo-topicos">
-                <label>Tópicos</label>
+                <label>Tópicos da Categoria</label> {/* Alterado para ser mais claro */}
                 <div className="campo-valor">
                   {loadingTopicos ? (
                     <p>A carregar tópicos...</p>
-                  ) : topicos.length > 0 ? (
+                  ) : topicosCategoria.length > 0 ? (
                     <ul className="lista-topicos">
-                      {topicos.map((topico) => (
+                      {topicosCategoria.map((topico) => (
                         <li key={topico.id_topico || topico.id} className="topico-item">
-                          {/* Tentar vários campos possíveis para exibir o nome do tópico */}
                           {topico.titulo || topico.nome || topico.descricao || topico.topic_title || topico.topic_name || JSON.stringify(topico)}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    "Sem tópicos associados"
+                    "Sem tópicos de categoria associados"
                   )}
                 </div>
               </div>

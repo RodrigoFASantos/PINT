@@ -117,14 +117,19 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
 
       if (Array.isArray(response.data)) {
         // Definir todos os tópicos e pastas como fechados por padrão
-        const collapsedTopicos = response.data.map(topico => ({
+        let collapsedTopicos = response.data.map(topico => ({
           ...topico,
           expanded: false,
+          isAvaliacao: topico.nome.toLowerCase() === 'avaliação',
           pastas: topico.pastas ? topico.pastas.map(pasta => ({
             ...pasta,
-            expanded: false
+            expanded: false,
+            isAvaliacao: topico.nome.toLowerCase() === 'avaliação' || pasta.isAvaliacao
           })) : []
         }));
+        
+        // Filtrar tópicos de avaliação para não exibi-los na seção de conteúdos
+        collapsedTopicos = collapsedTopicos.filter(topico => !topico.isAvaliacao);
 
         setTopicos(collapsedTopicos);
       } else {
@@ -211,7 +216,8 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     setPastaSelecionada({
       id_pasta: pasta.id_pasta,
       id_curso: courseId,
-      nome: pasta.nome
+      nome: pasta.nome,
+      isAvaliacao: pasta.isAvaliacao || false
     });
     setShowConteudoModal(true);
   };
