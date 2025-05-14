@@ -14,6 +14,7 @@ const path = require('path');
 
 // Importando o controller de notificações diretamente
 const notificacaoController = require('../notificacoes/notificacoes_ctrl');
+const { get } = require("http");
 
 // Obter todos os cursos com paginação
 const getAllCursos = async (req, res) => {
@@ -254,7 +255,28 @@ const getCursoById = async (req, res) => {
   }
 };
 
-
+// Buscar tópico de área específico pelo ID
+const getTopicoArea = async (req, res) => {
+  try {
+    const id = req.params.id;
+    
+    // Importar o modelo Topico_Area
+    const Topico_Area = require("../../database/models/Topico_Area");
+    
+    // Buscar o tópico pelo ID
+    const topico = await Topico_Area.findByPk(id);
+    
+    if (!topico) {
+      return res.status(404).json({ message: "Tópico de área não encontrado" });
+    }
+    
+    // Retornar o tópico encontrado
+    res.json(topico);
+  } catch (error) {
+    console.error("Erro ao buscar tópico de área:", error);
+    res.status(500).json({ message: "Erro ao buscar tópico de área", error: error.message });
+  }
+};
 
 
 // Função para criar um novo curso
@@ -886,6 +908,7 @@ const deleteCurso_Topicos = async (req, res) => {
 module.exports = {
   getAllCursos,
   getCursosByCategoria,
+  getTopicoArea,
   createCurso,
   getCursoById,
   getInscricoesCurso,

@@ -22,19 +22,59 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estados para os tópicos - separando os dois tipos de tópicos
-  const [topicosCategoria, setTopicosCategoria] = useState([]);
-  const [topicosConteudo, setTopicosConteudo] = useState([]);
+  // Estados para os tópicos - consolidados em um único estado
+  const [topicos, setTopicos] = useState([]);
   const [loadingTopicos, setLoadingTopicos] = useState(false);
-  
+
+  // Estado para tópico de área
+  const [topicoArea, setTopicoArea] = useState(null);
+  const [loadingTopicoArea, setLoadingTopicoArea] = useState(false);
+
   // Se o user estiver inscrito (!inscritoProp é false), os detalhes não aparecem
   // Se o user não estiver inscrito (!inscritoProp é true), os detalhes aparecem
   const [mostrarDetalhes, setMostrarDetalhes] = useState(!inscritoProp);
-  const [categoria, setCategoria] = useState(null);
-  const [carregarCategoria, setCarregarCategoria] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
+
+
+  const getTopicoArea = async (topicoAreaId) => {
+    try {
+      setLoadingTopicoArea(true);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      console.log(`A buscar tópico de área com ID: ${topicoAreaId}`);
+
+      try {
+        // Usar o endpoint para buscar o tópico de área
+        const response = await axios.get(`${API_BASE}/cursos/topico-area/${topicoAreaId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        console.log("Resposta da API de tópico área:", response.data);
+
+        if (response.data) {
+          // Guardar o tópico no estado
+          setTopicoArea(response.data);
+
+          // Atualizar o curso com o tópico de área
+          setCurso(prevCurso => ({
+            ...prevCurso,
+            topico_area: response.data
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao buscar tópico de área:", err);
+      } finally {
+        setLoadingTopicoArea(false);
+      }
+    } catch (error) {
+      console.error(`Erro ao buscar tópico de área ${topicoAreaId}:`, error);
+      setLoadingTopicoArea(false);
+    }
+  };
+
 
   // Carregar curso se não for fornecido via props
   useEffect(() => {
@@ -51,41 +91,30 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
 
         console.log(`A carregar curso com ID: ${courseId}`);
-        // Adicionar parâmetros para inclusão de relacionamentos
-        const response = await axios.get(`${API_BASE}/cursos/${courseId}?include=topicos,categoria,area`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Incluir todos os relacionamentos importantes na mesma requisição
+        const response = await axios.get(
+          `${API_BASE}/cursos/${courseId}?include=topicos,categoria,area,formador`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
         if (isMounted) {
           const cursoData = response.data;
           console.log("Dados do curso recebidos:", cursoData);
           setCurso(cursoData);
 
-          // Verificar se temos categoria e área antes de prosseguir
-          console.log("ID Categoria:", cursoData.id_categoria);
-          console.log("Categoria objeto:", cursoData.categoria);
-          
-          // Se temos o objeto categoria completo, guardamos diretamente
-          if (cursoData.categoria && cursoData.categoria.nome) {
-            console.log("A usar categoria do objeto curso:", cursoData.categoria);
-            setCategoria(cursoData.categoria);
-          } 
-          // Caso contrário, buscamos pelo ID se disponível
-          else if (cursoData.id_categoria) {
-            console.log("A buscar categoria pelo ID:", cursoData.id_categoria);
-            await getCategoriaById(cursoData.id_categoria);
+          // Se temos tópicos incluídos na resposta, salve-os no estado
+          if (cursoData.topicos && Array.isArray(cursoData.topicos) && cursoData.topicos.length > 0) {
+            console.log("Tópicos recebidos com o curso:", cursoData.topicos);
+            setTopicos(cursoData.topicos);
+          }
+          // Se não temos tópicos, tentar carregar separadamente
+          else if (cursoData.id_curso) {
+            await getTopicosByCurso(cursoData.id_curso);
           }
 
-          // Se os tópicos já vieram com o curso, guardar como tópicos de conteúdo
-          if (cursoData.topicos && Array.isArray(cursoData.topicos) && cursoData.topicos.length > 0) {
-            console.log("Tópicos de conteúdo recebidos com o curso:", cursoData.topicos);
-            setTopicosConteudo(cursoData.topicos);
-          }
-          
-          // Buscar sempre os tópicos de categoria, independentemente de já termos tópicos de conteúdo
-          if (cursoData.id_categoria) {
-            console.log("A buscar tópicos de categoria pelo ID:", cursoData.id_categoria);
-            await getTopicosCategoria(cursoData.id_categoria);
+          // Buscar o tópico de área associado ao curso se não estiver incluído
+          if (cursoData.id_topico_area && (!cursoData.topico_area || !cursoData.topico_area.titulo)) {
+            await getTopicoArea(cursoData.id_topico_area);
           }
 
           if (!inscritoProp) {
@@ -106,27 +135,18 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     if (!cursoProp && courseId) {
       carregarCurso();
     } else if (cursoProp) {
-      // Se o curso já estiver disponível via props, ainda precisamos buscar categoria e tópicos
-      console.log("Curso disponível via props:", cursoProp);
-      
-      // Verificar se o curso já tem tópicos e guardá-los como tópicos de conteúdo
+      // Se o curso já estiver disponível via props, precisamos verificar se já tem tópicos
       if (cursoProp.topicos && Array.isArray(cursoProp.topicos) && cursoProp.topicos.length > 0) {
-        console.log("Tópicos de conteúdo já presentes nas props:", cursoProp.topicos);
-        setTopicosConteudo(cursoProp.topicos);
+        setTopicos(cursoProp.topicos);
       }
-      
-      // Similar ao caso anterior, verificamos fonte da categoria/tópicos
-      if (cursoProp.categoria && cursoProp.categoria.nome) {
-        console.log("A usar categoria das props:", cursoProp.categoria);
-        setCategoria(cursoProp.categoria);
-      } else if (cursoProp.id_categoria) {
-        console.log("A buscar categoria pelo ID (das props):", cursoProp.id_categoria);
-        getCategoriaById(cursoProp.id_categoria);
+      // Se não tem tópicos, tentar carregar separadamente
+      else if (cursoProp.id_curso) {
+        getTopicosByCurso(cursoProp.id_curso);
       }
-      
-      // Buscar sempre os tópicos de categoria
-      if (cursoProp.id_categoria) {
-        getTopicosCategoria(cursoProp.id_categoria);
+
+      // Buscar o tópico de área associado ao curso se não estiver incluído
+      if (cursoProp.id_topico_area && (!cursoProp.topico_area || !cursoProp.topico_area.titulo)) {
+        getTopicoArea(cursoProp.id_topico_area);
       }
     }
 
@@ -135,222 +155,51 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     };
   }, [courseId, cursoProp, inscritoProp, navigate]);
 
-  // Função para buscar categoria diretamente pelo ID
-  const getCategoriaById = async (categoriaId) => {
-    try {
-      setCarregarCategoria(true);
-      const token = localStorage.getItem('token');
-      if (!token) return null;
-
-      console.log(`A buscar categoria com ID: ${categoriaId}`);
-      const response = await axios.get(`${API_BASE}/categorias/${categoriaId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      console.log("Resposta da API de categoria:", response.data);
-      
-      // Verificar formato da resposta
-      if (response.data) {
-        if (response.data.data) {
-          // Formato { success, data }
-          setCategoria(response.data.data);
-          return response.data.data;
-        } else {
-          // Formato direto
-          setCategoria(response.data);
-          return response.data;
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error(`Erro ao buscar categoria ${categoriaId}:`, error);
-      return null;
-    } finally {
-      setCarregarCategoria(false);
-    }
-  };
-
-  // Função especificamente para buscar tópicos de CATEGORIA
-  const getTopicosCategoria = async (categoriaId) => {
+  // Função consolidada para buscar tópicos do curso
+  const getTopicosByCurso = async (cursoId) => {
     try {
       setLoadingTopicos(true);
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      console.log(`A buscar tópicos DA CATEGORIA com ID: ${categoriaId}`);
-      
-      let topicosDados = [];
-      
-      // Tentativa 1: Endpoint para tópicos de categoria
+      console.log(`A buscar tópicos do curso: ${cursoId}`);
+
+      // Tentar diretamente pelo endpoint mais confiável
       try {
-        console.log("Tentativa 1: Buscar por /topicos-categoria/categoria/" + categoriaId);
-        const response = await axios.get(`${API_BASE}/topicos-categoria/categoria/${categoriaId}`, {
+        const response = await axios.get(`${API_BASE}/cursos/${cursoId}/topicos`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
-        console.log("Resposta da API de tópicos por categoria (tentativa 1):", response.data);
-        
+
+        console.log("Resposta da API de tópicos:", response.data);
+
         if (response.data) {
+          let topicosDados = [];
+
           if (Array.isArray(response.data)) {
             topicosDados = response.data;
           } else if (response.data.data && Array.isArray(response.data.data)) {
             topicosDados = response.data.data;
           }
-          
+
           if (topicosDados.length > 0) {
-            console.log("Tópicos encontrados na tentativa 1:", topicosDados);
+            console.log("Tópicos encontrados:", topicosDados);
+            setTopicos(topicosDados);
+          } else {
+            console.warn("Nenhum tópico encontrado");
+            setTopicos([]);
           }
         }
       } catch (err) {
-        console.log("Endpoint /topicos-categoria/categoria/ falhou:", err.message);
-      }
-      
-      // Tentativa 2: Endpoint alternativo
-      if (topicosDados.length === 0) {
-        try {
-          console.log("Tentativa 2: Buscar por /topicos/categoria/" + categoriaId);
-          const response = await axios.get(`${API_BASE}/topicos/categoria/${categoriaId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          console.log("Resposta da API (tentativa 2):", response.data);
-          
-          if (response.data) {
-            if (Array.isArray(response.data)) {
-              topicosDados = response.data;
-            } else if (response.data.data && Array.isArray(response.data.data)) {
-              topicosDados = response.data.data;
-            }
-            
-            if (topicosDados.length > 0) {
-              console.log("Tópicos encontrados na tentativa 2:", topicosDados);
-            }
-          }
-        } catch (err) {
-          console.log("Endpoint /topicos/categoria/ falhou:", err.message);
-        }
-      }
-      
-      // Tentativa 3: Buscar detalhes completos da categoria
-      if (topicosDados.length === 0) {
-        try {
-          console.log("Tentativa 3: Buscar detalhes completos da categoria com tópicos");
-          const response = await axios.get(`${API_BASE}/categorias/${categoriaId}?include=topicos`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          console.log("Resposta da API (tentativa 3):", response.data);
-          
-          if (response.data && response.data.topicos) {
-            topicosDados = response.data.topicos;
-            console.log("Tópicos encontrados nos detalhes da categoria:", topicosDados);
-          }
-        } catch (err) {
-          console.log("Busca de detalhes da categoria falhou:", err.message);
-        }
-      }
-      
-      // Definir os tópicos de categoria encontrados
-      if (topicosDados.length > 0) {
-        console.log("Tópicos de categoria finais encontrados:", topicosDados);
-        setTopicosCategoria(topicosDados);
-      } else {
-        console.warn("Nenhum tópico de categoria encontrado após todas as tentativas");
-        setTopicosCategoria([]);
-      }
-    } catch (error) {
-      console.error(`Erro ao buscar tópicos da categoria ${categoriaId}:`, error);
-      setTopicosCategoria([]);
-    } finally {
-      setLoadingTopicos(false);
-    }
-  };
-
-  // Função para buscar tópicos de conteúdo do curso (mantida por compatibilidade)
-  const getTopicosByCurso = async (cursoId) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      console.log(`A buscar tópicos de CONTEÚDO do curso: ${cursoId}`);
-      
-      let topicosDados = [];
-      
-      // Tentativa 1: Endpoint padrão para tópicos do curso
-      try {
-        console.log("Tentativa 1: Buscar por /topicos-curso/curso/" + cursoId);
-        const response = await axios.get(`${API_BASE}/topicos-curso/curso/${cursoId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log("Resposta da tentativa 1:", response.data);
-        if (response.data && (Array.isArray(response.data) || (response.data.data && Array.isArray(response.data.data)))) {
-          topicosDados = Array.isArray(response.data) ? response.data : response.data.data;
-          if (topicosDados.length > 0) {
-            console.log("Tópicos encontrados na tentativa 1:", topicosDados);
-          }
-        }
-      } catch (err) {
-        console.log("Endpoint /topicos-curso/curso/ falhou:", err.message);
-      }
-      
-      // Tentativa 2: Endpoint alternativo (se a primeira tentativa não retornou resultados)
-      if (topicosDados.length === 0) {
-        try {
-          console.log("Tentativa 2: Buscar por /curso-topicos/curso/" + cursoId);
-          const response = await axios.get(`${API_BASE}/curso-topicos/curso/${cursoId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          console.log("Resposta da tentativa 2:", response.data);
-          if (response.data && (Array.isArray(response.data) || (response.data.data && Array.isArray(response.data.data)))) {
-            topicosDados = Array.isArray(response.data) ? response.data : response.data.data;
-            if (topicosDados.length > 0) {
-              console.log("Tópicos encontrados na tentativa 2:", topicosDados);
-            }
-          }
-        } catch (err) {
-          console.log("Endpoint /curso-topicos/curso/ falhou:", err.message);
-        }
-      }
-      
-      // Tentativa 3: Buscar tópicos diretamente pela API de cursos
-      if (topicosDados.length === 0) {
-        try {
-          console.log("Tentativa 3: Buscar pelo detalhe completo do curso em /cursos/" + cursoId);
-          const response = await axios.get(`${API_BASE}/cursos/${cursoId}?include=topicos`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          console.log("Resposta da tentativa 3:", response.data);
-          // Verificar se o curso tem tópicos na resposta
-          if (response.data && response.data.topicos) {
-            topicosDados = response.data.topicos;
-            console.log("Tópicos encontrados na resposta do curso:", topicosDados);
-          }
-        } catch (err) {
-          console.log("Busca de detalhes do curso falhou:", err.message);
-        }
-      }
-      
-      // Definir os tópicos de conteúdo encontrados
-      if (topicosDados.length > 0) {
-        console.log("Tópicos de conteúdo finais encontrados:", topicosDados);
-        setTopicosConteudo(topicosDados);
-      } else {
-        console.warn("Nenhum tópico de conteúdo encontrado após todas as tentativas");
-        setTopicosConteudo([]);
+        console.error("Erro ao buscar tópicos:", err);
+        setTopicos([]);
+      } finally {
+        setLoadingTopicos(false);
       }
     } catch (error) {
       console.error(`Erro ao buscar tópicos do curso ${cursoId}:`, error);
-      setTopicosConteudo([]);
+      setTopicos([]);
+      setLoadingTopicos(false);
     }
-  };
-
-  // Abrir pop-up de confirmação de inscrição
-  const handleInscricao = () => {
-    console.log('Botão de inscrição clicado');
-    setShowInscricaoForm(true);
   };
 
   // Verificar se o user já está inscrito no curso
@@ -367,7 +216,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       setInscrito(estadoInscrito);
 
       // Atualizar o estado mostrarDetalhes com base no status de inscrição
-      // Se o user estiver inscrito, fechar os detalhes
       if (estadoInscrito) {
         setMostrarDetalhes(false);
       }
@@ -394,6 +242,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   };
 
+  // Abrir pop-up de confirmação de inscrição
+  const handleInscricao = () => {
+    console.log('Botão de inscrição clicado');
+    setShowInscricaoForm(true);
+  };
+
   // Confirmar inscrição no curso
   const handleInscricaoConfirm = async () => {
     try {
@@ -406,15 +260,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       }
 
       const userId = JSON.parse(atob(token.split('.')[1])).id_utilizador;
-
-      // Verificar a conexão com o servidor
-      try {
-        const pingResponse = await axios.get(`${API_BASE}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } catch (pingError) {
-        throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão com a internet.");
-      }
 
       const response = await axios.post(`${API_BASE}/inscricoes`,
         {
@@ -489,12 +334,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const getImageUrl = (curso) => {
     if (!curso) return '/placeholder-curso.jpg';
 
-    // Primeiro verificar imagem_path (mesma lógica que Lista_Cursos.jsx)
+    // Primeiro verificar imagem_path
     if (curso.imagem_path) {
       return `${API_BASE}/${curso.imagem_path}`;
     }
 
-    // Depois tentar com o nome do curso (mesma lógica que Lista_Cursos.jsx)
+    // Depois tentar com o nome do curso
     if (curso.nome) {
       const nomeCursoSlug = curso.nome
         .toLowerCase()
@@ -548,11 +393,17 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                   return;
                 }
 
-                const response = await axios.get(`${API_BASE}/cursos/${courseId}`, {
+                const response = await axios.get(`${API_BASE}/cursos/${courseId}?include=topicos,categoria,area`, {
                   headers: { Authorization: `Bearer ${token}` }
                 });
 
                 setCurso(response.data);
+
+                // Extrair tópicos
+                if (response.data.topicos && Array.isArray(response.data.topicos)) {
+                  setTopicos(response.data.topicos);
+                }
+
                 setLoading(false);
               } catch (error) {
                 console.error("Erro ao carregar curso:", error);
@@ -624,22 +475,10 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           <div>
             <h1 className='titulo'>{curso.nome}</h1>
             <p className="subtitulo">
-              {/* Agora usando especificamente os tópicos de categoria */}
-              {(categoria?.nome || curso.categoria?.nome || "Categoria não disponível")} 
-              {' > '} 
-              {(curso.area?.nome || "Área não disponível")}
-              {loadingTopicos ? (
-                <> {' > '} A carregar tópicos...</>
-              ) : topicosCategoria.length > 0 ? (
-                <> {' > '} {topicosCategoria.map(t => t.titulo || t.nome || t.descricao || t.topic_title).join(', ')}</>
-              ) : (
-                <> {' > '} Sem tópicos associados</>
-              )}
+              <span className={`badge-estado ${statusCurso.toLowerCase().replace(' ', '-')}`}>
+                {statusCurso}
+              </span>
             </p>
-            {/* Estado do curso abaixo do subtítulo */}
-            <span className={`badge-estado ${statusCurso.toLowerCase().replace(' ', '-')}`}>
-              {statusCurso}
-            </span>
           </div>
         </div>
 
@@ -707,12 +546,17 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
             {/* Terceira linha */}
             <div className="campo-container">
-              <div className="campo campo-area">
-                <label>Área</label>
+
+
+
+
+              <div className="campo campo-tipo">
+                <label>Tipo Curso</label>
                 <div className="campo-valor">
-                  {curso.area?.nome || "Não atribuída"}
+                  {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
                 </div>
               </div>
+
               <div className="campo campo-inicio">
                 <label>Início</label>
                 <div className="campo-valor">
@@ -729,35 +573,33 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
             {/* Quarta linha */}
             <div className="campos-grid-3">
-              <div className="campo campo-tipo">
-                <label>Tipo Curso</label>
-                <div className="campo-valor">
-                  {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
-                </div>
-              </div>
+
               <div className="campo campo-categoria">
                 <label>Categoria</label>
                 <div className="campo-valor">
-                  {carregarCategoria
-                    ? "A carregar..."
-                    : (categoria?.nome || curso.categoria?.nome || "Não atribuída")}
+                  {curso.categoria?.nome || "Não atribuída"}
                 </div>
               </div>
-              <div className="campo campo-topicos">
-                <label>Tópicos da Categoria</label> {/* Alterado para ser mais claro */}
+
+              <div className="campo campo-area">
+                <label>Área</label>
                 <div className="campo-valor">
-                  {loadingTopicos ? (
-                    <p>A carregar tópicos...</p>
-                  ) : topicosCategoria.length > 0 ? (
-                    <ul className="lista-topicos">
-                      {topicosCategoria.map((topico) => (
-                        <li key={topico.id_topico || topico.id} className="topico-item">
-                          {topico.titulo || topico.nome || topico.descricao || topico.topic_title || topico.topic_name || JSON.stringify(topico)}
-                        </li>
-                      ))}
-                    </ul>
+                  {curso.area?.nome || "Não atribuída"}
+                </div>
+              </div>
+
+              {/*Tópico de Área */}
+              <div className="campo campo-topico-area">
+                <label>Tópico de Área</label>
+                <div className="campo-valor">
+                  {loadingTopicoArea ? (
+                    <p>A carregar tópico de área...</p>
+                  ) : curso.topico_area?.titulo || topicoArea?.titulo ? (
+                    <span className="topico-item">
+                      {curso.topico_area?.titulo || topicoArea?.titulo}
+                    </span>
                   ) : (
-                    "Sem tópicos de categoria associados"
+                    "Tópico de área não disponível"
                   )}
                 </div>
               </div>
