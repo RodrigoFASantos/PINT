@@ -69,39 +69,44 @@ const CriarCurso = () => {
       setIsLoading(true);
       setTopicosFetched(false);
 
-      // CORREÇÃO: Usar o endpoint mais apropriado e incluir logs detalhados
       console.log(`Buscando tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
       
-      // Primeiro, tentamos com o endpoint específico
-      axios.get(`${API_BASE}/topicos/categoria-area`, {
-        params: {
-          id_categoria: formData.id_categoria,
-          id_area: formData.id_area
-        },
+      // Usar a rota topicos-area (a rota correta com base nas definições do servidor)
+      axios.get(`${API_BASE}/topicos-area/todos`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
         .then(res => {
-          console.log("Tentativa 1 - Tópicos carregados:", res.data);
+          console.log("Tópicos gerais carregados:", res.data);
           
-          // Verificar se recebemos uma lista ou objeto
+          // Dados podem vir em diferentes formatos, então lidamos com todos
           let topicos = Array.isArray(res.data) ? res.data : 
-                       (res.data.topicos ? res.data.topicos : []);
+                       (res.data.data ? res.data.data : []);
           
-          if (topicos.length > 0) {
-            setTopicosDisponiveis(topicos);
-            setTopicosFetched(true);
-            setIsLoading(false);
+          // Filtrar os tópicos pela categoria e área selecionadas
+          const topicosFiltrados = topicos.filter(topico => {
+            const categoriaMatch = topico.id_categoria == formData.id_categoria;
+            const areaMatch = topico.id_area == formData.id_area;
+            return categoriaMatch && areaMatch;
+          });
+          
+          console.log("Tópicos filtrados:", topicosFiltrados);
+          
+          if (topicosFiltrados.length > 0) {
+            setTopicosDisponiveis(topicosFiltrados);
           } else {
-            // Se não encontrou, tentar o segundo endpoint
-            segundaTentativaCarregarTopicos();
+            // Tentar buscar especificamente por categoria
+            buscarTopicosCategoria();
           }
+          
+          setTopicosFetched(true);
+          setIsLoading(false);
         })
         .catch(err => {
-          console.error("Erro na primeira tentativa de carregar tópicos:", err);
-          // Tentar o segundo endpoint em caso de erro
-          segundaTentativaCarregarTopicos();
+          console.error("Erro ao carregar tópicos gerais:", err);
+          // Tentar buscar especificamente por categoria
+          buscarTopicosCategoria();
         });
     } else {
       // Se não tiver categoria ou área selecionada, limpar tópicos
@@ -112,74 +117,74 @@ const CriarCurso = () => {
     }
   }, [formData.id_categoria, formData.id_area]);
 
-  // Segunda tentativa com outro endpoint
-  const segundaTentativaCarregarTopicos = () => {
-    console.log("Iniciando segunda tentativa para carregar tópicos");
+  // Buscar tópicos por categoria
+  const buscarTopicosCategoria = () => {
+    console.log(`Buscando tópicos para categoria específica: ${formData.id_categoria}`);
     
-    axios.get(`${API_BASE}/topicos`, {
-      params: {
-        id_categoria: formData.id_categoria,
-        id_area: formData.id_area
-      },
+    axios.get(`${API_BASE}/topicos-area/categoria/${formData.id_categoria}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
       .then(res => {
-        console.log("Tentativa 2 - Tópicos carregados:", res.data);
+        console.log("Tópicos por categoria:", res.data);
         
-        // Verificar se recebemos uma lista ou objeto
+        // Verificar formato dos dados
         let topicos = Array.isArray(res.data) ? res.data : 
-                     (res.data.topicos ? res.data.topicos : []);
+                     (res.data.data ? res.data.data : []);
         
-        setTopicosDisponiveis(topicos);
-        setTopicosFetched(true);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error("Erro na segunda tentativa de carregar tópicos:", err);
+        // Filtrar adicionalmente por área
+        const topicosFiltrados = topicos.filter(topico => 
+          topico.id_area == formData.id_area || !topico.id_area
+        );
         
-        // Terceira tentativa: buscar todos os tópicos e filtrar no frontend
-        terceiraTentativaCarregarTopicos();
-      });
-  };
-
-  // Terceira tentativa: buscar todos os tópicos e filtrar no frontend
-  const terceiraTentativaCarregarTopicos = () => {
-    console.log("Iniciando terceira tentativa para carregar tópicos");
-    
-    axios.get(`${API_BASE}/topicos`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-      .then(res => {
-        console.log("Tentativa 3 - Todos os tópicos:", res.data);
-        
-        // Verificar se recebemos uma lista ou objeto
-        let todosTópicos = Array.isArray(res.data) ? res.data : 
-                         (res.data.topicos ? res.data.topicos : []);
-        
-        // Filtrar manualmente por categoria e área
-        const topicosFiltrados = todosTópicos.filter(topico => {
-          const categoriaMatch = topico.id_categoria == formData.id_categoria || 
-                                topico.categoria_id == formData.id_categoria;
-          const areaMatch = topico.id_area == formData.id_area || 
-                           topico.area_id == formData.id_area;
-          
-          return categoriaMatch && areaMatch;
-        });
-        
-        console.log("Tópicos filtrados manualmente:", topicosFiltrados);
+        console.log("Tópicos filtrados por área:", topicosFiltrados);
         setTopicosDisponiveis(topicosFiltrados);
         setTopicosFetched(true);
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro na terceira tentativa de carregar tópicos:", err);
+        console.error("Erro ao buscar tópicos por categoria:", err);
+        // Última tentativa: buscar do fórum
+        buscarTopicosForum();
+      });
+  };
+
+  // Buscar tópicos do fórum como último recurso
+  const buscarTopicosForum = () => {
+    console.log("Buscando tópicos do fórum como último recurso");
+    
+    axios.get(`${API_BASE}/forum`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+      .then(res => {
+        console.log("Tópicos do fórum:", res.data);
         
-        // Última opção: mostrar que não foi possível carregar
-        toast.error("Não foi possível carregar os tópicos. Por favor, tente novamente mais tarde.");
+        let topicos = Array.isArray(res.data) ? res.data : 
+                     (res.data.data ? res.data.data : []);
+        
+        // Filtrar por categoria e área
+        const topicosFiltrados = topicos.filter(topico => {
+          // Verificar diversas possibilidades de estrutura de dados
+          const categoriaId = topico.id_categoria || 
+                             (topico.categoria && topico.categoria.id_categoria);
+          const areaId = topico.id_area || 
+                        (topico.area && topico.area.id_area);
+          
+          return categoriaId == formData.id_categoria && 
+                 (areaId == formData.id_area || !areaId);
+        });
+        
+        console.log("Tópicos do fórum filtrados:", topicosFiltrados);
+        setTopicosDisponiveis(topicosFiltrados);
+        setTopicosFetched(true);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Erro ao buscar tópicos do fórum:", err);
+        toast.error("Não foi possível carregar os tópicos. Verifique sua conexão ou tente novamente mais tarde.");
         setTopicosDisponiveis([]);
         setTopicosFetched(true);
         setIsLoading(false);

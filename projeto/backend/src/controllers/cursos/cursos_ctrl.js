@@ -1,13 +1,11 @@
-const Curso = require("../../database/models/Curso");
-const Area = require("../../database/models/Area");
-const Categoria = require("../../database/models/Categoria");
 const User = require("../../database/models/User");
-const ConteudoCurso = require("../../database/models/ConteudoCurso");
-
-const Curso_Topicos = require("../../database/models/Curso_Topicos");
-
-const PastaCurso = require("../../database/models/PastaCurso");
+const Categoria = require("../../database/models/Categoria");
+const Area = require("../../database/models/Area");
+const Curso = require("../../database/models/Curso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+const Curso_Topicos = require("../../database/models/Curso_Topicos");
+const PastaCurso = require("../../database/models/PastaCurso");
+const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const uploadUtils = require('../../middleware/upload');
 const { sequelize } = require("../../config/db");
 const { Op } = require('sequelize');
@@ -263,13 +261,21 @@ const getCursoById = async (req, res) => {
 const createCurso = async (req, res) => {
   try {
     console.log("A iniciar criação de curso");
+    console.log("Dados recebidos:", req.body);
+    
     const { 
       nome, descricao, tipo, vagas, data_inicio, data_fim, 
       id_formador, id_area, id_categoria, topicos, id_topico_categoria
     } = req.body;
 
+    // Validação de campos obrigatórios
     if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
+    }
+
+    // Validação adicional para id_topico_categoria
+    if (!id_topico_categoria) {
+      return res.status(400).json({ message: "É necessário selecionar um tópico para o curso!" });
     }
 
     // Verificar se já existe um curso com o mesmo nome
@@ -299,7 +305,7 @@ const createCurso = async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-      // Criar o curso
+      // CORREÇÃO: Mapear id_topico_categoria para id_topico_area que é o nome correto no modelo
       const novoCurso = await Curso.create({
         nome,
         descricao,
@@ -310,7 +316,7 @@ const createCurso = async (req, res) => {
         id_formador,
         id_area,
         id_categoria,
-        id_topico_categoria,
+        id_topico_area: id_topico_categoria, // Correção aqui
         imagem_path: imagemPath,
         dir_path: dirPath,
         ativo: true
@@ -351,11 +357,14 @@ const createCurso = async (req, res) => {
     } catch (error) {
       // Reverter a transação em caso de erro
       await t.rollback();
+      console.error("Erro específico na transação:", error);
+      console.error("Stack trace:", error.stack);
       throw error;
     }
   } catch (error) {
     console.error("Erro ao criar curso:", error);
-    res.status(500).json({ message: "Erro no servidor ao criar curso." });
+    console.error("Stack trace completo:", error.stack);
+    res.status(500).json({ message: "Erro no servidor ao criar curso.", error: error.message });
   }
 };
 
