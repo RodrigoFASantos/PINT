@@ -227,7 +227,7 @@ const ensureDestDir = (dirPath) => (req, res, next) => {
 };
 
 // Função para criar estrutura de diretórios para um curso
-const criarDiretorosCurso = (curso) => {
+const criarDiretoriosCurso = (curso) => {
   const cursoSlug = normalizarNome(curso.nome);
   const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
   ensureDir(cursoDir);
@@ -235,6 +235,19 @@ const criarDiretorosCurso = (curso) => {
   return {
     dirPath: cursoDir,
     urlPath: `uploads/cursos/${cursoSlug}`
+  };
+};
+
+const criarDiretorosAvaliacaoCurso = (curso, topico) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const topicoSlug = 'avaliacao'; // Nome fixo para a pasta de avaliação
+  
+  const avaliacaoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
+  ensureDir(avaliacaoDir);
+
+  return {
+    dirPath: avaliacaoDir,
+    urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}`
   };
 };
 
@@ -253,28 +266,123 @@ const criarDiretoriosTopico = (curso, topico) => {
 
 // Função para criar estrutura de diretórios para uma pasta
 const criarDiretoriosPasta = (curso, topico, pasta) => {
+  if (!curso || !curso.nome) {
+    console.error("Erro: Informações do curso inválidas");
+    throw new Error("Informações do curso inválidas");
+  }
+  
+  if (!topico || !topico.nome) {
+    console.error("Erro: Informações do tópico inválidas");
+    throw new Error("Informações do tópico inválidas");
+  }
+  
+  if (!pasta || !pasta.nome) {
+    console.error("Erro: Informações da pasta inválidas");
+    throw new Error("Informações da pasta inválidas");
+  }
+
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = normalizarNome(topico.nome);
   const pastaSlug = normalizarNome(pasta.nome);
-  const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
-
-  // Criar diretório principal da pasta
+  
+  // Verificar se é um tópico de avaliação
+  const isAvaliacao = 
+    topico.nome.toLowerCase() === 'avaliação' || 
+    topico.nome.toLowerCase() === 'avaliacao' ||
+    topico.nome.toLowerCase().includes('avalia') ||
+    (topico.tipo && topico.tipo.toLowerCase() === 'avaliacao');
+  
+  console.log(`[CRIAR_DIRETORIOS_PASTA] Curso: ${curso.nome}, Tópico: ${topico.nome}, Pasta: ${pasta.nome}`);
+  console.log(`[CRIAR_DIRETORIOS_PASTA] É avaliação? ${isAvaliacao ? 'SIM' : 'NÃO'}`);
+  
+  let pastaDir;
+  let urlPath;
+  
+  if (isAvaliacao) {
+    // Para tópicos de avaliação, usar o diretório fixo "avaliacao"
+    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
+    urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta de avaliação em: ${pastaDir}`);
+  } else {
+    // Para outros tópicos, usar o nome normalizado do tópico
+    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
+    urlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`;
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta normal em: ${pastaDir}`);
+  }
+  
+  // Sempre criar o diretório principal da pasta
+  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório principal: ${pastaDir}`);
   ensureDir(pastaDir);
-
+  
   // Criar diretórios para conteúdos e quizes
   const conteudosDir = path.join(pastaDir, 'conteudos');
   const quizesDir = path.join(pastaDir, 'quizes');
+  
+  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório conteúdos: ${conteudosDir}`);
+  ensureDir(conteudosDir);
+  
+  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório quizes: ${quizesDir}`);
+  ensureDir(quizesDir);
+  
+  // Para avaliações, criar também um diretório de submissões
+  let submissoesDir = null;
+  let submissoesUrlPath = null;
+  
+  if (isAvaliacao) {
+    submissoesDir = path.join(pastaDir, 'submissoes');
+    submissoesUrlPath = `${urlPath}/submissoes`;
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório submissões: ${submissoesDir}`);
+    ensureDir(submissoesDir);
+  }
+  
+  // Construir objeto de resultado com todos os caminhos
+  const result = {
+    dirPath: pastaDir,
+    conteudosPath: conteudosDir,
+    quizesPath: quizesDir,
+    urlPath: urlPath,
+    conteudosUrlPath: `${urlPath}/conteudos`,
+    quizesUrlPath: `${urlPath}/quizes`,
+  };
+  
+  // Adicionar caminhos de submissões apenas para avaliações
+  if (isAvaliacao) {
+    result.submissoesPath = submissoesDir;
+    result.submissoesUrlPath = submissoesUrlPath;
+  }
+  
+  console.log(`[CRIAR_DIRETORIOS_PASTA] Estrutura criada com sucesso:`, result);
+  return result;
+};
 
+const criarDiretoriosPastaAvaliacao = (curso, pasta) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const pastaSlug = normalizarNome(pasta.nome);
+  
+  // Estrutura correta para pastas de avaliação
+  const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
+  const conteudosDir = path.join(pastaDir, 'conteudos');
+  const quizesDir = path.join(pastaDir, 'quizes');
+  const submissoesDir = path.join(pastaDir, 'submissoes');
+  
+  // Criar os diretórios
+  ensureDir(pastaDir);
   ensureDir(conteudosDir);
   ensureDir(quizesDir);
-
+  ensureDir(submissoesDir);
+  
+  // URLs relativas para acesso web
+  const urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
+  
   return {
     dirPath: pastaDir,
     conteudosPath: conteudosDir,
     quizesPath: quizesDir,
-    urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`,
-    conteudosUrlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/conteudos`,
-    quizesUrlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}/quizes`
+    submissoesPath: submissoesDir,
+    urlPath: urlPath,
+    conteudosUrlPath: `${urlPath}/conteudos`,
+    quizesUrlPath: `${urlPath}/quizes`,
+    submissoesUrlPath: `${urlPath}/submissoes`
   };
 };
 
@@ -285,24 +393,29 @@ const criarDiretoriosChat = (categoria, topico) => {
 
   const chatDir = path.join(BASE_UPLOAD_DIR, 'chat', categoriaSlug, topicoSlug);
   const conteudosDir = path.join(chatDir, 'conteudos');
+  // Normalizar nomes para evitar caracteres especiais e espaços
 
   ensureDir(chatDir);
   ensureDir(conteudosDir);
+  // Definir caminhos para diretórios de avaliação
 
   return {
     dirPath: chatDir,
     conteudosPath: conteudosDir,
     urlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}`,
     conteudosUrlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}/conteudos`
+  // Criar cada diretório necessário
   };
 };
 
 // Função para mover ficheiro temporário para o destino final
 const moverArquivo = (origem, destino) => {
   try {
+  // Criar URLs relativas para acesso web
     // Normalizar caminhos para comparação
     const origemPath = path.resolve(origem);
     const destinoPath = path.resolve(destino);
+  // Retornar objeto com caminhos físicos e URLs
 
     // Se origem e destino são iguais, não precisamos fazer nada
     if (origemPath === destinoPath) {
@@ -508,10 +621,12 @@ module.exports = {
   normalizarNome,
   getFileType,
   gerarNomeUnico,
-  criarDiretorosCurso,
+  criarDiretoriosCurso,
   criarDiretoriosTopico,
   criarDiretoriosPasta,
+  criarDiretoriosPastaAvaliacao,
   criarDiretoriosChat,
+  criarDiretorosAvaliacaoCurso,
   moverArquivo,
   uploadUserModificado,
   uploadTemp,

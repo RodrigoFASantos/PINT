@@ -1,9 +1,15 @@
+/* ==========================================================================
+   CURSO_CONTEUDOS - CSS COMPLETO
+   Estilos para página de conteúdos de curso com hierarquia vertical
+   ========================================================================== */
+
 .curso-conteudos-container {
   width: 100%;
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
 }
 
 .conteudos-header { 
@@ -91,6 +97,11 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .conteudos-error {
   text-align: center;
   padding: 30px 0;
@@ -125,17 +136,17 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Ajustado para permitir que topico-modal-wrapper fique acima */
+  z-index: 1000;
 }
 
 /* Wrapper para o CriarTopicoModal */
 .topico-modal-wrapper {
-  z-index: 1050 !important; /* Maior que o modal-overlay padrão */
+  z-index: 1050 !important;
 }
 
 /* Modal específico para criação de tópicos */
 .topico-modal-wrapper .modal-overlay {
-  z-index: 1050 !important; /* Maior que o modal-overlay padrão */
+  z-index: 1050 !important;
 }
 
 .modal-content {
@@ -264,7 +275,7 @@
   border-radius: 6px;
   border: 1px dashed #ccc;
   margin: 20px 0;
-  position: relative; /* Para garantir que o modal filho tenha uma referência posicional */
+  position: relative;
 }
 
 .btn-add-first, .btn-add-pasta {
@@ -282,16 +293,23 @@
   background-color: #3a5be0;
 }
 
-/* Estilos da estrutura de tópicos e pastas */
+/* ===== HIERARQUIA DE CONTEÚDOS - VERTICAL ===== */
 .conteudo-list-estruturada {
   width: 100%;
-  padding: 10px;
+  padding: 0; /* Remover padding horizontal */
+  margin: 0; /* Remover margens */
 }
 
+/* TÓPICOS */
 .topico-item {
-  margin-bottom: 2%;
+  margin-bottom: 15px;
   border-radius: 8px;
   background: transparent;
+  /* Estrutura vertical para tópicos e seus filhos */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: flex-start; /* Alinhar à esquerda */
 }
 
 .topico-header {
@@ -302,6 +320,12 @@
   border-radius: 8px;
   border-left: 4px solid #ff9800;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  width: 100%; /* Ocupar largura total */
+}
+
+.topico-header:hover {
+  background-color: #f0f0f0;
 }
 
 .btn-toggle {
@@ -311,6 +335,9 @@
   padding: 5px;
   margin-right: 5px;
   color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .topico-nome {
@@ -350,27 +377,36 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Corrigido para remover o fundo cinzento */
+/* PASTAS */
 .pastas-list {
-  padding-left: 15px;
-  margin-left: 15px;
-  margin-top: 10px;
+  padding: 0;
+  margin-top: 5px;
+  width: 100%;
+  animation: fadeIn 0.2s ease;
+  align-self: flex-start; /* Alinhar à esquerda */
 }
 
 .pasta-item {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  background-color: transparent;
+  margin: 5px 0 5px 20px;
+  /* Estrutura vertical para pastas e seus conteúdos */
+  display: flex;
+  flex-direction: column;
 }
 
 .pasta-header {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background-color: #fff;
-  border-radius: 6px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
   border: 1px solid #e0e0e0;
   margin-bottom: 5px;
+  cursor: pointer;
+  width: 100%; /* Ocupar largura total */
+}
+
+.pasta-header:hover {
+  background-color: #e9ecef;
 }
 
 .pasta-header i.fas.fa-folder {
@@ -383,11 +419,12 @@
   font-weight: 500;
 }
 
+/* CONTEÚDOS */
 .conteudos-list {
-  margin-left: 30px;
-  padding-left: 15px;
-  border-left: 1px dashed #e0e0e0;
-  background-color: transparent;
+  margin-left: 20px;
+  padding: 5px 0;
+  width: calc(100% - 20px);
+  animation: fadeIn 0.2s ease;
 }
 
 .conteudo-item {
@@ -395,9 +432,14 @@
   align-items: center;
   padding: 8px 12px;
   margin-bottom: 5px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-  border-left: 3px solid #e0e0e0;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.conteudo-item:hover {
+  background-color: #fafafa;
+  border-color: #ccc;
 }
 
 .conteudo-item i {
@@ -421,6 +463,10 @@
   cursor: pointer;
 }
 
+.conteudo-titulo:hover {
+  color: #0d6efd;
+}
+
 .topico-empty, .pasta-empty {
   padding: 10px;
   color: #757575;
@@ -428,22 +474,22 @@
   text-align: center;
   background-color: #f5f5f5;
   border-radius: 4px;
-  margin: 5px 0;
+  margin: 5px 10px;
 }
 
-
-.conteudo-bloqueado {
+/* Conteúdos bloqueados */
+.conteudo-titulo.bloqueado {
   cursor: not-allowed;
   color: #999;
   position: relative;
 }
 
-.conteudo-bloqueado:hover {
+.conteudo-titulo.bloqueado:hover {
   text-decoration: none;
   color: #999;
 }
 
-.conteudo-bloqueado .fa-lock {
+.conteudo-titulo.bloqueado .fa-lock {
   font-size: 0.8em;
   margin-left: 5px;
   color: #d1af2b;
@@ -451,4 +497,119 @@
 
 .conteudo-item:has(.conteudo-bloqueado) {
   opacity: 0.8;
+}
+
+/* ===== ESTILOS PARA MODAL DE CONTEÚDO ===== */
+.conteudo-ficheiro-modal .modal-content {
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.conteudo-ficheiro-modal .modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.conteudo-ficheiro-modal .ficheiro-container {
+  padding: 20px;
+}
+
+.conteudo-ficheiro-modal .ficheiro-header {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.conteudo-ficheiro-modal .ficheiro-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.conteudo-ficheiro-modal .ficheiro-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.conteudo-ficheiro-modal .ficheiro-content {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.conteudo-ficheiro-modal .ficheiro-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Media queries para responsividade */
+@media (max-width: 768px) {
+  .curso-conteudos-container {
+    padding: 15px;
+  }
+  
+  .topico-actions, .pasta-actions, .conteudo-actions {
+    gap: 5px;
+  }
+  
+  .topico-actions button, .pasta-actions button, .conteudo-actions button {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .topico-header, .pasta-header {
+    padding: 8px 10px;
+  }
+  
+  .modal-content {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .topico-header {
+    flex-wrap: wrap;
+  }
+  
+  .topico-actions, .pasta-actions {
+    margin-top: 5px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .conteudo-item {
+    flex-wrap: wrap;
+  }
+  
+  .conteudo-actions {
+    margin-top: 5px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.avaliacao-badge {
+  background-color: #e74c3c;
+  color: white;
+  font-size: 0.8em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  display: inline-block;
+}
+
+/* Estilo para pasta de avaliação */
+.pasta-item.avaliacao {
+  border-left: 3px solid #e74c3c;
+}
+
+/* Estilo para tópico de avaliação (se necessário) */
+.topico-item.avaliacao {
+  border-left: 3px solid #e74c3c;
 }

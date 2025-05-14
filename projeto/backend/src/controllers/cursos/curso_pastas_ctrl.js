@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
-// Criar uma nova pasta
+// Criar uma nova pasta - MODIFICADO para estrutura simplificada
 const createPasta = async (req, res) => {
   try {
     const { nome, id_topico, ordem } = req.body;
@@ -26,36 +26,50 @@ const createPasta = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Criar caminho para o diretório da pasta
+    // Verificar se o tópico é de avaliação
+    const isAvaliacao = 
+      topico.nome.toLowerCase() === 'avaliação' || 
+      topico.nome.toLowerCase() === 'avaliacao' || 
+      topico.nome.toLowerCase().includes('avalia');
+    
+    console.log(`Criando pasta para tópico: ${topico.nome}, É avaliação: ${isAvaliacao ? 'SIM' : 'NÃO'}`);
+
+    // Criar caminho para o diretório da pasta - MODIFICADO: estrutura simplificada
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
-    const topicoSlug = uploadUtils.normalizarNome(topico.nome);
-    const pastaSlug = uploadUtils.normalizarNome(nome);
     
-    // Caminho completo do diretório
-    const pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
-    // Caminho relativo para a base de dados
-    const pastaUrlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`;
+    // Usar estrutura simplificada
+    const pastaBase = isAvaliacao ? 'avaliacao' : 'conteudos';
     
-    // Criar diretório se não existir
+    // Caminho do diretório (pasta base)
+    const pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, pastaBase);
+    const pastaUrlPath = `uploads/cursos/${cursoSlug}/${pastaBase}`;
+    
+    console.log(`Pasta será criada como referência em BD, usando diretório: ${pastaDir}`);
+    
+    // Criar diretório base se não existir
     uploadUtils.ensureDir(pastaDir);
     
-    // Criar subdiretórios para conteúdos e quizes
-    const conteudosDir = path.join(pastaDir, 'conteudos');
-    const quizesDir = path.join(pastaDir, 'quizes');
-    
-    uploadUtils.ensureDir(conteudosDir);
-    uploadUtils.ensureDir(quizesDir);
+    // Se for avaliação, criar também pasta de submissões
+    if (isAvaliacao) {
+      const submissoesDir = path.join(pastaDir, 'submissoes');
+      console.log(`Criando pasta de submissões: ${submissoesDir}`);
+      uploadUtils.ensureDir(submissoesDir);
+    }
 
+    // Criar pasta na base de dados (sem criar pasta física adicional além da base)
     const novaPasta = await PastaCurso.create({
       nome,
       id_topico,
       ordem: ordem || 1,
-      dir_path: pastaUrlPath, // Guardar o caminho relativo na base de dados
+      dir_path: pastaUrlPath, // Usar o caminho base
       arquivo_path: pastaUrlPath, // Mesmo caminho para manter consistência
       ativo: true
     });
 
-    res.status(201).json({ message: "Pasta criada com sucesso", pasta: novaPasta });
+    res.status(201).json({ 
+      message: "Pasta criada com sucesso", 
+      pasta: novaPasta
+    });
   } catch (error) {
     console.error("Erro ao criar pasta:", error);
     res.status(500).json({ message: "Erro ao criar pasta" });
@@ -134,7 +148,7 @@ const getPastaById = async (req, res) => {
   }
 };
 
-// Atualizar uma pasta
+// Atualizar uma pasta - MODIFICADO para estrutura simplificada
 const updatePasta = async (req, res) => {
   try {
     const { id } = req.params;
@@ -145,8 +159,9 @@ const updatePasta = async (req, res) => {
     if (!pasta) {
       return res.status(404).json({ message: "Pasta não encontrada" });
     }
-
-    // Se estiver a mudar o nome, atualizar também o diretório
+    
+    // Se está alterando o nome, não precisamos alterar diretórios físicos
+    // pois a pasta não existe fisicamente na estrutura simplificada
     if (nome !== undefined && nome !== pasta.nome) {
       // Procurar o tópico e curso para obter o caminho completo
       const topico = await Curso_Topicos.findByPk(pasta.id_topico);
