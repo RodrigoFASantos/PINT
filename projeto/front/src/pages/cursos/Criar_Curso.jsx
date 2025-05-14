@@ -14,8 +14,8 @@ const CriarCurso = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
-  
-  // Declarar formData ANTES de quaisquer funções que o utilizem
+
+  // Estado do formulário com adição de id_topico
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -26,9 +26,10 @@ const CriarCurso = () => {
     id_formador: '',
     id_area: '',
     id_categoria: '',
+    id_topico: '', // Adicionado id_topico ao formData
     imagem: null,
   });
-  
+
   const [modalAberto, setModalAberto] = useState(false);
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -38,10 +39,10 @@ const CriarCurso = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
   const [cursosAssociados, setCursosAssociados] = useState([]);
-  
-  // Estados para tópicos
+
+  // Estado para tópicos disponíveis
   const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
-  const [topicosAdicionados, setTopicosAdicionados] = useState([]);
+  const [topicosFetched, setTopicosFetched] = useState(false);
 
   const abrirModalAssociacao = () => {
     setModalAssociacaoAberto(true);
@@ -62,58 +63,127 @@ const CriarCurso = () => {
     toast.info("Curso removido da lista de associações");
   };
 
-  // Carregar tópicos quando a categoria é selecionada
+  // Carregar tópicos quando a categoria E a área são selecionadas
   useEffect(() => {
-    if (formData.id_categoria) {
+    if (formData.id_categoria && formData.id_area) {
       setIsLoading(true);
-      // Buscar tópicos baseados na categoria selecionada
-      axios.get(`${API_BASE}/topicos/categoria/${formData.id_categoria}`, {
+      setTopicosFetched(false);
+
+      // CORREÇÃO: Usar o endpoint mais apropriado e incluir logs detalhados
+      console.log(`Buscando tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
+      
+      // Primeiro, tentamos com o endpoint específico
+      axios.get(`${API_BASE}/topicos/categoria-area`, {
+        params: {
+          id_categoria: formData.id_categoria,
+          id_area: formData.id_area
+        },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
         .then(res => {
-          console.log("Tópicos carregados:", res.data);
-          setTopicosDisponiveis(res.data);
-          setIsLoading(false);
+          console.log("Tentativa 1 - Tópicos carregados:", res.data);
+          
+          // Verificar se recebemos uma lista ou objeto
+          let topicos = Array.isArray(res.data) ? res.data : 
+                       (res.data.topicos ? res.data.topicos : []);
+          
+          if (topicos.length > 0) {
+            setTopicosDisponiveis(topicos);
+            setTopicosFetched(true);
+            setIsLoading(false);
+          } else {
+            // Se não encontrou, tentar o segundo endpoint
+            segundaTentativaCarregarTopicos();
+          }
         })
         .catch(err => {
-          console.error("Erro ao carregar tópicos:", err);
-          toast.error("Não foi possível carregar os tópicos para esta categoria");
-          setIsLoading(false);
+          console.error("Erro na primeira tentativa de carregar tópicos:", err);
+          // Tentar o segundo endpoint em caso de erro
+          segundaTentativaCarregarTopicos();
         });
     } else {
-      // Se nenhuma categoria estiver selecionada, limpar tópicos
+      // Se não tiver categoria ou área selecionada, limpar tópicos
       setTopicosDisponiveis([]);
-      setTopicosAdicionados([]);
+      setTopicosFetched(false);
+      // Limpar o tópico selecionado
+      setFormData(prev => ({ ...prev, id_topico: '' }));
     }
-  }, [formData.id_categoria]);
+  }, [formData.id_categoria, formData.id_area]);
 
-  // Função para adicionar um tópico à lista de tópicos selecionados
-  const handleAdicionarTopico = (e) => {
-    const topicoId = e.target.value;
+  // Segunda tentativa com outro endpoint
+  const segundaTentativaCarregarTopicos = () => {
+    console.log("Iniciando segunda tentativa para carregar tópicos");
     
-    if (!topicoId) return;
-    
-    if (!formData.id_categoria) {
-      toast.error("É necessário selecionar uma categoria primeiro");
-      return;
-    }
-    
-    const topicoSelecionado = topicosDisponiveis.find(t => t.id === parseInt(topicoId));
-    
-    if (topicoSelecionado && !topicosAdicionados.some(t => t.id === topicoSelecionado.id)) {
-      setTopicosAdicionados([...topicosAdicionados, topicoSelecionado]);
-      // Resetar o valor do select após adicionar
-      e.target.value = "";
-    }
+    axios.get(`${API_BASE}/topicos`, {
+      params: {
+        id_categoria: formData.id_categoria,
+        id_area: formData.id_area
+      },
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+      .then(res => {
+        console.log("Tentativa 2 - Tópicos carregados:", res.data);
+        
+        // Verificar se recebemos uma lista ou objeto
+        let topicos = Array.isArray(res.data) ? res.data : 
+                     (res.data.topicos ? res.data.topicos : []);
+        
+        setTopicosDisponiveis(topicos);
+        setTopicosFetched(true);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Erro na segunda tentativa de carregar tópicos:", err);
+        
+        // Terceira tentativa: buscar todos os tópicos e filtrar no frontend
+        terceiraTentativaCarregarTopicos();
+      });
   };
 
-  // Função para remover um tópico
-  const handleRemoverTopico = (index) => {
-    const novosTopicos = [...topicosAdicionados];
-    novosTopicos.splice(index, 1);
-    setTopicosAdicionados(novosTopicos);
+  // Terceira tentativa: buscar todos os tópicos e filtrar no frontend
+  const terceiraTentativaCarregarTopicos = () => {
+    console.log("Iniciando terceira tentativa para carregar tópicos");
+    
+    axios.get(`${API_BASE}/topicos`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+      .then(res => {
+        console.log("Tentativa 3 - Todos os tópicos:", res.data);
+        
+        // Verificar se recebemos uma lista ou objeto
+        let todosTópicos = Array.isArray(res.data) ? res.data : 
+                         (res.data.topicos ? res.data.topicos : []);
+        
+        // Filtrar manualmente por categoria e área
+        const topicosFiltrados = todosTópicos.filter(topico => {
+          const categoriaMatch = topico.id_categoria == formData.id_categoria || 
+                                topico.categoria_id == formData.id_categoria;
+          const areaMatch = topico.id_area == formData.id_area || 
+                           topico.area_id == formData.id_area;
+          
+          return categoriaMatch && areaMatch;
+        });
+        
+        console.log("Tópicos filtrados manualmente:", topicosFiltrados);
+        setTopicosDisponiveis(topicosFiltrados);
+        setTopicosFetched(true);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Erro na terceira tentativa de carregar tópicos:", err);
+        
+        // Última opção: mostrar que não foi possível carregar
+        toast.error("Não foi possível carregar os tópicos. Por favor, tente novamente mais tarde.");
+        setTopicosDisponiveis([]);
+        setTopicosFetched(true);
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -201,7 +271,7 @@ const CriarCurso = () => {
       setAreasFiltradas(areasFiltered);
 
       // Limpar área selecionada se a categoria mudar
-      setFormData(prev => ({ ...prev, id_area: '' }));
+      setFormData(prev => ({ ...prev, id_area: '', id_topico: '' }));
     } else {
       setAreasFiltradas([]);
     }
@@ -209,6 +279,7 @@ const CriarCurso = () => {
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
+
     if (name === 'imagem') {
       const file = files[0];
       setFormData({ ...formData, imagem: file });
@@ -231,9 +302,28 @@ const CriarCurso = () => {
         setFormData({ ...formData, [name]: value });
       }
     } else if (name === 'id_categoria') {
-      // Quando a categoria muda, limpar o campo de área e atualizar a categoria
+      // Quando a categoria muda, limpar o campo de área e tópico
       console.log("Categoria alterada para:", value);
-      setFormData({ ...formData, [name]: value, id_area: '' });
+      setFormData({ ...formData, [name]: value, id_area: '', id_topico: '' });
+    } else if (name === 'id_area') {
+      // Verificar se uma categoria foi selecionada antes
+      if (!formData.id_categoria) {
+        toast.error("É necessário selecionar uma categoria primeiro");
+        return;
+      }
+      // Quando a área muda, limpar apenas o tópico
+      setFormData({ ...formData, [name]: value, id_topico: '' });
+    } else if (name === 'id_topico') {
+      // Verificar se categoria e área foram selecionadas
+      if (!formData.id_categoria) {
+        toast.error("É necessário selecionar uma categoria primeiro");
+        return;
+      }
+      if (!formData.id_area) {
+        toast.error("É necessário selecionar uma área primeiro");
+        return;
+      }
+      setFormData({ ...formData, [name]: value });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -273,6 +363,12 @@ const CriarCurso = () => {
       return false;
     }
 
+    // Validar seleção de tópico
+    if (!formData.id_topico) {
+      toast.error("É necessário selecionar um tópico");
+      return false;
+    }
+
     return true;
   };
 
@@ -290,10 +386,9 @@ const CriarCurso = () => {
       }
     }
 
-    // Adicionar tópicos ao FormData
-    if (topicosAdicionados.length > 0) {
-      data.append('topicos', JSON.stringify(topicosAdicionados));
-      data.append('id_topico_categoria', topicosAdicionados[0].id);
+    // Adicionar id_topico_categoria ao FormData
+    if (formData.id_topico) {
+      data.append('id_topico_categoria', formData.id_topico);
     }
 
     setIsLoading(true);
@@ -343,10 +438,10 @@ const CriarCurso = () => {
         id_formador: '',
         id_area: '',
         id_categoria: '',
+        id_topico: '',
         imagem: null,
       });
       setPreviewImage(null);
-      setTopicosAdicionados([]);
       setCursosAssociados([]);
 
       // Opcional: redirecionar para a lista de cursos após sucesso
@@ -429,6 +524,7 @@ const CriarCurso = () => {
               </select>
             </div>
 
+            {/* Categoria, Área e Tópico na mesma linha */}
             <div className="row">
               <select
                 name="id_categoria"
@@ -446,10 +542,21 @@ const CriarCurso = () => {
 
               <select
                 name="id_area"
+                onMouseDown={e => {
+                  if (!formData.id_categoria) {
+                    e.preventDefault();
+                    toast.error('É necessário selecionar uma categoria primeiro');
+                  }
+                }}
                 value={formData.id_area}
-                onChange={handleChange}
+                onChange={e => {
+                  if (!formData.id_categoria) {
+                    toast.error('É necessário selecionar uma categoria primeiro');
+                    return;
+                  }
+                  handleChange(e);
+                }}
                 required
-                disabled={!formData.id_categoria || isLoading}
               >
                 <option value="">Selecione a Área</option>
                 {isLoading ? (
@@ -471,86 +578,79 @@ const CriarCurso = () => {
                   <option value="" disabled>Nenhuma área disponível para esta categoria</option>
                 )}
               </select>
-            </div>
 
-            {/* Secção de tópicos - sempre visível */}
-            <div className="topicos-section">
-              <h3>Tópicos do Curso</h3>
-              <div className="row">
-                <select
-                  onChange={handleAdicionarTopico}
-                  value=""
-                  disabled={!formData.id_categoria}
-                >
-                  <option value="">
-                    {!formData.id_categoria 
-                      ? "Selecione uma categoria primeiro" 
-                      : "Selecionar tópico para adicionar"}
+              <select
+                name="id_topico"
+                value={formData.id_topico}
+                onMouseDown={e => {
+                  if (!formData.id_area) {
+                    e.preventDefault();
+                    toast.error('É necessário selecionar uma área primeiro');
+                  }
+                }}
+                onChange={e => {
+                  if (!formData.id_area) {
+                    toast.error('É necessário selecionar uma área primeiro');
+                    return;
+                  }
+                  handleChange(e);
+                }}
+                required
+              >
+                <option value="">Selecione o Tópico</option>
+                {isLoading && !topicosFetched ? (
+                  <option value="" disabled>A carregar tópicos...</option>
+                ) : topicosDisponiveis.length > 0 ? (
+                  topicosDisponiveis.map(topico => {
+                    // Verificar diferentes formatos de ID
+                    const topicoId = topico.id || topico.id_topico || topico.topico_id;
+                    // Verificar diferentes formatos de título
+                    const topicoTitulo = topico.titulo || topico.title || topico.nome || topico.name;
+                    
+                    return (
+                      <option key={topicoId} value={topicoId}>
+                        {topicoTitulo}
+                      </option>
+                    );
+                  })
+                ) : (
+                  <option value="" disabled>
+                    {!formData.id_area
+                      ? "Selecione uma área primeiro"
+                      : (topicosFetched
+                          ? "Nenhum tópico disponível para esta área"
+                          : "A carregar tópicos...")}
                   </option>
-                  {topicosDisponiveis.map(topico => (
-                    <option
-                      key={topico.id}
-                      value={topico.id}
-                      disabled={topicosAdicionados.some(t => t.id === topico.id)}
-                    >
-                      {topico.titulo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {topicosAdicionados.length > 0 ? (
-                <ul className="topicos-adicionados">
-                  {topicosAdicionados.map((topico, index) => (
-                    <li key={index} className="topico-item">
-                      <span>{topico.titulo}</span>
-                      <button type="button" onClick={() => handleRemoverTopico(index)}>
-                        <i className="fas fa-times"></i>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="sem-topicos">
-                  {formData.id_categoria 
-                    ? "Nenhum tópico adicionado. Selecione tópicos acima." 
-                    : "Selecione uma categoria para ver tópicos disponíveis."}
-                </p>
-              )}
+                )}
+              </select>
             </div>
 
             <div className="row">
               {formData.tipo === 'sincrono' && (
-                <button
-                  type="button"
-                  className="select-formador-button"
-                  onClick={() => setModalAberto(true)}
-                >
-                  <i className="fas fa-user-plus"></i>
-                  {formData.id_formador
-                    ? `Formador: ${formadorNome} (Clique para alterar)`
-                    : "Selecionar Formador"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="select-formador-button"
+                    onClick={() => setModalAberto(true)}
+                  >
+                    <i className="fas fa-user-plus"></i>
+                    {formData.id_formador
+                      ? `Formador: ${formadorNome} (Clique para alterar)`
+                      : "Selecionar Formador"}
+                  </button>
+                  <input
+                    type="number"
+                    name="vagas"
+                    placeholder="Vagas"
+                    value={formData.vagas}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                  />
+                </>
               )}
-
-              {formData.tipo === 'assincrono' && (
-                <div className="info-box">
-                  <i className="fas fa-info-circle"></i>
-                  Cursos assíncronos não precisam de formador
-                </div>
-              )}
-
-              <input
-                type="number"
-                name="vagas"
-                placeholder="Vagas"
-                value={formData.vagas}
-                onChange={handleChange}
-                disabled={formData.tipo === 'assincrono'}
-                required={formData.tipo === 'sincrono'}
-                min="1"
-              />
             </div>
+
 
             <div className="row">
               <div className="input-group">

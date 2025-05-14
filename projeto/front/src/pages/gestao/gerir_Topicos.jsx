@@ -152,13 +152,26 @@ const TopicoModal = ({ isOpen, onClose, topico, categorias, areas, onSave }) => 
 
                         <div className="form-group">
                             <label>Área:</label>
+
                             <select
                                 name="id_area"
                                 value={formData.id_area}
-                                onChange={handleChange}
+                                onMouseDown={e => {
+                                    if (!formData.id_categoria) {
+                                        e.preventDefault();
+                                        toast.error('Selecione uma categoria primeiro');
+                                    }
+                                }}
+                                onChange={e => {
+                                    if (!formData.id_categoria) {
+                                        toast.error('Selecione uma categoria primeiro');
+                                        return;
+                                    }
+                                    handleChange(e);
+                                }}
                                 required
-                                disabled={!formData.id_categoria}
                             >
+
                                 <option value="">
                                     {!formData.id_categoria
                                         ? "Selecione uma categoria primeiro"
@@ -281,12 +294,17 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, topico }) => {
                         type="button"
                         className="delete-button"
                         onClick={() => {
-                            if (topicoId) {
-                                onConfirm(topicoId);
+                            // Captura e log explícito do ID antes da ação
+                            const idToDelete = topico.id_topico || topico.id || topico.id_categoria_topico;
+                            console.log('Detalhes completos do tópico para exclusão:', topico);
+                            console.log('ID identificado para exclusão:', idToDelete);
+
+                            if (idToDelete) {
+                                onConfirm(idToDelete);
                                 onClose();
                             } else {
-                                console.error('Não foi possível identificar o ID do tópico para exclusão');
-                                alert('Erro: Não foi possível identificar o tópico para exclusão');
+                                console.error('Detalhes do objeto tópico:', JSON.stringify(topico));
+                                toast.error('Não foi possível identificar o ID do tópico para exclusão');
                             }
                         }}
                     >
@@ -310,6 +328,7 @@ const Gerir_Topicos = () => {
 
     // Estados para filtros
     const [filtroCategoria, setFiltroCategoria] = useState('');
+    const [filtroArea, setFiltroArea] = useState('');
     const [filtroPesquisa, setFiltroPesquisa] = useState('');
 
     // Estados para modais
@@ -318,6 +337,7 @@ const Gerir_Topicos = () => {
     const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
     const [topicoParaExcluir, setTopicoParaExcluir] = useState(null);
 
+    const [areasFiltradas, setAreasFiltradas] = useState([]);
     // Carregar dados iniciais: tópicos, categorias e áreas
     useEffect(() => {
         const fetchData = async () => {
@@ -338,34 +358,17 @@ const Gerir_Topicos = () => {
                 });
 
                 // Carregar tópicos
-                const topicosRes = await axios.get(`${API_BASE}/topicos`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
+                const topicosRes = await axios.get(`${API_BASE}/topicos-area/todos`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
 
-                console.log('Tópicos carregados com sucesso:', topicosRes.data?.length || 0);
 
-                // Verificar e normalizar a estrutura de dados dos tópicos
-                let topicosNormalizados = [];
-                if (Array.isArray(topicosRes.data)) {
-                    topicosNormalizados = topicosRes.data;
-                    console.log('Dados já estão em formato de array');
-                } else if (topicosRes.data && topicosRes.data.data && Array.isArray(topicosRes.data.data)) {
-                    topicosNormalizados = topicosRes.data.data;
-                    console.log('Dados extraídos da propriedade data');
-                } else if (topicosRes.data && typeof topicosRes.data === 'object') {
-                    // Se não for um array mas for um objeto, pode ser um objeto wrapper
-                    topicosNormalizados = [topicosRes.data];
-                    console.log('Dados eram um objeto único, convertido para array');
-                }
 
-                console.log('Estrutura das categorias:', categoriasRes.data ? 'OK' : 'Vazia');
-                console.log('Estrutura das áreas:', areasRes.data ? 'OK' : 'Vazia');
-
+                console.log('Tópicos carregados com sucesso:', topicosRes.data.length);
                 setCategorias(Array.isArray(categoriasRes.data) ? categoriasRes.data : []);
                 setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
-                setTopicos(topicosNormalizados);
+                setTopicos(topicosRes.data);
+
 
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
@@ -384,14 +387,36 @@ const Gerir_Topicos = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        if (filtroCategoria) {
+            // Filtrar áreas que pertencem à categoria selecionada
+            const areasFiltered = areas.filter(area =>
+                area.id_categoria === parseInt(filtroCategoria)
+            );
+            setAreasFiltradas(areasFiltered);
+            console.log(`Categoria ${filtroCategoria} selecionada: ${areasFiltered.length} áreas disponíveis`);
+
+            // Limpar filtro de área somente se a categoria mudou e não há correspondência
+            if (filtroArea && !areasFiltered.some(a => a.id_area === parseInt(filtroArea))) {
+                setFiltroArea('');
+            }
+        } else {
+            // Se nenhuma categoria estiver selecionada, não mostrar áreas
+            setAreasFiltradas([]);
+            setFiltroArea('');
+        }
+    }, [filtroCategoria, areas, filtroArea]);
+
     // Função para filtrar tópicos com base nos filtros atuais
     const filtrarTopicos = () => {
         return topicos.filter(topico => {
-            // Usar id_topico como identificador principal, com fallback para id
-            const topicoId = topico.id_topico || topico.id;
-
             // Filtro por categoria
             if (filtroCategoria && topico.id_categoria !== parseInt(filtroCategoria)) {
+                return false;
+            }
+
+            // Filtro por área
+            if (filtroArea && topico.id_area !== parseInt(filtroArea)) {
                 return false;
             }
 
@@ -432,7 +457,7 @@ const Gerir_Topicos = () => {
         try {
             if (topicoData.id) {
                 // Modo edição
-                const response = await axios.put(`${API_BASE}/topicos/${topicoData.id}`, topicoData, {
+                const response = await axios.put(`${API_BASE}/topicos-area/${topicoData.id}`, topicoData, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -453,7 +478,7 @@ const Gerir_Topicos = () => {
                 toast.success('Tópico atualizado com sucesso!');
             } else {
                 // Modo criação
-                const response = await axios.post(`${API_BASE}/topicos`, topicoData, {
+                const response = await axios.post(`${API_BASE}/topicos-area`, topicoData, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -467,7 +492,7 @@ const Gerir_Topicos = () => {
                 // Se o retorno não tiver um ID explícito, pode ser necessário fazer outra requisição
                 // para obter a lista atualizada de tópicos
                 if (!novoTopico.id) {
-                    const topicosAtualizados = await axios.get(`${API_BASE}/topicos`, {
+                    const topicosAtualizados = await axios.get(`${API_BASE}/topicos-area/todos`, {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`
                         }
@@ -504,12 +529,12 @@ const Gerir_Topicos = () => {
     };
 
     // Função para excluir tópico mais robusta
+    // Modificar a função excluirTopico para ser mais robusta:
     const excluirTopico = async (id) => {
         try {
             setIsLoading(true);
 
-            console.log('A tentar eliminar tópico com ID:', id);
-
+            // Verificação mais rigorosa do ID
             if (!id) {
                 console.error('ID do tópico é inválido ou nulo');
                 toast.error('Erro ao eliminar tópico: ID inválido');
@@ -517,27 +542,54 @@ const Gerir_Topicos = () => {
                 return;
             }
 
-            const response = await axios.delete(`${API_BASE}/topicos/${id}`, {
+            // Mostrar toast informativo antes da operação
+            toast.info('A eliminar tópico...');
+
+            console.log('Tentando eliminar tópico com ID:', id);
+
+            // Verificar se o token está disponível
+            const token = localStorage.getItem('token');
+            if (!token) {
+                toast.error('Autenticação expirada. Por favor, faça login novamente.');
+                setIsLoading(false);
+                return;
+            }
+
+            // Realizar a chamada à API com tratamento de erros mais detalhado
+            const response = await axios.delete(`${API_BASE}/topicos-area/${id}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-            console.log('Resposta da API (exclusão):', response.data);
+            console.log('Resposta da API (eliminação):', response.data);
 
-            // Atualização mais robusta da lista
-            setTopicos(prevTopicos => {
-                return prevTopicos.filter(t => {
-                    // Verificar todas as propriedades possíveis de ID
-                    const topicoId = t.id_topico || t.id;
-                    return topicoId !== id;
-                });
-            });
+            // Atualizar lista de tópicos localmente de forma mais segura
+            setTopicos(prevTopicos => prevTopicos.filter(t => {
+                // Verificar todas as propriedades possíveis de ID
+                const topicoId = t.id_topico || t.id || t.id_categoria_topico;
+                console.log(`Comparando IDs: ${topicoId} vs ${id}`);
+                return String(topicoId) !== String(id); // Converter para string para comparação segura
+            }));
 
             toast.success('Tópico eliminado com sucesso!');
         } catch (error) {
-            console.error('Erro ao eliminar tópico:', error);
-            toast.error(error.response?.data?.message || 'Erro ao eliminar tópico');
+            console.error('Erro detalhado ao eliminar tópico:', error.response || error);
+
+            // Mensagens de erro mais informativas
+            if (error.response) {
+                if (error.response.status === 403) {
+                    toast.error('Permissão negada para eliminar este tópico');
+                } else if (error.response.status === 404) {
+                    toast.error('Tópico não encontrado ou já foi removido');
+                    // Atualizar a lista mesmo assim, assumindo que o tópico não existe mais
+                    setTopicos(prev => prev.filter(t => (t.id_topico || t.id) !== id));
+                } else {
+                    toast.error(`Erro ao eliminar tópico: ${error.response.data?.message || error.message}`);
+                }
+            } else {
+                toast.error(`Erro ao eliminar tópico: ${error.message}`);
+            }
         } finally {
             setIsLoading(false);
             setConfirmDeleteModal(false);
@@ -582,6 +634,36 @@ const Gerir_Topicos = () => {
                             {categorias.map(categoria => (
                                 <option key={categoria.id_categoria} value={categoria.id_categoria}>
                                     {categoria.nome}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Filtrar por área */}
+                        <select
+                            value={filtroArea}
+                            onMouseDown={e => {
+                                if (!filtroCategoria) {
+                                    e.preventDefault();
+                                    toast.error('Selecione uma categoria primeiro');
+                                }
+                            }}
+                            onChange={e => {
+                                if (!filtroCategoria) {
+                                    toast.error('Selecione uma categoria primeiro');
+                                    return;
+                                }
+                                setFiltroArea(e.target.value);
+                            }}
+                            className="filter-select"
+                        >
+                            <option value="">
+                                {areasFiltradas.length === 0
+                                    ? "Sem áreas disponíveis"
+                                    : "Todas as áreas"}
+                            </option>
+                            {areasFiltradas.map(area => (
+                                <option key={area.id_area} value={area.id_area}>
+                                    {area.nome}
                                 </option>
                             ))}
                         </select>

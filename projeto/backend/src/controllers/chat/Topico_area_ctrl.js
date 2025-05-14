@@ -246,7 +246,7 @@ const createTopico = async (req, res) => {
   }
 };
 
-// Solicitar a criação de um novo tópico (para utilizadores não admin/gestor)
+// Solicitar a criação de um novo tópico (para formandos)
 const solicitarTopico = async (req, res) => {
   try {
     const userId = req.user.id_utilizador || req.user.id;
