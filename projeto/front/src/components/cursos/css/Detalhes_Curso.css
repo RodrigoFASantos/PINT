@@ -473,3 +473,42 @@
     margin-bottom: 10px;
   }
 }
+.campos-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* Três colunas com o mesmo tamanho */
+  gap: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.campos-grid-3 .campo {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ajuste para a área de tópicos */
+.campo-topicos .campo-valor {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.lista-topicos {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.topico-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.topico-item:last-child {
+  border-bottom: none;
+}
+
+@media screen and (max-width: 768px) {
+  .campos-grid-3 {
+    grid-template-columns: 1fr; /* Uma coluna em telas pequenas */
+  }
+}

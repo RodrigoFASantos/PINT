@@ -8,7 +8,8 @@ const {
   createTopico,
   solicitarTopico,
   updateTopico,
-  deleteTopico
+  deleteTopico,
+  getAllTopicosByCategoria // Adicionar nova função ao import
 } = require("../../controllers/chat/Topico_ctrl");
 
 // Middleware para verificar autenticação
@@ -17,7 +18,10 @@ router.use(authMiddleware);
 // Listar todos os tópicos
 router.get("/", getAllTopicos);
 
-// Rotas para criar e manipular tópicos
+// Rota para buscar tópicos por categoria
+router.get("/categoria/:id_categoria", getAllTopicosByCategoria); // Nova rota
+
+// Outras rotas existentes
 router.post("/", autorizar([1, 2]), createTopico);
 router.post("/solicitar", solicitarTopico);
 router.put("/:id", autorizar([1, 2]), updateTopico);

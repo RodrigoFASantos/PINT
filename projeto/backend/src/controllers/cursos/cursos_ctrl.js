@@ -263,7 +263,7 @@ const createCurso = async (req, res) => {
     console.log("A iniciar criação de curso");
     const { 
       nome, descricao, tipo, vagas, data_inicio, data_fim, 
-      id_formador, id_area, id_categoria, topicos 
+      id_formador, id_area, id_categoria, topicos, id_topico_categoria
     } = req.body;
 
     if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
@@ -308,6 +308,7 @@ const createCurso = async (req, res) => {
         id_formador,
         id_area,
         id_categoria,
+        id_topico_categoria,
         imagem_path: imagemPath,
         dir_path: dirPath,
         ativo: true

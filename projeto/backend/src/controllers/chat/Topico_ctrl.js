@@ -322,10 +322,82 @@ const deleteTopico = async (req, res) => {
   }
 };
 
+const getAllTopicosByCategoria = async (req, res) => {
+  try {
+    const { id_categoria } = req.params;
+    
+    console.log(`A iniciar busca de tópicos para a categoria ${id_categoria}...`);
+    
+    // Verificar se a categoria existe
+    const categoria = await Categoria.findByPk(id_categoria);
+    if (!categoria) {
+      return res.status(404).json({
+        success: false,
+        message: 'Categoria não encontrada'
+      });
+    }
+    
+    // Buscar tópicos filtrados por categoria
+    const topicos = await Topico_Categoria.findAll({
+      where: { id_categoria: id_categoria },
+      include: [
+        {
+          model: Categoria,
+          as: "categoria",
+          attributes: ['id_categoria', 'nome'],
+          required: false
+        },
+        {
+          model: Area,
+          as: "area",
+          attributes: ['id_area', 'nome'],
+          required: false
+        },
+        {
+          model: User,
+          as: "criador",
+          attributes: ['id_utilizador', 'nome', 'email'],
+          required: false
+        }
+      ],
+      order: [['data_criacao', 'DESC']]
+    });
+    
+    console.log(`Encontrados ${topicos.length} tópicos para a categoria ${id_categoria}`);
+    
+    // Formatar os resultados como no getAllTopicos
+    const topicosMapeados = topicos.map(topico => {
+      const t = topico.get({ plain: true });
+      
+      // Adicionar campo id para compatibilidade com frontend
+      t.id = t.id_topico;
+      
+      // Garantir que propriedades estejam sempre presentes
+      if (!t.categoria) t.categoria = { nome: 'Não disponível' };
+      if (!t.area) t.area = { nome: 'Não disponível' };
+      if (!t.criador) t.criador = { nome: 'Utilizador desconhecido' };
+      
+      return t;
+    });
+    
+    return res.status(200).json(topicosMapeados);
+  } catch (error) {
+    console.error('Erro ao listar tópicos por categoria:', error);
+    console.error('Stack de erro completo:', error.stack);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar tópicos para esta categoria',
+      error: error.message
+    });
+  }
+};
+
+// Não esquecer de adicionar a função ao module.exports
 module.exports = {
   getAllTopicos,
   createTopico,
   solicitarTopico,
   updateTopico,
-  deleteTopico
+  deleteTopico,
+  getAllTopicosByCategoria // Adicionar aqui
 };

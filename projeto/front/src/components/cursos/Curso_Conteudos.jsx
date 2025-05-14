@@ -463,10 +463,17 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
       <div className="conteudo-list-estruturada">
         {topicos.map((topico) => (
           <div key={topico.id_topico} className="topico-item">
-            <div className="topico-header">
+            {/* Cabeçalho do tópico */}
+            <div 
+              className="topico-header"
+              onClick={() => toggleTopico(topico.id_topico)}
+            >
               <button
                 className="btn-toggle"
-                onClick={() => toggleTopico(topico.id_topico)}
+                onClick={(e) => {
+                  e.stopPropagation(); // Impedir propagação do clique
+                  toggleTopico(topico.id_topico);
+                }}
               >
                 <i className={`fas fa-chevron-${topico.expanded ? 'down' : 'right'}`}></i>
               </button>
@@ -477,21 +484,30 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                   <button
                     className="btn-add"
                     title="Adicionar pasta"
-                    onClick={() => handleCreatePasta(topico)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impedir propagação do clique
+                      handleCreatePasta(topico);
+                    }}
                   >
                     <i className="fas fa-plus"></i>
                   </button>
                   <button
                     className="btn-edit"
                     title="Editar tópico"
-                    onClick={() => handleEditTopico(topico.id_topico, topico.nome)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impedir propagação do clique
+                      handleEditTopico(topico.id_topico, topico.nome);
+                    }}
                   >
                     <i className="fas fa-pencil-alt"></i>
                   </button>
                   <button
                     className="btn-delete"
                     title="Remover tópico"
-                    onClick={() => confirmRemoveTopico(topico.id_topico)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impedir propagação do clique
+                      confirmRemoveTopico(topico.id_topico);
+                    }}
                   >
                     <i className="fas fa-trash"></i>
                   </button>
@@ -499,15 +515,23 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
               )}
             </div>
 
+            {/* Pastas do tópico - agora fora do .topico-header */}
             {topico.expanded && (
               <div className="pastas-list">
                 {topico.pastas && topico.pastas.length > 0 ? (
                   topico.pastas.map(pasta => (
                     <div key={pasta.id_pasta} className="pasta-item">
-                      <div className="pasta-header">
+                      {/* Cabeçalho da pasta */}
+                      <div 
+                        className="pasta-header"
+                        onClick={() => togglePasta(topico.id_topico, pasta.id_pasta)}
+                      >
                         <button
                           className="btn-toggle"
-                          onClick={() => togglePasta(topico.id_topico, pasta.id_pasta)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Impedir propagação do clique
+                            togglePasta(topico.id_topico, pasta.id_pasta);
+                          }}
                         >
                           <i className={`fas fa-chevron-${pasta.expanded ? 'down' : 'right'}`}></i>
                         </button>
@@ -519,21 +543,30 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                             <button
                               className="btn-add"
                               title="Adicionar conteúdo"
-                              onClick={() => handleCreateConteudo(pasta)}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Impedir propagação do clique
+                                handleCreateConteudo(pasta);
+                              }}
                             >
                               <i className="fas fa-plus"></i>
                             </button>
                             <button
                               className="btn-edit"
                               title="Editar pasta"
-                              onClick={() => handleEditPasta(pasta.id_pasta, pasta.nome)}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Impedir propagação do clique
+                                handleEditPasta(pasta.id_pasta, pasta.nome);
+                              }}
                             >
                               <i className="fas fa-pencil-alt"></i>
                             </button>
                             <button
                               className="btn-delete"
                               title="Remover pasta"
-                              onClick={() => confirmRemovePasta(pasta.id_pasta)}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Impedir propagação do clique
+                                confirmRemovePasta(pasta.id_pasta);
+                              }}
                             >
                               <i className="fas fa-trash"></i>
                             </button>
@@ -541,6 +574,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                         )}
                       </div>
 
+                      {/* Conteúdos da pasta - agora fora do .pasta-header */}
                       {pasta.expanded && (
                         <div className="conteudos-list">
                           {pasta.conteudos && pasta.conteudos.length > 0 ? (

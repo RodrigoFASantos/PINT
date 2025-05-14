@@ -293,6 +293,7 @@ const CriarCurso = () => {
     // Adicionar tópicos ao FormData
     if (topicosAdicionados.length > 0) {
       data.append('topicos', JSON.stringify(topicosAdicionados));
+      data.append('id_topico_categoria', topicosAdicionados[0].id);
     }
 
     setIsLoading(true);
