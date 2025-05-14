@@ -77,12 +77,12 @@ const CriarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       }
       
       const response = await axios.post(
-        `${API_BASE}/topicos`,
-        requestData,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+  `${API_BASE}/topicos-area`,
+  requestData,
+  {
+    headers: { Authorization: `Bearer ${token}` }
+  }
+);
       
       if (response.data.success || response.status === 201) {
         if (onSuccess) {

@@ -3,7 +3,9 @@ const Area = require("../../database/models/Area");
 const Categoria = require("../../database/models/Categoria");
 const User = require("../../database/models/User");
 const ConteudoCurso = require("../../database/models/ConteudoCurso");
-const TopicoCurso = require("../../database/models/TopicoCurso");
+
+const Curso_Topicos = require("../../database/models/Curso_Topicos");
+
 const PastaCurso = require("../../database/models/PastaCurso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const uploadUtils = require('../../middleware/upload');
@@ -165,7 +167,7 @@ const getCursoById = async (req, res) => {
           as: "categoria"
         },
         {
-          model: TopicoCurso,
+          model: Curso_Topicos,
           as: "topicos",
           where: { ativo: true },
           required: false,
@@ -316,7 +318,7 @@ const createCurso = async (req, res) => {
       // Se foram fornecidos tópicos, criar cada um deles
       if (topicos && Array.isArray(topicos) && topicos.length > 0) {
         for (let i = 0; i < topicos.length; i++) {
-          await TopicoCurso.create({
+          await Curso_Topicos.create({
             nome: topicos[i].nome,
             id_curso: novoCurso.id_curso,
             ordem: i + 1,
@@ -594,7 +596,7 @@ const deleteCurso = async (req, res) => {
       console.log(`Removidas ${numInscricoesRemovidas} inscrições do curso ${id}`);
 
       // Encontrar todas as pastas do curso através dos tópicos
-      const topicos = await TopicoCurso.findAll({
+      const topicos = await Curso_Topicos.findAll({
         where: { id_curso: id }
       });
 
@@ -624,7 +626,7 @@ const deleteCurso = async (req, res) => {
       }
 
       // Eliminar os tópicos
-      await TopicoCurso.destroy({
+      await Curso_Topicos.destroy({
         where: { id_curso: id }
       });
       console.log(`Removidos tópicos do curso ${id}`);
@@ -754,7 +756,7 @@ const getTopicosCurso = async (req, res) => {
   try {
     const id_curso = req.params.id;
     
-    const topicos = await TopicoCurso.findAll({
+    const topicos = await Curso_Topicos.findAll({
       where: { id_curso, ativo: true },
       order: [['ordem', 'ASC']]
     });
@@ -767,7 +769,7 @@ const getTopicosCurso = async (req, res) => {
 };
 
 // Criar um novo tópico para um curso
-const createTopicoCurso = async (req, res) => {
+const createCurso_Topicos = async (req, res) => {
   try {
     const id_curso = req.params.id;
     const { nome, ordem } = req.body;
@@ -783,12 +785,12 @@ const createTopicoCurso = async (req, res) => {
     }
     
     // Obter a ordem máxima atual
-    const ultimaOrdem = await TopicoCurso.max('ordem', { 
+    const ultimaOrdem = await Curso_Topicos.max('ordem', { 
       where: { id_curso } 
     }) || 0;
     
     // Criar o tópico
-    const novoTopico = await TopicoCurso.create({
+    const novoTopico = await Curso_Topicos.create({
       nome,
       id_curso,
       ordem: ordem || ultimaOrdem + 1,
@@ -806,13 +808,13 @@ const createTopicoCurso = async (req, res) => {
 };
 
 // Atualizar um tópico
-const updateTopicoCurso = async (req, res) => {
+const updateCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
     const { nome, ordem, ativo } = req.body;
     
     // Verificar se o tópico existe
-    const topico = await TopicoCurso.findByPk(id_topico);
+    const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
@@ -835,12 +837,12 @@ const updateTopicoCurso = async (req, res) => {
 };
 
 // Eliminar um tópico
-const deleteTopicoCurso = async (req, res) => {
+const deleteCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
     
     // Verificar se o tópico existe
-    const topico = await TopicoCurso.findByPk(id_topico);
+    const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
@@ -882,7 +884,7 @@ module.exports = {
   getCursosSugeridos,
   associarFormadorCurso,
   getTopicosCurso,
-  createTopicoCurso,
-  updateTopicoCurso,
-  deleteTopicoCurso
+  createCurso_Topicos,
+  updateCurso_Topicos,
+  deleteCurso_Topicos
 };

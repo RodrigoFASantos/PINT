@@ -1,4 +1,4 @@
-const Topico = require('../../database/models/Topico');
+const Topico_Area = require('../../database/models/Topico_Area');
 const Categoria = require('../../database/models/Categoria');
 const Area = require('../../database/models/Area');
 const User = require('../../database/models/User');
@@ -7,7 +7,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
 
 // Listar todos os tópicos com filtros por categoria e área
-const listarTopicos = async (req, res) => {
+const listarTopico_Areas = async (req, res) => {
   try {
     const { categoria, area, busca } = req.query;
     
@@ -54,11 +54,11 @@ const listarTopicos = async (req, res) => {
     }
     
     // Procurar tópicos com contagem de mensagens
-    const topicos = await Topico.findAll({
+    const Topico_Areas = await Topico_Area.findAll({
       where: whereClause,
       attributes: [
         'id', 'titulo', 'descricao', 'dataCriacao',
-        [sequelize.literal('(SELECT COUNT(*) FROM chat_mensagens WHERE chat_mensagens.id_topico = "Topico".id)'), 'comentarios']
+        [sequelize.literal('(SELECT COUNT(*) FROM chat_mensagens WHERE chat_mensagens.id_Topico_Area = "Topico_Area".id)'), 'comentarios']
       ],
       include: [
         {
@@ -80,7 +80,7 @@ const listarTopicos = async (req, res) => {
       order: [['dataCriacao', 'DESC']]
     });
     
-    return res.status(200).json(topicos);
+    return res.status(200).json(Topico_Areas);
   } catch (error) {
     console.error('Erro ao listar tópicos:', error);
     return res.status(500).json({ mensagem: 'Erro interno do servidor' });
@@ -88,11 +88,11 @@ const listarTopicos = async (req, res) => {
 };
 
 // Obter detalhes de um tópico específico
-const obterTopico = async (req, res) => {
+const obterTopico_Area = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const topico = await Topico.findByPk(id, {
+    const Topico_Area = await Topico_Area.findByPk(id, {
       include: [
         {
           model: User,
@@ -112,21 +112,21 @@ const obterTopico = async (req, res) => {
       ]
     });
     
-    if (!topico) {
+    if (!Topico_Area) {
       return res.status(404).json({ mensagem: 'Tópico não encontrado' });
     }
     
     // Contar número de mensagens
     const comentarios = await ChatMensagem.count({
-      where: { id_topico: id }
+      where: { id_Topico_Area: id }
     });
     
-    const topicoComComentarios = {
-      ...topico.toJSON(),
+    const Topico_AreaComComentarios = {
+      ...Topico_Area.toJSON(),
       comentarios
     };
     
-    return res.status(200).json(topicoComComentarios);
+    return res.status(200).json(Topico_AreaComComentarios);
   } catch (error) {
     console.error('Erro ao obter tópico:', error);
     return res.status(500).json({ mensagem: 'Erro interno do servidor' });
@@ -134,7 +134,7 @@ const obterTopico = async (req, res) => {
 };
 
 // Criar novo tópico (apenas para gestores)
-const criarTopico = async (req, res) => {
+const criarTopico_Area = async (req, res) => {
   try {
     const userId = req.user.id;
     const { titulo, descricao, id_categoria, id_area } = req.body;
@@ -150,7 +150,7 @@ const criarTopico = async (req, res) => {
     }
     
     // Criar tópico
-    const novoTopico = await Topico.create({
+    const novoTopico_Area = await Topico_Area.create({
       titulo,
       descricao,
       id_categoria,
@@ -159,7 +159,7 @@ const criarTopico = async (req, res) => {
     });
     
     // Procurar o tópico completo para retornar
-    const topicoCompleto = await Topico.findByPk(novoTopico.id, {
+    const Topico_AreaCompleto = await Topico_Area.findByPk(novoTopico_Area.id, {
       include: [
         {
           model: User,
@@ -179,7 +179,7 @@ const criarTopico = async (req, res) => {
       ]
     });
     
-    return res.status(201).json(topicoCompleto);
+    return res.status(201).json(Topico_AreaCompleto);
   } catch (error) {
     console.error('Erro ao criar tópico:', error);
     return res.status(500).json({ mensagem: 'Erro interno do servidor' });
@@ -187,34 +187,34 @@ const criarTopico = async (req, res) => {
 };
 
 // Atualizar um tópico (apenas para gestores ou criador)
-const atualizarTopico = async (req, res) => {
+const atualizarTopico_Area = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
     const { titulo, descricao, ativo } = req.body;
     
     // Procurar tópico
-    const topico = await Topico.findByPk(id);
-    if (!topico) {
+    const Topico_Area = await Topico_Area.findByPk(id);
+    if (!Topico_Area) {
       return res.status(404).json({ mensagem: 'Tópico não encontrado' });
     }
     
     // Verificar permissão (criador ou gestor/admin)
-    if (topico.id_criador !== userId && req.user.role !== 1 && req.user.role !== 2) {
+    if (Topico_Area.id_criador !== userId && req.user.role !== 1 && req.user.role !== 2) {
       return res.status(403).json({ mensagem: 'Sem permissão para atualizar este tópico' });
     }
     
     // Atualizar campos
-    if (titulo) topico.titulo = titulo;
-    if (descricao !== undefined) topico.descricao = descricao;
+    if (titulo) Topico_Area.titulo = titulo;
+    if (descricao !== undefined) Topico_Area.descricao = descricao;
     if (ativo !== undefined && (req.user.role === 1 || req.user.role === 2)) {
-      topico.ativo = ativo;
+      Topico_Area.ativo = ativo;
     }
     
-    await topico.save();
+    await Topico_Area.save();
     
     // Procurar tópico atualizado com dados relacionados
-    const topicoAtualizado = await Topico.findByPk(id, {
+    const Topico_AreaAtualizado = await Topico_Area.findByPk(id, {
       include: [
         {
           model: User,
@@ -234,7 +234,7 @@ const atualizarTopico = async (req, res) => {
       ]
     });
     
-    return res.status(200).json(topicoAtualizado);
+    return res.status(200).json(Topico_AreaAtualizado);
   } catch (error) {
     console.error('Erro ao atualizar tópico:', error);
     return res.status(500).json({ mensagem: 'Erro interno do servidor' });
@@ -242,7 +242,7 @@ const atualizarTopico = async (req, res) => {
 };
 
 // Excluir um tópico (apenas admin ou gestor)
-const excluirTopico = async (req, res) => {
+const excluirTopico_Area = async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -252,18 +252,18 @@ const excluirTopico = async (req, res) => {
     }
     
     // Procurar tópico
-    const topico = await Topico.findByPk(id);
-    if (!topico) {
+    const Topico_Area = await Topico_Area.findByPk(id);
+    if (!Topico_Area) {
       return res.status(404).json({ mensagem: 'Tópico não encontrado' });
     }
     
     // Excluir todas as mensagens associadas
     await ChatMensagem.destroy({
-      where: { id_topico: id }
+      where: { id_Topico_Area: id }
     });
     
     // Excluir tópico
-    await topico.destroy();
+    await Topico_Area.destroy();
     
     return res.status(200).json({ mensagem: 'Tópico excluído com sucesso' });
   } catch (error) {
@@ -273,9 +273,9 @@ const excluirTopico = async (req, res) => {
 };
 
 module.exports = {
-  listarTopicos,
-  obterTopico,
-  criarTopico,
-  atualizarTopico,
-  excluirTopico
+  listarTopico_Areas,
+  obterTopico_Area,
+  criarTopico_Area,
+  atualizarTopico_Area,
+  excluirTopico_Area
 };

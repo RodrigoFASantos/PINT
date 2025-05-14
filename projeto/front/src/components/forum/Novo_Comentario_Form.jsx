@@ -10,8 +10,8 @@ const NovoComentarioForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!conteudo.trim()) {
-      setErro('O comentário não pode estar vazio.');
+    if (!conteudo.trim() && arquivos.length === 0) {
+      setErro('O comentário não pode estar vazio e deve incluir texto ou anexo.');
       return;
     }
     
@@ -19,27 +19,33 @@ const NovoComentarioForm = ({ onSubmit }) => {
     setErro('');
     
     const formData = new FormData();
-    formData.append('conteudo', conteudo);
-    
-    // Adicionar arquivos ao formData
-    for (const arquivo of arquivos) {
-      formData.append('arquivos', arquivo);
+
+    formData.append('texto', conteudo);
+    if (arquivos.length > 0) {
+      formData.append('anexo', arquivos[0]);
     }
     
-    const sucesso = await onSubmit(formData);
-    
-    if (sucesso) {
-      setConteudo('');
-      setArquivos([]);
-    } else {
-      setErro('Erro ao enviar comentário. Tente novamente.');
+    try {
+      const sucesso = await onSubmit(formData);
+      
+      if (sucesso) {
+        setConteudo('');
+        setArquivos([]);
+      } else {
+        setErro('Erro ao enviar comentário. Tente novamente.');
+      }
+    } catch (error) {
+      console.error("Erro ao enviar comentário:", error);
+      setErro(`Erro ao enviar comentário: ${error.message}`);
+    } finally {
+      setEnviando(false);
     }
-    
-    setEnviando(false);
   };
 
   const handleArquivoChange = (e) => {
-    setArquivos(Array.from(e.target.files));
+    if (e.target.files && e.target.files.length > 0) {
+      setArquivos(Array.from(e.target.files));
+    }
   };
 
   const removerArquivo = (index) => {
@@ -55,7 +61,6 @@ const NovoComentarioForm = ({ onSubmit }) => {
             onChange={(e) => setConteudo(e.target.value)}
             rows="4"
             placeholder="Digite seu comentário..."
-            required
           />
         </div>
         
@@ -68,7 +73,7 @@ const NovoComentarioForm = ({ onSubmit }) => {
               type="file"
               id="arquivos-comentario"
               onChange={handleArquivoChange}
-              multiple
+              accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               style={{ display: 'none' }}
             />
           </div>

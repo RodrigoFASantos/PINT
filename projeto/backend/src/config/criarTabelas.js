@@ -102,9 +102,9 @@ const createTablesInOrder = async () => {
     );`,
 
     // =============================================
-    // 9. TOPICO_CATEGORIA
+    // 9. TOPICO_AREA
     // =============================================
-    `CREATE TABLE IF NOT EXISTS topico_categoria (
+    `CREATE TABLE IF NOT EXISTS topico_area (
       id_topico SERIAL PRIMARY KEY,
       id_categoria INTEGER NOT NULL REFERENCES categorias(id_categoria),
       id_area INTEGER NOT NULL REFERENCES areas(id_area),
@@ -131,7 +131,7 @@ const createTablesInOrder = async () => {
       id_formador INTEGER REFERENCES utilizadores(id_utilizador),
       id_categoria INTEGER NOT NULL REFERENCES categorias(id_categoria),
       id_area INTEGER NOT NULL REFERENCES areas(id_area),
-      id_topico_categoria INTEGER NOT NULL REFERENCES topico_categoria(id_topico),
+      id_topico_area INTEGER NOT NULL REFERENCES topico_area(id_topico),
       imagem_path VARCHAR(500),
       dir_path VARCHAR(500)
     );`,
@@ -359,7 +359,7 @@ const createTablesInOrder = async () => {
     // =============================================
     `CREATE TABLE IF NOT EXISTS chat_mensagens (
       id SERIAL PRIMARY KEY,
-      id_topico INTEGER NOT NULL REFERENCES topico_categoria(id_topico),
+      id_topico INTEGER NOT NULL REFERENCES topico_area(id_topico),
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
       texto TEXT,
       anexo_url VARCHAR(255),

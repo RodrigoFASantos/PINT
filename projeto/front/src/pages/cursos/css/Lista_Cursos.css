@@ -117,7 +117,7 @@
 
 @media (min-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -492,4 +492,38 @@
   width: 50px;
   height: 3px;
   background-color: #3182ce;
+}
+
+.curso-card-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Título no canto superior esquerdo */
+.curso-overlay-title {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Datas no canto superior direito */
+.curso-overlay-dates {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+/* Vagas logo abaixo do título */
+.curso-overlay-vagas {
+  position: absolute;
+  top: 2.25rem;  /* ajusta conforme o tamanho do título */
+  left: 0.5rem;
+  color: #fff;
+  font-size: 0.875rem;
 }

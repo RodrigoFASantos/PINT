@@ -1,5 +1,5 @@
 const PastaCurso = require("../../database/models/PastaCurso");
-const TopicoCurso = require("../../database/models/TopicoCurso");
+const Curso_Topicos = require("../../database/models/Curso_Topicos");
 const Curso = require("../../database/models/Curso");
 const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const fs = require('fs');
@@ -16,7 +16,7 @@ const createPasta = async (req, res) => {
     }
 
     // Procurar informações do tópico e curso para criar o caminho do diretório
-    const topico = await TopicoCurso.findByPk(id_topico);
+    const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
@@ -149,7 +149,7 @@ const updatePasta = async (req, res) => {
     // Se estiver a mudar o nome, atualizar também o diretório
     if (nome !== undefined && nome !== pasta.nome) {
       // Procurar o tópico e curso para obter o caminho completo
-      const topico = await TopicoCurso.findByPk(pasta.id_topico);
+      const topico = await Curso_Topicos.findByPk(pasta.id_topico);
       if (topico) {
         const curso = await Curso.findByPk(topico.id_curso);
         if (curso) {

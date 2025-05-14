@@ -13,7 +13,7 @@ const ChatInteracao = sequelize.define('chat_interacoes', {
     allowNull: false,
     references: {
       model: 'chat_mensagens',
-      key: 'id'
+      key: 'id'  // Referência ao campo 'id' em vez de 'id_comentario'
     }
   },
   id_utilizador: {

@@ -8,11 +8,20 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     autoIncrement: true,
     allowNull: false
   },
+  id_comentario: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.id; // Retorna o valor de 'id' quando 'id_comentario' é acessado
+    },
+    set(value) {
+      // Não faz nada, apenas para compatibilidade
+    }
+  },
   id_topico: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'topico_categoria',
+      model: 'topico_area',
       key: 'id_topico'
     }
   },
@@ -64,10 +73,54 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  // Campos adicionados como virtuais para manter compatibilidade
+  denuncias: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return 0; // Retorna um valor padrão para manter compatibilidade
+    }
+  },
+  motivo_denuncia: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return null; // Retorna um valor padrão para manter compatibilidade
+    }
   }
 }, {
   tableName: 'chat_mensagens',
-  timestamps: false
+  timestamps: false,
+  hooks: {
+    // Hook para garantir que os dados sejam consistentes com a interface
+    afterFind: (result) => {
+      if (!result) return result;
+      
+      // Para arrays de resultados (findAll)
+      if (Array.isArray(result)) {
+        result.forEach(item => {
+          if (item && !item.id_comentario) {
+            item.id_comentario = item.id;
+          }
+          // Garantir que denuncias e motivo_denuncia estejam definidos
+          if (item) {
+            item.denuncias = 0;
+            item.motivo_denuncia = null;
+          }
+        });
+      } 
+      // Para resultados únicos (findOne, findByPk)
+      else if (result) {
+        if (!result.id_comentario) {
+          result.id_comentario = result.id;
+        }
+        // Garantir que denuncias e motivo_denuncia estejam definidos
+        result.denuncias = 0;
+        result.motivo_denuncia = null;
+      }
+      
+      return result;
+    }
+  }
 });
 
 module.exports = ChatMensagem;

@@ -1,5 +1,5 @@
 const ChatMensagem = require('../../database/models/ChatMensagem');
-const Topico = require('../../database/models/Topico');
+const Topico = require('../../database/models/Topico_Area');
 const User = require('../../database/models/User');
 const fs = require('fs');
 const path = require('path');

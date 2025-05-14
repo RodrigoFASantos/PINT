@@ -23,16 +23,16 @@ const SolicitarTopicoModal = ({ categoria, onClose, onSuccess }) => {
       
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${API_BASE}/topicos/solicitar`,
-        {
-          id_categoria: categoria.id_categoria || categoria.id,
-          titulo: titulo,
-          descricao: descricao
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+  `${API_BASE}/topicos-area/solicitar`,
+  {
+    id_categoria: categoria.id_categoria || categoria.id,
+    titulo: titulo,
+    descricao: descricao
+  },
+  {
+    headers: { Authorization: `Bearer ${token}` }
+  }
+);
       
       if (response.data.success) {
         if (onSuccess) {

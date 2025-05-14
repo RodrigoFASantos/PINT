@@ -1,6 +1,6 @@
 const ConteudoCurso = require('../../database/models/ConteudoCurso');
 const PastaCurso = require('../../database/models/PastaCurso');
-const TopicoCurso = require('../../database/models/TopicoCurso');
+const Curso_Topicos = require('../../database/models/Curso_Topicos');
 const Curso = require('../../database/models/Curso');
 const { Op } = require('sequelize');
 const fs = require('fs');
@@ -114,7 +114,7 @@ const corrigirConteudosSemCurso = async (req, res) => {
           as: 'pasta',
           include: [
             {
-              model: TopicoCurso,
+              model: Curso_Topicos,
               as: 'topico'
             }
           ]
@@ -227,7 +227,7 @@ const getAllConteudos = async (req, res) => {
           attributes: ['id_pasta', 'nome'],
           include: [
             {
-              model: TopicoCurso,
+              model: Curso_Topicos,
               as: 'topico',
               attributes: ['id_topico', 'nome']
             }
@@ -291,7 +291,7 @@ const getConteudoById = async (req, res) => {
           attributes: ['id_pasta', 'nome'],
           include: [
             {
-              model: TopicoCurso,
+              model: Curso_Topicos,
               as: 'topico',
               attributes: ['id_topico', 'nome']
             }
@@ -491,7 +491,7 @@ const createConteudo = async (req, res) => {
     const curso = await Curso.findByPk(id_curso);
     if (!curso) return res.status(404).json({ message: 'Curso não encontrado' });
 
-    const topico = await TopicoCurso.findByPk(pasta.id_topico);
+    const topico = await Curso_Topicos.findByPk(pasta.id_topico);
     if (!topico || topico.id_curso !== parseInt(id_curso)) {
       return res.status(400).json({ message: 'A pasta selecionada não pertence a este curso' });
     }
@@ -610,7 +610,7 @@ const updateConteudo = async (req, res) => {
 
     // Procurar informações para o diretório
     const pastaAtual = await PastaCurso.findByPk(conteudo.id_pasta);
-    const topicoAtual = pastaAtual ? await TopicoCurso.findByPk(pastaAtual.id_topico) : null;
+    const topicoAtual = pastaAtual ? await Curso_Topicos.findByPk(pastaAtual.id_topico) : null;
     const cursoAtual = await Curso.findByPk(conteudo.id_curso);
 
     if (!pastaAtual || !topicoAtual || !cursoAtual) {
@@ -630,7 +630,7 @@ const updateConteudo = async (req, res) => {
         return res.status(404).json({ message: 'Pasta não encontrada' });
       }
 
-      topicoAlvo = await TopicoCurso.findByPk(pastaAlvo.id_topico);
+      topicoAlvo = await Curso_Topicos.findByPk(pastaAlvo.id_topico);
       if (!topicoAlvo) {
         return res.status(404).json({ message: 'Tópico não encontrado' });
       }
@@ -884,7 +884,7 @@ const updateConteudo = async (req, res) => {
           attributes: ['id_pasta', 'nome'],
           include: [
             {
-              model: TopicoCurso,
+              model: Curso_Topicos,
               as: 'topico',
               attributes: ['id_topico', 'nome']
             }

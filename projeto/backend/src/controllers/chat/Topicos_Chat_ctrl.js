@@ -1,4 +1,4 @@
-const { Topico_Categoria, Comentario_Topico, User, Categoria } = require('../../database/associations');
+const { Topico_Area, ChatMensagem, User, Categoria } = require('../../database/associations');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
@@ -31,7 +31,7 @@ const getTopico = async (req, res) => {
     const { id } = req.params;
     console.log(`Buscando tópico com ID: ${id}`);
 
-    const topico = await Topico_Categoria.findOne({
+    const topico = await Topico_Area.findOne({
       where: { id_topico: id },
       include: [
         {
@@ -76,7 +76,7 @@ const getMensagens = async (req, res) => {
     const { id } = req.params;
     console.log(`Buscando mensagens para o tópico ID: ${id}`);
 
-    const mensagens = await Comentario_Topico.findAll({
+    const mensagens = await ChatMensagem.findAll({
       where: { id_topico: id },
       include: [
         {
@@ -114,7 +114,7 @@ const enviarMensagem = async (req, res) => {
     console.log(`Enviando mensagem para tópico ${id} pelo utilizador ${userId}`);
     console.log(`Texto da mensagem: ${texto}`);
 
-    const topico = await Topico_Categoria.findByPk(id, {
+    const topico = await Topico_Area.findByPk(id, {
       include: [{ model: Categoria, as: 'categoria' }]
     });
 
@@ -175,10 +175,10 @@ const enviarMensagem = async (req, res) => {
       mensagemData.tipo_anexo = getFileType(req.file.mimetype);
     }
 
-    const novaMensagem = await Comentario_Topico.create(mensagemData);
+    const novaMensagem = await ChatMensagem.create(mensagemData);
     console.log(`Mensagem criada com ID: ${novaMensagem.id_comentario}`);
 
-    const mensagemCompleta = await Comentario_Topico.findOne({
+    const mensagemCompleta = await ChatMensagem.findOne({
       where: { id_comentario: novaMensagem.id_comentario },
       include: [
         {
@@ -225,7 +225,7 @@ const avaliarMensagem = async (req, res) => {
       });
     }
 
-    const mensagem = await Comentario_Topico.findByPk(idComentario);
+    const mensagem = await ChatMensagem.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
         success: false,
@@ -281,7 +281,7 @@ const denunciarMensagem = async (req, res) => {
       });
     }
 
-    const mensagem = await Comentario_Topico.findByPk(idComentario);
+    const mensagem = await ChatMensagem.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
         success: false,

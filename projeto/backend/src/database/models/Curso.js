@@ -65,11 +65,11 @@ const Curso = sequelize.define("curso", {
       key: "id_area",
     },
   },
-  id_topico_categoria: {
+  id_topico_area: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "topico_categoria",
+      model: "topico_area",
       key: "id_topico",
     },
   },

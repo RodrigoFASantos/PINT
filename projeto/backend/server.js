@@ -163,9 +163,8 @@ const rotas = [
 
   // Chat
   { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
-  { caminho: "./src/routes/chat/Topico_routes", prefixo: "/api/topicos" },
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
-  { caminho: "./src/routes/chat/topico_categoria_route", prefixo: "/api/topicos-categoria" },
+  { caminho: "./src/routes/chat/Topico_area_routes", prefixo: "/api/topicos-area" },
   { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" },
   { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
 

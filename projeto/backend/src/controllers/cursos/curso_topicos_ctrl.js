@@ -1,4 +1,6 @@
-const TopicoCurso = require("../../database/models/TopicoCurso");
+const Curso_Topicos = require("../../database/models/Curso_Topicos");
+
+
 const PastaCurso = require("../../database/models/PastaCurso");
 const ConteudoCurso = require("../../database/models/ConteudoCurso");
 const Curso = require("../../database/models/Curso");
@@ -12,7 +14,7 @@ const getTopicosByCurso = async (req, res) => {
     const { id_curso } = req.params;
     
     // Procurar tópicos
-    const topicos = await TopicoCurso.findAll({
+    const topicos = await Curso_Topicos.findAll({
       where: { 
         id_curso,
         ativo: true 
@@ -94,7 +96,7 @@ const createTopico = async (req, res) => {
     // Criar o diretório se não existir
     uploadUtils.ensureDir(topicoDir);
 
-    const novoTopico = await TopicoCurso.create({
+    const novoTopico = await Curso_Topicos.create({
       nome,
       id_curso,
       ordem: ordem || 1,
@@ -119,7 +121,7 @@ const getTopicoById = async (req, res) => {
     const { id } = req.params;
 
     // Procurar o tópico
-    const topico = await TopicoCurso.findByPk(id);
+    const topico = await Curso_Topicos.findByPk(id);
 
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
@@ -170,7 +172,7 @@ const updateTopico = async (req, res) => {
     const { id } = req.params;
     const { nome, ordem, ativo } = req.body;
 
-    const topico = await TopicoCurso.findByPk(id);
+    const topico = await Curso_Topicos.findByPk(id);
 
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
@@ -226,7 +228,7 @@ const deleteTopico = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const topico = await TopicoCurso.findByPk(id);
+    const topico = await Curso_Topicos.findByPk(id);
 
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });

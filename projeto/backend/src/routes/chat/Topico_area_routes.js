@@ -6,30 +6,33 @@ const { uploadChatFile } = require('../../middleware/upload_middleware');
 
 const {
   getAllTopicosCategoria,
+  getAllTopicos,
   getTopicoById,
   getTopicosByCategoria,
+  createTopico,
+  solicitarTopico,
+  updateTopico,
+  deleteTopico,
   getComentariosByTopico,
   createComentario,
   avaliarComentario,
   denunciarComentario
-} = require("../../controllers/chat/topico_categoria_ctrl");
-
-const {
-  createTopico,
-  updateTopico,
-  deleteTopico
-} = require("../../controllers/chat/Topico_ctrl");
+} = require("../../controllers/chat/Topico_area_ctrl");
 
 // Middleware para verificar autenticação
 router.use(authMiddleware);
 
-// Rotas para tópicos
-router.get("/", getAllTopicosCategoria);
+// Rotas gerais para tópicos
+router.get("/", getAllTopicosCategoria);  // Mantém a rota original para compatibilidade
+router.get("/todos", getAllTopicos);      // Nova rota para listar todos os tópicos com formato alternativo
+
+// Rotas para manipulação de tópicos específicos
 router.get("/:id", getTopicoById);
 router.get("/categoria/:id_categoria", getTopicosByCategoria);
 
-// Rota para criar um novo tópico
+// Rotas para criar e manipular tópicos
 router.post("/", autorizar([1, 2]), createTopico);
+router.post("/solicitar", solicitarTopico);
 router.put("/:id", autorizar([1, 2]), updateTopico);
 router.delete("/:id", autorizar([1, 2]), deleteTopico);
 

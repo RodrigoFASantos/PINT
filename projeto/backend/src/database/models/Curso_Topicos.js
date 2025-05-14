@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const TopicoCurso = sequelize.define("curso_topico", {
+const Curso_Topicos = sequelize.define("curso_topico", {
   id_topico: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -42,4 +42,4 @@ const TopicoCurso = sequelize.define("curso_topico", {
   timestamps: false,
 });
 
-module.exports = TopicoCurso;
+module.exports = Curso_Topicos;

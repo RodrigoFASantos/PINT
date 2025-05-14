@@ -4,22 +4,19 @@ const authMiddleware = require("../../middleware/auth");
 const autorizar = require("../../middleware/autorizar");
 const { uploadChatFile } = require('../../middleware/upload_middleware');
 
+// Importar todas as funções do controller unificado
 const {
   getAllTopicosCategoria,
   getTopicoById,
   getTopicosByCategoria,
+  createTopico,
+  updateTopico,
+  deleteTopico,
   getComentariosByTopico,
   createComentario,
   avaliarComentario,
   denunciarComentario
-} = require("../../controllers/chat/topico_categoria_ctrl");
-
-const {
-  createTopico,
-  updateTopico,
-  deleteTopico
-} = require("../../controllers/chat/Topico_ctrl");
-
+} = require("../../controllers/chat/Topico_area_ctrl");
 
 // Middleware para verificar autenticação
 router.use(authMiddleware);
@@ -29,7 +26,7 @@ router.get("/", getAllTopicosCategoria);
 router.get("/:id", getTopicoById);
 router.get("/categoria/:id_categoria", getTopicosByCategoria);
 
-// Rota para criar um novo tópico
+// Rotas para criar e manipular tópicos
 router.post("/", autorizar([1, 2]), createTopico);
 router.put("/:id", autorizar([1, 2]), updateTopico);
 router.delete("/:id", autorizar([1, 2]), deleteTopico);

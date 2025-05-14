@@ -5,7 +5,7 @@ const autorizar = require('../../middleware/autorizar');
 const { 
   getAllCursos, getCursosByCategoria, createCurso, getCursoById, 
   getInscricoesCurso, updateCurso, deleteCurso, getCursosSugeridos,
-  getTopicosCurso, createTopicoCurso, updateTopicoCurso, deleteTopicoCurso
+  getTopicosCurso, createCurso_Topicos, updateCurso_Topicos, deleteCurso_Topicos
 } = require("../../controllers/cursos/cursos_ctrl");
 const uploadUtils = require('../../middleware/upload');
 
@@ -21,8 +21,8 @@ router.get("/:id/inscricoes", verificarToken, getInscricoesCurso);
 
 // Rotas para tópicos de cursos
 router.get("/:id/topicos", getTopicosCurso);
-router.post("/:id/topicos", verificarToken, autorizar([1, 2, 3]), createTopicoCurso);
-router.put("/topicos/:id", verificarToken, autorizar([1, 2, 3]), updateTopicoCurso);
-router.delete("/topicos/:id", verificarToken, autorizar([1, 2, 3]), deleteTopicoCurso);
+router.post("/:id/topicos", verificarToken, autorizar([1, 2, 3]), createCurso_Topicos);
+router.put("/topicos/:id", verificarToken, autorizar([1, 2, 3]), updateCurso_Topicos);
+router.delete("/topicos/:id", verificarToken, autorizar([1, 2, 3]), deleteCurso_Topicos);
 
 module.exports = router;

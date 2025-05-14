@@ -97,7 +97,8 @@ const ForumPartilha = () => {
       const token = localStorage.getItem('token');
       console.log(`A carregar tópicos para categoria: ${categoriaId}`);
 
-      const response = await axios.get(`${API_BASE}/topicos-categoria/categoria/${categoriaId}`, {
+
+      const response = await axios.get(`${API_BASE}/topicos-area/categoria/${categoriaId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const Topico_Categoria = sequelize.define("topico_categoria", {
+const Topico_Area = sequelize.define("topico_area", {
   id_topico: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -51,8 +51,8 @@ const Topico_Categoria = sequelize.define("topico_categoria", {
     defaultValue: true,
   }
 }, {
-  tableName: "topico_categoria",
+  tableName: "topico_area",
   timestamps: false,
 });
 
-module.exports = Topico_Categoria;
+module.exports = Topico_Area;

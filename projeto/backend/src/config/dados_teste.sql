@@ -117,9 +117,9 @@ VALUES
   (9, 'https://fcm.googleapis.com/fcm/send/example-endpoint-2', 'base64-encoded-p256dh-key-2', 'base64-encoded-auth-secret-2', NOW());
 
 -- =============================================
--- 11. TOPICO_CATEGORIA
+-- 11. TOPICO_AREA
 -- =============================================
-INSERT INTO topico_categoria (id_categoria, id_area, titulo, descricao, criado_por, data_criacao, ativo)
+INSERT INTO topico_area (id_categoria, id_area, titulo, descricao, criado_por, data_criacao, ativo)
 VALUES
   (1, 1, 'JavaScript Moderno', 'Discussões sobre JavaScript ES6+', 1, NOW(), TRUE),
   (1, 2, 'Desenvolvimento React Native', 'Tópicos sobre desenvolvimento mobile com React Native', 4, NOW(), TRUE),
@@ -139,7 +139,7 @@ VALUES
 -- =============================================
 -- 13. CURSO
 -- =============================================
-INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_categoria, id_area, id_topico_categoria, imagem_path, dir_path)
+INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_categoria, id_area, id_topico_area, imagem_path, dir_path)
 VALUES
   ('JavaScript Avançado', 'Curso completo de JavaScript moderno', 'assincrono', 20, '2025-06-01', '2025-08-30', 'planeado', TRUE, 4, 1, 1, 1, 'uploads/cursos/javascript_avancado.jpg', 'uploads/cursos/javascript_avancado/'),
   ('React Native do Zero', 'Aprenda a desenvolver apps mobile', 'sincrono', 15, '2025-07-15', '2025-09-30', 'planeado', TRUE, 4, 1, 2, 2, 'uploads/cursos/react_native.jpg', 'uploads/cursos/react_native/'),
@@ -199,6 +199,8 @@ VALUES
 -- =============================================
 INSERT INTO inscricoes_cursos (id_utilizador, id_curso, data_inscricao, estado, motivacao, expectativas)
 VALUES
+  (1, 1, NOW(), 'inscrito', 'Inscrição para avaliação do curso como administrador', 'Avaliar a qualidade e estrutura do curso'),
+  (1, 2, NOW(), 'inscrito', 'Análise das metodologias de ensino aplicadas', 'Verificar a eficácia do material didático'),
   (8, 1, NOW(), 'inscrito', 'Aprender JavaScript avançado para melhorar habilidades profissionais', 'Espero aprender técnicas modernas de JavaScript'),
   (9, 1, NOW(), 'inscrito', 'Atualização profissional', 'Aprofundar conhecimentos em JavaScript'),
   (10, 2, NOW(), 'inscrito', 'Interesse em desenvolvimento mobile', 'Aprender a criar aplicativos completos'),

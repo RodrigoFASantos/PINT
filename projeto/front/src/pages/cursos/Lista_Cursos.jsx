@@ -6,6 +6,8 @@ import axios from 'axios';
 import Sidebar from "../../components/Sidebar";
 import { useAuth } from "../../contexts/AuthContext";
 import "./css/Lista_Cursos.css";
+import fallbackCurso from '../../images/default_image.png';
+
 
 export default function CursosPage() {
   const [cursos, setCursos] = useState([]);
@@ -44,25 +46,25 @@ export default function CursosPage() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-// Carregar tópicos
-useEffect(() => {
-  const fetchTopicos = async () => {
-    if (areaId) {
-      try {
-        const response = await axios.get(`${API_BASE}/topicos-curso/area/${areaId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        setTopicos(response.data);
-      } catch (error) {
-        console.error("Erro ao carregar tópicos:", error);
+  // Carregar tópicos
+  useEffect(() => {
+    const fetchTopicos = async () => {
+      if (areaId) {
+        try {
+          const response = await axios.get(`${API_BASE}/topicos-curso/area/${areaId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          setTopicos(response.data);
+        } catch (error) {
+          console.error("Erro ao carregar tópicos:", error);
+        }
       }
-    }
-  };
+    };
 
-  fetchTopicos();
-}, [areaId]);
+    fetchTopicos();
+  }, [areaId]);
 
   // Função para verificar os diferentes campos possíveis de id_categoria
   const getCategoriaId = (area) => {
@@ -130,46 +132,46 @@ useEffect(() => {
 
 
   // Função para buscar cursos com filtros
-const fetchCursos = async () => {
-  try {
-    setIsLoading(true);
+  const fetchCursos = async () => {
+    try {
+      setIsLoading(true);
 
-    // Construir parâmetros da query
-    const params = new URLSearchParams({
-      page: currentPage.toString(),
-      limit: cursosPerPage.toString()
-    });
+      // Construir parâmetros da query
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: cursosPerPage.toString()
+      });
 
-    // Adicionar filtros se estiverem ativos
-    if (searchTerm) {
-      params.append('search', searchTerm);
-    }
-    if (categoriaId) {
-      params.append('categoria', categoriaId);
-    }
-    if (areaId) {
-      params.append('area', areaId);
-    }
-    if (topicoId) {
-      params.append('topico', topicoId);
-    }
-    if (tipoFiltro !== 'todos') {
-      params.append('tipo', tipoFiltro);
-    }
+      // Adicionar filtros se estiverem ativos
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      if (categoriaId) {
+        params.append('categoria', categoriaId);
+      }
+      if (areaId) {
+        params.append('area', areaId);
+      }
+      if (topicoId) {
+        params.append('topico', topicoId);
+      }
+      if (tipoFiltro !== 'todos') {
+        params.append('tipo', tipoFiltro);
+      }
 
-    const url = `${API_BASE}/cursos?${params.toString()}`;
-    const response = await fetch(url);
-    const data = await response.json();
+      const url = `${API_BASE}/cursos?${params.toString()}`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-    setCursos(data.cursos || []);
-    setTotalPages(data.totalPages || 1);
-    setTotalCursos(data.total || 0);
-    setIsLoading(false);
-  } catch (error) {
-    console.error("Erro ao carregar cursos:", error);
-    setIsLoading(false);
-  }
-};
+      setCursos(data.cursos || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCursos(data.total || 0);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Erro ao carregar cursos:", error);
+      setIsLoading(false);
+    }
+  };
 
 
 
@@ -297,7 +299,7 @@ const fetchCursos = async () => {
       return IMAGES.CURSO(nomeCursoSlug);
     }
 
-    return '/placeholder-curso.jpg';
+    return fallbackCurso;
   };
 
   const clearFilters = () => {
@@ -461,34 +463,34 @@ const fetchCursos = async () => {
       )}
 
       {areaId && (
-  <div className="custom-select-wrapper">
-    <select
-      className="custom-select-button select-topico"
-      value={topicoId}
-      onChange={(e) => setTopicoId(e.target.value)}
-      disabled={!areaId || isLoading}
-    >
-      <option value="">Selecionar Tópico</option>
-      {isLoading ? (
-        <option value="" disabled>A carregar tópicos...</option>
-      ) : topicos.length > 0 ? (
-        topicos.map(topico => {
-          const topicoIdValue = topico.id_topico || topico.id;
-          const topicoNomeValue = topico.nome || topico.titulo;
+        <div className="custom-select-wrapper">
+          <select
+            className="custom-select-button select-topico"
+            value={topicoId}
+            onChange={(e) => setTopicoId(e.target.value)}
+            disabled={!areaId || isLoading}
+          >
+            <option value="">Selecionar Tópico</option>
+            {isLoading ? (
+              <option value="" disabled>A carregar tópicos...</option>
+            ) : topicos.length > 0 ? (
+              topicos.map(topico => {
+                const topicoIdValue = topico.id_topico || topico.id;
+                const topicoNomeValue = topico.nome || topico.titulo;
 
-          return (
-            <option key={topicoIdValue} value={topicoIdValue}>
-              {topicoNomeValue}
-            </option>
-          );
-        })
-      ) : (
-        <option value="" disabled>Nenhum tópico disponível</option>
+                return (
+                  <option key={topicoIdValue} value={topicoIdValue}>
+                    {topicoNomeValue}
+                  </option>
+                );
+              })
+            ) : (
+              <option value="" disabled>Nenhum tópico disponível</option>
+            )}
+          </select>
+          <i className="fas fa-tag custom-select-icon"></i>
+        </div>
       )}
-    </select>
-    <i className="fas fa-tag custom-select-icon"></i>
-  </div>
-)}
 
       {/* Indicador de carregamento */}
       {isLoading && (
@@ -512,16 +514,21 @@ const fetchCursos = async () => {
                 backgroundPosition: 'center'
               }}
             >
-              <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                <h3 className="text-white text-xl font-semibold text-center px-4">{curso.nome}</h3>
-                <p className="text-white text-sm mt-2">
+
+              <div className="curso-card-overlay">
+                <span className="curso-overlay-title">{curso.nome}</span>
+                <span className="curso-overlay-dates">
+                  {new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}
+                </span>
+                <span className="curso-overlay-vagas">
                   {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
-                </p>
+                </span>
               </div>
             </div>
           ))}
         </div>
       )}
+
 
       {/* Mensagem para quando não há cursos */}
       {!isLoading && cursos.length === 0 && (
