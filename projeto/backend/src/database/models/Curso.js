@@ -49,14 +49,6 @@ const Curso = sequelize.define("curso", {
       key: "id_utilizador",
     },
   },
-  id_area: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: "areas",
-      key: "id_area",
-    },
-  },
   id_categoria: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -65,11 +57,19 @@ const Curso = sequelize.define("curso", {
       key: "id_categoria",
     },
   },
-  id_topico_organizacional: {
+  id_area: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "topicos_categorias",
+      model: "areas",
+      key: "id_area",
+    },
+  },
+  id_topico_categoria: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "topico_categoria",
       key: "id_topico",
     },
   },
@@ -80,7 +80,7 @@ const Curso = sequelize.define("curso", {
   dir_path: {
     type: DataTypes.STRING(500),
     allowNull: true,
-  },
+  }
 }, {
   tableName: "curso",
   timestamps: false,

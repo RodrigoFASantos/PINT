@@ -11,7 +11,7 @@ const FormadorAssociacoesPendentes = sequelize.define("formador_associacoes_pend
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: '"User_Pendente"',
+      model: "User_Pendente",
       key: "id",
     },
     unique: true

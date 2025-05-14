@@ -12,11 +12,11 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'topicos_categorias',
+      model: 'topico_categoria',
       key: 'id_topico'
     }
   },
-  id_usuario: {
+  id_utilizador: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -28,36 +28,46 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     type: DataTypes.TEXT,
     allowNull: true // Permite mensagens só com anexo
   },
-  anexoUrl: {
+  anexo_url: {
     type: DataTypes.STRING(255),
     allowNull: true
   },
-  anexoNome: {
+  anexo_nome: {
     type: DataTypes.STRING(100),
     allowNull: true
   },
-  tipoAnexo: {
+  tipo_anexo: {
     type: DataTypes.ENUM('imagem', 'video', 'file'),
     allowNull: true
   },
-  dataCriacao: {
+  data_criacao: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
+  },
+  likes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  dislikes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  foi_denunciada: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  oculta: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   tableName: 'chat_mensagens',
-  timestamps: false, // Usamos dataCriacao em vez de createdAt
-  indexes: [
-    {
-      name: 'idx_chat_mensagens_topico',
-      fields: ['id_topico']
-    },
-    {
-      name: 'idx_chat_mensagens_usuario',
-      fields: ['id_usuario']
-    }
-  ]
+  timestamps: false
 });
 
 module.exports = ChatMensagem;

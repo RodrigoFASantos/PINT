@@ -34,7 +34,7 @@ const ConteudoCurso = sequelize.define("curso_topico_pasta_conteudo", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "curso_topico_pasta", // Changed to match the tableName in PastaCurso
+      model: "curso_topico_pasta",
       key: "id_pasta",
     },
   },
@@ -42,7 +42,7 @@ const ConteudoCurso = sequelize.define("curso_topico_pasta_conteudo", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "curso", // Changed to match tableName in Curso
+      model: "curso",
       key: "id_curso",
     },
   },
@@ -62,7 +62,7 @@ const ConteudoCurso = sequelize.define("curso_topico_pasta_conteudo", {
     defaultValue: true,
   },
 }, {
-  tableName: "curso_topico_pasta_conteudo", // Left as is since it's already correct
+  tableName: "curso_topico_pasta_conteudo",
   timestamps: false,
 });
 

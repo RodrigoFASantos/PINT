@@ -1,8 +1,3 @@
-/*
-Modelo para a tabela de utilizadores pendentes
-Este modelo é utilizado para armazenar informações de usuários que estão em processo de registro, mas ainda não foram confirmados, ou seja, ainda não clicaram no botão de confirmar registo no email.
-*/
-
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 const bcrypt = require('bcrypt');
@@ -47,7 +42,7 @@ const User_Pendente = sequelize.define('User_Pendente', {
     allowNull: false
   }
 }, {
-  tableName: '"User_Pendente"',  // Nome exato da tabela com aspas duplas
+  tableName: "User_Pendente",
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at'

@@ -33,6 +33,10 @@ const TopicoCurso = sequelize.define("curso_topico", {
     type: DataTypes.STRING(500),
     allowNull: true,
   },
+  dir_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  }
 }, {
   tableName: "curso_topico",
   timestamps: false,

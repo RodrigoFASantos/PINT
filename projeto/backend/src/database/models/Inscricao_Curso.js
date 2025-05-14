@@ -19,7 +19,7 @@ const Inscricao_Curso = sequelize.define("Inscricao_Curso", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "cursos",
+      model: "curso",
       key: "id_curso",
     },
   },

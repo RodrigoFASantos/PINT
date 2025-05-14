@@ -1,30 +1,22 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
-const Topico = sequelize.define('topicos', {
-  id: {
+const ChatDenuncia = sequelize.define('chat_denuncias', {
+  id_denuncia: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
     allowNull: false
   },
-  id_categoria: {
+  id_mensagem: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'categorias',
-      key: 'id_categoria'
+      model: 'chat_mensagens',
+      key: 'id'
     }
   },
-  id_area: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'areas',
-      key: 'id_area'
-    }
-  },
-  id_criador: {
+  id_denunciante: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -32,7 +24,7 @@ const Topico = sequelize.define('topicos', {
       key: 'id_utilizador'
     }
   },
-  titulo: {
+  motivo: {
     type: DataTypes.STRING(100),
     allowNull: false
   },
@@ -40,33 +32,20 @@ const Topico = sequelize.define('topicos', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  dataCriacao: {
+  data_denuncia: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  ativo: {
+  resolvida: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: true
+    defaultValue: false
+  },
+  acao_tomada: {
+    type: DataTypes.STRING(50),
+    allowNull: true
   }
-}, {
-  tableName: 'topicos',
-  timestamps: false,
-  indexes: [
-    {
-      name: 'idx_topicos_categoria',
-      fields: ['id_categoria']
-    },
-    {
-      name: 'idx_topicos_area',
-      fields: ['id_area']
-    },
-    {
-      name: 'idx_topicos_criador',
-      fields: ['id_criador']
-    }
-  ]
 });
 
-module.exports = Topico;
+module.exports = ChatDenuncia;

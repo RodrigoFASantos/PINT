@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
-const Topico_Categoria = sequelize.define("topicos_categorias", {
+const Topico_Categoria = sequelize.define("topico_categoria", {
   id_topico: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -44,9 +44,14 @@ const Topico_Categoria = sequelize.define("topicos_categorias", {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW,
+  },
+  ativo: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
   }
 }, {
-  tableName: "topicos_categorias",
+  tableName: "topico_categoria",
   timestamps: false,
 });
 

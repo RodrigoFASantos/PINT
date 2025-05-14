@@ -19,7 +19,7 @@ const PastaCurso = sequelize.define("curso_topico_pasta", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "curso_topico", // Alterado de "topicos_curso" para "curso_topico"
+      model: "curso_topico",
       key: "id_topico",
     },
   },

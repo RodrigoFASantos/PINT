@@ -3,7 +3,6 @@ const Avaliacao = require('./models/Avaliacao');
 const Cargo = require('./models/Cargo');
 const Categoria = require('./models/Categoria');
 const ChatMensagem = require('./models/ChatMensagem');
-const Comentario_Topico = require('./models/Comentario_Topico');
 const ConteudoCurso = require('./models/ConteudoCurso');
 const Curso = require('./models/Curso');
 const FormadorCategoria = require('./models/Formador_Categoria');
@@ -18,7 +17,6 @@ const QuizPergunta = require('./models/QuizPergunta');
 const QuizResposta = require('./models/QuizResposta');
 const QuizRespostaDetalhe = require('./models/QuizRespostaDetalhe');
 const TipoConteudo = require('./models/TipoConteudo');
-const Topico = require('./models/Topico');
 const Topico_Categoria = require('./models/Topico_Categoria');
 const TopicoCurso = require('./models/TopicoCurso');
 const Trabalho_Entregue = require('./models/Trabalho_Entregue');
@@ -38,7 +36,6 @@ const models = {
   Cargo,
   Categoria,
   ChatMensagem,
-  Comentario_Topico,
   ConteudoCurso,
   Curso,
   FormadorCategoria,
@@ -53,7 +50,6 @@ const models = {
   QuizResposta,
   QuizRespostaDetalhe,
   TipoConteudo,
-  Topico,
   Topico_Categoria,
   TopicoCurso,
   Trabalho_Entregue,
@@ -150,13 +146,8 @@ User.belongsToMany(Area, {
 });
 
 User.hasMany(ChatMensagem, {
-  foreignKey: "id_usuario",
+  foreignKey: "id_utilizador",
   as: "mensagens_enviadas"
-});
-
-User.hasMany(Topico, {
-  foreignKey: "id_criador",
-  as: "topicos_criados"
 });
 
 // === Associações Cargo ===
@@ -182,10 +173,6 @@ Categoria.hasMany(Curso, {
   as: "cursos"
 });
 
-Categoria.hasMany(Topico, {
-  foreignKey: "id_categoria",
-  as: "topicos"
-});
 
 // Nova associação de Categoria com Formadores
 Categoria.belongsToMany(User, {
@@ -206,10 +193,7 @@ Area.hasMany(Curso, {
   as: "cursos"
 });
 
-Area.hasMany(Topico, {
-  foreignKey: "id_area",
-  as: "topicos"
-});
+
 
 // Nova associação de Area com Formadores
 Area.belongsToMany(User, {
@@ -237,13 +221,13 @@ Curso.belongsTo(Categoria, {
 
 
 Curso.belongsTo(Topico_Categoria, {
-  foreignKey: "id_topico_organizacional",
-  as: "topico_organizacional"
+  foreignKey: "id_topico_categoria",
+  as: "topico_categoria"
 });
 
 
 Topico_Categoria.hasMany(Curso, {
-  foreignKey: "id_topico_organizacional",
+  foreignKey: "id_topico_categoria",
   as: "cursos_associados"
 });
 
@@ -381,27 +365,6 @@ OcorrenciaCurso.belongsTo(Curso, {
   as: "curso_nova_ocorrencia"
 });
 
-// === Associações Topico ===
-Topico.belongsTo(User, {
-  foreignKey: "id_criador",
-  as: "criador"
-});
-
-Topico.belongsTo(Categoria, {
-  foreignKey: "id_categoria",
-  as: "categoria"
-});
-
-Topico.belongsTo(Area, {
-  foreignKey: "id_area",
-  as: "area"
-});
-
-Topico.hasMany(ChatMensagem, {
-  foreignKey: "id_topico",
-  as: "mensagens"
-});
-
 // === Associações Topico_Categoria ===
 Topico_Categoria.belongsTo(Categoria, {
   foreignKey: "id_categoria",
@@ -423,11 +386,6 @@ Topico_Categoria.belongsTo(Area, {
 Area.hasMany(Topico_Categoria, {
   foreignKey: "id_area",
   as: "topicos_categoria"
-});
-
-Topico_Categoria.hasMany(Comentario_Topico, {
-  foreignKey: "id_topico",
-  as: "comentarios"
 });
 
 // === Associações TopicoCurso ===
@@ -464,23 +422,17 @@ ConteudoCurso.belongsTo(Curso, {
 });
 
 // === Associações ChatMensagem ===
-ChatMensagem.belongsTo(Topico, {
+ChatMensagem.belongsTo(Topico_Categoria, {
   foreignKey: "id_topico",
   as: "topico"
+});
+
+Topico_Categoria.hasMany(ChatMensagem, {
+  foreignKey: "id_topico",
+  as: "mensagens"
 });
 
 ChatMensagem.belongsTo(User, {
-  foreignKey: "id_usuario",
-  as: "usuario"
-});
-
-// === Associações Comentario_Topico ===
-Comentario_Topico.belongsTo(Topico_Categoria, {
-  foreignKey: "id_topico",
-  as: "topico"
-});
-
-Comentario_Topico.belongsTo(User, {
   foreignKey: "id_utilizador",
   as: "utilizador"
 });
