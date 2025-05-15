@@ -1,13 +1,13 @@
 const ChatMensagem = require("../../database/models/ChatMensagem");
 const User = require("../../database/models/User");
-const ChatInteracao = require("../../database/models/ChatInteracao");
+const ChatInteracao = require("../../database/models/ChatInteracoes");
 const ChatDenuncia = require("../../database/models/ChatDenuncia");
 const Topico_Area = require("../../database/models/Topico_Area");
 const Categoria = require("../../database/models/Categoria");
 const { Op } = require("sequelize");
 const fs = require("fs");
 const path = require("path");
-const uploadUtils = require("../../utils/uploadUtils");
+const uploadUtils = require('../../middleware/upload');
 
 // Obter todos os comentários
 const getAllComentarios = async (req, res) => {

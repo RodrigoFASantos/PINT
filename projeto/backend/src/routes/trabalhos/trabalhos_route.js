@@ -8,7 +8,7 @@ const uploadMiddleware = require("../../middleware/upload_middleware");
 const uploadUtils = require("../../middleware/upload");
 const Curso = require("../../database/models/Curso");
 const PastaCurso = require("../../database/models/PastaCurso");
-const TopicoCurso = require("../../database/models/TopicoCurso");
+const TopicoCurso = require("../../database/models/Curso_Topicos");
 
 // Criar middleware personalizado para lidar com uploads de trabalhos
 const uploadTrabalho = async (req, res, next) => {

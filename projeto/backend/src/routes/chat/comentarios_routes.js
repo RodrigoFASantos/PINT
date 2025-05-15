@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
 const { getAllComentarios, createComentario, avaliarComentario, denunciarComentario } = require("../../controllers/chat/comentarios_ctrl");
-const upload = require("../../middleware/upload");
+const { upload } = require("../../middleware/upload"); 
 
 // Rotas para comentários
 router.get("/", getAllComentarios);

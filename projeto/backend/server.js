@@ -68,6 +68,16 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log(`❌ Utilizador desconectado: ${userId}`);
   });
+
+  socket.on("joinTema", (temaId) => {
+    socket.join(`tema_${temaId}`);
+    console.log(`➕ ${userId} entrou no tema ${temaId}`);
+  });
+
+  socket.on("leaveTema", (temaId) => {
+    socket.leave(`tema_${temaId}`);
+    console.log(`➖ ${userId} saiu do tema ${temaId}`);
+  });
 });
 
 // Middlewares globais
@@ -110,7 +120,7 @@ server.timeout = 3600000; // 1 hora
 function carregarRota(caminho, prefixo) {
   try {
     const rotaPath = path.resolve(caminho);
-    
+
     if (!fs.existsSync(`${rotaPath}.js`)) {
       console.warn(`⚠️ Arquivo não encontrado: ${rotaPath}.js`);
       app.use(prefixo, (req, res) =>
@@ -118,9 +128,9 @@ function carregarRota(caminho, prefixo) {
       );
       return false;
     }
-    
+
     const rota = require(rotaPath);
-    
+
     if (!rota || typeof rota !== "function" || !rota.stack) {
       console.warn(`⚠️ Módulo de rota inválido: ${prefixo}`);
       app.use(prefixo, (req, res) =>
@@ -128,7 +138,7 @@ function carregarRota(caminho, prefixo) {
       );
       return false;
     }
-    
+
     app.use(prefixo, rota);
     console.log(`✅ Rota carregada: ${prefixo} (${rotaPath})`);
     return true;
@@ -166,7 +176,9 @@ const rotas = [
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
   { caminho: "./src/routes/chat/Topico_area_routes", prefixo: "/api/topicos-area" },
   { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" },
+  { caminho: "./src/routes/chat/Forum_Tema_routes", prefixo: "/api/forum-tema" },
   { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
+
 
   // Resto das Rotas
   { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },
@@ -185,7 +197,7 @@ app.use("/api/uploads", express.static(path.join(process.cwd(), process.env.CAMI
 
 // Rota raiz
 app.get("/api", (req, res) => {
-  res.json({ 
+  res.json({
     message: "API está funcionando!",
     version: "1.0.0",
     date: new Date().toISOString()

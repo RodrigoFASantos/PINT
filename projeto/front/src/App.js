@@ -13,11 +13,10 @@ import ConfirmAccount from './pages/auth/confirmAccount';
 import Home from './pages/home';
 
 // Páginas de Cursos
-import Lista_Cursos from './pages/cursos/Lista_Cursos';
-import Criar_Curso from './pages/cursos/Criar_Curso';
+import ListaCursos from './pages/cursos/Lista_Cursos';
+import CriarCurso from './pages/cursos/Criar_Curso';
 import CursoPagina from './pages/cursos/Pagina_Curso';
-import Editar_Curso from './pages/cursos/Editar_Curso';
-import Detalhes_Curso from './components/cursos/Detalhes_Curso';
+import EditarCurso from './pages/cursos/Editar_Curso';
 
 // Páginas de Utilizadores
 import PerfilUser from './pages/users/Perfil_Utilizador';
@@ -31,15 +30,17 @@ import DetalhesFormadores from './pages/users/Detalhes_Formadores';
 
 // Páginas do Fórum
 import ForumPartilha from './pages/forum/Forum';
+import ChatConversas from './pages/forum/Chat_Conversas';
+import TopicosChatComponent from './components/forum/Topicos_Chat';
 
 // Páginas de Gestão
 import AdminDashboard from './pages/gestao/Admin_Dashboard';
-import Gerir_Utilizadores from './pages/gestao/gerir_Utilizadores';
-import Gerir_Inscricoes from './pages/gestao/gerir_Inscricoes';
-import Gerir_Categoria from './pages/gestao/gerir_Categoria';
-import Gerir_Area from './pages/gestao/gerir_Area';
-import Gerir_Topicos from './pages/gestao/gerir_Topicos';
-import Gerir_Cursos from './pages/gestao/gerir_Cursos';
+import GerirUtilizadores from './pages/gestao/gerir_Utilizadores';
+import GerirInscricoes from './pages/gestao/gerir_Inscricoes';
+import GerirCategoria from './pages/gestao/gerir_Categoria';
+import GerirArea from './pages/gestao/gerir_Area';
+import GerirTopicos from './pages/gestao/gerir_Topicos';
+import GerirCursos from './pages/gestao/gerir_Cursos';
 
 // Páginas de Avaliações
 import QuizPage from './pages/cursos/QuizPage';
@@ -49,7 +50,6 @@ import Notificacoes from './pages/Notificacoes';
 
 // Componentes
 import ProtectedRoute from './components/ProtectedRoute';
-import TopicosChatComponent from './components/forum/Topicos_Chat';
 
 // Wrapper para adicionar logs em rotas
 const RouteWrapper = ({ path, children }) => {
@@ -118,7 +118,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/cursos">
                     <ProtectedRoute allowedRoles={[1, 2, 3]}>
-                      <Lista_Cursos />
+                      <ListaCursos />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -140,7 +140,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/Criar_Curso">
                     <ProtectedRoute allowedRoles={[1, 2]}>
-                      <Criar_Curso />
+                      <CriarCurso />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -179,10 +179,22 @@ const App = () => {
                 }
               />
 
+              {/* Nova estrutura de 3 níveis para o fórum */}
               <Route
                 path="/forum/topico/:topicoId"
                 element={
                   <RouteWrapper path="/forum/topico/:topicoId">
+                    <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                      <ChatConversas />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
+                path="/forum/topico/:topicoId/tema/:temaId"
+                element={
+                  <RouteWrapper path="/forum/topico/:topicoId/tema/:temaId">
                     <ProtectedRoute allowedRoles={[1, 2, 3]}>
                       <TopicosChatComponent />
                     </ProtectedRoute>
@@ -202,7 +214,7 @@ const App = () => {
                 }
               />
 
-              {/* Rotas para formandos */}
+              {/* Demais rotas... */}
               <Route
                 path="/percurso-formativo"
                 element={
@@ -254,19 +266,18 @@ const App = () => {
                 element={
                   <RouteWrapper path="/admin/usuarios">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Gerir_Utilizadores />
+                      <GerirUtilizadores />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
               />
-
 
               <Route
                 path="/admin/categorias"
                 element={
                   <RouteWrapper path="/admin/categorias">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Gerir_Categoria />
+                      <GerirCategoria />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -277,7 +288,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/admin/areas">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Gerir_Area />
+                      <GerirArea />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -288,23 +299,18 @@ const App = () => {
                 element={
                   <RouteWrapper path="/admin/topicos">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Gerir_Topicos />
+                      <GerirTopicos />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
               />
-
-
-
-
-
 
               <Route
                 path="/admin/cursos"
                 element={
                   <RouteWrapper path="/admin/cursos">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Gerir_Cursos />
+                      <GerirCursos />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -315,7 +321,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/admin/criar-curso">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Criar_Curso />
+                      <CriarCurso />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -337,7 +343,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/admin/cursos/:id/editar">
                     <ProtectedRoute allowedRoles={[1]}>
-                      <Editar_Curso />
+                      <EditarCurso />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }
@@ -348,7 +354,7 @@ const App = () => {
                 element={
                   <RouteWrapper path="/cursos/:id/inscricoes">
                     <ProtectedRoute allowedRoles={[1, 2]}>
-                      <Gerir_Inscricoes />
+                      <GerirInscricoes />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }

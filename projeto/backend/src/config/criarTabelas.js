@@ -396,6 +396,70 @@ const createTablesInOrder = async () => {
       data_denuncia TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       resolvida BOOLEAN NOT NULL DEFAULT FALSE,
       acao_tomada VARCHAR(50)
+    );`,
+
+      // =============================================
+      // 31. FORUM_TEMA
+      // =============================================
+      `CREATE TABLE IF NOT EXISTS forum_tema (
+      id_tema SERIAL PRIMARY KEY,
+      id_topico INTEGER NOT NULL REFERENCES topico_area(id_topico),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      titulo VARCHAR(255),
+      texto TEXT,
+      anexo_url VARCHAR(255),
+      anexo_nome VARCHAR(100),
+      tipo_anexo VARCHAR(20) CHECK (tipo_anexo IN ('imagem', 'video', 'file')),
+      data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      likes INTEGER NOT NULL DEFAULT 0,
+      dislikes INTEGER NOT NULL DEFAULT 0,
+      comentarios INTEGER NOT NULL DEFAULT 0,
+      foi_denunciado BOOLEAN NOT NULL DEFAULT FALSE,
+      oculto BOOLEAN NOT NULL DEFAULT FALSE
+    );`,
+
+    // =============================================
+    // 32. FORUM_TEMA_INTERACAO
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS forum_tema_interacao (
+      id_interacao SERIAL PRIMARY KEY,
+      id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('like', 'dislike')),
+      data_interacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      CONSTRAINT unique_user_tema UNIQUE (id_tema, id_utilizador)
+    );`,
+
+    // =============================================
+    // 33. FORUM_TEMA_DENUNCIA
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS forum_tema_denuncia (
+      id_denuncia SERIAL PRIMARY KEY,
+      id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema),
+      id_denunciante INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      motivo VARCHAR(100) NOT NULL,
+      descricao TEXT,
+      data_denuncia TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      resolvida BOOLEAN NOT NULL DEFAULT FALSE,
+      acao_tomada VARCHAR(50)
+    );`,
+
+    // =============================================
+    // 34. FORUM_COMENTARIO
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS forum_comentario (
+      id_comentario SERIAL PRIMARY KEY,
+      id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      texto TEXT,
+      anexo_url VARCHAR(255),
+      anexo_nome VARCHAR(100),
+      tipo_anexo VARCHAR(20) CHECK (tipo_anexo IN ('imagem', 'video', 'file')),
+      data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      likes INTEGER NOT NULL DEFAULT 0,
+      dislikes INTEGER NOT NULL DEFAULT 0,
+      foi_denunciado BOOLEAN NOT NULL DEFAULT FALSE,
+      oculto BOOLEAN NOT NULL DEFAULT FALSE
     );`
   ];
 
