@@ -296,12 +296,6 @@ const DetalhesFormadores = () => {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 fade-in">
           <div className="page-container">
-            <button onClick={handleVoltar} className="back-button">
-              <svg className="back-button-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Voltar para a lista de formadores
-            </button>
             
             {/* Secção com foto de capa e foto de perfil */}
             <div className="cover-container">

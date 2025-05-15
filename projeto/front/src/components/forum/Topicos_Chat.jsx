@@ -3,8 +3,30 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
 import './css/Topicos_Chat.css';
-import API_BASE, {IMAGES} from '../../api';
+import API_BASE, { IMAGES } from '../../api';
 import Sidebar from '../Sidebar';
+
+
+const ImageComponent = ({ src, alt = 'Imagem', className = '', onClick, apiBase }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const normalizeUrl = (url) => {
+    if (!url) return IMAGES.DEFAULT_AVATAR;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/')) return `${apiBase.split('/api')[0]}${url}`;
+    return `${apiBase.split('/api')[0]}/${url}`;
+  };
+
+  return (
+    <img
+      src={hasError ? IMAGES.DEFAULT_AVATAR : normalizeUrl(src)}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      onError={() => setHasError(true)}
+    />
+  );
+};
 
 
 const Topicos_Chat = () => {
@@ -20,6 +42,7 @@ const Topicos_Chat = () => {
   const [usuario, setUsuario] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [erro, setErro] = useState(null);
+  const [avaliacoes, setAvaliacoes] = useState({});
 
   const mensagensContainerRef = useRef(null);
   const socketRef = useRef();
@@ -81,6 +104,7 @@ const Topicos_Chat = () => {
       }
     };
 
+
     // Obter comentários existentes
     const fetchComentarios = async () => {
       try {
@@ -94,13 +118,19 @@ const Topicos_Chat = () => {
         if (response.data && response.data.data) {
           // Garantir que todos os comentários têm um ID único
           const comentariosValidados = response.data.data.map((comentario, index) => {
-            if (!comentario.id && !comentario.id_comentario) {
-              return { ...comentario, id_comentario: `temp-${index}` };
+            const novoComentario = { ...comentario };
+            if (!novoComentario.id && !novoComentario.id_comentario) {
+              novoComentario.id_comentario = `temp-${index}`;
             }
-            if (!comentario.id_comentario && comentario.id) {
-              return { ...comentario, id_comentario: comentario.id };
+            if (!novoComentario.id_comentario && novoComentario.id) {
+              novoComentario.id_comentario = novoComentario.id;
             }
-            return comentario;
+
+            // Inicializar likes/dislikes se não existirem
+            if (novoComentario.likes === undefined) novoComentario.likes = 0;
+            if (novoComentario.dislikes === undefined) novoComentario.dislikes = 0;
+
+            return novoComentario;
           });
           setMensagens(comentariosValidados);
         } else {
@@ -134,20 +164,24 @@ const Topicos_Chat = () => {
         // Verificar se o comentário já existe para evitar duplicações
         setMensagens((prev) => {
           // Verificar pelo id ou id_comentario
-          const existe = prev.some(m => 
-            (m.id_comentario && m.id_comentario === comentario.id_comentario) || 
+          const existe = prev.some(m =>
+            (m.id_comentario && m.id_comentario === comentario.id_comentario) ||
             (m.id && m.id === comentario.id) ||
             (m.id && comentario.id_comentario && m.id === comentario.id_comentario) ||
             (m.id_comentario && comentario.id && m.id_comentario === comentario.id)
           );
           if (existe) return prev;
-          
+
           // Garantir que o comentário tem um id_comentario
-          const comentarioValidado = comentario;
+          const comentarioValidado = { ...comentario };
           if (!comentarioValidado.id_comentario && comentarioValidado.id) {
             comentarioValidado.id_comentario = comentarioValidado.id;
           }
-          
+
+          // Inicializar likes/dislikes se não existirem
+          if (comentarioValidado.likes === undefined) comentarioValidado.likes = 0;
+          if (comentarioValidado.dislikes === undefined) comentarioValidado.dislikes = 0;
+
           return [...prev, comentarioValidado];
         });
       });
@@ -266,11 +300,15 @@ const Topicos_Chat = () => {
           if (!novoComentario.id_comentario && novoComentario.id) {
             novoComentario.id_comentario = novoComentario.id;
           }
-          
+
+          // Inicializar likes/dislikes se não existirem
+          if (novoComentario.likes === undefined) novoComentario.likes = 0;
+          if (novoComentario.dislikes === undefined) novoComentario.dislikes = 0;
+
           setMensagens(prev => {
             // Verificar se já existe
-            const existe = prev.some(m => 
-              (m.id_comentario && m.id_comentario === novoComentario.id_comentario) || 
+            const existe = prev.some(m =>
+              (m.id_comentario && m.id_comentario === novoComentario.id_comentario) ||
               (m.id && m.id === novoComentario.id) ||
               (m.id && novoComentario.id_comentario && m.id === novoComentario.id_comentario) ||
               (m.id_comentario && novoComentario.id && m.id_comentario === novoComentario.id)
@@ -300,30 +338,84 @@ const Topicos_Chat = () => {
       logInfo(`Avaliando comentário ${idComentario} como ${tipo}`);
       const token = localStorage.getItem('token');
 
-      // Usar o endpoint correto com URL base correta
-      await axios.post(`${API_BASE}/topicos-area/${topicoId}/comentarios/${idComentario}/avaliar`,
-        { tipo },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      logInfo('Avaliação enviada com sucesso');
-
-      // Atualizar o estado local (para feedback imediato)
+      // Atualizar o estado local para feedback imediato
       setMensagens(prev => prev.map(mensagem => {
         const mensagemId = mensagem.id_comentario || mensagem.id;
         if (mensagemId === idComentario) {
-          return {
-            ...mensagem,
-            likes: tipo === 'like' ? (mensagem.likes + 1 || 1) : (mensagem.likes || 0),
-            dislikes: tipo === 'dislike' ? (mensagem.dislikes + 1 || 1) : (mensagem.dislikes || 0)
-          };
+          // Verificar se o usuário já avaliou este comentário (toggle)
+          const jaAvaliado = avaliacoes[idComentario] === tipo;
+
+          // Atualizar o estado de avaliações
+          const novasAvaliacoes = { ...avaliacoes };
+
+          if (jaAvaliado) {
+            // Remover avaliação (toggle off)
+            delete novasAvaliacoes[idComentario];
+            setAvaliacoes(novasAvaliacoes);
+
+            return {
+              ...mensagem,
+              likes: tipo === 'like' ? Math.max(0, mensagem.likes - 1) : mensagem.likes,
+              dislikes: tipo === 'dislike' ? Math.max(0, mensagem.dislikes - 1) : mensagem.dislikes
+            };
+          } else {
+            // Adicionar nova avaliação ou trocar tipo
+            const tipoAnterior = avaliacoes[idComentario];
+            novasAvaliacoes[idComentario] = tipo;
+            setAvaliacoes(novasAvaliacoes);
+
+            return {
+              ...mensagem,
+              likes: tipo === 'like'
+                ? mensagem.likes + 1
+                : (tipoAnterior === 'like' ? Math.max(0, mensagem.likes - 1) : mensagem.likes),
+              dislikes: tipo === 'dislike'
+                ? mensagem.dislikes + 1
+                : (tipoAnterior === 'dislike' ? Math.max(0, mensagem.dislikes - 1) : mensagem.dislikes)
+            };
+          }
         }
         return mensagem;
       }));
 
+      // Fazer a requisição para o servidor
+      const response = await axios.post(
+        `${API_BASE}/topicos-area/${topicoId}/comentarios/${idComentario}/avaliar`,
+        { tipo },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      logInfo('Avaliação enviada com sucesso', response.data);
+
+      // Atualizar os contadores com valores reais do servidor
+      if (response.data && response.data.data) {
+        const { id_comentario, likes, dislikes } = response.data.data;
+
+        setMensagens(prev => prev.map(mensagem => {
+          const mensagemId = mensagem.id_comentario || mensagem.id;
+          if (mensagemId === id_comentario) {
+            return {
+              ...mensagem,
+              likes,
+              dislikes
+            };
+          }
+          return mensagem;
+        }));
+      }
     } catch (error) {
       logInfo('Erro ao avaliar comentário:', error.message);
-      alert(`Erro ao avaliar comentário: ${error.message}`);
+
+      // Reverter a atualização local em caso de erro
+      setMensagens(prev => [...prev]); // Cria uma cópia para forçar re-render
+
+      // Exibir mensagem de erro com mais detalhes
+      if (error.response) {
+        const mensagemErro = error.response.data.message || 'Erro desconhecido';
+        alert(`Erro ao avaliar comentário: ${mensagemErro}`);
+      } else {
+        alert(`Erro ao avaliar comentário: ${error.message}`);
+      }
     }
   };
 
@@ -337,24 +429,44 @@ const Topicos_Chat = () => {
       const token = localStorage.getItem('token');
 
       // Usar o endpoint correto com URL base correta
-      await axios.post(`${API_BASE}/topicos-area/${topicoId}/comentarios/${idComentario}/denunciar`,
+      const response = await axios.post(
+        `${API_BASE}/topicos-area/${topicoId}/comentarios/${idComentario}/denunciar`,
         { motivo },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      logInfo('Denúncia enviada com sucesso');
+      logInfo('Denúncia enviada com sucesso', response.data);
+
+      // Marcar o comentário como denunciado localmente
+      setMensagens(prev => prev.map(mensagem => {
+        const mensagemId = mensagem.id_comentario || mensagem.id;
+        if (mensagemId === idComentario) {
+          return {
+            ...mensagem,
+            foi_denunciada: true
+          };
+        }
+        return mensagem;
+      }));
+
       alert('Comentário denunciado com sucesso. Obrigado pela sua contribuição.');
 
     } catch (error) {
       logInfo('Erro ao denunciar comentário:', error.message);
-      alert('Ocorreu um erro ao denunciar o comentário. Tente novamente.');
+
+      if (error.response) {
+        const mensagemErro = error.response.data.message || 'Erro desconhecido';
+        alert(`Erro ao denunciar comentário: ${mensagemErro}`);
+      } else {
+        alert(`Ocorreu um erro ao denunciar o comentário: ${error.message}`);
+      }
     }
   };
 
   // Formatar data para exibição
   const formatarData = (dataString) => {
     if (!dataString) return 'Data indisponível';
-    
+
     try {
       const data = new Date(dataString);
       return data.toLocaleString('pt-BR', {
@@ -379,7 +491,7 @@ const Topicos_Chat = () => {
     if (!anexoUrl.startsWith('http') && !anexoUrl.startsWith('/')) {
       anexoUrl = `/${anexoUrl}`;
     }
-    
+
     if (anexoUrl.startsWith('/')) {
       anexoUrl = `${API_BASE.split('/api')[0]}${anexoUrl}`;
     }
@@ -390,15 +502,12 @@ const Topicos_Chat = () => {
     if (mensagem.tipo_anexo === 'imagem') {
       return (
         <div className="anexo-imagem" key={anexoKey}>
-          <img
+          <ImageComponent
             src={anexoUrl}
             alt="Anexo"
+            className="anexo-img"
             onClick={() => window.open(anexoUrl, '_blank')}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = IMAGES.DEFAULT_AVATAR;
-              console.error(`Erro ao carregar imagem: ${anexoUrl}`);
-            }}
+            apiBase={API_BASE}
           />
         </div>
       );
@@ -457,18 +566,15 @@ const Topicos_Chat = () => {
   }
 
   return (
-    <div className="chat-container">
+
+<div>
+      <button className="voltar-btn" onClick={() => navigate('/forum')} > <i className="fas fa-arrow-left"></i> </button>
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="chat-content">
           {topico && (
             <div className="chat-header">
-              <button
-                className="voltar-btn"
-                onClick={() => navigate('/forum')}
-              >
-                <i className="fas fa-arrow-left"></i> Voltar ao Fórum
-              </button>
+
               <h2>{topico.titulo}</h2>
               <p className="chat-description">{topico.descricao}</p>
               <div className="topico-meta">
@@ -489,21 +595,18 @@ const Topicos_Chat = () => {
                 // Garantir um ID único
                 const mensagemId = mensagem.id_comentario || mensagem.id || `msg-temp-${index}`;
                 const isAutor = mensagem.id_utilizador === (usuario?.id_utilizador || usuario?.id);
-                
+
                 return (
                   <div
                     key={`msg-${mensagemId}`}
-                    className={`mensagem ${isAutor ? 'minha-mensagem' : ''}`}
+                    className={`mensagem ${isAutor ? 'minha-mensagem' : ''} ${mensagem.foi_denunciada ? 'mensagem-denunciada' : ''}`}
                   >
                     <div className="mensagem-header">
-                      <img
-                        src={mensagem.utilizador?.foto_perfil || IMAGES.DEFAULT_AVATAR}
+                      <ImageComponent
+                        src={mensagem.utilizador?.foto_perfil}
                         alt={mensagem.utilizador?.nome || 'Usuário'}
                         className="avatar"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = IMAGES.DEFAULT_AVATAR;
-                        }}
+                        apiBase={API_BASE}
                       />
                       <span className="nome-usuario">{mensagem.utilizador?.nome || 'Usuário'}</span>
                       <span className="data-mensagem">{formatarData(mensagem.data_criacao)}</span>
@@ -516,7 +619,7 @@ const Topicos_Chat = () => {
 
                     <div className="mensagem-acoes">
                       <button
-                        className="acao-btn like-btn"
+                        className={`acao-btn like-btn ${avaliacoes[mensagemId] === 'like' ? 'active' : ''}`}
                         onClick={() => avaliarComentario(mensagemId, 'like')}
                         title="Curtir"
                       >
@@ -525,7 +628,7 @@ const Topicos_Chat = () => {
                       </button>
 
                       <button
-                        className="acao-btn dislike-btn"
+                        className={`acao-btn dislike-btn ${avaliacoes[mensagemId] === 'dislike' ? 'active' : ''}`}
                         onClick={() => avaliarComentario(mensagemId, 'dislike')}
                         title="Descurtir"
                       >
@@ -537,8 +640,10 @@ const Topicos_Chat = () => {
                         className="acao-btn denunciar-btn"
                         onClick={() => denunciarComentario(mensagemId)}
                         title="Denunciar"
+                        disabled={mensagem.foi_denunciada}
                       >
                         <i className="fas fa-flag"></i>
+                        {mensagem.foi_denunciada && <span className="denuncia-status">Denunciado</span>}
                       </button>
                     </div>
                   </div>

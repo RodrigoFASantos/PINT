@@ -1,12 +1,54 @@
 const ChatMensagem = require("../../database/models/ChatMensagem");
+const User = require("../../database/models/User");
+const ChatInteracao = require("../../database/models/ChatInteracao");
+const ChatDenuncia = require("../../database/models/ChatDenuncia");
+const Topico_Area = require("../../database/models/Topico_Area");
+const Categoria = require("../../database/models/Categoria");
+const { Op } = require("sequelize");
+const fs = require("fs");
+const path = require("path");
+const uploadUtils = require("../../utils/uploadUtils");
 
 // Obter todos os comentários
 const getAllComentarios = async (req, res) => {
   try {
-    const comentarios = await ChatMensagem.findAll();
-    res.json(comentarios);
+    const { id } = req.params; // ID do tópico
+    
+    const comentarios = await ChatMensagem.findAll({
+      where: { 
+        id_topico: id,
+        oculta: false 
+      },
+      include: [
+        {
+          model: User,
+          as: 'utilizador',
+          attributes: ['id_utilizador', 'nome', 'email', 'foto_perfil']
+        }
+      ],
+      order: [['data_criacao', 'ASC']]
+    });
+    
+    // Garantir que todos os comentários têm um ID único
+    const comentariosValidados = comentarios.map((comentario) => {
+      const item = comentario.toJSON();
+      if (!item.id_comentario) {
+        item.id_comentario = item.id;
+      }
+      return item;
+    });
+    
+    res.json({
+      success: true,
+      data: comentariosValidados
+    });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao procurar comentários" });
+    console.error("Erro ao procurar comentários:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Erro ao procurar comentários", 
+      error: error.message 
+    });
   }
 };
 
@@ -198,7 +240,200 @@ const createComentario = async (req, res) => {
   }
 };
 
+// NOVA FUNÇÃO: Avaliar um comentário (like/dislike)
+const avaliarComentario = async (req, res) => {
+  try {
+    const { id, idComentario } = req.params;
+    const { tipo } = req.body; // 'like' ou 'dislike'
+    
+    // Validar tipo de avaliação
+    if (!['like', 'dislike'].includes(tipo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de avaliação inválido. Use "like" ou "dislike".'
+      });
+    }
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
+    
+    console.log(`Avaliando comentário ${idComentario} como ${tipo} pelo utilizador ${id_utilizador}`);
+    
+    // Verificar se o comentário existe
+    const comentario = await ChatMensagem.findByPk(idComentario);
+    
+    if (!comentario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Comentário não encontrado'
+      });
+    }
+    
+    // Verificar se o utilizador já avaliou este comentário
+    const interacaoExistente = await ChatInteracao.findOne({
+      where: {
+        id_mensagem: idComentario,
+        id_utilizador
+      }
+    });
+    
+    if (interacaoExistente) {
+      // Se o utilizador já avaliou com o mesmo tipo, remover a avaliação
+      if (interacaoExistente.tipo === tipo) {
+        await interacaoExistente.destroy();
+        
+        // Atualizar contadores
+        if (tipo === 'like') {
+          await comentario.update({ likes: Math.max(0, comentario.likes - 1) });
+        } else {
+          await comentario.update({ dislikes: Math.max(0, comentario.dislikes - 1) });
+        }
+        
+        return res.json({
+          success: true,
+          message: `Avaliação "${tipo}" removida do comentário`,
+          data: {
+            id_comentario: idComentario,
+            likes: tipo === 'like' ? comentario.likes - 1 : comentario.likes,
+            dislikes: tipo === 'dislike' ? comentario.dislikes - 1 : comentario.dislikes
+          }
+        });
+      } 
+      
+      // Se o utilizador já avaliou com tipo diferente, alterar o tipo
+      else {
+        await interacaoExistente.update({ tipo });
+        
+        // Atualizar contadores (incrementar o novo tipo, decrementar o antigo)
+        if (tipo === 'like') {
+          await comentario.update({ 
+            likes: comentario.likes + 1,
+            dislikes: Math.max(0, comentario.dislikes - 1)
+          });
+        } else {
+          await comentario.update({ 
+            likes: Math.max(0, comentario.likes - 1),
+            dislikes: comentario.dislikes + 1
+          });
+        }
+      }
+    } else {
+      // Se o utilizador não avaliou anteriormente, criar nova avaliação
+      await ChatInteracao.create({
+        id_mensagem: idComentario,
+        id_utilizador,
+        tipo,
+        data_interacao: new Date()
+      });
+      
+      // Atualizar contadores
+      if (tipo === 'like') {
+        await comentario.update({ likes: comentario.likes + 1 });
+      } else {
+        await comentario.update({ dislikes: comentario.dislikes + 1 });
+      }
+    }
+    
+    // Buscar comentário atualizado
+    const comentarioAtualizado = await ChatMensagem.findByPk(idComentario);
+    
+    res.json({
+      success: true,
+      message: `Comentário avaliado como "${tipo}" com sucesso`,
+      data: {
+        id_comentario: idComentario,
+        likes: comentarioAtualizado.likes,
+        dislikes: comentarioAtualizado.dislikes
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erro ao avaliar comentário:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao avaliar comentário',
+      error: error.message
+    });
+  }
+};
+
+// NOVA FUNÇÃO: Denunciar um comentário
+const denunciarComentario = async (req, res) => {
+  try {
+    const { id, idComentario } = req.params;
+    const { motivo, descricao } = req.body;
+    
+    // Validação básica
+    if (!motivo) {
+      return res.status(400).json({
+        success: false,
+        message: 'É necessário fornecer um motivo para a denúncia'
+      });
+    }
+    
+    // Usar id_utilizador se disponível, caso contrário usar id
+    const id_utilizador = req.user.id_utilizador || req.user.id;
+    
+    console.log(`Denúncia de comentário ${idComentario} por ${id_utilizador}: ${motivo}`);
+    
+    // Verificar se o comentário existe
+    const comentario = await ChatMensagem.findByPk(idComentario);
+    
+    if (!comentario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Comentário não encontrado'
+      });
+    }
+    
+    // Verificar se o utilizador já denunciou este comentário
+    const denunciaExistente = await ChatDenuncia.findOne({
+      where: {
+        id_mensagem: idComentario,
+        id_denunciante: id_utilizador
+      }
+    });
+    
+    if (denunciaExistente) {
+      return res.status(400).json({
+        success: false,
+        message: 'Você já denunciou este comentário anteriormente'
+      });
+    }
+    
+    // Criar a denúncia
+    await ChatDenuncia.create({
+      id_mensagem: idComentario,
+      id_denunciante: id_utilizador,
+      motivo,
+      descricao: descricao || null,
+      data_denuncia: new Date(),
+      resolvida: false
+    });
+    
+    // Marcar o comentário como denunciado
+    await comentario.update({ foi_denunciada: true });
+    
+    // Notificar administradores (opcional - implementar se necessário)
+    
+    res.json({
+      success: true,
+      message: 'Comentário denunciado com sucesso. Obrigado pela sua contribuição.'
+    });
+    
+  } catch (error) {
+    console.error('Erro ao denunciar comentário:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao denunciar comentário',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllComentarios,
-  createComentario
+  createComentario,
+  avaliarComentario,
+  denunciarComentario
 };
