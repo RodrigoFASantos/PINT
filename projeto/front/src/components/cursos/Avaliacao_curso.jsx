@@ -7,6 +7,37 @@ import Curso_Conteudo_ficheiro_Modal from './Curso_Conteudo_Ficheiro_Modal';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
 
+
+const decodeJWT = (token) => {
+  try {
+    // Divide o token nas suas partes (cabeçalho, payload, assinatura)
+    const parts = token.split('.');
+    
+    // Se não tiver 3 partes, não é um JWT válido
+    if (parts.length !== 3) {
+      console.error('Token JWT inválido: formato incorreto');
+      return null;
+    }
+    
+    // A função atob() espera uma string em Base64 sem padding
+    // Ajustar o padding da string Base64 para garantir decodificação correta
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    
+    // Decodificar a string Base64
+    try {
+      const decoded = atob(padded);
+      return JSON.parse(decoded);
+    } catch (e) {
+      console.error('Erro ao decodificar payload JWT:', e);
+      return null;
+    }
+  } catch (error) {
+    console.error('Erro ao processar token JWT:', error);
+    return null;
+  }
+};
 // Componente reutilizável para modal de confirmação
 const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel = "Confirmar" }) => {
   if (!show) return null;
@@ -54,17 +85,24 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
 
   // Verifica se o utilizador é formador
   const isFormador = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.id_utilizador === formadorId || payload.id_cargo === 1 || payload.id_cargo === 2;
-    } catch (e) {
-      console.error('Erro ao descodificar token:', e);
-      return false;
-    }
-  };
-
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  
+  try {
+    // Usar a função segura para decodificar o token
+    const payload = decodeJWT(token);
+    
+    if (!payload) return false;
+    
+    // Verificar o id_utilizador ou cargo
+    return payload.id_utilizador === formadorId || 
+           payload.id_cargo === 1 || 
+           payload.id_cargo === 2;
+  } catch (e) {
+    console.error('Erro ao verificar permissões:', e);
+    return false;
+  }
+};
   // Carregar tópicos do curso
   const carregarTopicos = async () => {
     try {
@@ -298,95 +336,51 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
 
   // MODIFICADO: Enviar submissão do formando com endpoints corrigidos
   const enviarSubmissao = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!arquivo) {
+    alert('Por favor, selecione um ficheiro.');
+    return;
+  }
+  
+  try {
+    setEnviandoArquivo(true);
+    const token = localStorage.getItem('token');
     
-    if (!arquivo) {
-      alert('Por favor, selecione um ficheiro.');
-      return;
+    const formData = new FormData();
+    formData.append('ficheiro', arquivo);
+    formData.append('id_pasta', enviarSubmissaoModal.pastaId);
+    formData.append('id_curso', cursoId);
+    
+    // Não precisamos mais decodificar o token manualmente
+    // O ID do utilizador será obtido no backend através do token JWT
+    
+    const response = await axios.post(`${API_BASE}/trabalhos`, formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    await carregarTopicos();
+    setEnviarSubmissaoModal({ show: false, pastaId: null });
+    alert('Trabalho submetido com sucesso!');
+  } catch (error) {
+    console.error('Erro ao enviar trabalho:', error);
+    
+    let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
+    
+    if (error.response) {
+      if (error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
     }
     
-    try {
-      setEnviandoArquivo(true);
-      const token = localStorage.getItem('token');
-      
-      const formData = new FormData();
-      formData.append('ficheiro', arquivo); // Alterado de 'arquivo' para 'ficheiro' (nome do campo correto)
-      formData.append('id_pasta', enviarSubmissaoModal.pastaId);
-      formData.append('id_curso', cursoId);
-      
-      // Obter ID do utilizador do token
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const idUtilizador = payload.id_utilizador;
-      formData.append('id_utilizador', idUtilizador);
-      
-      // Corrigido: usar trabalhos em vez de submissoes
-      const response = await axios.post(`${API_BASE}/trabalhos`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      
-      // Em caso de sucesso
-      await carregarTopicos();
-      setEnviarSubmissaoModal({ show: false, pastaId: null });
-      alert('Trabalho submetido com sucesso!');
-    } catch (error) {
-      console.error('Erro ao enviar trabalho:', error);
-      
-      // Tentativa alternativa com outro endpoint
-      if (error.response && error.response.status === 404) {
-        try {
-          console.log("A tentar endpoint alternativo para submissão...");
-          const token = localStorage.getItem('token');
-          const formData = new FormData();
-          
-          formData.append('ficheiro', arquivo);
-          formData.append('id_pasta', enviarSubmissaoModal.pastaId);
-          formData.append('id_curso', cursoId);
-          
-          // Obter ID do utilizador do token
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const idUtilizador = payload.id_utilizador;
-          formData.append('id_utilizador', idUtilizador);
-          
-          // Tentando outro possível endpoint
-          const altResponse = await axios.post(`${API_BASE}/trabalhos/submeter`, formData, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-          
-          await carregarTopicos();
-          setEnviarSubmissaoModal({ show: false, pastaId: null });
-          alert('Trabalho submetido com sucesso!');
-          return;
-        } catch (altError) {
-          console.error('Falha na tentativa alternativa:', altError);
-        }
-      }
-      
-      // Melhor tratamento de erros com mensagens específicas
-      let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
-      
-      if (error.response) {
-        if (error.response.status === 404) {
-          errorMsg = 'O serviço de submissão de trabalhos não foi encontrado. Por favor, contacte o administrador.';
-        } else if (error.response.status === 400) {
-          errorMsg = error.response.data?.message || 'Erro de validação. Verifique os dados do ficheiro.';
-        } else if (error.response.status === 413) {
-          errorMsg = 'O ficheiro é demasiado grande. Por favor, escolha um ficheiro menor.';
-        } else if (error.response.data?.message) {
-          errorMsg = error.response.data.message;
-        }
-      }
-      
-      alert(errorMsg);
-    } finally {
-      setEnviandoArquivo(false);
-    }
-  };
+    alert(errorMsg);
+  } finally {
+    setEnviandoArquivo(false);
+  }
+};
 
   // Renderização condicional para carregamento
   if (carregando) {

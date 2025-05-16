@@ -514,27 +514,28 @@ const createConteudo = async (req, res) => {
       return res.status(409).json({ message: 'Já existe um conteúdo com esse título nesta pasta' });
     }
 
-    // MODIFICADO: Estrutura de pastas simplificada
+    // Usar a nova estrutura de pastas
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const topicoSlug = uploadUtils.normalizarNome(topico.nome);
+    const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
     
-    // Determinar pasta base de acordo com o tipo (avaliação ou conteúdo)
-    const pastaBase = isAvaliacaoTopico ? 'avaliacao' : 'conteudos';
+    // Determinar o caminho do diretório baseado no tipo (avaliação ou conteúdo regular)
+    let conteudosDir, conteudosPath;
     
-    // Caminho simplificado - diretamente na pasta base
-    const conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, pastaBase);
-    const conteudosPath = `uploads/cursos/${cursoSlug}/${pastaBase}`;
+    if (isAvaliacaoTopico) {
+      // Manter avaliação na pasta especial
+      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug, 'conteudos');
+      conteudosPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos`;
+    } else {
+      // Para tópicos normais, usar a nova estrutura com "topicos"
+      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug, 'conteudos');
+      conteudosPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/conteudos`;
+    }
     
-    console.log(`Usando estrutura simplificada: ${conteudosDir}`);
+    console.log(`Diretório para conteúdos: ${conteudosDir}`);
     
     // Criar pasta se não existir
     uploadUtils.ensureDir(conteudosDir);
-    
-    // Se for avaliação, criar também pasta de submissões
-    if (isAvaliacaoTopico) {
-      const submissoesDir = path.join(conteudosDir, 'submissoes');
-      console.log(`Criando pasta de submissões: ${submissoesDir}`);
-      uploadUtils.ensureDir(submissoesDir);
-    }
 
     let conteudoData = {
       titulo,

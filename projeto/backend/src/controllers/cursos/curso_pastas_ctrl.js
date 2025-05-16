@@ -34,15 +34,21 @@ const createPasta = async (req, res) => {
     
     console.log(`Criando pasta para tópico: ${topico.nome}, É avaliação: ${isAvaliacao ? 'SIM' : 'NÃO'}`);
 
-    // Criar caminho para o diretório da pasta - MODIFICADO: estrutura simplificada
+    // Criar caminho para o diretório da pasta com nova estrutura
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const topicoSlug = uploadUtils.normalizarNome(topico.nome);
     
-    // Usar estrutura simplificada
-    const pastaBase = isAvaliacao ? 'avaliacao' : 'conteudos';
+    let pastaDir, pastaUrlPath;
     
-    // Caminho do diretório (pasta base)
-    const pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, pastaBase);
-    const pastaUrlPath = `uploads/cursos/${cursoSlug}/${pastaBase}`;
+    if (isAvaliacao) {
+      // Manter avaliação na pasta especial
+      pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
+      pastaUrlPath = `uploads/cursos/${cursoSlug}/avaliacao`;
+    } else {
+      // Para tópicos normais, usar a nova estrutura com "topicos"
+      pastaDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug);
+      pastaUrlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}`;
+    }
     
     console.log(`Pasta será criada como referência em BD, usando diretório: ${pastaDir}`);
     
@@ -56,13 +62,13 @@ const createPasta = async (req, res) => {
       uploadUtils.ensureDir(submissoesDir);
     }
 
-    // Criar pasta na base de dados (sem criar pasta física adicional além da base)
+    // Criar pasta na base de dados
     const novaPasta = await PastaCurso.create({
       nome,
       id_topico,
       ordem: ordem || 1,
-      dir_path: pastaUrlPath, // Usar o caminho base
-      arquivo_path: pastaUrlPath, // Mesmo caminho para manter consistência
+      dir_path: pastaUrlPath,
+      arquivo_path: pastaUrlPath,
       ativo: true
     });
 

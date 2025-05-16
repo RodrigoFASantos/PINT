@@ -230,11 +230,28 @@ const ensureDestDir = (dirPath) => (req, res, next) => {
 const criarDiretoriosCurso = (curso) => {
   const cursoSlug = normalizarNome(curso.nome);
   const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+  
+  // Criar o diretório do curso
+  console.log(`A criar diretório do curso: ${cursoDir}`);
   ensureDir(cursoDir);
+  
+  // Criar explicitamente a pasta 'topicos' dentro do curso
+  const topicosDir = path.join(cursoDir, 'topicos');
+  console.log(`A criar pasta 'topicos': ${topicosDir}`);
+  ensureDir(topicosDir);
+
+  // Verificar se a pasta foi criada
+  if (fs.existsSync(topicosDir)) {
+    console.log(`✅ Pasta 'topicos' criada com sucesso em: ${topicosDir}`);
+  } else {
+    console.error(`❌ Falha ao criar pasta 'topicos' em: ${topicosDir}`);
+  }
 
   return {
     dirPath: cursoDir,
-    urlPath: `uploads/cursos/${cursoSlug}`
+    topicosPath: topicosDir,
+    urlPath: `uploads/cursos/${cursoSlug}`,
+    topicosUrlPath: `uploads/cursos/${cursoSlug}/topicos`
   };
 };
 
@@ -255,12 +272,14 @@ const criarDiretorosAvaliacaoCurso = (curso, topico) => {
 const criarDiretoriosTopico = (curso, topico) => {
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = normalizarNome(topico.nome);
-  const topicoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
+  
+  // Colocar o tópico dentro da pasta 'topicos'
+  const topicoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug);
   ensureDir(topicoDir);
 
   return {
     dirPath: topicoDir,
-    urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}`
+    urlPath: `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}`
   };
 };
 
@@ -299,18 +318,18 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   let urlPath;
   
   if (isAvaliacao) {
-    // Para tópicos de avaliação, usar o diretório fixo "avaliacao"
+    // Para tópicos de avaliação, usar o diretório "avaliacao" diretamente sob o curso
     pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
     urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
     console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta de avaliação em: ${pastaDir}`);
   } else {
-    // Para outros tópicos, usar o nome normalizado do tópico
-    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug, pastaSlug);
-    urlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}/${pastaSlug}`;
+    // Para outros tópicos, colocar na nova estrutura dentro de "topicos"
+    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug);
+    urlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}`;
     console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta normal em: ${pastaDir}`);
   }
   
-  // Sempre criar o diretório principal da pasta
+  // Criar diretório principal da pasta
   console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório principal: ${pastaDir}`);
   ensureDir(pastaDir);
   
