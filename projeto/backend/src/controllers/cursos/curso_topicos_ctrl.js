@@ -1,3 +1,4 @@
+
 const Curso_Topicos = require("../../database/models/Curso_Topicos");
 
 
@@ -85,25 +86,56 @@ const createTopico = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Criar o caminho do diretório para o tópico
-    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
-    const topicoSlug = uploadUtils.normalizarNome(nome);
-    
-    // Criar caminho completo para o diretório
-    const topicoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
-    const topicoUrlPath = `uploads/cursos/${cursoSlug}/${topicoSlug}`;
-    
-    // Criar o diretório se não existir
-    uploadUtils.ensureDir(topicoDir);
+    // CORREÇÃO: Usar a função criarDiretoriosTopico para garantir a estrutura correta
+    // Verificar se é um tópico de avaliação
+    const isAvaliacao = 
+      nome.toLowerCase() === 'avaliação' || 
+      nome.toLowerCase() === 'avaliacao' || 
+      nome.toLowerCase().includes('avalia');
 
+    // Primeiro criar o tópico na base de dados
     const novoTopico = await Curso_Topicos.create({
       nome,
       id_curso,
       ordem: ordem || 1,
-      dir_path: topicoUrlPath, // Guardar o caminho relativo para a base de dados
-      arquivo_path: topicoUrlPath, // A mesma coisa para manter consistência
       ativo: true
     });
+
+    // CORREÇÃO: Criar os diretórios corretamente usando a nova estrutura
+    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    
+    if (isAvaliacao) {
+      // Caminho para avaliação (sem pasta 'topicos')
+      const avaliacaoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
+      const avaliacaoUrlPath = `uploads/cursos/${cursoSlug}/avaliacao`;
+      
+      // Criar a pasta de avaliação e submissões
+      uploadUtils.ensureDir(avaliacaoDir);
+      uploadUtils.ensureDir(path.join(avaliacaoDir, 'submissoes'));
+      
+      // Atualizar os caminhos no tópico
+      novoTopico.dir_path = avaliacaoUrlPath;
+      novoTopico.arquivo_path = avaliacaoUrlPath;
+    } else {
+      // Garantir que a pasta 'topicos' exista
+      const topicosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
+      uploadUtils.ensureDir(topicosDir);
+      
+      // Criar o diretório do tópico dentro de 'topicos'
+      const topicoSlug = uploadUtils.normalizarNome(nome);
+      const topicoDir = path.join(topicosDir, topicoSlug);
+      const topicoUrlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}`;
+      
+      // Criar o diretório se não existir
+      uploadUtils.ensureDir(topicoDir);
+      
+      // Atualizar os caminhos no tópico
+      novoTopico.dir_path = topicoUrlPath;
+      novoTopico.arquivo_path = topicoUrlPath;
+    }
+    
+    // Guardar as alterações
+    await novoTopico.save();
 
     res.status(201).json({ 
       message: "Tópico criado com sucesso", 
@@ -184,28 +216,92 @@ const updateTopico = async (req, res) => {
       const curso = await Curso.findByPk(topico.id_curso);
       if (curso) {
         const cursoSlug = uploadUtils.normalizarNome(curso.nome);
-        const topicoSlugAntigo = uploadUtils.normalizarNome(topico.nome);
-        const topicoSlugNovo = uploadUtils.normalizarNome(nome);
         
-        // Caminhos com base no diretório uploads
-        const topicoAntigoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugAntigo);
-        const topicoNovoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlugNovo);
+        // Verificar se é um tópico de avaliação (atual ou novo)
+        const isAvaliacaoAtual = 
+          topico.nome.toLowerCase() === 'avaliação' || 
+          topico.nome.toLowerCase() === 'avaliacao' || 
+          topico.nome.toLowerCase().includes('avalia');
         
-        // Caminhos relativos para a base de dados
-        const topicoAntigoPath = `uploads/cursos/${cursoSlug}/${topicoSlugAntigo}`;
-        const topicoNovoPath = `uploads/cursos/${cursoSlug}/${topicoSlugNovo}`;
+        const isAvaliacaoNovo = 
+          nome.toLowerCase() === 'avaliação' || 
+          nome.toLowerCase() === 'avaliacao' || 
+          nome.toLowerCase().includes('avalia');
         
-        // Se o diretório antigo existir, renomear para o novo nome
-        if (fs.existsSync(topicoAntigoDir)) {
-          fs.renameSync(topicoAntigoDir, topicoNovoDir);
-        } else {
-          // Se não existir, criar o novo diretório
-          uploadUtils.ensureDir(topicoNovoDir);
+        // CORREÇÃO: Usar a estrutura correta com pasta 'topicos'
+        if (isAvaliacaoAtual) {
+          // Se era avaliação e continua sendo
+          if (isAvaliacaoNovo) {
+            // Mantém na pasta avaliacao, só atualiza o nome
+            const avaliacaoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
+            const avaliacaoUrlPath = `uploads/cursos/${cursoSlug}/avaliacao`;
+            
+            // Atualizar caminhos na base de dados
+            topico.dir_path = avaliacaoUrlPath;
+            topico.arquivo_path = avaliacaoUrlPath;
+          } 
+          // Se era avaliação mas não é mais
+          else {
+            // Mover para a pasta topicos
+            const topicoSlugNovo = uploadUtils.normalizarNome(nome);
+            
+            // Garantir que a pasta topicos exista
+            const topicosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
+            uploadUtils.ensureDir(topicosDir);
+            
+            const topicoNovoDir = path.join(topicosDir, topicoSlugNovo);
+            const topicoNovoPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlugNovo}`;
+            
+            // Criar o novo diretório
+            uploadUtils.ensureDir(topicoNovoDir);
+            
+            // Atualizar caminhos na base de dados
+            topico.dir_path = topicoNovoPath;
+            topico.arquivo_path = topicoNovoPath;
+          }
+        } 
+        // Se NÃO era avaliação
+        else {
+          // Se NÃO era avaliação mas agora é
+          if (isAvaliacaoNovo) {
+            // Mover para a pasta avaliacao
+            const avaliacaoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
+            const avaliacaoUrlPath = `uploads/cursos/${cursoSlug}/avaliacao`;
+            
+            // Criar diretório se não existir
+            uploadUtils.ensureDir(avaliacaoDir);
+            uploadUtils.ensureDir(path.join(avaliacaoDir, 'submissoes'));
+            
+            // Atualizar caminhos na base de dados
+            topico.dir_path = avaliacaoUrlPath;
+            topico.arquivo_path = avaliacaoUrlPath;
+          } 
+          // Se continua não sendo avaliação, apenas atualiza o nome
+          else {
+            const topicoSlugAntigo = uploadUtils.normalizarNome(topico.nome);
+            const topicoSlugNovo = uploadUtils.normalizarNome(nome);
+            
+            // CORREÇÃO: Usar a pasta 'topicos' na estrutura
+            const topicoAntigoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlugAntigo);
+            const topicoNovoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlugNovo);
+            
+            // Caminhos relativos para a base de dados
+            const topicoAntigoPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlugAntigo}`;
+            const topicoNovoPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlugNovo}`;
+            
+            // Se o diretório antigo existir, renomear para o novo nome
+            if (fs.existsSync(topicoAntigoDir)) {
+              fs.renameSync(topicoAntigoDir, topicoNovoDir);
+            } else {
+              // Se não existir, criar o novo diretório
+              uploadUtils.ensureDir(topicoNovoDir);
+            }
+            
+            // Atualizar os caminhos na base de dados
+            topico.dir_path = topicoNovoPath;
+            topico.arquivo_path = topicoNovoPath;
+          }
         }
-        
-        // Atualizar os caminhos na base de dados
-        topico.dir_path = topicoNovoPath;
-        topico.arquivo_path = topicoNovoPath;
       }
     }
 

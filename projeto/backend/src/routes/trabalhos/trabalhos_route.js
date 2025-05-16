@@ -63,31 +63,56 @@ const uploadTrabalho = async (req, res, next) => {
           return res.status(404).json({ message: 'Tópico não encontrado' });
         }
 
+        // Verificar se é um tópico de avaliação
+        const isAvaliacao = 
+          topico.nome.toLowerCase() === 'avaliação' || 
+          topico.nome.toLowerCase() === 'avaliacao' || 
+          topico.nome.toLowerCase().includes('avalia');
+
         // Criar caminhos para salvar o ficheiro seguindo a estrutura correta
         const cursoSlug = uploadUtils.normalizarNome(curso.nome);
         
-        // Criar os diretórios necessários
-        const avaliacaoDir = path.join(
-          uploadUtils.BASE_UPLOAD_DIR,
-          'cursos',
-          cursoSlug,
-          'avaliacao'
-        );
+        let submissoesDir;
+        let destPath;
         
-        const submissoesDir = path.join(avaliacaoDir, 'submissoes');
+        if (isAvaliacao) {
+          // Para tópicos de avaliação, usar caminho de avaliação
+          submissoesDir = path.join(
+            uploadUtils.BASE_UPLOAD_DIR,
+            'cursos',
+            cursoSlug,
+            'avaliacao',
+            uploadUtils.normalizarNome(pasta.nome),
+            'submissoes'
+          );
+          
+          destPath = `uploads/cursos/${cursoSlug}/avaliacao/${uploadUtils.normalizarNome(pasta.nome)}/submissoes`;
+        } else {
+          // Para outros tópicos, usar estrutura normal dentro de topicos
+          submissoesDir = path.join(
+            uploadUtils.BASE_UPLOAD_DIR,
+            'cursos',
+            cursoSlug,
+            'topicos',
+            uploadUtils.normalizarNome(topico.nome),
+            uploadUtils.normalizarNome(pasta.nome),
+            'submissoes'
+          );
+          
+          destPath = `uploads/cursos/${cursoSlug}/topicos/${uploadUtils.normalizarNome(topico.nome)}/${uploadUtils.normalizarNome(pasta.nome)}/submissoes`;
+        }
         
-        // Criar diretórios recursivamente
-        uploadUtils.ensureDir(avaliacaoDir);
+        // Criar diretório de submissões se não existir
+        console.log(`Verificando diretório de submissões: ${submissoesDir}`);
         uploadUtils.ensureDir(submissoesDir);
         
-        // Verificar se os diretórios foram criados corretamente
+        // Verificar se o diretório foi criado corretamente
         if (!fs.existsSync(submissoesDir)) {
           console.error(`Erro: Diretório ${submissoesDir} não foi criado`);
           return res.status(500).json({ message: 'Erro ao criar diretórios para submissão' });
         }
         
-        const destPath = `uploads/cursos/${cursoSlug}/avaliacao/submissoes`;
-        
+        console.log(`Diretório de submissões criado: ${submissoesDir}`);
         console.log(`Salvando submissão em: ${submissoesDir}`);
 
         // Preparar nome do ficheiro
@@ -106,22 +131,43 @@ const uploadTrabalho = async (req, res, next) => {
         
         const filePath = path.join(submissoesDir, fileName);
 
-        // Mover o ficheiro do diretório temporário para o destino final
-        console.log(`Movendo ficheiro de ${req.file.path} para ${filePath}`);
-        
-        // Verificar se o ficheiro temporário existe
+        // Verificar se o ficheiro temporário existe antes de tentar movê-lo
         if (!fs.existsSync(req.file.path)) {
           console.error(`Erro: Ficheiro temporário ${req.file.path} não encontrado`);
           return res.status(500).json({ message: 'Ficheiro temporário não encontrado' });
         }
         
+        console.log(`Movendo ficheiro de ${req.file.path} para ${filePath}`);
+        
         try {
-          // Usar fs.copyFileSync e fs.unlinkSync em vez da função moverArquivo
-          fs.copyFileSync(req.file.path, filePath);
-          fs.unlinkSync(req.file.path);
-          console.log(`Ficheiro copiado e temporário removido com sucesso`);
+          // Tentar usar o método moverArquivo
+          const movido = uploadUtils.moverArquivo(req.file.path, filePath);
+          
+          if (!movido) {
+            console.error(`Falha ao mover ficheiro para ${filePath}, tentando copiar manualmente`);
+            
+            // Tentativa alternativa: copiar e depois remover
+            fs.copyFileSync(req.file.path, filePath);
+            
+            // Verificar se o ficheiro foi copiado corretamente
+            if (fs.existsSync(filePath)) {
+              // Tentar remover o ficheiro temporário
+              try {
+                fs.unlinkSync(req.file.path);
+                console.log(`Ficheiro copiado e temporário removido com sucesso`);
+              } catch (unlinkError) {
+                console.error(`Aviso: Não foi possível remover ficheiro temporário: ${unlinkError.message}`);
+                // Continuar mesmo sem remover o temporário
+              }
+            } else {
+              console.error(`Erro: Ficheiro não foi copiado para ${filePath}`);
+              return res.status(500).json({ message: 'Erro ao copiar ficheiro para o destino final' });
+            }
+          }
+          
+          console.log(`Ficheiro movido com sucesso para: ${filePath}`);
         } catch (moveError) {
-          console.error(`Erro ao mover ficheiro: ${moveError.message}`);
+          console.error(`Erro crítico ao mover ficheiro: ${moveError.message}`);
           return res.status(500).json({ message: 'Erro ao mover ficheiro para o destino final' });
         }
 
@@ -131,7 +177,8 @@ const uploadTrabalho = async (req, res, next) => {
           fileName: fileName,
           filePath: path.join(destPath, fileName).replace(/\\/g, '/'),
           id_topico: topico.id_topico,
-          id_pasta: pasta.id_pasta
+          id_pasta: pasta.id_pasta,
+          isAvaliacao: isAvaliacao
         };
 
         console.log(`Ficheiro de trabalho guardado em: ${filePath}`);

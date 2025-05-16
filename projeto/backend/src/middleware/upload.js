@@ -235,23 +235,36 @@ const criarDiretoriosCurso = (curso) => {
   console.log(`A criar diretório do curso: ${cursoDir}`);
   ensureDir(cursoDir);
   
-  // Criar explicitamente a pasta 'topicos' dentro do curso
+  // Criar explicitamente as pastas principais
   const topicosDir = path.join(cursoDir, 'topicos');
+  const avaliacaoDir = path.join(cursoDir, 'avaliacao');
+  const submissoesDir = path.join(avaliacaoDir, 'submissoes');
+  
   console.log(`A criar pasta 'topicos': ${topicosDir}`);
   ensureDir(topicosDir);
-
-  // Verificar se a pasta foi criada
-  if (fs.existsSync(topicosDir)) {
-    console.log(`✅ Pasta 'topicos' criada com sucesso em: ${topicosDir}`);
+  
+  console.log(`A criar pasta 'avaliacao': ${avaliacaoDir}`);
+  ensureDir(avaliacaoDir);
+  
+  console.log(`A criar pasta 'submissoes': ${submissoesDir}`);
+  ensureDir(submissoesDir);
+  
+  // Verificar se as pastas foram criadas
+  if (fs.existsSync(topicosDir) && fs.existsSync(avaliacaoDir) && fs.existsSync(submissoesDir)) {
+    console.log(`✅ Estrutura base criada com sucesso para o curso: ${curso.nome}`);
   } else {
-    console.error(`❌ Falha ao criar pasta 'topicos' em: ${topicosDir}`);
+    console.error(`❌ Falha ao criar estrutura base para o curso: ${curso.nome}`);
   }
 
   return {
     dirPath: cursoDir,
     topicosPath: topicosDir,
+    avaliacaoPath: avaliacaoDir,
+    submissoesPath: submissoesDir,
     urlPath: `uploads/cursos/${cursoSlug}`,
-    topicosUrlPath: `uploads/cursos/${cursoSlug}/topicos`
+    topicosUrlPath: `uploads/cursos/${cursoSlug}/topicos`,
+    avaliacaoUrlPath: `uploads/cursos/${cursoSlug}/avaliacao`,
+    submissoesUrlPath: `uploads/cursos/${cursoSlug}/avaliacao/submissoes`
   };
 };
 
@@ -259,8 +272,22 @@ const criarDiretorosAvaliacaoCurso = (curso, topico) => {
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = 'avaliacao'; // Nome fixo para a pasta de avaliação
   
-  const avaliacaoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, topicoSlug);
+  // Garantir que a pasta do curso exista
+  const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+  console.log(`Verificando se o diretório do curso existe: ${cursoDir}`);
+  ensureDir(cursoDir);
+  
+  // Criar pasta de avaliação
+  const avaliacaoDir = path.join(cursoDir, topicoSlug);
+  console.log(`A criar pasta de avaliação: ${avaliacaoDir}`);
   ensureDir(avaliacaoDir);
+  
+  // Verificar se foi criada
+  if (fs.existsSync(avaliacaoDir)) {
+    console.log(`✅ Pasta de avaliação criada com sucesso`);
+  } else {
+    console.error(`❌ Falha ao criar pasta de avaliação`);
+  }
 
   return {
     dirPath: avaliacaoDir,
@@ -273,9 +300,21 @@ const criarDiretoriosTopico = (curso, topico) => {
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = normalizarNome(topico.nome);
   
+  // Garantir que a pasta topicos exista
+  const topicosDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
+  console.log(`Verificando se a pasta 'topicos' existe: ${topicosDir}`);
+  ensureDir(topicosDir);
+  
   // Colocar o tópico dentro da pasta 'topicos'
-  const topicoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug);
+  const topicoDir = path.join(topicosDir, topicoSlug);
+  console.log(`A criar pasta para o tópico: ${topicoDir}`);
   ensureDir(topicoDir);
+  
+  if (fs.existsSync(topicoDir)) {
+    console.log(`✅ Pasta do tópico criada com sucesso: ${topicoSlug}`);
+  } else {
+    console.error(`❌ Falha ao criar pasta do tópico: ${topicoSlug}`);
+  }
 
   return {
     dirPath: topicoDir,
@@ -323,8 +362,18 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
     urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
     console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta de avaliação em: ${pastaDir}`);
   } else {
-    // Para outros tópicos, colocar na nova estrutura dentro de "topicos"
-    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug);
+    // Garantir que a pasta topicos exista
+    const topicosDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Verificando pasta topicos: ${topicosDir}`);
+    ensureDir(topicosDir);
+    
+    // Garantir que a pasta do tópico exista
+    const topicoDir = path.join(topicosDir, topicoSlug);
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Verificando pasta do tópico: ${topicoDir}`);
+    ensureDir(topicoDir);
+    
+    // Para outros tópicos, colocar na estrutura dentro de "topicos"
+    pastaDir = path.join(topicoDir, pastaSlug);
     urlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}`;
     console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta normal em: ${pastaDir}`);
   }
@@ -354,6 +403,17 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
     ensureDir(submissoesDir);
   }
   
+  // Verificar se os diretórios foram criados
+  const todosDir = [pastaDir, conteudosDir, quizesDir];
+  if (submissoesDir) todosDir.push(submissoesDir);
+  
+  const todosCriados = todosDir.every(dir => fs.existsSync(dir));
+  if (todosCriados) {
+    console.log(`✅ Todos os diretórios foram criados com sucesso`);
+  } else {
+    console.error(`❌ Falha ao criar algum diretório`);
+  }
+  
   // Construir objeto de resultado com todos os caminhos
   const result = {
     dirPath: pastaDir,
@@ -378,17 +438,43 @@ const criarDiretoriosPastaAvaliacao = (curso, pasta) => {
   const cursoSlug = normalizarNome(curso.nome);
   const pastaSlug = normalizarNome(pasta.nome);
   
+  // Garantir que a pasta do curso exista
+  const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+  console.log(`Verificando se o diretório do curso existe: ${cursoDir}`);
+  ensureDir(cursoDir);
+  
+  // Garantir que a pasta avaliacao exista
+  const avaliacaoDir = path.join(cursoDir, 'avaliacao');
+  console.log(`Verificando se o diretório de avaliação existe: ${avaliacaoDir}`);
+  ensureDir(avaliacaoDir);
+  
   // Estrutura correta para pastas de avaliação
-  const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
+  const pastaDir = path.join(avaliacaoDir, pastaSlug);
   const conteudosDir = path.join(pastaDir, 'conteudos');
   const quizesDir = path.join(pastaDir, 'quizes');
   const submissoesDir = path.join(pastaDir, 'submissoes');
   
   // Criar os diretórios
+  console.log(`A criar diretório da pasta: ${pastaDir}`);
   ensureDir(pastaDir);
+  
+  console.log(`A criar diretório de conteúdos: ${conteudosDir}`);
   ensureDir(conteudosDir);
+  
+  console.log(`A criar diretório de quizes: ${quizesDir}`);
   ensureDir(quizesDir);
+  
+  console.log(`A criar diretório de submissões: ${submissoesDir}`);
   ensureDir(submissoesDir);
+  
+  // Verificar se os diretórios foram criados
+  const todosDir = [pastaDir, conteudosDir, quizesDir, submissoesDir];
+  const todosCriados = todosDir.every(dir => fs.existsSync(dir));
+  if (todosCriados) {
+    console.log(`✅ Todos os diretórios de avaliação foram criados com sucesso`);
+  } else {
+    console.error(`❌ Falha ao criar algum diretório de avaliação`);
+  }
   
   // URLs relativas para acesso web
   const urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
@@ -412,29 +498,36 @@ const criarDiretoriosChat = (categoria, topico) => {
 
   const chatDir = path.join(BASE_UPLOAD_DIR, 'chat', categoriaSlug, topicoSlug);
   const conteudosDir = path.join(chatDir, 'conteudos');
-  // Normalizar nomes para evitar caracteres especiais e espaços
 
+  console.log(`A criar diretório para chat: ${chatDir}`);
   ensureDir(chatDir);
+  
+  console.log(`A criar diretório para conteúdos de chat: ${conteudosDir}`);
   ensureDir(conteudosDir);
-  // Definir caminhos para diretórios de avaliação
+  
+  // Verificar se foram criados
+  if (fs.existsSync(chatDir) && fs.existsSync(conteudosDir)) {
+    console.log(`✅ Diretórios de chat criados com sucesso`);
+  } else {
+    console.error(`❌ Falha ao criar diretórios de chat`);
+  }
 
   return {
     dirPath: chatDir,
     conteudosPath: conteudosDir,
     urlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}`,
     conteudosUrlPath: `uploads/chat/${categoriaSlug}/${topicoSlug}/conteudos`
-  // Criar cada diretório necessário
   };
 };
 
 // Função para mover ficheiro temporário para o destino final
 const moverArquivo = (origem, destino) => {
   try {
-  // Criar URLs relativas para acesso web
     // Normalizar caminhos para comparação
     const origemPath = path.resolve(origem);
     const destinoPath = path.resolve(destino);
-  // Retornar objeto com caminhos físicos e URLs
+    
+    console.log(`Movendo arquivo de "${origemPath}" para "${destinoPath}"`);
 
     // Se origem e destino são iguais, não precisamos fazer nada
     if (origemPath === destinoPath) {
@@ -442,35 +535,49 @@ const moverArquivo = (origem, destino) => {
       return true;
     }
 
+    // Verificar se o ficheiro de origem existe
+    if (!fs.existsSync(origemPath)) {
+      console.error(`Erro: Ficheiro de origem não existe: ${origemPath}`);
+      return false;
+    }
+
     // Garantir que o diretório de destino exista
     const destDir = path.dirname(destino);
+    console.log(`Verificando diretório de destino: ${destDir}`);
     ensureDir(destDir);
 
-    // Se o ficheiro de origem existir, copiá-lo e depois removê-lo
-    if (fs.existsSync(origem)) {
-      // Se o ficheiro de destino já existir, remover primeiro
-      if (fs.existsSync(destino)) {
-        try {
-          fs.unlinkSync(destino);
-        } catch (deleteError) {
-          console.error('Erro ao remover ficheiro existente:', deleteError);
-          // Continuar mesmo com erro ao remover
-        }
-      }
-
-      fs.copyFileSync(origem, destino);
-
-      // Tentar remover o ficheiro de origem
+    // Se o ficheiro de destino já existir, remover primeiro
+    if (fs.existsSync(destino)) {
       try {
-        fs.unlinkSync(origem);
-      } catch (unlinkError) {
-        console.error('Erro ao remover ficheiro de origem:', unlinkError);
-        // Não falhar a operação se não conseguir remover o ficheiro de origem
+        console.log(`Removendo ficheiro de destino existente: ${destino}`);
+        fs.unlinkSync(destino);
+      } catch (deleteError) {
+        console.error('Erro ao remover ficheiro existente:', deleteError);
+        // Continuar mesmo com erro ao remover
       }
-
-      return true;
     }
-    return false;
+
+    // Copiar o ficheiro
+    console.log(`Copiando de ${origem} para ${destino}`);
+    fs.copyFileSync(origem, destino);
+
+    // Verificar se a cópia foi bem-sucedida
+    if (!fs.existsSync(destino)) {
+      console.error(`Erro: A cópia não foi bem-sucedida - ficheiro de destino não existe: ${destino}`);
+      return false;
+    }
+
+    // Tentar remover o ficheiro de origem
+    try {
+      console.log(`Removendo ficheiro de origem: ${origem}`);
+      fs.unlinkSync(origem);
+    } catch (unlinkError) {
+      console.error('Erro ao remover ficheiro de origem:', unlinkError);
+      // Não falhar a operação se não conseguir remover o ficheiro de origem
+    }
+
+    console.log(`✅ Ficheiro movido com sucesso`);
+    return true;
   } catch (error) {
     console.error('Erro ao mover ficheiro:', error);
     return false;
