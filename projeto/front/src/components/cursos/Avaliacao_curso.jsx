@@ -335,7 +335,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   };
 
   // MODIFICADO: Enviar submissão do formando com endpoints corrigidos
-  const enviarSubmissao = async (e) => {
+const enviarSubmissao = async (e) => {
   e.preventDefault();
   
   if (!arquivo) {
@@ -352,9 +352,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     formData.append('id_pasta', enviarSubmissaoModal.pastaId);
     formData.append('id_curso', cursoId);
     
-    // Não precisamos mais decodificar o token manualmente
-    // O ID do utilizador será obtido no backend através do token JWT
-    
     const response = await axios.post(`${API_BASE}/trabalhos`, formData, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -362,8 +359,12 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       }
     });
     
-    await carregarTopicos();
+    // Fechar modal
     setEnviarSubmissaoModal({ show: false, pastaId: null });
+    
+    // Importante: recarregar submissões APÓS o envio bem-sucedido
+    await recarregarSubmissoes();
+    
     alert('Trabalho submetido com sucesso!');
   } catch (error) {
     console.error('Erro ao enviar trabalho:', error);
@@ -379,6 +380,82 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     alert(errorMsg);
   } finally {
     setEnviandoArquivo(false);
+  }
+};
+
+
+const recarregarSubmissoes = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Usar apenas o endpoint principal de trabalhos
+    const response = await axios.get(`${API_BASE}/trabalhos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (response.status === 200 && Array.isArray(response.data)) {
+      console.log("Trabalhos carregados:", response.data);
+      
+      // Filtrar e organizar os trabalhos por pasta
+      const submissoesAtualizadas = {};
+      
+      // Inicializar entradas vazias para todas as pastas existentes
+      if (topicoAvaliacao && topicoAvaliacao.pastas) {
+        topicoAvaliacao.pastas.forEach(pasta => {
+          submissoesAtualizadas[pasta.id_pasta] = [];
+        });
+      }
+      
+      // Preencher com os trabalhos correspondentes
+      response.data.forEach(trabalho => {
+        // Verificar se o trabalho pertence ao curso atual
+        if (trabalho.id_curso == cursoId) {
+          // Se a pasta existe no objeto, adicionar o trabalho
+          if (submissoesAtualizadas.hasOwnProperty(trabalho.id_pasta)) {
+            submissoesAtualizadas[trabalho.id_pasta].push(trabalho);
+          }
+        }
+      });
+      
+      console.log("Submissões organizadas:", submissoesAtualizadas);
+      setSubmissoes(submissoesAtualizadas);
+    }
+  } catch (error) {
+    console.error('Erro ao recarregar submissões:', error);
+  }
+};
+
+const recarregarSubmissoesDaPasta = async (pastaId) => {
+  if (!pastaId) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    let submissoesAtualizadas = { ...submissoes };
+    
+    // Tentar primeiro endpoint
+    try {
+      const response = await axios.get(`${API_BASE}/trabalhos`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { id_curso: cursoId }
+      });
+      
+      if (response.status === 200 && response.data) {
+        // Filtrar apenas os trabalhos desta pasta
+        const trabalhosDaPasta = response.data.filter(
+          trabalho => trabalho.id_pasta === pastaId
+        );
+        
+        submissoesAtualizadas[pastaId] = trabalhosDaPasta;
+        console.log(`Submissões recarregadas para pasta ${pastaId}:`, trabalhosDaPasta);
+      }
+    } catch (err) {
+      console.log(`Erro ao obter trabalhos para pasta ${pastaId}:`, err.message);
+    }
+    
+    // Atualizar estado
+    setSubmissoes(submissoesAtualizadas);
+  } catch (error) {
+    console.error('Erro ao recarregar submissões:', error);
   }
 };
 

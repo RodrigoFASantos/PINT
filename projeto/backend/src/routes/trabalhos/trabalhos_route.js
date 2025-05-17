@@ -71,35 +71,38 @@ const uploadTrabalho = async (req, res, next) => {
 
         // Criar caminhos para salvar o ficheiro seguindo a estrutura correta
         const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+        const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
         
         let submissoesDir;
         let destPath;
         
         if (isAvaliacao) {
-          // Para tópicos de avaliação, usar caminho de avaliação
+          // Para tópicos de avaliação, usar a estrutura correta:
+          // uploads/cursos/curso_slug/avaliacao/pasta_slug/submissoes
           submissoesDir = path.join(
             uploadUtils.BASE_UPLOAD_DIR,
             'cursos',
             cursoSlug,
             'avaliacao',
-            uploadUtils.normalizarNome(pasta.nome),
+            pastaSlug,
             'submissoes'
           );
           
-          destPath = `uploads/cursos/${cursoSlug}/avaliacao/${uploadUtils.normalizarNome(pasta.nome)}/submissoes`;
+          destPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/submissoes`;
         } else {
           // Para outros tópicos, usar estrutura normal dentro de topicos
+          const topicoSlug = uploadUtils.normalizarNome(topico.nome);
           submissoesDir = path.join(
             uploadUtils.BASE_UPLOAD_DIR,
             'cursos',
             cursoSlug,
             'topicos',
-            uploadUtils.normalizarNome(topico.nome),
-            uploadUtils.normalizarNome(pasta.nome),
+            topicoSlug,
+            pastaSlug,
             'submissoes'
           );
           
-          destPath = `uploads/cursos/${cursoSlug}/topicos/${uploadUtils.normalizarNome(topico.nome)}/${uploadUtils.normalizarNome(pasta.nome)}/submissoes`;
+          destPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/submissoes`;
         }
         
         // Criar diretório de submissões se não existir

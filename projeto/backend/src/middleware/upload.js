@@ -235,10 +235,9 @@ const criarDiretoriosCurso = (curso) => {
   console.log(`A criar diretório do curso: ${cursoDir}`);
   ensureDir(cursoDir);
   
-  // Criar explicitamente as pastas principais
+  // Criar explicitamente apenas as pastas principais
   const topicosDir = path.join(cursoDir, 'topicos');
   const avaliacaoDir = path.join(cursoDir, 'avaliacao');
-  const submissoesDir = path.join(avaliacaoDir, 'submissoes');
   
   console.log(`A criar pasta 'topicos': ${topicosDir}`);
   ensureDir(topicosDir);
@@ -246,11 +245,8 @@ const criarDiretoriosCurso = (curso) => {
   console.log(`A criar pasta 'avaliacao': ${avaliacaoDir}`);
   ensureDir(avaliacaoDir);
   
-  console.log(`A criar pasta 'submissoes': ${submissoesDir}`);
-  ensureDir(submissoesDir);
-  
   // Verificar se as pastas foram criadas
-  if (fs.existsSync(topicosDir) && fs.existsSync(avaliacaoDir) && fs.existsSync(submissoesDir)) {
+  if (fs.existsSync(topicosDir) && fs.existsSync(avaliacaoDir)) {
     console.log(`✅ Estrutura base criada com sucesso para o curso: ${curso.nome}`);
   } else {
     console.error(`❌ Falha ao criar estrutura base para o curso: ${curso.nome}`);
@@ -260,11 +256,9 @@ const criarDiretoriosCurso = (curso) => {
     dirPath: cursoDir,
     topicosPath: topicosDir,
     avaliacaoPath: avaliacaoDir,
-    submissoesPath: submissoesDir,
     urlPath: `uploads/cursos/${cursoSlug}`,
     topicosUrlPath: `uploads/cursos/${cursoSlug}/topicos`,
-    avaliacaoUrlPath: `uploads/cursos/${cursoSlug}/avaliacao`,
-    submissoesUrlPath: `uploads/cursos/${cursoSlug}/avaliacao/submissoes`
+    avaliacaoUrlPath: `uploads/cursos/${cursoSlug}/avaliacao`
   };
 };
 
@@ -292,6 +286,32 @@ const criarDiretorosAvaliacaoCurso = (curso, topico) => {
   return {
     dirPath: avaliacaoDir,
     urlPath: `uploads/cursos/${cursoSlug}/${topicoSlug}`
+  };
+};
+
+const criarDiretoriosTopicoAvaliacao = (curso, topico) => {
+  const cursoSlug = normalizarNome(curso.nome);
+  const topicoSlug = normalizarNome(topico.nome);
+  
+  // Garantir que a pasta avaliacao exista
+  const avaliacaoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
+  console.log(`Verificando se a pasta 'avaliacao' existe: ${avaliacaoDir}`);
+  ensureDir(avaliacaoDir);
+  
+  // Criar a pasta do tópico dentro de avaliacao
+  const topicoDir = path.join(avaliacaoDir, topicoSlug);
+  console.log(`A criar pasta para o tópico de avaliação: ${topicoDir}`);
+  ensureDir(topicoDir);
+  
+  if (fs.existsSync(topicoDir)) {
+    console.log(`✅ Pasta do tópico de avaliação criada com sucesso: ${topicoSlug}`);
+  } else {
+    console.error(`❌ Falha ao criar pasta do tópico de avaliação: ${topicoSlug}`);
+  }
+
+  return {
+    dirPath: topicoDir,
+    urlPath: `uploads/cursos/${cursoSlug}/avaliacao/${topicoSlug}`
   };
 };
 
@@ -434,8 +454,9 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   return result;
 };
 
-const criarDiretoriosPastaAvaliacao = (curso, pasta) => {
+const criarDiretoriosPastaAvaliacao = (curso, topico, pasta) => {
   const cursoSlug = normalizarNome(curso.nome);
+  const topicoSlug = normalizarNome(topico.nome);
   const pastaSlug = normalizarNome(pasta.nome);
   
   // Garantir que a pasta do curso exista
@@ -448,8 +469,13 @@ const criarDiretoriosPastaAvaliacao = (curso, pasta) => {
   console.log(`Verificando se o diretório de avaliação existe: ${avaliacaoDir}`);
   ensureDir(avaliacaoDir);
   
+  // Garantir que a pasta do tópico exista dentro de avaliacao
+  const topicoDir = path.join(avaliacaoDir, topicoSlug);
+  console.log(`Verificando se o diretório do tópico de avaliação existe: ${topicoDir}`);
+  ensureDir(topicoDir);
+  
   // Estrutura correta para pastas de avaliação
-  const pastaDir = path.join(avaliacaoDir, pastaSlug);
+  const pastaDir = path.join(topicoDir, pastaSlug);
   const conteudosDir = path.join(pastaDir, 'conteudos');
   const quizesDir = path.join(pastaDir, 'quizes');
   const submissoesDir = path.join(pastaDir, 'submissoes');
@@ -477,7 +503,7 @@ const criarDiretoriosPastaAvaliacao = (curso, pasta) => {
   }
   
   // URLs relativas para acesso web
-  const urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
+  const urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${topicoSlug}/${pastaSlug}`;
   
   return {
     dirPath: pastaDir,
@@ -749,6 +775,7 @@ module.exports = {
   gerarNomeUnico,
   criarDiretoriosCurso,
   criarDiretoriosTopico,
+  criarDiretoriosTopicoAvaliacao,
   criarDiretoriosPasta,
   criarDiretoriosPastaAvaliacao,
   criarDiretoriosChat,
