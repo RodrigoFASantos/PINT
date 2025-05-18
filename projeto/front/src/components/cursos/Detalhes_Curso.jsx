@@ -581,6 +581,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                 </div>
               </div>
 
+
               <div className="campo campo-area">
                 <label>Área</label>
                 <div className="campo-valor">
