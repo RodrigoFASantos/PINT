@@ -1,8 +1,3 @@
-/* ==========================================================================
-   CURSO_CONTEUDOS - CSS COMPLETO
-   Estilos para página de conteúdos de curso com hierarquia vertical
-   ========================================================================== */
-
 .curso-conteudos-container {
   width: 100%;
   background-color: #f8f9fa;
@@ -300,97 +295,17 @@
   margin: 0; /* Remover margens */
 }
 
-/* TÓPICOS */
-.topico-item {
-  margin-bottom: 15px;
-  border-radius: 8px;
-  background: transparent;
-  /* Estrutura vertical para tópicos e seus filhos */
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  align-items: flex-start; /* Alinhar à esquerda */
-}
-
-.topico-header {
-  display: flex;
-  align-items: center;
-  background-color: #f8f8f8;
-  padding: 10px 15px;
-  border-radius: 8px;
-  border-left: 4px solid #ff9800;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  width: 100%; /* Ocupar largura total */
-}
-
-.topico-header:hover {
-  background-color: #f0f0f0;
-}
-
-.btn-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  margin-right: 5px;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.topico-nome {
-  font-weight: bold;
-  font-size: 16px;
-  flex-grow: 1;
-}
-
-.topico-actions, .pasta-actions, .conteudo-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.topico-actions button, .pasta-actions button, .conteudo-actions button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
-  color: #666;
-  transition: all 0.2s;
-}
-
-.btn-add {
-  color: #4caf50 !important;
-}
-
-.btn-edit {
-  color: #2196f3 !important;
-}
-
-.btn-delete {
-  color: #f44336 !important;
-}
-
-.btn-add:hover, .btn-edit:hover, .btn-delete:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-/* PASTAS */
-.pastas-list {
-  padding: 0;
-  margin-top: 5px;
-  width: 100%;
-  animation: fadeIn 0.2s ease;
-  align-self: flex-start; /* Alinhar à esquerda */
-}
-
+/* PASTAS (para tópicos e pastas reais) */
 .pasta-item {
   margin: 5px 0 5px 20px;
   /* Estrutura vertical para pastas e seus conteúdos */
   display: flex;
   flex-direction: column;
+}
+
+/* Classe específica para o container do tópico */
+.topico-container {
+  margin: 0 0 10px 0 !important; /* Override para o tópico principal */
 }
 
 .pasta-header {
@@ -409,14 +324,77 @@
   background-color: #e9ecef;
 }
 
-.pasta-header i.fas.fa-folder {
-  color: #ffc107;
-  margin-right: 8px;
+.btn-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  margin-right: 5px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pasta-nome {
   flex-grow: 1;
   font-weight: 500;
+}
+
+.pasta-header i.fas.fa-folder {
+  color: #ffc107;
+  margin-right: 8px;
+}
+
+.pasta-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pasta-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn-add {
+  color: #4caf50 !important;
+}
+
+.btn-edit {
+  color: #2196f3 !important;
+}
+
+/* Garantir que o ícone de editar fique azul */
+.pasta-actions .btn-edit i,
+.pasta-header .btn-edit i {
+  color: #2196f3 !important;
+}
+
+.btn-delete {
+  color: #f44336 !important;
+}
+
+.btn-add:hover, .btn-delete:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Remover hover do botão de edição */
+.btn-edit:hover {
+  background-color: transparent !important;
+}
+
+/* PASTAS INTERNAS */
+.pastas-list {
+  padding: 0;
+  margin-top: 5px;
+  width: 100%;
+  animation: fadeIn 0.2s ease;
+  align-self: flex-start; /* Alinhar à esquerda */
 }
 
 /* CONTEÚDOS */
@@ -499,6 +477,21 @@
   opacity: 0.8;
 }
 
+.conteudo-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.conteudo-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  color: #666;
+  transition: all 0.2s;
+}
+
 /* ===== ESTILOS PARA MODAL DE CONTEÚDO ===== */
 .conteudo-ficheiro-modal .modal-content {
   max-width: 800px;
@@ -554,16 +547,16 @@
     padding: 15px;
   }
   
-  .topico-actions, .pasta-actions, .conteudo-actions {
+  .pasta-actions, .conteudo-actions {
     gap: 5px;
   }
   
-  .topico-actions button, .pasta-actions button, .conteudo-actions button {
+  .pasta-actions button, .conteudo-actions button {
     width: 24px;
     height: 24px;
   }
   
-  .topico-header, .pasta-header {
+  .pasta-header {
     padding: 8px 10px;
   }
   
@@ -573,11 +566,11 @@
 }
 
 @media (max-width: 480px) {
-  .topico-header {
+  .pasta-header {
     flex-wrap: wrap;
   }
   
-  .topico-actions, .pasta-actions {
+  .pasta-actions {
     margin-top: 5px;
     width: 100%;
     justify-content: flex-end;
@@ -610,6 +603,6 @@
 }
 
 /* Estilo para tópico de avaliação (se necessário) */
-.topico-item.avaliacao {
+.pasta-item.avaliacao {
   border-left: 3px solid #e74c3c;
 }

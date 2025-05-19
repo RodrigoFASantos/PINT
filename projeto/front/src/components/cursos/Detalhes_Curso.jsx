@@ -225,21 +225,38 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   }, [courseId]);
 
-  // Verificar o status do curso em relação às datas
-  const verificarStatusCurso = (curso) => {
-    if (!curso) return 'Indisponível';
+  // Função para formatar o estado para exibição e CSS
+  const formatarEstadoParaExibicao = (estado) => {
+    if (!estado) return 'Indisponível';
 
-    const hoje = new Date();
-    const dataInicio = new Date(curso.data_inicio);
-    const dataFim = new Date(curso.data_fim);
+    // Mapear estados do banco para exibição user-friendly
+    const estadosMap = {
+      'planeado': 'Planeado',
+      'em_curso': 'Em Curso',
+      'terminado': 'Terminado',
+      'inativo': 'Inativo'
+    };
 
-    if (hoje >= dataInicio && hoje <= dataFim) {
-      return "Em curso";
-    } else if (hoje > dataFim) {
-      return "Terminado";
-    } else {
-      return "Agendado";
-    }
+    // Normalizar para minúsculas e remover espaços para comparação
+    const estadoNormalizado = estado.toLowerCase().replace(/[\s_]+/g, '_');
+    return estadosMap[estadoNormalizado] || estado;
+  };
+
+  // Função para formatar o estado para classes CSS
+  const formatarEstadoParaCSS = (estado) => {
+    if (!estado) return 'indisponivel';
+
+    // Mapear estados do banco para classes CSS
+    const cssMap = {
+      'planeado': 'planeado',
+      'em_curso': 'em-curso',
+      'terminado': 'terminado',
+      'inativo': 'inativo'
+    };
+
+    // Normalizar para minúsculas e remover espaços para comparação
+    const estadoNormalizado = estado.toLowerCase().replace(/[\s_]+/g, '_');
+    return cssMap[estadoNormalizado] || estadoNormalizado.replace('_', '-');
   };
 
   // Abrir pop-up de confirmação de inscrição
@@ -429,8 +446,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     );
   }
 
-  // Definir o status do curso
-  const statusCurso = verificarStatusCurso(curso);
+  // Usar o estado formatado para exibição
+  const statusCurso = formatarEstadoParaExibicao(curso.estado);
+  const cssClasse = formatarEstadoParaCSS(curso.estado);
 
   return (
     <div className="curso-detalhes-wrapper">
@@ -463,22 +481,20 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       )}
 
       {/* Cabeçalho do curso */}
-      <div
-        className="curso-cabecalho"
-        style={{
-          backgroundImage: `url(${getImageUrl(curso)})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className='titulo'>{curso.nome}</h1>
-            <p className="subtitulo">
-              <span className={`badge-estado ${statusCurso.toLowerCase().replace(' ', '-')}`}>
-                {statusCurso}
-              </span>
-            </p>
+      <div className="curso-cabecalho" style={{
+        backgroundImage: `url(${getImageUrl(curso)})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}>
+        <div className="curso-info-container" style={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Title first, completely separate from the badge */}
+          <h1 className='titulo' style={{ marginBottom: '15px' }}>{curso.nome}</h1>
+
+          {/* Badge as a separate element below the title */}
+          <div className="badge-container" style={{ marginTop: '10px' }}>
+            <span className={`status-badge ${cssClasse}`} style={{ position: 'static' }}>
+              {statusCurso}
+            </span>
           </div>
         </div>
 
@@ -546,10 +562,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
             {/* Terceira linha */}
             <div className="campo-container">
-
-
-
-
               <div className="campo campo-tipo">
                 <label>Tipo Curso</label>
                 <div className="campo-valor">

@@ -70,7 +70,7 @@ const CriarCurso = () => {
       setTopicosFetched(false);
 
       console.log(`Buscando tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
-      
+
       // Usar a rota topicos-area (a rota correta com base nas definições do servidor)
       axios.get(`${API_BASE}/topicos-area/todos`, {
         headers: {
@@ -79,27 +79,27 @@ const CriarCurso = () => {
       })
         .then(res => {
           console.log("Tópicos gerais carregados:", res.data);
-          
+
           // Dados podem vir em diferentes formatos, então lidamos com todos
-          let topicos = Array.isArray(res.data) ? res.data : 
-                       (res.data.data ? res.data.data : []);
-          
+          let topicos = Array.isArray(res.data) ? res.data :
+            (res.data.data ? res.data.data : []);
+
           // Filtrar os tópicos pela categoria e área selecionadas
           const topicosFiltrados = topicos.filter(topico => {
             const categoriaMatch = topico.id_categoria == formData.id_categoria;
             const areaMatch = topico.id_area == formData.id_area;
             return categoriaMatch && areaMatch;
           });
-          
+
           console.log("Tópicos filtrados:", topicosFiltrados);
-          
+
           if (topicosFiltrados.length > 0) {
             setTopicosDisponiveis(topicosFiltrados);
           } else {
             // Tentar buscar especificamente por categoria
             buscarTopicosCategoria();
           }
-          
+
           setTopicosFetched(true);
           setIsLoading(false);
         })
@@ -120,7 +120,7 @@ const CriarCurso = () => {
   // Buscar tópicos por categoria
   const buscarTopicosCategoria = () => {
     console.log(`Buscando tópicos para categoria específica: ${formData.id_categoria}`);
-    
+
     axios.get(`${API_BASE}/topicos-area/categoria/${formData.id_categoria}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -128,16 +128,16 @@ const CriarCurso = () => {
     })
       .then(res => {
         console.log("Tópicos por categoria:", res.data);
-        
+
         // Verificar formato dos dados
-        let topicos = Array.isArray(res.data) ? res.data : 
-                     (res.data.data ? res.data.data : []);
-        
+        let topicos = Array.isArray(res.data) ? res.data :
+          (res.data.data ? res.data.data : []);
+
         // Filtrar adicionalmente por área
-        const topicosFiltrados = topicos.filter(topico => 
+        const topicosFiltrados = topicos.filter(topico =>
           topico.id_area == formData.id_area || !topico.id_area
         );
-        
+
         console.log("Tópicos filtrados por área:", topicosFiltrados);
         setTopicosDisponiveis(topicosFiltrados);
         setTopicosFetched(true);
@@ -153,7 +153,7 @@ const CriarCurso = () => {
   // Buscar tópicos do fórum como último recurso
   const buscarTopicosForum = () => {
     console.log("Buscando tópicos do fórum como último recurso");
-    
+
     axios.get(`${API_BASE}/forum`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -161,22 +161,22 @@ const CriarCurso = () => {
     })
       .then(res => {
         console.log("Tópicos do fórum:", res.data);
-        
-        let topicos = Array.isArray(res.data) ? res.data : 
-                     (res.data.data ? res.data.data : []);
-        
+
+        let topicos = Array.isArray(res.data) ? res.data :
+          (res.data.data ? res.data.data : []);
+
         // Filtrar por categoria e área
         const topicosFiltrados = topicos.filter(topico => {
           // Verificar diversas possibilidades de estrutura de dados
-          const categoriaId = topico.id_categoria || 
-                             (topico.categoria && topico.categoria.id_categoria);
-          const areaId = topico.id_area || 
-                        (topico.area && topico.area.id_area);
-          
-          return categoriaId == formData.id_categoria && 
-                 (areaId == formData.id_area || !areaId);
+          const categoriaId = topico.id_categoria ||
+            (topico.categoria && topico.categoria.id_categoria);
+          const areaId = topico.id_area ||
+            (topico.area && topico.area.id_area);
+
+          return categoriaId == formData.id_categoria &&
+            (areaId == formData.id_area || !areaId);
         });
-        
+
         console.log("Tópicos do fórum filtrados:", topicosFiltrados);
         setTopicosDisponiveis(topicosFiltrados);
         setTopicosFetched(true);
@@ -449,8 +449,9 @@ const CriarCurso = () => {
       setPreviewImage(null);
       setCursosAssociados([]);
 
-      // Opcional: redirecionar para a lista de cursos após sucesso
-      // navigate('/cursos');
+      // Redirecionar para a página do curso criado
+      const novoCursoId = response.data.curso.id_curso;
+      navigate(`/cursos/${novoCursoId}`);
     } catch (error) {
       console.error('Erro ao criar curso:', error);
       const errorMessage = error.response?.data?.message || 'Erro desconhecido';
@@ -611,7 +612,7 @@ const CriarCurso = () => {
                     const topicoId = topico.id || topico.id_topico || topico.topico_id;
                     // Verificar diferentes formatos de título
                     const topicoTitulo = topico.titulo || topico.title || topico.nome || topico.name;
-                    
+
                     return (
                       <option key={topicoId} value={topicoId}>
                         {topicoTitulo}
@@ -623,8 +624,8 @@ const CriarCurso = () => {
                     {!formData.id_area
                       ? "Selecione uma área primeiro"
                       : (topicosFetched
-                          ? "Nenhum tópico disponível para esta área"
-                          : "A carregar tópicos...")}
+                        ? "Nenhum tópico disponível para esta área"
+                        : "A carregar tópicos...")}
                   </option>
                 )}
               </select>

@@ -8,20 +8,20 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
   // Estado para gerenciar os modais
   const [modalAtual, setModalAtual] = useState('selecao-tipo');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
-  
+
   // Verificar se o conteúdo está associado a uma pasta de avaliação
   const isAvaliacao = pasta.isAvaliacao;
-  
+
   // Função para fechar todos os modais
   const fecharTodosModais = () => {
     onClose();
   };
-  
+
   // Handler para seleção de tipo
   const handleTipoSelecionado = (tipo) => {
     console.log(`Tipo selecionado: ${tipo}`);
     setTipoSelecionado(tipo);
-    
+
     if (tipo === 'arquivo' || tipo === 'video') {
       setModalAtual('arquivo-modal');
     } else {
@@ -34,7 +34,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
       {modalAtual === 'selecao-tipo' && (
         <div className="criar-conteudo-modal">
           <button className="close-btn" onClick={fecharTodosModais} type="button">×</button>
-          
+
           <h2>Adicionar Conteúdo{isAvaliacao ? ' de Avaliação' : ''}</h2>
           {pasta && pasta.nome && (
             <p className="pasta-info">
@@ -42,31 +42,31 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
               {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
             </p>
           )}
-          
+
           <div className="tipo-botoes">
             {/* Botão Link - Amarelo */}
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="tipo-btn"
               onClick={() => handleTipoSelecionado('link')}
               style={{ backgroundColor: "#f1c40f" }}
             >
               Link
             </button>
-            
+
             {/* Botão Arquivo - Azul */}
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="tipo-btn"
               onClick={() => handleTipoSelecionado('arquivo')}
               style={{ backgroundColor: "#3498db" }}
             >
               Arquivo
             </button>
-            
+
             {/* Botão Vídeo - Vermelho */}
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="tipo-btn"
               onClick={() => handleTipoSelecionado('video')}
               style={{ backgroundColor: "#e74c3c" }}
@@ -78,7 +78,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
       )}
 
       {modalAtual === 'url-link-modal' && (
-        <UrlLinkModal 
+        <UrlLinkModal
           tipo={tipoSelecionado}
           pasta={pasta}
           API_BASE={API_BASE}
@@ -90,7 +90,7 @@ const CriarConteudoModal = ({ pasta, onClose, onSuccess }) => {
       )}
 
       {modalAtual === 'arquivo-modal' && (
-        <ArquivoModal 
+        <ArquivoModal
           pasta={pasta}
           API_BASE={API_BASE}
           onClose={fecharTodosModais}
@@ -116,23 +116,23 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!titulo.trim()) {
       setErro('O título é obrigatório.');
       return;
     }
-    
+
     if (!url.trim()) {
       setErro(`O ${tipoLabel} é obrigatório para este tipo de conteúdo.`);
       return;
     }
-    
+
     setEnviando(true);
     setErro('');
-    
+
     try {
       const token = localStorage.getItem('token');
-      
+
       const formData = new FormData();
       formData.append('tipo', tipo);
       formData.append('titulo', titulo.trim());
@@ -140,19 +140,19 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
       formData.append('id_pasta', pasta.id_pasta);
       formData.append('id_curso', pasta.id_curso);
       formData.append('url', url.trim());
-      
+
       // Adicionar flag para indicar se é avaliação
       if (isAvaliacao) {
         formData.append('isAvaliacao', 'true');
       }
-      
+
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       console.log('Resposta da API:', response.data);
       onSuccess();
       onClose();
@@ -166,7 +166,7 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
   return (
     <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
-      
+
       <h2>Adicionar Link{isAvaliacao ? ' de Avaliação' : ''}</h2>
       {pasta && pasta.nome && (
         <p className="pasta-info">
@@ -174,7 +174,7 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
           {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
         </p>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="titulo">Título:</label>
@@ -188,7 +188,7 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
             required
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="url">{tipoLabel}:</label>
           <input
@@ -201,21 +201,21 @@ const UrlLinkModal = ({ tipo, pasta, onClose, onVoltar, onSuccess, API_BASE, isA
             required
           />
         </div>
-        
+
         {erro && <p className="erro-message">{erro}</p>}
-        
+
         <div className="form-actions">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="voltar-btn"
             onClick={onVoltar}
             disabled={enviando}
           >
             Voltar
           </button>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             className="confirmar-btn"
             disabled={enviando}
           >
@@ -239,13 +239,13 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
 
   // Determina se estamos adicionando um arquivo comum ou um vídeo
   const isVideo = tipo === 'video';
-  
+
   // Extensões de arquivo permitidas para vídeo
   const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
-  
+
   // Aceitar apenas formatos de vídeo se tipo for vídeo
-  const acceptAttribute = isVideo ? 
-    `.${videoExtensions.join(',.')}` : 
+  const acceptAttribute = isVideo ?
+    `.${videoExtensions.join(',.')}` :
     '*/*';
 
   const handleArquivoChange = (e) => {
@@ -259,7 +259,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
           return;
         }
       }
-      
+
       setArquivo(selectedFile);
       setArquivoNome(selectedFile.name);
       setTitulo(selectedFile.name); // Preenche o título com o nome do arquivo por padrão
@@ -272,33 +272,35 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!arquivo) {
       setErro('O arquivo é obrigatório.');
       return;
     }
-    
+
     setEnviando(true);
     setShowProgress(true);
     setErro('');
-    
+
     try {
       const token = localStorage.getItem('token');
-      
+
       const formData = new FormData();
-      // Define o tipo correto com base na seleção
-      formData.append('tipo', isVideo ? 'video_file' : 'file');
-      formData.append('titulo', titulo || arquivo.name); // Usa o título personalizado ou o nome do arquivo
+      // Aqui está a alteração - usando sempre 'file' como tipo
+      formData.append('tipo', 'file');
+      // Adicionando um campo extra para identificar se é vídeo ou outro tipo de arquivo
+      formData.append('tipo_midia', isVideo ? 'video' : 'documento');
+      formData.append('titulo', titulo || arquivo.name);
       formData.append('descricao', '');
       formData.append('id_pasta', pasta.id_pasta);
       formData.append('id_curso', pasta.id_curso);
-      formData.append('arquivo', arquivo);
-      
+      formData.append('ficheiro', arquivo);
+
       // Adicionar flag para indicar se é avaliação
       if (isAvaliacao) {
         formData.append('isAvaliacao', 'true');
       }
-      
+
       // Configura axios para monitorar o progresso do upload
       const response = await axios.post(`${API_BASE}/conteudos-curso`, formData, {
         headers: {
@@ -310,20 +312,20 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
           setUploadProgress(percentCompleted);
         }
       });
-      
+
       console.log('Resposta da API:', response.data);
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Erro ao adicionar arquivo:', error);
-      
+
       // Verifica se é um erro de tamanho de arquivo
       if (error.response && error.response.status === 413) {
         setErro('O arquivo é muito grande. Verifique as configurações de upload do servidor.');
       } else {
         setErro(error.response?.data?.message || 'Erro ao adicionar arquivo. Tente novamente.');
       }
-      
+
       setEnviando(false);
       setShowProgress(false);
     }
@@ -332,7 +334,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
   return (
     <div className="criar-conteudo-modal">
       <button className="close-btn" onClick={onClose} type="button">×</button>
-      
+
       <h2>Adicionar {isVideo ? 'Vídeo' : 'Arquivo'}{isAvaliacao ? ' de Avaliação' : ''}</h2>
       {pasta && pasta.nome && (
         <p className="pasta-info">
@@ -340,7 +342,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
           {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
         </p>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="arquivo">Selecione o {isVideo ? 'vídeo' : 'arquivo'}:</label>
@@ -350,7 +352,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
           <input
             type="file"
             id="arquivo"
-            name="arquivo"
+            name="ficheiro"
             accept={acceptAttribute}
             onChange={handleArquivoChange}
             required
@@ -360,7 +362,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
           </p>
           {arquivo && <p className="file-size">Tamanho: {(arquivo.size / (1024 * 1024)).toFixed(2)} MB</p>}
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="titulo">Título (opcional):</label>
           <input
@@ -372,33 +374,33 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
             placeholder={`Deixe em branco para usar o nome do ${isVideo ? 'vídeo' : 'arquivo'}`}
           />
         </div>
-        
+
         {showProgress && (
           <div className="upload-progress">
             <div className="progress-bar">
-              <div 
-                className="progress-fill" 
+              <div
+                className="progress-fill"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
             <div className="progress-text">{uploadProgress}% Enviado</div>
           </div>
         )}
-        
+
         {erro && <p className="erro-message">{erro}</p>}
-        
+
         <div className="form-actions">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="voltar-btn"
             onClick={onVoltar}
             disabled={enviando}
           >
             Voltar
           </button>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             className="confirmar-btn"
             disabled={enviando}
           >

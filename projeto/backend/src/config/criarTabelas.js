@@ -348,10 +348,12 @@ const createTablesInOrder = async () => {
     // =============================================
     `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
       id_trabalho SERIAL PRIMARY KEY,
-      id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      id_curso     INTEGER NOT NULL REFERENCES curso(id_curso),
       ficheiro_path VARCHAR(500) NOT NULL,
-      data_entrega TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      avaliacao TEXT
+      data_entrega  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      avaliacao     INTEGER CHECK (avaliacao BETWEEN 0 AND 20),
+      observacoes   TEXT
     );`,
 
     // =============================================

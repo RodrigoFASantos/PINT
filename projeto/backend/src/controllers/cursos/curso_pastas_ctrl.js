@@ -41,7 +41,7 @@ const createPasta = async (req, res) => {
     let pastaDir, pastaUrlPath;
     
     if (isAvaliacao) {
-      // Para pastas de avaliação, usar a estrutura: curso/avaliacao/pasta_slug
+      // MODIFICADO: Para pastas de avaliação, usar a estrutura: curso/avaliacao/nome_pasta
       pastaDir = path.join(
         uploadUtils.BASE_UPLOAD_DIR, 
         'cursos', 
@@ -77,13 +77,18 @@ const createPasta = async (req, res) => {
     
     // Criar a pasta e suas subpastas
     uploadUtils.ensureDir(pastaDir);
-    uploadUtils.ensureDir(path.join(pastaDir, 'conteudos'));
-    // A pasta quizes não será mais criada automaticamente
     
-    // Para qualquer tipo de pasta, a pasta submissões agora vai ficar dentro da pasta específica
-    const submissoesDir = path.join(pastaDir, 'submissoes');
-    console.log(`Criando pasta de submissões: ${submissoesDir}`);
-    uploadUtils.ensureDir(submissoesDir);
+    // MODIFICADO: Criar a estrutura correta de pastas
+    if (isAvaliacao) {
+      // Para avaliação: criar conteudos/Conteudos e submissoes/Submissoes
+      uploadUtils.ensureDir(path.join(pastaDir, 'conteudos'));
+      uploadUtils.ensureDir(path.join(pastaDir, 'conteudos', 'Conteudos'));
+      uploadUtils.ensureDir(path.join(pastaDir, 'submissoes'));
+      uploadUtils.ensureDir(path.join(pastaDir, 'submissoes', 'Submissoes'));
+    } else {
+      // Para tópicos regulares: criar apenas Conteudos
+      uploadUtils.ensureDir(path.join(pastaDir, 'Conteudos'));
+    }
 
     // Criar pasta na base de dados
     const novaPasta = await PastaCurso.create({

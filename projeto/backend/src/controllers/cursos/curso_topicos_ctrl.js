@@ -99,9 +99,10 @@ const createTopico = async (req, res) => {
 
     // Criar os diretórios corretamente usando a nova estrutura
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
+    const topicoSlug = uploadUtils.normalizarNome(nome);
     
     if (isAvaliacao) {
-      // Para tópicos de avaliação, usar DIRETAMENTE a pasta 'avaliacao' sem subpasta adicional
+      // MODIFICADO: Para tópicos de avaliação, usar diretório "avaliacao"
       const avaliacaoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao');
       const avaliacaoUrlPath = `uploads/cursos/${cursoSlug}/avaliacao`;
       
@@ -114,7 +115,6 @@ const createTopico = async (req, res) => {
       novoTopico.arquivo_path = avaliacaoUrlPath;
     } else {
       // Para tópicos normais, usar a estrutura com "topicos"
-      const topicoSlug = uploadUtils.normalizarNome(nome);
       const topicosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
       const topicoDir = path.join(topicosDir, topicoSlug);
       const topicoUrlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}`;

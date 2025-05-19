@@ -239,9 +239,9 @@ const App = () => {
 
               {/* Rotas para formadores */}
               <Route
-                path="/area-professor"
+                path="/area-formador"
                 element={
-                  <RouteWrapper path="/area-professor">
+                  <RouteWrapper path="/area-formador">
                     <ProtectedRoute allowedRoles={[1, 2]}>
                       <AreaProfessor />
                     </ProtectedRoute>

@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
+const uploadUtils = require('../../middleware/upload');
 const { 
   getAllCursos, getCursosByCategoria, getTopicoArea, createCurso, getCursoById, 
   getInscricoesCurso, updateCurso, deleteCurso, getCursosSugeridos,
   getTopicosCurso, createCurso_Topicos, updateCurso_Topicos, deleteCurso_Topicos
 } = require("../../controllers/cursos/cursos_ctrl");
-const uploadUtils = require('../../middleware/upload');
 
 // Rotas de cursos
 router.post("/", verificarToken, autorizar([1, 2]), uploadUtils.uploadCurso.single("imagem"), createCurso);

@@ -51,8 +51,8 @@ const normalizarNome = (nome) => {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9]+/g, '-')     // Substitui caracteres não alfanuméricos por hífens
-    .replace(/^-+|-+$/g, '');        // Remove hífens no início ou fim
+    .replace(/[^a-z0-9]+/g, '_')     // Substitui caracteres não alfanuméricos por UNDERSCORES
+    .replace(/^_+|_+$/g, '');        // Remove underscores no início ou fim
 };
 
 // Função para garantir que um diretório exista

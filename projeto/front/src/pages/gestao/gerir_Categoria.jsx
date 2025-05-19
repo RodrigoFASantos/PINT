@@ -5,34 +5,34 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import API_BASE from "../../api";
 import { useAuth } from '../../contexts/AuthContext';
-import Sidebar from '../../components/Sidebar';
 import './css/gerir_Categoria.css';
+import Sidebar from '../../components/Sidebar';
 
 const Gerir_Categoria = () => {
   const navigate = useNavigate();
-  const [categorias, setCategorias] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalCategorias, setTotalCategorias] = useState(0);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [formMode, setFormMode] = useState('criar'); // 'criar' ou 'editar'
-  const [formData, setFormData] = useState({ nome: '' });
   
   // Auth context
   const { currentUser } = useAuth();
   
-  // Estados para paginação
-  const [paginaAtual, setPaginaAtual] = useState(1);
-  const categoriasPorPagina = 20;
+  // Estados para sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Estados para filtros
-  const [filtros, setFiltros] = useState({
-    nome: ''
-  });
-
-  // Ref para controlar debounce nos filtros
+  // Estados para categorias
+  const [categorias, setCategorias] = useState([]);
+  const [totalCategorias, setTotalCategorias] = useState(0);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const categoriasPorPagina = 10;
+  const [filtros, setFiltros] = useState({ nome: '' });
+  const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [editCategoria, setEditCategoria] = useState(null);
+  const [newCategoriaNome, setNewCategoriaNome] = useState('');
+  const [showCategoriaForm, setShowCategoriaForm] = useState(false);
+  
+  // Estado de carregamento
+  const [loading, setLoading] = useState(true);
+  
+  // Ref para debounce
   const filterTimeoutRef = useRef(null);
 
   // Toggle para a sidebar
@@ -41,7 +41,7 @@ const Gerir_Categoria = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Função para buscar categorias com paginação e filtros (usando useCallback)
+  // Função para buscar categorias com paginação e filtros
   const buscarCategorias = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
       console.log('[DEBUG] Gerir_Categoria: A iniciar busca de categorias - Página:', pagina);
@@ -72,15 +72,13 @@ const Gerir_Categoria = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Categoria: Resposta da API:', response.data);
+      console.log('[DEBUG] Gerir_Categoria: Resposta da API (categorias):', response.data);
       
-      // Verifica a estrutura dos dados recebidos
       if (response.data) {
         if (Array.isArray(response.data.categorias)) {
           setCategorias(response.data.categorias);
           setTotalCategorias(response.data.total || response.data.categorias.length);
         } else if (Array.isArray(response.data)) {
-          // Se a resposta for um array direto
           setCategorias(response.data);
           setTotalCategorias(response.data.length);
         } else {
@@ -110,10 +108,11 @@ const Gerir_Categoria = () => {
           toast.error('Não autorizado. Faça login novamente.');
           navigate('/login');
         } else {
-          toast.error(`Erro ao carregar categorias: ${error.response.data.message || 'Erro desconhecido'}`);
+          toast.error(`Erro ao carregar categorias: ${error.response.data?.message || 'Erro desconhecido'}`);
         }
       } else {
-        toast.error('Erro de conexão com o servidor. Verifique sua internet.');
+        console.error('[DEBUG] Gerir_Categoria: Erro:', error.message);
+        toast.error('Erro ao processar a requisição.');
       }
       
       setCategorias([]);
@@ -122,7 +121,7 @@ const Gerir_Categoria = () => {
     }
   }, [categoriasPorPagina, navigate]);
 
-  // Buscar dados iniciais
+  // Efeito para carregar dados iniciais
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -130,15 +129,38 @@ const Gerir_Categoria = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         
+        console.log('[DEBUG] Gerir_Categoria: Token no localStorage:', token ? 'SIM' : 'NÃO');
+        
         if (!token) {
           console.log('[DEBUG] Gerir_Categoria: Token não encontrado. A redirecionar para login...');
           navigate('/login');
           return;
         }
         
+        // Log do usuário atual do AuthContext
+        console.log('[DEBUG] Gerir_Categoria: Utilizador atual do AuthContext:', currentUser);
+        
+        if (currentUser) {
+          console.log('[DEBUG] Gerir_Categoria: Dados do utilizador do AuthContext:', {
+            id_utilizador: currentUser.id_utilizador,
+            nome: currentUser.nome,
+            id_cargo: currentUser.id_cargo,
+            email: currentUser.email,
+            cargo: currentUser.cargo
+          });
+          
+          // Verificar se o usuário tem permissão (admin ou gestor)
+          if (currentUser.id_cargo !== 1) {
+            console.log('[DEBUG] Gerir_Categoria: Usuário não é administrador. Redirecionando...');
+            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            navigate('/');
+            return;
+          }
+        }
+        
         console.log('[DEBUG] Gerir_Categoria: Autenticação verificada com sucesso. A buscar dados...');
         
-        // Obter categorias (primeira página) - com filtros vazios inicialmente
+        // Buscar categorias iniciais
         await buscarCategorias(1, filtros);
         
       } catch (error) {
@@ -157,26 +179,33 @@ const Gerir_Categoria = () => {
     };
 
     fetchData();
-  }, [navigate, buscarCategorias]);
+  }, [navigate, currentUser, buscarCategorias]);
 
   // Handler para mudança de filtros com debounce
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     console.log(`[DEBUG] Gerir_Categoria: Filtro alterado: ${name} = ${value}`);
     
+    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
+    // Atualizar o estado dos filtros
     setFiltros(prev => {
       const novosFiltros = {
         ...prev,
         [name]: value
       };
       
+      console.log('[DEBUG] Gerir_Categoria: Novos filtros:', novosFiltros);
+      
+      // Ativar o indicador de carregamento imediatamente
       setLoading(true);
       
+      // Configurar novo temporizador de debounce
       filterTimeoutRef.current = setTimeout(() => {
+        // Quando o temporizador disparar, usar os valores atuais dos filtros
         buscarCategorias(1, novosFiltros);
       }, 600);
       
@@ -188,140 +217,148 @@ const Gerir_Categoria = () => {
   const handleLimparFiltros = () => {
     console.log('[DEBUG] Gerir_Categoria: A limpar filtros');
     
+    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
-    const filtrosLimpos = {
-      nome: ''
-    };
+    const filtrosLimpos = { nome: '' };
     
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
     
+    // Buscar dados com filtros limpos
     buscarCategorias(1, filtrosLimpos);
   };
 
   // Funções de navegação
   const handlePaginaAnterior = () => {
+    console.log('[DEBUG] Gerir_Categoria: A navegar para página anterior');
     if (paginaAtual > 1) {
       buscarCategorias(paginaAtual - 1, filtros);
     }
   };
 
   const handleProximaPagina = () => {
+    console.log('[DEBUG] Gerir_Categoria: A navegar para próxima página');
     const totalPaginas = Math.ceil(totalCategorias / categoriasPorPagina);
     if (paginaAtual < totalPaginas) {
       buscarCategorias(paginaAtual + 1, filtros);
     }
   };
 
-  // Função para mostrar o modal de criação
-  const handleCriarCategoria = () => {
-    setFormData({ nome: '' });
-    setFormMode('criar');
-    setShowFormModal(true);
+  // Funções para criar nova categoria
+  const handleOpenCategoriaForm = () => {
+    setShowCategoriaForm(true);
+    setEditCategoria(null);
+    setNewCategoriaNome('');
   };
 
-  // Função para mostrar o modal de edição
-  const handleEditarCategoria = (categoria, e) => {
-    e.stopPropagation();
-    setFormData({ 
-      id: categoria.id_categoria || categoria.id,
-      nome: categoria.nome 
-    });
-    setFormMode('editar');
-    setShowFormModal(true);
+  const handleCloseCategoriaForm = () => {
+    setShowCategoriaForm(false);
+    setEditCategoria(null);
+    setNewCategoriaNome('');
   };
 
-  // Função para mostrar confirmação de exclusão
-  const handleConfirmarExclusao = (categoria, e) => {
-    e.stopPropagation();
-    console.log('[DEBUG] Gerir_Categoria: A solicitar confirmação de exclusão para categoria:', categoria);
-    setCategoriaParaExcluir(categoria);
-    setShowDeleteConfirmation(true);
-  };
-
-  // Função para salvar categoria (criar ou editar)
-  const handleSalvarCategoria = async () => {
-    if (!formData.nome.trim()) {
-      toast.error('O nome da categoria é obrigatório!');
-      return;
-    }
-    
+  const handleSaveCategoria = async () => {
     try {
       const token = localStorage.getItem('token');
       
-      if (formMode === 'criar') {
-        console.log('[DEBUG] Gerir_Categoria: A criar nova categoria:', formData);
-        
-        const response = await axios.post(`${API_BASE}/categorias`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('[DEBUG] Gerir_Categoria: Categoria criada com sucesso:', response.data);
-        toast.success('Categoria criada com sucesso!');
-      } else {
-        console.log('[DEBUG] Gerir_Categoria: A atualizar categoria:', formData);
-        
-        const response = await axios.put(`${API_BASE}/categorias/${formData.id}`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('[DEBUG] Gerir_Categoria: Categoria atualizada com sucesso:', response.data);
-        toast.success('Categoria atualizada com sucesso!');
+      if (!newCategoriaNome.trim()) {
+        toast.error('Por favor, insira um nome para a categoria.');
+        return;
       }
       
-      setShowFormModal(false);
+      // Modo edição
+      if (editCategoria) {
+        console.log(`[DEBUG] Gerir_Categoria: A atualizar categoria ID ${editCategoria.id_categoria}`);
+        
+        await axios.put(`${API_BASE}/categorias/${editCategoria.id_categoria}`, {
+          nome: newCategoriaNome
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        toast.success('Categoria atualizada com sucesso!');
+      } 
+      // Modo criação
+      else {
+        console.log('[DEBUG] Gerir_Categoria: A criar nova categoria');
+        
+        await axios.post(`${API_BASE}/categorias`, {
+          nome: newCategoriaNome
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        toast.success('Categoria criada com sucesso!');
+      }
+      
+      // Fechar o formulário e atualizar a lista
+      handleCloseCategoriaForm();
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
       console.error('[DEBUG] Gerir_Categoria: Erro ao salvar categoria:', error);
       
       if (error.response) {
-        toast.error(`Erro: ${error.response.data.message || 'Falha ao processar a requisição.'}`);
+        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro de conexão. Verifique sua conexão com a internet.');
+        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
       }
     }
   };
 
-  // Função para excluir a categoria
+  // Funções para editar categoria
+  const handleEditarCategoria = (categoria) => {
+    console.log(`[DEBUG] Gerir_Categoria: A editar categoria ID ${categoria.id_categoria}`);
+    setEditCategoria(categoria);
+    setNewCategoriaNome(categoria.nome);
+    setShowCategoriaForm(true);
+  };
+
+  // Funções para excluir categoria
+  const handleConfirmarExclusao = (categoria) => {
+    console.log(`[DEBUG] Gerir_Categoria: A confirmar exclusão da categoria ID ${categoria.id_categoria}`);
+    setCategoriaParaExcluir(categoria);
+    setShowDeleteConfirmation(true);
+  };
+
   const handleExcluirCategoria = async () => {
     if (!categoriaParaExcluir) return;
     
-    const categoriaId = categoriaParaExcluir.id_categoria || categoriaParaExcluir.id;
-    console.log('[DEBUG] Gerir_Categoria: A iniciar exclusão da categoria:', categoriaId);
-    
     try {
       const token = localStorage.getItem('token');
+      console.log(`[DEBUG] Gerir_Categoria: A excluir categoria ID ${categoriaParaExcluir.id_categoria}`);
       
-      await axios.delete(`${API_BASE}/categorias/${categoriaId}`, {
+      await axios.delete(`${API_BASE}/categorias/${categoriaParaExcluir.id_categoria}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Categoria: Categoria excluída com sucesso');
       toast.success('Categoria excluída com sucesso!');
+      setShowDeleteConfirmation(false);
+      setCategoriaParaExcluir(null);
       
-      // Atualizar a lista de categorias
+      // Atualizar a lista
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
       console.error('[DEBUG] Gerir_Categoria: Erro ao excluir categoria:', error);
       
       if (error.response) {
-        if (error.response.status === 400 && error.response.data.message.includes('áreas associadas')) {
-          toast.error('Esta categoria não pode ser excluída porque possui áreas associadas.');
-        } else {
-          toast.error(`Erro ao excluir categoria: ${error.response.data.message || 'Erro desconhecido'}`);
-        }
+        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro de conexão. Verifique sua conexão com a internet.');
+        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
       }
-    } finally {
+      
       setShowDeleteConfirmation(false);
       setCategoriaParaExcluir(null);
     }
+  };
+
+  // Função para navegar para a página de áreas
+  const handleIrParaAreas = () => {
+    navigate('/admin/areas');
   };
 
   // Calcular número total de páginas
@@ -358,13 +395,21 @@ const Gerir_Categoria = () => {
       
       <div className="main-content">
         <div className="categorias-header">
-          <h1>Categorias</h1>
-          <button 
-            className="criar-categoria-btn"
-            onClick={handleCriarCategoria}
-          >
-            Criar Nova Categoria
-          </button>
+          <h1>Gestão de Categorias</h1>
+          <div className="header-actions">
+            <button 
+              className="btn-navegacao"
+              onClick={handleIrParaAreas}
+            >
+              Gerir Áreas
+            </button>
+            <button 
+              className="criar-btn"
+              onClick={handleOpenCategoriaForm}
+            >
+              Criar Nova Categoria
+            </button>
+          </div>
         </div>
         
         <div className="filtros-container">
@@ -398,7 +443,7 @@ const Gerir_Categoria = () => {
               <p>A carregar categorias...</p>
             </div>
           ) : categorias.length === 0 ? (
-            <div className="no-categorias">
+            <div className="no-items">
               <p>Nenhuma categoria encontrada com os filtros aplicados.</p>
             </div>
           ) : (
@@ -408,45 +453,35 @@ const Gerir_Categoria = () => {
                   <tr>
                     <th>ID</th>
                     <th>Nome da Categoria</th>
-                    <th>Áreas</th>
+                    <th>Total de Áreas</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categorias.map(categoria => {
-                    // Obter ID da categoria de maneira consistente
-                    const categoriaId = categoria.id_categoria || categoria.id;
-                    
-                    // Obter número de áreas (se disponível)
-                    const numAreas = categoria.areas_count || 0;
-                    
-                    return (
-                      <tr 
-                        key={categoriaId} 
-                        className="categoria-row"
-                      >
-                        <td>{categoriaId}</td>
-                        <td className="categoria-nome">{categoria.nome}</td>
-                        <td>{numAreas} área{numAreas !== 1 ? 's' : ''}</td>
-                        <td className="acoes">
-                          <button 
-                            className="btn-icon btn-editar"
-                            onClick={(e) => handleEditarCategoria(categoria, e)}
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="btn-icon btn-excluir"
-                            onClick={(e) => handleConfirmarExclusao(categoria, e)}
-                            title="Excluir"
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {categorias.map(categoria => (
+                    <tr key={categoria.id_categoria}>
+                      <td>{categoria.id_categoria}</td>
+                      <td className="categoria-nome">{categoria.nome}</td>
+                      <td>{categoria.areas_count || 0}</td>
+                      <td className="acoes">
+                        <button 
+                          className="btn-icon btn-editar"
+                          onClick={() => handleEditarCategoria(categoria)}
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn-icon btn-excluir"
+                          onClick={() => handleConfirmarExclusao(categoria)}
+                          title="Excluir"
+                          disabled={categoria.areas_count > 0}
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               
@@ -481,33 +516,33 @@ const Gerir_Categoria = () => {
         </div>
       </div>
       
-      {/* Modal de formulário (criar/editar) */}
-      {showFormModal && (
+      {/* Modal de formulário de categoria */}
+      {showCategoriaForm && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>{formMode === 'criar' ? 'Criar Nova Categoria' : 'Editar Categoria'}</h3>
+            <h3>{editCategoria ? 'Editar Categoria' : 'Nova Categoria'}</h3>
             <div className="form-group">
-              <label htmlFor="categoria-nome">Nome da Categoria:</label>
+              <label htmlFor="newCategoriaNome">Nome da Categoria:</label>
               <input 
-                type="text"
-                id="categoria-nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                placeholder="Nome da categoria"
+                type="text" 
+                id="newCategoriaNome" 
+                value={newCategoriaNome}
+                onChange={(e) => setNewCategoriaNome(e.target.value)}
+                placeholder="Digite o nome da categoria"
               />
             </div>
             <div className="modal-actions">
               <button 
                 className="btn-cancelar"
-                onClick={() => setShowFormModal(false)}
+                onClick={handleCloseCategoriaForm}
               >
                 Cancelar
               </button>
               <button 
                 className="btn-confirmar"
-                onClick={handleSalvarCategoria}
+                onClick={handleSaveCategoria}
               >
-                {formMode === 'criar' ? 'Criar Categoria' : 'Salvar Alterações'}
+                {editCategoria ? 'Atualizar' : 'Criar'}
               </button>
             </div>
           </div>

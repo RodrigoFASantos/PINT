@@ -28,7 +28,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
   const isActive = (path) => {
     return location.pathname === path ||
-           (path !== '/' && location.pathname.startsWith(path));
+      (path !== '/' && location.pathname.startsWith(path));
   };
 
   return (
@@ -65,7 +65,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   <i className="fas fa-comments"></i> Chats
                 </Link>
               </li>
-              
+
             </ul>
           </div>
 
@@ -88,14 +88,9 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             <div className="sidebar-section">
               <h3>Formador</h3>
               <ul>
-                <li className={isActive('/criarCurso') ? 'active' : ''}>
-                  <Link to="/criarCurso" onClick={toggleSidebar}>
-                    <i className="fas fa-book"></i> Criar Cursos
-                  </Link>
-                </li>
-                <li className={isActive('/area-professor') ? 'active' : ''}>
-                  <Link to="/area-professor" onClick={toggleSidebar}>
-                    <i className="fas fa-chalkboard-teacher"></i> Meus Cursos
+                <li className={isActive('/area-formador') ? 'active' : ''}>
+                  <Link to="/area-formador" onClick={toggleSidebar}>
+                    <i className="fas fa-chalkboard-teacher"></i> Cursos Lecionados
                   </Link>
                 </li>
               </ul>
@@ -122,12 +117,37 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     <i className="fas fa-users"></i> Gerir Utilizadores
                   </Link>
                 </li>
-                
+
+
+
+
+
+
+                <li className={isActive('/admin/categorias') ? 'active' : ''}>
+                  <Link to="/admin/categorias" onClick={toggleSidebar}>
+                    <i className="fas fa-pencil-ruler"></i> Gerir Categorias
+                  </Link>
+                </li>
+
+                <li className={isActive('/admin/areas') ? 'active' : ''}>
+                  <Link to="/admin/areas" onClick={toggleSidebar}>
+                    <i className="fas fa-pencil-ruler"></i> Gerir Áreas
+                  </Link>
+                </li>
+
+
                 <li className={isActive('/admin/topicos') ? 'active' : ''}>
                   <Link to="/admin/topicos" onClick={toggleSidebar}>
                     <i className="fas fa-pencil-ruler"></i> Gerir Topicos
                   </Link>
                 </li>
+
+
+
+
+
+
+
 
                 <li className={isActive('/admin/criar-curso') ? 'active' : ''}>
                   <Link to="/admin/criar-curso" onClick={toggleSidebar}>
@@ -144,7 +164,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           )}
 
           {/* Configurações */}
-          
+
           <div className="sidebar-section">
             <h3>Configurações</h3>
             <ul>

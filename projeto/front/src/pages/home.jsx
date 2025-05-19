@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import banner from '../images/banner.jpg';
-import './css/home.css';
 import API_BASE from '../api';
 import axios from 'axios';
-import Cursos_Sugeridos from '../components/Cursos_Sugeridos';
+import CursosSugeridos from '../components/Cursos_Sugeridos';
 import fallbackCurso from '../images/default_image.png';
-import Trocar_Senha_Modal from '../components/Trocar_Senha_Modal'; // Importar o modal
+import TrocarSenhaModal from '../components/Trocar_Senha_Modal';
+import './css/home.css';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -199,7 +199,7 @@ export default function Home() {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Modal de alteração de senha para primeiro login */}
-      <Trocar_Senha_Modal
+      <TrocarSenhaModal
         isOpen={showPasswordModal}
         onClose={handleClosePasswordModal}
         userId={userId}
@@ -247,7 +247,7 @@ export default function Home() {
                     <p className="curso-detalhe">Área: {inscricao.area}</p>
 
                     
-                    <div className={`status-badge status-${inscricao.status ? inscricao.status.toLowerCase().replace(/\s+/g, '-') : 'agendado'}`}>
+                    <div className={`estado-curso status-${inscricao.status ? inscricao.status.toLowerCase().replace(/\s+/g, '-') : 'agendado'}`}>
                       {inscricao.status || 'Agendado'}
                     </div>
                   </div>
@@ -266,7 +266,7 @@ export default function Home() {
         <section className="cursos-section">
           <h2 className="section-title">Cursos Sugeridos para Você</h2>
           <div className="cursos-grid">
-            <Cursos_Sugeridos />
+            <CursosSugeridos />
           </div>
         </section>
 

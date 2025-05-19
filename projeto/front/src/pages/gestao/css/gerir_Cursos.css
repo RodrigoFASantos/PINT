@@ -1,4 +1,4 @@
-/* Corrigir alinhamento da página */
+/* Estrutura da página */
 .gerenciar-cursos-container {
   display: flex;
   flex-direction: column;
@@ -7,20 +7,20 @@
   background-color: #f5f7fa;
   width: 100%;
   box-sizing: border-box;
-  padding-top: 60px; /* Espaço para a navbar */
+  padding-top: 60px;
 }
 
-/* Corrigir largura e centralização do conteúdo */
+/* Conteúdo principal */
 .main-content {
   width: 100%;
-  max-width: 1400px; /* Limita o tamanho para telas muito grandes */
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
   box-sizing: border-box;
   transition: margin-left 0.3s ease;
 }
 
-/* Cabeçalho */
+/* Cabeçalho da página */
 .cursos-header {
   display: flex;
   justify-content: space-between;
@@ -50,7 +50,7 @@
   background-color: #2563eb;
 }
 
-/* Seção de filtros */
+/* Área de filtros */
 .filtros-container {
   background-color: white;
   border-radius: 0.5rem;
@@ -61,7 +61,8 @@
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 1rem;
   position: relative;
-  padding-bottom: 4rem; /* Espaço para o botão limpar filtros */
+  padding-bottom: 4rem;
+  /* Espaço para o botão limpar filtros */
 }
 
 .filtro {
@@ -76,7 +77,8 @@
   margin-bottom: 0.5rem;
 }
 
-.filtro input, .filtro select {
+.filtro input,
+.filtro select {
   padding: 0.625rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
@@ -84,14 +86,14 @@
   font-size: 0.875rem;
 }
 
-.filtro input:focus, .filtro select:focus {
+.filtro input:focus,
+.filtro select:focus {
   outline: none;
   border-color: #3b82f6;
-  ring: 2px;
-  ring-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
 
-/* Posicionamento do botão limpar filtros no canto inferior direito */
+/* Botão de limpar filtros */
 .limpar-filtros-container {
   position: absolute;
   bottom: 1rem;
@@ -118,11 +120,11 @@
 .cursos-table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* Para iOS */
   background-color: white;
   border-radius: 0.5rem;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
 }
 
 .cursos-table {
@@ -165,48 +167,93 @@
   color: #1f2937;
 }
 
+/* Célula de formador clicável */
 .formador-cell {
   color: #2563eb;
   text-decoration: underline;
   cursor: pointer;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
+/* Estado dos cursos - contentor da célula */
+.status-cell {
+  position: relative;
+  text-align: center;
+  padding: 0.75rem 1rem;
 }
 
-.status-badge.agendado {
-  background-color: #fef3c7; /* Amarelo */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Badge de estado do curso */
+.estado {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 25px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+/* Cores para os diferentes estados */
+.estado.planeado {
+  background-color: #fef3c7 !important;
   color: #92400e;
 }
 
-.status-badge.em-curso {
-  background-color: #dcfce7; /* Verde */
+.estado.em-curso {
+  background-color: #dcfce7 !important;
   color: #166534;
 }
 
-.status-badge.terminado {
-  background-color: #fee2e2; /* Vermelho */
-  color: #b91c1c;
+.estado.terminado {
+  background-color: #fee2e2 !important;
+  color: red;
 }
 
-.status-badge.inativo {
-  background-color: #f3f4f6;
-  color: #6b7280;
+.estado.inativo {
+  background-color: black;
+  color: white;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Botões de ações */
 .acoes {
   display: flex;
   gap: 0.5rem;
   white-space: nowrap;
 }
 
-/* Botões de ícones */
+/* Estilos de botões com ícones */
 .btn-icon {
   padding: 0.375rem;
   border: none;
@@ -240,7 +287,7 @@
   background-color: #fecaca;
 }
 
-/* Paginação com estilo similar ao cursos.jsx */
+/* Paginação */
 .paginacao {
   display: flex;
   justify-content: center;
@@ -255,7 +302,8 @@
   border-radius: 0.375rem;
   background-color: white;
   color: #4b5563;
-  font-size: 1.125rem; /* Aumentado para setas */
+  font-size: 1.125rem;
+  /* Aumentado para setas */
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -285,14 +333,14 @@
   line-height: 1;
 }
 
-/* Estado sem cursos */
+/* Mensagem de não há cursos */
 .no-cursos {
   padding: 3rem 0;
   text-align: center;
   color: #6b7280;
 }
 
-/* Loading */
+/* Indicador de carregamento */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -358,7 +406,8 @@
   gap: 1rem;
 }
 
-.btn-cancelar, .btn-confirmar {
+.btn-cancelar,
+.btn-confirmar {
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 0.375rem;
@@ -391,7 +440,7 @@
     margin-left: 0;
     padding: 1rem;
   }
-  
+
   .filtros-container {
     grid-template-columns: 1fr;
   }
@@ -401,29 +450,4 @@
   .sidebar-closed .main-content {
     margin-left: 4rem;
   }
-}
-
-/* Para "planeado" (ou "agendado") - amarelo */
-.status-badge.perfil.planeado,
-.status-badge.perfil.agendado {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-/* Para "em curso" - verde */
-.status-badge.perfil.em-curso {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-/* Para "terminado" - vermelho */
-.status-badge.perfil.terminado {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-/* Para "inativo" - cinza */
-.status-badge.perfil.inativo {
-  background-color: #f3f4f6;
-  color: #6b7280;
 }

@@ -25,7 +25,8 @@ async function criarPastasEImagens() {
       console.log(`\n==== A processar curso: ${curso.nome} (ID: ${curso.id_curso}) ====`);
 
       // Normalizar o nome do curso para uso em caminhos de ficheiros
-      const cursoSlug = curso.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const cursoSlug = curso.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
 
       // Definir diretório base do curso
       let cursoDirPath = curso.dir_path;
@@ -134,7 +135,8 @@ async function criarPastasEImagens() {
 
         // Inserir os tópicos padrão na base
         for (const topico of topicosDefault) {
-          const topicoSlug = topico.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+          const topicoSlug = topico.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
           const topicoDirPath = `${cursoDirPath}/${topicoSlug}`;
           const fullTopicoDirPath = path.join(process.cwd(), topicoDirPath);
 
@@ -168,7 +170,7 @@ async function criarPastasEImagens() {
           ];
 
           for (const pasta of pastasDefault) {
-            const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
             const pastaDirPath = `${topicoDirPath}/${pastaSlug}`;
             const fullPastaDirPath = path.join(process.cwd(), pastaDirPath);
 
@@ -292,7 +294,8 @@ async function criarPastasEImagens() {
           console.log(`\n-- A processar tópico existente: ${topico.nome} (ID: ${topico.id_topico})`);
 
           // Normalizar o nome do tópico para uso em caminhos
-          const topicoSlug = topico.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+          const topicoSlug = topico.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
 
           // Definir caminho do tópico
           let topicoDirPath = topico.arquivo_path;
@@ -336,7 +339,7 @@ async function criarPastasEImagens() {
             ];
 
             for (const pasta of pastasDefault) {
-              const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+              const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
               const pastaDirPath = `${topicoDirPath}/${pastaSlug}`;
               const fullPastaDirPath = path.join(process.cwd(), pastaDirPath);
 
@@ -441,7 +444,7 @@ async function criarPastasEImagens() {
               console.log(`-- A processar pasta existente: ${pasta.nome} (ID: ${pasta.id_pasta})`);
 
               // Normalizar o nome da pasta para uso em caminhos
-              const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+              const pastaSlug = pasta.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
               // Definir caminho da pasta
               let pastaDirPath = pasta.arquivo_path;
@@ -522,7 +525,7 @@ async function criarPastasEImagens() {
 
                   if (conteudo.tipo === 'file') {
                     // Normalizar o nome do conteúdo para uso em caminhos
-                    const conteudoSlug = conteudo.titulo.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                    const conteudoSlug = conteudo.titulo.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
                     // Definir caminho do ficheiro
                     let conteudoFilePath = conteudo.arquivo_path;
@@ -571,20 +574,9 @@ async function criarPastasEImagens() {
     return true;
   } catch (error) {
     console.error('❌ Erro durante o processamento:', error);
-    return false;
-  } finally {
-    try {
-      await sequelize.close();
-      console.log('Ligação à base de dados fechada.');
-    } catch (error) {
-      console.error('Erro ao fechar ligação à base:', error);
-    }
+    throw error; // Propaga o erro para o chamador
   }
 }
 
-// Executar o script quando chamado diretamente
-if (require.main === module) {
-  criarPastasEImagens();
-} else {
-  module.exports = { criarPastasEImagens };
-}
+// Modificado para não executar diretamente, apenas exportar
+module.exports = { criarPastasEImagens };

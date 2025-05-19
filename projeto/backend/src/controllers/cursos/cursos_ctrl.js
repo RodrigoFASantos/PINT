@@ -1,6 +1,7 @@
 const User = require("../../database/models/User");
 const Categoria = require("../../database/models/Categoria");
 const Area = require("../../database/models/Area");
+const Topico_Area = require("../../database/models/Topico_Area");
 const Curso = require("../../database/models/Curso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const Curso_Topicos = require("../../database/models/Curso_Topicos");
@@ -24,21 +25,21 @@ const getAllCursos = async (req, res) => {
     const offset = (page - 1) * limit;
 
     // Parâmetros de filtro opcionais
-    const { categoria, area, formador, search, tipo, estado, ativo, vagas } = req.query;
+    const { categoria, area, formador, search, tipo, estado, ativo, vagas, topico } = req.query;
 
     // Construir condições de filtro
     const where = {};
 
     if (categoria) {
-      where.id_categoria = categoria;
+      where.id_categoria = parseInt(categoria, 10);
     }
 
     if (area) {
-      where.id_area = area;
+      where.id_area = parseInt(area, 10);
     }
 
     if (formador) {
-      where.id_formador = formador;
+      where.id_formador = parseInt(formador, 10);
     }
 
     if (search) {
@@ -54,7 +55,6 @@ const getAllCursos = async (req, res) => {
     }
 
     if (ativo !== undefined) {
-      // "false" vem como string da query, por isso comparo diretamente
       where.ativo = ativo === 'false' ? false : true;
     }
 
@@ -62,27 +62,66 @@ const getAllCursos = async (req, res) => {
       where.vagas = { [Op.gte]: parseInt(vagas, 10) };
     }
 
+    if (topico) {
+      where.id_topico_area = parseInt(topico, 10);
+      console.log(`Filtrando cursos por tópico id: ${parseInt(topico, 10)}`);
+    }
+
+    // Definir os modelos a incluir
+    const includeModels = [
+      {
+        model: User,
+        as: "formador",
+        attributes: ['id_utilizador', 'nome', 'email']
+      },
+      {
+        model: Area,
+        as: "area"
+      },
+      {
+        model: Categoria,
+        as: "categoria"
+      }
+    ];
+
+    // Adicionar Topico_Area se ele existir e estiver sendo usado
+    try {
+      if (Topico_Area) {
+        includeModels.push({
+          model: Topico_Area,
+          as: "Topico_Area"
+        });
+      }
+    } catch (err) {
+      console.error("Aviso: O modelo Topico_Area não pôde ser incluído: ", err.message);
+    }
+
     const { count, rows } = await Curso.findAndCountAll({
       where,
       offset,
       limit,
       order: [['data_inicio', 'DESC']],
-      include: [
-        {
-          model: User,
-          as: "formador",
-          attributes: ['id_utilizador', 'nome', 'email']
-        },
-        {
-          model: Area,
-          as: "area"
-        },
-        {
-          model: Categoria,
-          as: "categoria"
-        }
-      ]
+      include: includeModels
     });
+
+    // Se não houver cursos e não há filtros, tentar buscar todos os cursos
+    if (rows.length === 0 && 
+        !categoria && !area && !formador && !search && !tipo && !estado && !topico && ativo === undefined) {
+      console.log("Não foram encontrados cursos com os filtros. Tentando sem filtros...");
+      const todosOsCursos = await Curso.findAndCountAll({
+        limit,
+        offset,
+        order: [['data_inicio', 'DESC']],
+        include: includeModels
+      });
+      
+      return res.json({
+        cursos: todosOsCursos.rows,
+        total: todosOsCursos.count,
+        totalPages: Math.ceil(todosOsCursos.count / limit),
+        currentPage: page
+      });
+    }
 
     res.json({
       cursos: rows,
@@ -92,10 +131,12 @@ const getAllCursos = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao procurar cursos:", error);
-    res.status(500).json({ message: "Erro ao procurar cursos" });
+    res.status(500).json({ 
+      message: "Erro ao procurar cursos",
+      detalhes: error.message
+    });
   }
 };
-
 // Função para obter cursos filtrados por categorias (para associação com formador)
 const getCursosByCategoria = async (req, res) => {
   try {
@@ -259,17 +300,17 @@ const getCursoById = async (req, res) => {
 const getTopicoArea = async (req, res) => {
   try {
     const id = req.params.id;
-    
+
     // Importar o modelo Topico_Area
     const Topico_Area = require("../../database/models/Topico_Area");
-    
+
     // Buscar o tópico pelo ID
     const topico = await Topico_Area.findByPk(id);
-    
+
     if (!topico) {
       return res.status(404).json({ message: "Tópico de área não encontrado" });
     }
-    
+
     // Retornar o tópico encontrado
     res.json(topico);
   } catch (error) {
@@ -284,9 +325,9 @@ const createCurso = async (req, res) => {
   try {
     console.log("A iniciar criação de curso");
     console.log("Dados recebidos:", req.body);
-    
-    const { 
-      nome, descricao, tipo, vagas, data_inicio, data_fim, 
+
+    const {
+      nome, descricao, tipo, vagas, data_inicio, data_fim,
       id_formador, id_area, id_categoria, topicos, id_topico_categoria
     } = req.body;
 
@@ -332,13 +373,13 @@ const createCurso = async (req, res) => {
         nome,
         descricao,
         tipo,
-        vagas: tipo === "sincrono" ? vagas : null,
+        vagas: tipo === "sincrono" ? (parseInt(vagas, 10) + 1) : null,  // Adicionar +1 às vagas para o formador se for um curso síncrono
         data_inicio,
         data_fim,
         id_formador,
         id_area,
         id_categoria,
-        id_topico_area: id_topico_categoria, // Correção aqui
+        id_topico_area: id_topico_categoria,
         imagem_path: imagemPath,
         dir_path: dirPath,
         ativo: true
@@ -361,6 +402,29 @@ const createCurso = async (req, res) => {
 
       console.log(`Curso criado com sucesso: ${novoCurso.id_curso} - ${novoCurso.nome}`);
 
+      // Auto-inscrever o formador se for um curso síncrono com um formador
+      if (tipo === "sincrono" && id_formador) {
+        try {
+          console.log(`A inscrever formador automaticamente (ID: ${id_formador}) no curso ${novoCurso.id_curso}`);
+
+          // Criar inscrição para o formador
+          await Inscricao_Curso.create({
+            id_utilizador: id_formador,
+            id_curso: novoCurso.id_curso,
+            data_inscricao: new Date(),
+            estado: "inscrito"
+          });
+
+          // Nota: Não precisamos diminuir o número de vagas para o formador
+          // porque adicionamos +1 às vagas ao criar o curso
+
+          console.log(`Formador inscrito com sucesso`);
+        } catch (enrollError) {
+          console.error("Erro ao inscrever formador:", enrollError);
+          // Não falhar toda a operação se a inscrição do formador falhar
+        }
+      }
+
       // Notificar sobre o novo curso
       try {
         await notificacaoController.notificarNovoCurso(novoCurso);
@@ -369,12 +433,12 @@ const createCurso = async (req, res) => {
         console.error("Erro ao enviar notificação de curso criado:", notificationError);
       }
 
-      res.status(201).json({ 
-        message: "Curso criado com sucesso!", 
-        curso: { 
-          id_curso: novoCurso.id_curso, 
-          nome: novoCurso.nome 
-        } 
+      res.status(201).json({
+        message: "Curso criado com sucesso!",
+        curso: {
+          id_curso: novoCurso.id_curso,
+          nome: novoCurso.nome
+        }
       });
     } catch (error) {
       // Reverter a transação em caso de erro
@@ -397,9 +461,7 @@ const updateCurso = async (req, res) => {
     console.log("Request params:", req.params);
     console.log("Request body:", req.body);
 
-    // Fix: Get the id directly from req.params
-    const id = req.params.id;  // This matches the route parameter /:id
-
+    const id = req.params.id;
     const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
 
     // Procurar dados atuais do curso para comparação
@@ -422,7 +484,26 @@ const updateCurso = async (req, res) => {
       nome: cursoAtual.formador.nome
     } : null;
 
-    // Atualizar o curso
+    // Determinar o estado do curso com base nas datas atualizadas
+    let novoEstado = cursoAtual.estado;
+    if (data_inicio || data_fim) {
+      const dataAtual = new Date();
+      const novaDataInicio = data_inicio ? new Date(data_inicio) : new Date(cursoAtual.data_inicio);
+      const novaDataFim = data_fim ? new Date(data_fim) : new Date(cursoAtual.data_fim);
+      
+      // Determinar estado com base nas novas datas
+      if (novaDataFim < dataAtual) {
+        novoEstado = 'terminado';
+      } else if (novaDataInicio <= dataAtual) {
+        novoEstado = 'em_curso';
+      } else {
+        novoEstado = 'planeado';
+      }
+      
+      console.log(`Estado do curso determinado automaticamente: ${novoEstado}`);
+    }
+
+    // Atualizar o curso com o novo estado
     await cursoAtual.update({
       nome: nome || cursoAtual.nome,
       descricao: descricao || cursoAtual.descricao,
@@ -433,7 +514,8 @@ const updateCurso = async (req, res) => {
       id_formador: id_formador || cursoAtual.id_formador,
       id_area: id_area || cursoAtual.id_area,
       id_categoria: id_categoria || cursoAtual.id_categoria,
-      ativo: ativo !== undefined ? ativo : cursoAtual.ativo
+      ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
+      estado: novoEstado // Atualizar o estado do curso
     });
 
     // Recarregar o curso atualizado com as suas relações
@@ -787,12 +869,12 @@ const getCursosSugeridos = async (req, res) => {
 const getTopicosCurso = async (req, res) => {
   try {
     const id_curso = req.params.id;
-    
+
     const topicos = await Curso_Topicos.findAll({
       where: { id_curso, ativo: true },
       order: [['ordem', 'ASC']]
     });
-    
+
     res.json(topicos);
   } catch (error) {
     console.error("Erro ao obter tópicos do curso:", error);
@@ -805,22 +887,22 @@ const createCurso_Topicos = async (req, res) => {
   try {
     const id_curso = req.params.id;
     const { nome, ordem } = req.body;
-    
+
     if (!nome) {
       return res.status(400).json({ message: "Nome do tópico é obrigatório" });
     }
-    
+
     // Verificar se o curso existe
     const curso = await Curso.findByPk(id_curso);
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
-    
+
     // Obter a ordem máxima atual
-    const ultimaOrdem = await Curso_Topicos.max('ordem', { 
-      where: { id_curso } 
+    const ultimaOrdem = await Curso_Topicos.max('ordem', {
+      where: { id_curso }
     }) || 0;
-    
+
     // Criar o tópico
     const novoTopico = await Curso_Topicos.create({
       nome,
@@ -828,7 +910,7 @@ const createCurso_Topicos = async (req, res) => {
       ordem: ordem || ultimaOrdem + 1,
       ativo: true
     });
-    
+
     res.status(201).json({
       message: "Tópico criado com sucesso",
       topico: novoTopico
@@ -844,20 +926,20 @@ const updateCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
     const { nome, ordem, ativo } = req.body;
-    
+
     // Verificar se o tópico existe
     const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
-    
+
     // Atualizar o tópico
     await topico.update({
       nome: nome !== undefined ? nome : topico.nome,
       ordem: ordem !== undefined ? ordem : topico.ordem,
       ativo: ativo !== undefined ? ativo : topico.ativo
     });
-    
+
     res.json({
       message: "Tópico atualizado com sucesso",
       topico
@@ -872,38 +954,36 @@ const updateCurso_Topicos = async (req, res) => {
 const deleteCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
-    
+
     // Verificar se o tópico existe
     const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
-    
+
     // Verificar se há pastas associadas a este tópico
     const pastas = await PastaCurso.findAll({
       where: { id_topico }
     });
-    
+
     if (pastas.length > 0) {
       // Em vez de eliminar, marcar como inativo
       await topico.update({ ativo: false });
-      return res.json({ 
+      return res.json({
         message: "Tópico desativado com sucesso. Não foi possível eliminar pois possui pastas associadas.",
         desativado: true
       });
     }
-    
+
     // Se não há pastas, eliminar o tópico
     await topico.destroy();
-    
+
     res.json({ message: "Tópico eliminado com sucesso" });
   } catch (error) {
     console.error("Erro ao eliminar tópico:", error);
     res.status(500).json({ message: "Erro ao eliminar tópico" });
   }
 };
-
-
 
 module.exports = {
   getAllCursos,

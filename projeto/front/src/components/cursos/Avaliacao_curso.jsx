@@ -4,6 +4,8 @@ import API_BASE from '../../api';
 import CriarPastaModal from './Criar_Pasta_Modal';
 import CriarConteudoModal from './Criar_Conteudo_Modal';
 import Curso_Conteudo_ficheiro_Modal from './Curso_Conteudo_Ficheiro_Modal';
+import DetalhesSubmissao from './Detalhes_Submissao';
+import { Link } from 'react-router-dom';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
 
@@ -12,19 +14,19 @@ const decodeJWT = (token) => {
   try {
     // Divide o token nas suas partes (cabeçalho, payload, assinatura)
     const parts = token.split('.');
-    
+
     // Se não tiver 3 partes, não é um JWT válido
     if (parts.length !== 3) {
       console.error('Token JWT inválido: formato incorreto');
       return null;
     }
-    
+
     // A função atob() espera uma string em Base64 sem padding
     // Ajustar o padding da string Base64 para garantir decodificação correta
     const payload = parts[1];
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-    
+
     // Decodificar a string Base64
     try {
       const decoded = atob(padded);
@@ -38,10 +40,10 @@ const decodeJWT = (token) => {
     return null;
   }
 };
-// Componente reutilizável para modal de confirmação
+
 const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel = "Confirmar" }) => {
   if (!show) return null;
-  
+
   return (
     <div className="modal-overlay">
       <div className="modal-confirm">
@@ -83,26 +85,29 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [arquivo, setArquivo] = useState(null);
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
 
+  const [submissaoSelecionada, setSubmissaoSelecionada] = useState(null);
+
+
   // Verifica se o utilizador é formador
   const isFormador = () => {
-  const token = localStorage.getItem('token');
-  if (!token) return false;
-  
-  try {
-    // Usar a função segura para decodificar o token
-    const payload = decodeJWT(token);
-    
-    if (!payload) return false;
-    
-    // Verificar o id_utilizador ou cargo
-    return payload.id_utilizador === formadorId || 
-           payload.id_cargo === 1 || 
-           payload.id_cargo === 2;
-  } catch (e) {
-    console.error('Erro ao verificar permissões:', e);
-    return false;
-  }
-};
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+      // Usar a função segura para decodificar o token
+      const payload = decodeJWT(token);
+
+      if (!payload) return false;
+
+      // Verificar o id_utilizador ou cargo
+      return payload.id_utilizador === formadorId ||
+        payload.id_cargo === 1 ||
+        payload.id_cargo === 2;
+    } catch (e) {
+      console.error('Erro ao verificar permissões:', e);
+      return false;
+    }
+  };
   // Carregar tópicos do curso
   const carregarTopicos = async () => {
     try {
@@ -118,7 +123,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       if (topico) {
         // Clonar o tópico para evitar referências
         const topicoAvaliacao = { ...topico };
-        
+
         // Marcar cada pasta como pertencente à avaliação
         if (topicoAvaliacao.pastas) {
           topicoAvaliacao.pastas = topicoAvaliacao.pastas.map(pasta => ({
@@ -126,7 +131,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
             isAvaliacao: true
           }));
         }
-        
+
         setTopicoAvaliacao(topicoAvaliacao);
         await carregarSubmissoes(topicoAvaliacao);
       } else {
@@ -145,29 +150,29 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       const token = localStorage.getItem('token');
       const submissoesData = {};
-      
+
       if (topico && topico.pastas) {
         for (const pasta of topico.pastas) {
           submissoesData[pasta.id_pasta] = [];
-          
+
           try {
             // Corrigido: usar trabalhos em vez de submissoes
             const response = await axios.get(`${API_BASE}/trabalhos/pasta/${pasta.id_pasta}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            
+
             if (response.status === 200) {
               submissoesData[pasta.id_pasta] = response.data;
             }
           } catch (submissaoError) {
             console.log('A verificar trabalhos submetidos para a pasta:', submissaoError);
-            
+
             // Tentar endpoint alternativo caso o primeiro falhe
             try {
               const altResponse = await axios.get(`${API_BASE}/trabalhos/curso/${cursoId}/pasta/${pasta.id_pasta}`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
-              
+
               if (altResponse.status === 200) {
                 submissoesData[pasta.id_pasta] = altResponse.data;
               }
@@ -177,7 +182,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
           }
         }
       }
-      
+
       setSubmissoes(submissoesData);
     } catch (error) {
       console.error('Erro ao carregar submissões:', error);
@@ -223,20 +228,20 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     try {
       setCarregando(true);
       const token = localStorage.getItem('token');
-      
+
       const dadosEnvio = {
         nome: 'Avaliação',
         id_curso: cursoId,
         ordem: 1  // Posição do tópico na lista
       };
-      
+
       const response = await axios.post(`${API_BASE}/topicos-curso`, dadosEnvio, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.data) {
         await carregarTopicos();
       }
@@ -251,11 +256,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const removerTopicoAvaliacao = async () => {
     try {
       const token = localStorage.getItem('token');
-      
+
       const response = await axios.delete(`${API_BASE}/topicos-curso/${topicoAvaliacao.id_topico}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       setTopicoAvaliacao(null);
     } catch (error) {
       console.error('Erro ao remover tópico:', error);
@@ -267,11 +272,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const removerPasta = async (pastaId) => {
     try {
       const token = localStorage.getItem('token');
-      
+
       await axios.delete(`${API_BASE}/pastas-curso/${pastaId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       await carregarTopicos();
     } catch (error) {
       console.error('Erro ao remover pasta:', error);
@@ -283,11 +288,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const removerConteudo = async (conteudoId) => {
     try {
       const token = localStorage.getItem('token');
-      
+
       await axios.delete(`${API_BASE}/conteudos-curso/${conteudoId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       await carregarTopicos();
     } catch (error) {
       console.error('Erro ao remover conteúdo:', error);
@@ -314,7 +319,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     } else if (confirmModal.action === 'removerConteudo') {
       removerConteudo(confirmModal.targetId);
     }
-    
+
     setConfirmModal({ show: false, message: '', action: null, targetId: null });
   };
 
@@ -334,130 +339,165 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-  // MODIFICADO: Enviar submissão do formando com endpoints corrigidos
-const enviarSubmissao = async (e) => {
-  e.preventDefault();
-  
-  if (!arquivo) {
-    alert('Por favor, selecione um ficheiro.');
-    return;
-  }
-  
-  try {
-    setEnviandoArquivo(true);
-    const token = localStorage.getItem('token');
-    
-    const formData = new FormData();
-    formData.append('ficheiro', arquivo);
-    formData.append('id_pasta', enviarSubmissaoModal.pastaId);
-    formData.append('id_curso', cursoId);
-    
-    const response = await axios.post(`${API_BASE}/trabalhos`, formData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    
-    // Fechar modal
-    setEnviarSubmissaoModal({ show: false, pastaId: null });
-    
-    // Importante: recarregar submissões APÓS o envio bem-sucedido
-    await recarregarSubmissoes();
-    
-    alert('Trabalho submetido com sucesso!');
-  } catch (error) {
-    console.error('Erro ao enviar trabalho:', error);
-    
-    let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
-    
-    if (error.response) {
-      if (error.response.data?.message) {
-        errorMsg = error.response.data.message;
-      }
+  // Enviar submissão do formando
+  const enviarSubmissao = async (e) => {
+    e.preventDefault();
+
+    if (!arquivo) {
+      alert('Por favor, selecione um ficheiro.');
+      return;
     }
-    
-    alert(errorMsg);
-  } finally {
-    setEnviandoArquivo(false);
-  }
-};
 
+    try {
+      setEnviandoArquivo(true);
+      const token = localStorage.getItem('token');
 
-const recarregarSubmissoes = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Usar apenas o endpoint principal de trabalhos
-    const response = await axios.get(`${API_BASE}/trabalhos`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (response.status === 200 && Array.isArray(response.data)) {
-      console.log("Trabalhos carregados:", response.data);
-      
-      // Filtrar e organizar os trabalhos por pasta
-      const submissoesAtualizadas = {};
-      
-      // Inicializar entradas vazias para todas as pastas existentes
-      if (topicoAvaliacao && topicoAvaliacao.pastas) {
-        topicoAvaliacao.pastas.forEach(pasta => {
-          submissoesAtualizadas[pasta.id_pasta] = [];
-        });
-      }
-      
-      // Preencher com os trabalhos correspondentes
-      response.data.forEach(trabalho => {
-        // Verificar se o trabalho pertence ao curso atual
-        if (trabalho.id_curso == cursoId) {
-          // Se a pasta existe no objeto, adicionar o trabalho
-          if (submissoesAtualizadas.hasOwnProperty(trabalho.id_pasta)) {
-            submissoesAtualizadas[trabalho.id_pasta].push(trabalho);
-          }
+      const formData = new FormData();
+      formData.append('ficheiro', arquivo);
+      formData.append('id_pasta', enviarSubmissaoModal.pastaId);
+      formData.append('id_curso', parseInt(cursoId));
+
+      const response = await axios.post(`${API_BASE}/avaliacoes/submissoes`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
         }
       });
-      
-      console.log("Submissões organizadas:", submissoesAtualizadas);
-      setSubmissoes(submissoesAtualizadas);
-    }
-  } catch (error) {
-    console.error('Erro ao recarregar submissões:', error);
-  }
-};
 
-const recarregarSubmissoesDaPasta = async (pastaId) => {
-  if (!pastaId) return;
-  
-  try {
-    const token = localStorage.getItem('token');
-    let submissoesAtualizadas = { ...submissoes };
-    
-    // Tentar primeiro endpoint
-    try {
-      const response = await axios.get(`${API_BASE}/trabalhos`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { id_curso: cursoId }
-      });
-      
-      if (response.status === 200 && response.data) {
-        // Filtrar apenas os trabalhos desta pasta
-        const trabalhosDaPasta = response.data.filter(
-          trabalho => trabalho.id_pasta === pastaId
-        );
-        
-        submissoesAtualizadas[pastaId] = trabalhosDaPasta;
-        console.log(`Submissões recarregadas para pasta ${pastaId}:`, trabalhosDaPasta);
+      // Fechar modal
+      setEnviarSubmissaoModal({ show: false, pastaId: null });
+
+      // Importante: recarregar submissões APÓS o envio bem-sucedido
+      await recarregarSubmissoes();
+
+      alert('Trabalho submetido com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar trabalho:', error);
+
+      let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
+
+      if (error.response) {
+        if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
       }
-    } catch (err) {
-      console.log(`Erro ao obter trabalhos para pasta ${pastaId}:`, err.message);
+
+      alert(errorMsg);
+    } finally {
+      setEnviandoArquivo(false);
     }
-    
-    // Atualizar estado
-    setSubmissoes(submissoesAtualizadas);
-  } catch (error) {
-    console.error('Erro ao recarregar submissões:', error);
-  }
-};
+  };
+
+
+  const recarregarSubmissoes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      // Usar apenas o endpoint principal de trabalhos
+      const response = await axios.get(`${API_BASE}/trabalhos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        console.log("Trabalhos carregados:", response.data);
+
+        // Filtrar e organizar os trabalhos por pasta
+        const submissoesAtualizadas = {};
+
+        // Inicializar entradas vazias para todas as pastas existentes
+        if (topicoAvaliacao && topicoAvaliacao.pastas) {
+          topicoAvaliacao.pastas.forEach(pasta => {
+            submissoesAtualizadas[pasta.id_pasta] = [];
+          });
+        }
+
+        // Preencher com os trabalhos correspondentes
+        response.data.forEach(trabalho => {
+          // Verificar se o trabalho pertence ao curso atual
+          if (trabalho.id_curso == cursoId) {
+            // Se a pasta existe no objeto, adicionar o trabalho
+            if (submissoesAtualizadas.hasOwnProperty(trabalho.id_pasta)) {
+              submissoesAtualizadas[trabalho.id_pasta].push(trabalho);
+            }
+          }
+        });
+
+        console.log("Submissões organizadas:", submissoesAtualizadas);
+        setSubmissoes(submissoesAtualizadas);
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar submissões:', error);
+    }
+  };
+
+
+
+  const recarregarSubmissoesDaPasta = async (pastaId) => {
+    if (!pastaId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      let submissoesAtualizadas = { ...submissoes };
+
+      // Usar um endpoint mais confiável
+      try {
+        const response = await axios.get(`${API_BASE}/trabalhos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.status === 200 && Array.isArray(response.data)) {
+          // Filtrar trabalhos por curso e pasta
+          const trabalhosDaPasta = response.data.filter(trabalho =>
+            trabalho.id_curso == cursoId && trabalho.id_pasta == pastaId
+          );
+
+          // Organizar trabalhos para incluir metadados necessários para a visualização detalhada
+          const trabalhosFormatados = await Promise.all(trabalhosDaPasta.map(async (trabalho) => {
+            // Tentar obter informações adicionais se necessário
+            try {
+              const detalhesResponse = await axios.get(`${API_BASE}/trabalhos/${trabalho.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+
+              return {
+                ...trabalho,
+                ...detalhesResponse.data
+              };
+            } catch (err) {
+              console.log(`Erro ao obter detalhes do trabalho ${trabalho.id}:`, err.message);
+              return trabalho;
+            }
+          }));
+
+          submissoesAtualizadas[pastaId] = trabalhosFormatados;
+          console.log(`Submissões recarregadas para pasta ${pastaId}:`, trabalhosFormatados);
+        }
+      } catch (err) {
+        console.log(`Erro ao obter trabalhos para pasta ${pastaId}:`, err.message);
+
+        // Tentar endpoint alternativo
+        try {
+          const altResponse = await axios.get(`${API_BASE}/trabalhos/pasta/${pastaId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (altResponse.status === 200) {
+            submissoesAtualizadas[pastaId] = altResponse.data;
+          }
+        } catch (altErr) {
+          console.log(`Erro ao usar endpoint alternativo:`, altErr.message);
+        }
+      }
+
+      // Atualizar estado
+      setSubmissoes(submissoesAtualizadas);
+    } catch (error) {
+      console.error('Erro ao recarregar submissões:', error);
+    }
+  };
+
+
+
 
   // Renderização condicional para carregamento
   if (carregando) {
@@ -485,19 +525,32 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
     <div className="curso-conteudos-container avaliacao-container">
       <div className="conteudos-header-avaliacao">
         <h2 className="avaliacao-titulo">Avaliação</h2>
+
         {isFormador() && (
           <div className="topico-actions">
             {topicoAvaliacao ? (
               <>
-                <button 
-                  className="btn-add" 
+                {/* botão para criar pastas */}
+                <button
+                  className="btn-add"
                   onClick={abrirModalCriarPasta}
                   title="Adicionar pasta"
                 >
                   <i className="fas fa-folder-plus"></i>
                 </button>
-                <button 
-                  className="btn-delete" 
+
+                {/* NOVO: botão Ver submissões */}
+                <Link
+                  to={`/curso/${cursoId}/avaliacao/${topicoAvaliacao.id_topico}/submissoes`}
+                  className="btn-ver-submissoes"
+                  title="Ver submissões"
+                >
+                  <i className="fas fa-list"></i> Ver submissões
+                </Link>
+
+                {/* botão para remover avaliação */}
+                <button
+                  className="btn-delete"
                   onClick={() => mostrarModalConfirmacao(
                     'Tem certeza que deseja remover o tópico de Avaliação e todo o seu conteúdo?',
                     'removerTopico',
@@ -509,8 +562,8 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                 </button>
               </>
             ) : (
-              <button 
-                className="btn-add-topico" 
+              <button
+                className="btn-add-topico"
                 onClick={criarTopicoAvaliacao}
               >
                 Criar Avaliação
@@ -528,8 +581,8 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
             topicoAvaliacao.pastas.map((pasta) => (
               <div key={pasta.id_pasta} className="pasta-item">
                 <div className="pasta-header">
-                  <button 
-                    className="btn-toggle" 
+                  <button
+                    className="btn-toggle"
                     onClick={() => toggleExpandPasta(pasta.id_pasta)}
                   >
                     {expandedPastas.includes(pasta.id_pasta) ? (
@@ -540,18 +593,18 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                   </button>
                   <i className="fas fa-folder"></i>
                   <span className="pasta-nome">{pasta.nome}</span>
-                  
+
                   {isFormador() ? (
                     <div className="pasta-actions">
-                      <button 
-                        className="btn-add" 
+                      <button
+                        className="btn-add"
                         onClick={() => abrirModalAdicionarConteudo(pasta)}
                         title="Adicionar conteúdo"
                       >
                         <i className="fas fa-plus"></i>
                       </button>
-                      <button 
-                        className="btn-delete" 
+                      <button
+                        className="btn-delete"
                         onClick={() => mostrarModalConfirmacao(
                           'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
                           'removerPasta',
@@ -564,7 +617,7 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                     </div>
                   ) : (
                     <div className="pasta-actions">
-                      <button 
+                      <button
                         className="btn-submeter"
                         onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
                         title="Submeter trabalho"
@@ -583,10 +636,10 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                       {pasta.conteudos && pasta.conteudos.length > 0 ? (
                         pasta.conteudos.map((conteudo) => (
                           <div key={conteudo.id_conteudo} className="conteudo-item">
-                            <i className={`fas fa-${conteudo.tipo === 'file' ? 'file-alt' : 
-                                            conteudo.tipo === 'link' ? 'link' : 
-                                            conteudo.tipo === 'video' ? 'video' : 'file'}`}></i>
-                            <span 
+                            <i className={`fas fa-${conteudo.tipo === 'file' ? 'file-alt' :
+                              conteudo.tipo === 'link' ? 'link' :
+                                conteudo.tipo === 'video' ? 'video' : 'file'}`}></i>
+                            <span
                               className="conteudo-titulo"
                               onClick={() => {
                                 if (conteudo.tipo === 'file') {
@@ -600,10 +653,10 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                             >
                               {conteudo.titulo}
                             </span>
-                            
+
                             {isFormador() && (
                               <div className="conteudo-actions">
-                                <button 
+                                <button
                                   className="btn-delete"
                                   onClick={() => mostrarModalConfirmacao(
                                     'Tem certeza que deseja remover este conteúdo?',
@@ -622,7 +675,7 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                         <div className="secao-vazia">Nenhum conteúdo disponível</div>
                       )}
                     </div>
-                    
+
                     {/* Submissões dos formandos */}
                     {isFormador() && (
                       <div className="submissoes-list">
@@ -634,7 +687,7 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                               <span className="submissao-info">
                                 <strong>{submissao.nome_formando || "Formando"}</strong> - {submissao.data_submissao || "Data não disponível"}
                               </span>
-                              <button 
+                              <button
                                 className="btn-download"
                                 onClick={() => {
                                   if (submissao.ficheiro_path) {
@@ -654,26 +707,50 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                         )}
                       </div>
                     )}
-                    
+
                     {/* Para formandos, mostrar suas próprias submissões */}
                     {!isFormador() && (
                       <div className="minhas-submissoes">
                         <h4 className="secao-titulo">Minhas Submissões</h4>
                         {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
+                          // Se existem submissões
                           submissoes[pasta.id_pasta].map((submissao, index) => (
-                            <div key={submissao.id || index} className="submissao-item">
-                              <i className="fas fa-file-upload"></i>
-                              <span className="submissao-info">
-                                {submissao.nome_ficheiro || submissao.nome_arquivo || "Ficheiro"} - {submissao.data_submissao || "Data não disponível"}
-                              </span>
-                              {submissao.ficheiro_path && (
-                                <button 
-                                  className="btn-download"
-                                  onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
-                                  title="Descarregar submissão"
-                                >
-                                  <i className="fas fa-download"></i>
-                                </button>
+                            <div key={submissao.id || index}>
+                              {submissaoSelecionada && submissaoSelecionada.id === submissao.id ? (
+                                // Mostrar detalhes completos quando selecionado
+                                <DetalhesSubmissao
+                                  submissao={submissao}
+                                  cursoId={cursoId}
+                                  pastaId={pasta.id_pasta}
+                                />
+                              ) : (
+                                // Mostrar versão resumida com opção para expandir
+                                <div className="submissao-item">
+                                  <i className="fas fa-file-upload"></i>
+                                  <span className="submissao-info">
+                                    {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
+                                      new Date(submissao.data_submissao || submissao.data_entrega).toLocaleDateString('pt-PT')
+                                    }
+                                  </span>
+                                  <div className="submissao-acoes">
+                                    {submissao.ficheiro_path && (
+                                      <button
+                                        className="btn-download"
+                                        onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                                        title="Descarregar submissão"
+                                      >
+                                        <i className="fas fa-download"></i>
+                                      </button>
+                                    )}
+                                    <button
+                                      className="btn-detalhes"
+                                      onClick={() => setSubmissaoSelecionada(submissao)}
+                                      title="Ver detalhes"
+                                    >
+                                      <i className="fas fa-info-circle"></i>
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           ))
@@ -760,16 +837,16 @@ const recarregarSubmissoesDaPasta = async (pastaId) => {
                 )}
               </div>
               <div className="submissao-actions">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-cancelar"
                   onClick={() => setEnviarSubmissaoModal({ show: false, pastaId: null })}
                   disabled={enviandoArquivo}
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-enviar"
                   disabled={enviandoArquivo || !arquivo}
                 >
