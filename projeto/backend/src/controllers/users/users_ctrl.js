@@ -411,7 +411,7 @@ const updatePerfilUser = async (req, res) => {
   try {
     // Verificar se é atualização do próprio perfil ou de outro utilizador (admin)
     const userId = req.params.id || req.utilizador.id_utilizador;
-    
+
     const {
       nome,
       email,
@@ -679,9 +679,9 @@ const createUser = async (req, res) => {
     }
 
     // Se for um formador, notificar os administradores
-    if (isFormador) {
+    if (cargo === 'formador') {
       try {
-        await notificacaoController.notificarNovoFormador(novoUsuario);
+        await notificacaoController.notificarNovoFormador(novoPendente);
         console.log(`✅ Notificação de novo formador enviada para os administradores`);
       } catch (notifError) {
         console.error("⚠️ Erro ao enviar notificação de novo formador:", notifError);

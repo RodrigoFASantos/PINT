@@ -5,6 +5,7 @@ import API_BASE from '../../api';
 
 const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
   const [nome, setNome] = useState('');
+  const [dataLimite, setDataLimite] = useState(''); // Novo estado
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -29,7 +30,8 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
         nome: nome.trim(),
         id_topico: topico.id_topico,
         ordem: topico.pastas?.length + 1 || 1,
-        isAvaliacao: isAvaliacao // Adicionar flag para indicar se é uma pasta de avaliação
+        isAvaliacao: isAvaliacao, // Adicionar flag para indicar se é uma pasta de avaliação
+        data_limite: dataLimite || null
       };
 
       const response = await axios.post(`${API_BASE}/pastas-curso`, dadosEnvio, {
@@ -52,10 +54,8 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
   return (
     <div className="modal-overlay">
       <div className="criar-pasta-modal">
-
         <div className="modal-header" style={{ position: 'relative' }}>
           <h2>Criar Nova Pasta{isAvaliacao ? ' de Avaliação' : ''}</h2>
-          {/* Botão de cancelar como ícone X no canto superior direito */}
           <button
             className="cancel-icon"
             onClick={onClose}
@@ -88,6 +88,21 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
                 disabled={enviando}
               />
             </div>
+            
+            {/* Data limite */}
+            {isAvaliacao && (
+              <div className="form-group">
+                <label htmlFor="dataLimite">Data Limite de Entrega</label>
+                <input
+                  type="datetime-local"
+                  id="dataLimite"
+                  name="dataLimite"
+                  value={dataLimite}
+                  onChange={(e) => setDataLimite(e.target.value)}
+                  disabled={enviando}
+                />
+              </div>
+            )}
 
             <div className="modal-footer">
               <button

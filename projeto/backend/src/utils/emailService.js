@@ -255,10 +255,79 @@ const sendMailingList = async (formandos, cursos, area = null) => {
   }
 };
 
+/**
+ * Envia email de confirmação de inscrição num curso
+ * @param {Object} user - Objeto com informações do utilizador
+ * @param {Object} curso - Objeto com informações do curso
+ * @returns {Promise} - Promessa que resolve quando o email é enviado
+ */
+const sendCourseInscricaoEmail = async (user, curso) => {
+  try {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const cursoUrl = `${frontendUrl}/cursos/${curso.id_curso}`;
+
+    console.log(`Enviando email de confirmação de inscrição para ${user.email}`);
+
+    // Formatar datas
+    const dataInicio = new Date(curso.data_inicio).toLocaleDateString('pt-PT');
+    const dataFim = new Date(curso.data_fim).toLocaleDateString('pt-PT');
+
+    // Template do email de confirmação de inscrição
+    const mailOptions = {
+      from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: `Confirmação de Inscrição: ${curso.nome}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #3b82f6;">Inscrição Realizada com Sucesso!</h2>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <p>Olá, ${user.nome}!</p>
+            <p>A sua inscrição no curso <strong>${curso.nome}</strong> foi realizada com sucesso.</p>
+          </div>
+          
+          <div style="margin: 20px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
+            <h3 style="margin-top: 0; color: #334155;">Detalhes do Curso</h3>
+            <p><strong>Nome:</strong> ${curso.nome}</p>
+            <p><strong>Tipo:</strong> ${curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}</p>
+            <p><strong>Data de Início:</strong> ${dataInicio}</p>
+            <p><strong>Data de Fim:</strong> ${dataFim}</p>
+            ${curso.formador ? `<p><strong>Formador:</strong> ${curso.formador.nome}</p>` : ''}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${cursoUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Ver Detalhes do Curso</a>
+          </div>
+          
+          <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
+            <p>Se tiver alguma dúvida, entre em contato connosco respondendo a este email.</p>
+          </div>
+          
+          <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
+            <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      `
+    };
+
+    // Enviar o email
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email de confirmação de inscrição enviado: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error('Erro ao enviar email de confirmação de inscrição:', error);
+    throw error;
+  }
+};
+
+
 
 
 module.exports = {
   sendRegistrationEmail,
   sendPasswordResetEmail,
-  sendMailingList
+  sendMailingList,
+  sendCourseInscricaoEmail
 };

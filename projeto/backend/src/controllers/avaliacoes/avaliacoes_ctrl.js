@@ -38,6 +38,7 @@ const getAllAvaliacoes = async (req, res) => {
         horas_totais: plainAvaliacao.horas_totais,
         horas_presenca: plainAvaliacao.horas_presenca,
         data_criacao: plainAvaliacao.data_criacao,
+        data_limite: plainAvaliacao.data_limite,
         aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
         email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
         curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -54,7 +55,7 @@ const getAllAvaliacoes = async (req, res) => {
 // Criar uma nova avaliação
 const createAvaliacao = async (req, res) => {
   try {
-    const { id_inscricao, nota, certificado, horas_totais, horas_presenca } = req.body;
+    const { id_inscricao, nota, certificado, horas_totais, horas_presenca, data_limite } = req.body;
 
     // Validação básica
     if (!id_inscricao || nota === undefined || horas_totais === undefined || horas_presenca === undefined) {
@@ -86,6 +87,7 @@ const createAvaliacao = async (req, res) => {
       certificado: certificado || false,
       horas_totais,
       horas_presenca,
+      data_limite: data_limite || null, // Novo campo
     });
 
     // Carregar informações completas com relacionamentos
@@ -120,6 +122,7 @@ const createAvaliacao = async (req, res) => {
       horas_totais: plainAvaliacao.horas_totais,
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
+      data_limite: plainAvaliacao.data_limite,
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -175,6 +178,7 @@ const getAvaliacaoById = async (req, res) => {
       horas_totais: plainAvaliacao.horas_totais,
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
+      data_limite: plainAvaliacao.data_limite, // Novo campo
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -191,7 +195,7 @@ const getAvaliacaoById = async (req, res) => {
 const updateAvaliacao = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nota, certificado, horas_totais, horas_presenca } = req.body;
+    const { nota, certificado, horas_totais, horas_presenca, data_limite } = req.body;
 
     // Procurar a avaliação
     const avaliacao = await Avaliacao.findByPk(id);
@@ -205,6 +209,7 @@ const updateAvaliacao = async (req, res) => {
     if (certificado !== undefined) dadosAtualizacao.certificado = certificado;
     if (horas_totais !== undefined) dadosAtualizacao.horas_totais = horas_totais;
     if (horas_presenca !== undefined) dadosAtualizacao.horas_presenca = horas_presenca;
+    if (data_limite !== undefined) dadosAtualizacao.data_limite = data_limite; // Novo campo
 
     // Aplicar atualização
     await avaliacao.update(dadosAtualizacao);
@@ -241,6 +246,7 @@ const updateAvaliacao = async (req, res) => {
       horas_totais: plainAvaliacao.horas_totais,
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
+      data_limite: plainAvaliacao.data_limite,
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -256,7 +262,7 @@ const updateAvaliacao = async (req, res) => {
   }
 };
 
-// Excluir uma avaliação
+// Apagar uma avaliação
 const deleteAvaliacao = async (req, res) => {
   try {
     const { id } = req.params;
@@ -277,7 +283,6 @@ const deleteAvaliacao = async (req, res) => {
   }
 };
 
-// Exportar todas as funções
 module.exports = { 
   getAllAvaliacoes, 
   createAvaliacao,

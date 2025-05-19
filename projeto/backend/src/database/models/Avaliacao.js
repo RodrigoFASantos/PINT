@@ -38,6 +38,11 @@ const Avaliacao = sequelize.define("avaliacoes", {
   url_certificado: {
     type: DataTypes.STRING(500),
     allowNull: true,
+  },
+  data_limite: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: "Data limite para submissão de trabalhos",
   }
 }, {
   tableName: "avaliacoes",

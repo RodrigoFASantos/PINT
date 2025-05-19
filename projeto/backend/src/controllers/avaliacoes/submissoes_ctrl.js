@@ -65,20 +65,39 @@ submitSubmissao = async (req, res) => {
             pastaSlug,
             'submissoes'
         );
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
+        console.log(`Diretório de destino: ${destDir}`);
         ensureDir(destDir);
 
         // 5) Mover ficheiro do temp para a pasta final
         const { filename: tempName, originalname } = req.file;
         const ext = path.extname(originalname);
+        const baseName = path.basename(originalname, ext);
 
         // Formatar o email substituindo @ por _ e . por _
         const emailFormatado = email.replace(/@/g, '_').replace(/\./g, '_');
-        const finalName = `${emailFormatado}${ext}`;
+        const finalName = `${normalizarNome(emailFormatado)}_${normalizarNome(baseName)}${ext}`;
         const destPath = path.join(destDir, finalName);
         moverArquivo(path.join(BASE_UPLOAD_DIR, 'temp', tempName), destPath);
 
         // 6) Caminho para armazenar no banco de dados (relativo)
-        const ficheiro_path = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/submissoes/${finalName}`;
+        const ficheiro_path = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/${finalName}`;
 
         // 7) Gravar no BD com informações completas
         const trabalho = await Trabalho.create({
@@ -104,7 +123,7 @@ getTrabalhoById = async (req, res) => {
         const trabalho = await Trabalho.findByPk(id_trabalho, {
             include: [
                 {
-                    model: require('../../database/models/Utilizador'),
+                    model: require('../../database/models/User'),
                     as: 'utilizador',
                     attributes: ['id_utilizador', 'nome', 'email']
                 }
@@ -121,7 +140,7 @@ getTrabalhoById = async (req, res) => {
             where: { id_trabalho },
             include: [
                 {
-                    model: require('../../database/models/Utilizador'),
+                    model: require('../../database/models/User'),
                     as: 'utilizador',
                     attributes: ['id_utilizador', 'nome']
                 }
@@ -162,7 +181,7 @@ getSubmissoesByPasta = async (req, res) => {
             where: { id_pasta: pasta.id_pasta },
             include: [
                 {
-                    model: require('../../database/models/Utilizador'),
+                    model: require('../../database/models/User'),
                     as: 'utilizador',
                     attributes: ['id_utilizador', 'nome', 'email']
                 }
@@ -206,7 +225,7 @@ getTrabalhosByPastaECurso = async (req, res) => {
             },
             include: [
                 {
-                    model: require('../../database/models/Utilizador'),
+                    model: require('../../database/models/User'),
                     as: 'utilizador',
                     attributes: ['id_utilizador', 'nome', 'email']
                 }
@@ -222,64 +241,77 @@ getTrabalhosByPastaECurso = async (req, res) => {
 };
 
 getSubmissoes = async (req, res) => {
-    try {
-        // Verificar se o id_curso está presente
-        const { id_curso, id_utilizador } = req.query;
-        
-        if (!id_curso) {
-            return res.status(400).json({ message: 'ID do curso é obrigatório' });
-        }
+  try {
+    // Verificar se o id_curso está presente
+    const { id_curso, id_utilizador, id_pasta } = req.query;
 
-        // Construir o where com filtros condicionais
-        const whereClause = { id_curso: parseInt(id_curso) };
-        
-        // Adicionar id_utilizador se fornecido
-        if (id_utilizador) {
-            whereClause.id_utilizador = parseInt(id_utilizador);
-        }
-        
-        // Buscar os trabalhos com os filtros aplicados
-        const trabalhos = await Trabalho.findAll({
-            where: whereClause,
-            include: [
-                {
-                    model: require('../../database/models/Utilizador'),
-                    as: 'utilizador',
-                    attributes: ['id_utilizador', 'nome', 'email']
-                }
-            ],
-            order: [['data_entrega', 'DESC']]
-        });
-        
-        res.json(trabalhos);
-    } catch (error) {
-        console.error('Erro ao obter submissões:', error);
-        res.status(500).json({ message: 'Erro ao obter submissões' });
+    if (!id_curso) {
+      return res.status(400).json({ message: 'ID do curso é obrigatório' });
     }
+
+    // Construir o where com filtros condicionais
+    const whereClause = { 
+      id_curso: parseInt(id_curso) 
+    };
+
+    // Adicionar id_pasta se fornecido
+    if (id_pasta) {
+      whereClause.id_pasta = parseInt(id_pasta);
+    }
+
+    // Adicionar id_utilizador se fornecido
+    if (id_utilizador) {
+      whereClause.id_utilizador = parseInt(id_utilizador);
+    }
+
+    console.log('Filtros de submissão:', whereClause);
+
+    // Buscar os trabalhos com os filtros aplicados
+    const trabalhos = await Trabalho.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: require('../../database/models/User'),
+          as: 'utilizador',
+          attributes: ['id_utilizador', 'nome', 'email']
+        }
+      ],
+      order: [['data_entrega', 'DESC']]
+    });
+
+    console.log(`Encontrados ${trabalhos.length} trabalhos com os filtros aplicados`);
+
+    // Enviar resposta
+    res.status(200).json(trabalhos);
+  } catch (error) {
+    console.error('Erro ao obter submissões:', error);
+    res.status(500).json({ message: 'Erro ao obter submissões', error: error.message });
+  }
 };
+
 
 getTrabalhosByPastaId = async (req, res) => {
     try {
         // Extrair o id_pasta da query string
         const id_pasta = req.query.id_pasta;
-        
+
         console.log('Recebida requisição para id_pasta:', id_pasta);
-        
+
         if (!id_pasta) {
             return res.status(400).json({ message: 'ID da pasta não fornecido' });
         }
-        
+
         // Converter para número
         const pastaId = parseInt(id_pasta);
-        
+
         // Verificar se a pasta existe
         const pasta = await PastaCurso.findByPk(pastaId);
         if (!pasta) {
             return res.status(404).json({ message: `Pasta com ID ${pastaId} não encontrada` });
         }
-        
+
         console.log(`Buscando trabalhos para pasta: ${pasta.nome} (ID: ${pastaId})`);
-        
+
         // Buscar trabalhos com essa pasta
         const trabalhos = await Trabalho.findAll({
             where: { id_pasta: pastaId },
@@ -292,9 +324,9 @@ getTrabalhosByPastaId = async (req, res) => {
             ],
             order: [['data_entrega', 'DESC']]
         });
-        
+
         console.log(`Encontrados ${trabalhos.length} trabalhos para a pasta ID ${pastaId}`);
-        
+
         res.json(trabalhos);
     } catch (error) {
         console.error('Erro ao buscar trabalhos por ID da pasta:', error);
@@ -302,11 +334,11 @@ getTrabalhosByPastaId = async (req, res) => {
     }
 };
 
-module.exports = { 
-    getSubmissoesByPasta, 
-    submitSubmissao, 
-    getSubmissoes, 
-    getTrabalhoById, 
-    getTrabalhosByPastaECurso, 
-    getTrabalhosByPastaId 
+module.exports = {
+    getSubmissoesByPasta,
+    submitSubmissao,
+    getSubmissoes,
+    getTrabalhoById,
+    getTrabalhosByPastaECurso,
+    getTrabalhosByPastaId
 };

@@ -522,11 +522,10 @@ const createConteudo = async (req, res) => {
     let conteudosDir, conteudosPath;
 
     if (isAvaliacaoTopico) {
-      // MODIFICADO: Para tópicos de avaliação: cursos/CURSO/avaliacao/PASTA/conteudos/Conteudos
-      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug, 'conteudos', 'Conteudos');
-      conteudosPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos/Conteudos`;
+      // Para tópicos de avaliação - salvar na pasta conteudos
+      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug, 'conteudos');
+      conteudosPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos`;
     } else {
-      // MODIFICADO: Para tópicos normais: cursos/CURSO/topicos/TOPICO/PASTA/Conteudos
       conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug, 'Conteudos');
       conteudosPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/Conteudos`;
     }
@@ -535,6 +534,7 @@ const createConteudo = async (req, res) => {
 
     // Garantir que o diretório de conteúdos existe
     uploadUtils.ensureDir(conteudosDir);
+
 
     let conteudoData = {
       titulo,
@@ -711,21 +711,21 @@ const updateConteudo = async (req, res) => {
     let conteudoDirAtual, conteudoPathAtual, conteudoDirAlvo, conteudoPathAlvo;
 
     if (isAvaliacaoAtual) {
-      // Para avaliação: cursos/CURSO/avaliacao/PASTA/conteudos/Conteudos
-      conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'avaliacao', pastaSlugAtual, 'conteudos', 'Conteudos');
-      conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/avaliacao/${pastaSlugAtual}/conteudos/Conteudos`;
+      // Para avaliação - armazenar na pasta conteudos
+      conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'avaliacao', pastaSlugAtual, 'conteudos');
+      conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/avaliacao/${pastaSlugAtual}/conteudos`;
     } else {
-      // Para tópicos normais: cursos/CURSO/topicos/TOPICO/PASTA/Conteudos
+      // Para tópicos normais: manter a estrutura atual
       conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'topicos', topicoSlugAtual, pastaSlugAtual, 'Conteudos');
       conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/topicos/${topicoSlugAtual}/${pastaSlugAtual}/Conteudos`;
     }
 
     if (isAvaliacaoAlvo) {
-      // Para avaliação: cursos/CURSO/avaliacao/PASTA/conteudos/Conteudos
-      conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'avaliacao', pastaSlugAlvo, 'conteudos', 'Conteudos');
-      conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/avaliacao/${pastaSlugAlvo}/conteudos/Conteudos`;
+      // Para avaliação - armazenar na pasta conteudos
+      conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'avaliacao', pastaSlugAlvo, 'conteudos');
+      conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/avaliacao/${pastaSlugAlvo}/conteudos`;
     } else {
-      // Para tópicos normais: cursos/CURSO/topicos/TOPICO/PASTA/Conteudos
+      // Para tópicos normais: manter a estrutura atual
       conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'topicos', topicoSlugAlvo, pastaSlugAlvo, 'Conteudos');
       conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/topicos/${topicoSlugAlvo}/${pastaSlugAlvo}/Conteudos`;
     }
@@ -983,7 +983,7 @@ const uploadMiddleware = (req, res, next) => {
   next();
 };
 
-// Exportar todas as funções
+
 module.exports = {
   uploadMiddleware,
   getAllConteudos,

@@ -9,25 +9,16 @@ import { Link } from 'react-router-dom';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
 
-
 const decodeJWT = (token) => {
   try {
-    // Divide o token nas suas partes (cabeçalho, payload, assinatura)
     const parts = token.split('.');
-
-    // Se não tiver 3 partes, não é um JWT válido
     if (parts.length !== 3) {
       console.error('Token JWT inválido: formato incorreto');
       return null;
     }
-
-    // A função atob() espera uma string em Base64 sem padding
-    // Ajustar o padding da string Base64 para garantir decodificação correta
     const payload = parts[1];
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-
-    // Decodificar a string Base64
     try {
       const decoded = atob(padded);
       return JSON.parse(decoded);
@@ -84,9 +75,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [submissoes, setSubmissoes] = useState({});
   const [arquivo, setArquivo] = useState(null);
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
-
   const [submissaoSelecionada, setSubmissaoSelecionada] = useState(null);
-
 
   // Verifica se o utilizador é formador
   const isFormador = () => {
@@ -94,12 +83,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     if (!token) return false;
 
     try {
-      // Usar a função segura para decodificar o token
       const payload = decodeJWT(token);
 
       if (!payload) return false;
 
-      // Verificar o id_utilizador ou cargo
       return payload.id_utilizador === formadorId ||
         payload.id_cargo === 1 ||
         payload.id_cargo === 2;
@@ -119,13 +106,47 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     // Remover acentos
     normalizado = normalizado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // Substituir espaços por hífens
-    normalizado = normalizado.replace(/\s+/g, '-');
+    // Substituir espaços por underscores em vez de hífens
+    normalizado = normalizado.replace(/\s+/g, '_');
 
     // Remover caracteres especiais
     normalizado = normalizado.replace(/[^a-z0-9-_]/g, '');
 
     return normalizado;
+  };
+
+  // Função para verificar se uma submissão está atrasada
+  const isSubmissaoAtrasada = (submissao, pasta) => {
+  if (!pasta.data_limite || !submissao.data_entrega) return false;
+  
+  const dataLimite = new Date(pasta.data_limite);
+  const dataSubmissao = new Date(submissao.data_entrega);
+  
+  return dataSubmissao > dataLimite;
+};
+
+  // Função para formatar data para exibição
+  const formatarData = (dataString) => {
+    if (!dataString) return "Sem data";
+    
+    const data = new Date(dataString);
+    return data.toLocaleString('pt-PT', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Função para verificar se uma data limite já expirou
+  const isDataLimiteExpirada = (dataLimite) => {
+    if (!dataLimite) return false;
+    
+    const agora = new Date();
+    const limite = new Date(dataLimite);
+    
+    return agora > limite;
   };
 
   // Função para carregar submissões iniciais de todas as pastas
@@ -137,10 +158,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
         for (const pasta of topico.pastas) {
           submissoesData[pasta.id_pasta] = [];
         }
-        
+
         // Definir o estado inicial
         setSubmissoes(submissoesData);
-        
+
         // Carregar dados para as pastas já expandidas
         for (const pasta of topico.pastas) {
           if (expandedPastas.includes(pasta.id_pasta)) {
@@ -167,101 +188,72 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   };
 
   // Função otimizada para carregar submissões de uma pasta específica
-const carregarSubmissoesDaPasta = async (pastaId) => {
-  if (!pastaId) return;
-  
-  try {
-    const token = localStorage.getItem('token');
-    let submissoesAtualizadas = { ...submissoes };
-    
-    // Obter informações da pasta (nome)
-    const pasta = topicoAvaliacao.pastas.find(p => p.id_pasta === pastaId);
-    if (!pasta) {
-      console.error(`Pasta com ID ${pastaId} não encontrada`);
-      return;
-    }
-    
-    // MÉTODO 1 (CORRIGIDO): Usar o endpoint de submissões por ID de pasta
+  const carregarSubmissoesDaPasta = async (pastaId) => {
+    if (!pastaId) return;
+
     try {
-      console.log(`Tentando endpoint /avaliacoes/submissoes-pasta com id_pasta=${pastaId}`);
-      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes-pasta`, {
-        params: { id_pasta: pastaId },
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.status === 200) {
-        submissoesAtualizadas[pastaId] = response.data;
-        setSubmissoes(submissoesAtualizadas);
-        console.log(`Sucesso! Encontradas ${response.data.length} submissões.`);
+      const token = localStorage.getItem('token');
+      let submissoesAtualizadas = { ...submissoes };
+      const isFormadorUser = isFormador(); // Verificar se é formador
+
+      // Obter informações da pasta
+      const pasta = topicoAvaliacao.pastas.find(p => p.id_pasta === pastaId);
+      if (!pasta) {
+        console.error(`Pasta com ID ${pastaId} não encontrada`);
         return;
       }
-    } catch (err) {
-      console.log(`Método 1 falhou: ${err.message}`);
-    }
-    
-    // MÉTODO 2 (SIMPLIFICADO): Buscar trabalhos pelo curso e pasta
-    try {
-      console.log(`Tentando buscar trabalhos pelo curso ${cursoId} e pasta ${pastaId}`);
-      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
-        params: { 
-          id_curso: cursoId,
-          id_pasta: pastaId 
-        },
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.status === 200) {
-        submissoesAtualizadas[pastaId] = response.data;
-        setSubmissoes(submissoesAtualizadas);
-        console.log(`Método 2 sucesso! Encontradas ${response.data.length} submissões.`);
-        return;
-      }
-    } catch (err) {
-      console.log(`Método 2 falhou: ${err.message}`);
-    }
-    
-    // MÉTODO 3: Buscar pelo usuário atual
-    try {
+
+      // Obter dados do user do token
       const dadosUsuario = decodeJWT(token);
       if (!dadosUsuario || !dadosUsuario.id_utilizador) {
-        throw new Error('Não foi possível obter dados do usuário do token');
-      }
-      
-      const idUsuario = dadosUsuario.id_utilizador;
-      
-      console.log(`Buscando submissões do usuário ${idUsuario} na pasta ${pastaId}`);
-      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
-        params: { 
-          id_curso: cursoId,
-          id_utilizador: idUsuario,
-          id_pasta: pastaId
-        },
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.status === 200) {
-        submissoesAtualizadas[pastaId] = response.data;
-        setSubmissoes(submissoesAtualizadas);
-        console.log(`Método 3 sucesso! Encontradas ${response.data.length} submissões do usuário.`);
+        console.error('Não foi possível obter dados do user do token');
         return;
       }
-    } catch (err) {
-      console.log(`Método 3 falhou: ${err.message}`);
+
+      const idUsuario = dadosUsuario.id_utilizador;
+
+      try {
+        // Construir parâmetros baseados no cargo do user
+        const params = {
+          id_curso: cursoId,
+          id_pasta: pastaId
+        };
+
+        // Adicionar filtro de user apenas se for formando
+        if (!isFormadorUser) {
+          params.id_utilizador = idUsuario;
+        }
+
+        console.log(`Obter submissões com parâmetros:`, params);
+
+        // Chamada única à API
+        const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
+          params: params,
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.status === 200) {
+          console.log(`Sucesso! Encontradas ${response.data.length} submissões.`);
+          submissoesAtualizadas[pastaId] = response.data;
+          setSubmissoes(submissoesAtualizadas);
+          return;
+        }
+      } catch (err) {
+        console.error(`Erro ao buscar submissões:`, err);
+      }
+
+      // Caso falhe, inicializar com array vazio
+      console.log("Falha ao carregar submissões. Inicializando array vazio.");
+      submissoesAtualizadas[pastaId] = [];
+      setSubmissoes(submissoesAtualizadas);
+
+    } catch (error) {
+      console.error('Erro ao carregar submissões:', error);
+      let submissoesAtualizadas = { ...submissoes };
+      submissoesAtualizadas[pastaId] = [];
+      setSubmissoes(submissoesAtualizadas);
     }
-    
-    // Se todas as tentativas falharem, inicializar com array vazio
-    console.log("Todos os métodos falharam. Inicializando array vazio.");
-    submissoesAtualizadas[pastaId] = [];
-    setSubmissoes(submissoesAtualizadas);
-    
-  } catch (error) {
-    console.error('Erro ao carregar submissões:', error);
-    // Inicializar com array vazio em caso de erro
-    let submissoesAtualizadas = { ...submissoes };
-    submissoesAtualizadas[pastaId] = [];
-    setSubmissoes(submissoesAtualizadas);
-  }
-};
+  };
 
   // Carregar tópicos do curso
   const carregarTopicos = async () => {
@@ -600,15 +592,24 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
                   </button>
                   <i className="fas fa-folder"></i>
                   <span className="pasta-nome">{pasta.nome}</span>
+                  
+                  {/* Exibir data limite junto ao nome da pasta */}
+                  {pasta.data_limite && (
+                    <div className={`data-limite ${isDataLimiteExpirada(pasta.data_limite) ? 'data-limite-expirada' : ''}`}>
+                      <i className="fas fa-clock"></i>
+                      Prazo: {formatarData(pasta.data_limite)}
+                      {isDataLimiteExpirada(pasta.data_limite) && " (Expirado)"}
+                    </div>
+                  )}
 
                   {isFormador() ? (
                     <div className="pasta-actions">
                       <button
-                        className="btn-add"
+                        className="btn-add-conteudo"
                         onClick={() => abrirModalAdicionarConteudo(pasta)}
                         title="Adicionar conteúdo"
                       >
-                        <i className="fas fa-plus"></i>
+                        <i className="fas fa-file-medical"></i>
                       </button>
                       <button
                         className="btn-delete"
@@ -628,6 +629,7 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
                         className="btn-submeter"
                         onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
                         title="Submeter trabalho"
+                        disabled={isDataLimiteExpirada(pasta.data_limite)}
                       >
                         <i className="fas fa-upload"></i> Submeter
                       </button>
@@ -637,32 +639,19 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
 
                 {expandedPastas.includes(pasta.id_pasta) && (
                   <div className="pasta-expanded-content">
-                    {/* Conteúdos adicionados pelo formador */}
+                    {/* Conteúdos */}
                     <div className="conteudos-list">
                       <h4 className="secao-titulo">Conteúdos</h4>
                       {pasta.conteudos && pasta.conteudos.length > 0 ? (
-                        pasta.conteudos.map((conteudo) => (
-                          <div key={conteudo.id_conteudo} className="conteudo-item">
-                            <i className={`fas fa-${conteudo.tipo === 'file' ? 'file-alt' :
-                              conteudo.tipo === 'link' ? 'link' :
-                                conteudo.tipo === 'video' ? 'video' : 'file'}`}></i>
-                            <span
-                              className="conteudo-titulo"
-                              onClick={() => {
-                                if (conteudo.tipo === 'file') {
-                                  abrirModalFicheiro(conteudo);
-                                } else if (conteudo.tipo === 'link' || conteudo.tipo === 'video') {
-                                  if (conteudo.url) {
-                                    window.open(conteudo.url, '_blank', 'noopener,noreferrer');
-                                  }
-                                }
-                              }}
-                            >
-                              {conteudo.titulo}
-                            </span>
+                        pasta.conteudos.map((conteudo) => {
+                          return (
+                            <div key={conteudo.id_conteudo} className="conteudo-item">
+                              <i className={`fas ${conteudo.tipo === 'video' ? 'fa-video' : 'fa-file'}`}></i>
+                              <span className="conteudo-nome" onClick={() => abrirModalFicheiro(conteudo)}>
+                                {conteudo.titulo || conteudo.arquivo_path?.split('/').pop() || "Ficheiro sem nome"}
+                              </span>
 
-                            {isFormador() && (
-                              <div className="conteudo-actions">
+                              {isFormador() && (
                                 <button
                                   className="btn-delete"
                                   onClick={() => mostrarModalConfirmacao(
@@ -674,12 +663,12 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
                                 >
                                   <i className="fas fa-trash"></i>
                                 </button>
-                              </div>
-                            )}
-                          </div>
-                        ))
+                              )}
+                            </div>
+                          );
+                        })
                       ) : (
-                        <div className="secao-vazia">Nenhum conteúdo disponível</div>
+                        <div className="secao-vazia">Sem conteúdos disponíveis</div>
                       )}
                     </div>
 
@@ -688,29 +677,38 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
                       <div className="submissoes-list">
                         <h4 className="secao-titulo">Submissões dos Formandos</h4>
                         {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
-                          submissoes[pasta.id_pasta].map((submissao, index) => (
-                            <div key={submissao.id || index} className="submissao-item">
-                              <i className="fas fa-file-upload"></i>
-                              <span className="submissao-info">
-                                <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
-                                  new Date(submissao.data_submissao || submissao.data_entrega).toLocaleDateString('pt-PT')
-                                }
-                              </span>
-                              <button
-                                className="btn-download"
-                                onClick={() => {
-                                  if (submissao.ficheiro_path) {
-                                    window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
-                                  } else {
-                                    alert('Caminho do ficheiro não disponível');
-                                  }
-                                }}
-                                title="Descarregar submissão"
+                          submissoes[pasta.id_pasta].map((submissao, index) => {
+                            const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                            return (
+                              <div 
+                                key={submissao.id || index} 
+                                className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
                               >
-                                <i className="fas fa-download"></i>
-                              </button>
-                            </div>
-                          ))
+                                <i className="fas fa-file-upload"></i>
+                                <span className="submissao-info">
+                                  <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
+                                    formatarData(submissao.data_submissao || submissao.data_entrega)
+                                  }
+                                  {atrasada && (
+                                    <span className="submissao-atrasada-badge">Atrasada</span>
+                                  )}
+                                </span>
+                                <button
+                                  className="btn-download"
+                                  onClick={() => {
+                                    if (submissao.ficheiro_path) {
+                                      window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
+                                    } else {
+                                      alert('Caminho do ficheiro não disponível');
+                                    }
+                                  }}
+                                  title="Descarregar submissão"
+                                >
+                                  <i className="fas fa-download"></i>
+                                </button>
+                              </div>
+                            );
+                          })
                         ) : (
                           <div className="secao-vazia">Nenhuma submissão recebida</div>
                         )}
@@ -723,46 +721,53 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
                         <h4 className="secao-titulo">Minhas Submissões</h4>
                         {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
                           // Se existem submissões
-                          submissoes[pasta.id_pasta].map((submissao, index) => (
-                            <div key={submissao.id || index}>
-                              {submissaoSelecionada && submissaoSelecionada.id === submissao.id ? (
-                                // Mostrar detalhes completos quando selecionado
-                                <DetalhesSubmissao
-                                  submissao={submissao}
-                                  cursoId={cursoId}
-                                  pastaId={pasta.id_pasta}
-                                />
-                              ) : (
-                                // Mostrar versão resumida com opção para expandir
-                                <div className="submissao-item">
-                                  <i className="fas fa-file-upload"></i>
-                                  <span className="submissao-info">
-                                    {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
-                                      new Date(submissao.data_submissao || submissao.data_entrega).toLocaleDateString('pt-PT')
-                                    }
-                                  </span>
-                                  <div className="submissao-acoes">
-                                    {submissao.ficheiro_path && (
+                          submissoes[pasta.id_pasta].map((submissao, index) => {
+                            const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                            return (
+                              <div key={submissao.id || index}>
+                                {submissaoSelecionada && submissaoSelecionada.id === submissao.id ? (
+                                  // Mostrar detalhes completos quando selecionado
+                                  <DetalhesSubmissao
+                                    submissao={submissao}
+                                    cursoId={cursoId}
+                                    pastaId={pasta.id_pasta}
+                                    atrasada={atrasada}
+                                  />
+                                ) : (
+                                  // Mostrar versão resumida com opção para expandir
+                                  <div className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
+                                    <i className="fas fa-file-upload"></i>
+                                    <span className="submissao-info">
+                                      {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
+                                        formatarData(submissao.data_submissao || submissao.data_entrega)
+                                      }
+                                      {atrasada && (
+                                        <span className="submissao-atrasada-badge">Atrasada</span>
+                                      )}
+                                    </span>
+                                    <div className="submissao-acoes">
+                                      {submissao.ficheiro_path && (
+                                        <button
+                                          className="btn-download"
+                                          onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                                          title="Descarregar submissão"
+                                        >
+                                          <i className="fas fa-download"></i>
+                                        </button>
+                                      )}
                                       <button
-                                        className="btn-download"
-                                        onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
-                                        title="Descarregar submissão"
+                                        className="btn-detalhes"
+                                        onClick={() => setSubmissaoSelecionada(submissao)}
+                                        title="Ver detalhes"
                                       >
-                                        <i className="fas fa-download"></i>
+                                        <i className="fas fa-info-circle"></i>
                                       </button>
-                                    )}
-                                    <button
-                                      className="btn-detalhes"
-                                      onClick={() => setSubmissaoSelecionada(submissao)}
-                                      title="Ver detalhes"
-                                    >
-                                      <i className="fas fa-info-circle"></i>
-                                    </button>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          ))
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <div className="secao-vazia">Nenhuma submissão enviada</div>
                         )}
@@ -797,7 +802,7 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
         />
       )}
 
-      {/* Modal para adicionar conteúdos */}
+      {/* Modal para adicionar conteúdos - MANTIDO apenas para a possibilidade de ser aberto */}
       {showCriarConteudoModal && pastaSelecionada && (
         <CriarConteudoModal
           pasta={pastaSelecionada}
@@ -832,6 +837,19 @@ const carregarSubmissoesDaPasta = async (pastaId) => {
         <div className="modal-overlay">
           <div className="modal-submissao">
             <h3>Enviar Submissão</h3>
+            
+            {/* Verificar se a pasta selecionada possui data limite expirada */}
+            {enviarSubmissaoModal.pastaId && 
+             topicoAvaliacao && 
+             topicoAvaliacao.pastas && 
+             topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId)?.data_limite && 
+             isDataLimiteExpirada(topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId).data_limite) && (
+              <div className="aviso-atrasado">
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>Atenção: O prazo de entrega já expirou. Esta submissão será marcada como atrasada.</span>
+              </div>
+            )}
+            
             <form onSubmit={enviarSubmissao}>
               <div className="form-group">
                 <label htmlFor="arquivo-submissao">Selecione o ficheiro:</label>

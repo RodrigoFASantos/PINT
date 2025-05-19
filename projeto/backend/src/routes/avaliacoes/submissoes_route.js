@@ -14,11 +14,15 @@ const {
 // Submeter ficheiro de avaliação
 router.post('/', auth, uploadAvaliacaoConteudo, handleUploadErrors, submitSubmissao);
 
-// IMPORTANTES: Alterar a ordem das rotas - as mais específicas primeiro
-// Rota para buscar por ID da pasta - esta precisa vir primeiro!
+// IMPORTANTE: Ordenar rotas da mais específica para a mais genérica
+
+// Buscar trabalho específico por ID - deve ser a primeira rota
+router.get('/:id([0-9]+)', auth, getTrabalhoById);
+
+// Rota para buscar por ID da pasta
 router.get('/submissoes-pasta', auth, getTrabalhosByPastaId);
 
-// Rota alternativa para compatibilidade com o frontend existente
+// Rota alternativa para compatibilidade
 router.get('/pasta-id', auth, getTrabalhosByPastaId);
 
 // Rota para buscar por curso e pasta normalizada
@@ -27,11 +31,7 @@ router.get('/curso/:cursoNome/pasta/:pastaNome', auth, getTrabalhosByPastaECurso
 // Mostrar submissões de uma pasta específica
 router.get('/pasta/:pastaNome', auth, getSubmissoesByPasta);
 
-// Buscar trabalho específico por ID
-router.get('/:id([0-9]+)', auth, getTrabalhoById);
-
-// Mostrar todas as submissões de um curso (query string ?id_curso=)
-// Esta rota deve vir por último por ser mais genérica
+// Mostrar todas as submissões de um curso (deve ser a última rota)
 router.get('/', auth, getSubmissoes);
 
 module.exports = router;

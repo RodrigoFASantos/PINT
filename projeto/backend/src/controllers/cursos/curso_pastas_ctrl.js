@@ -9,7 +9,9 @@ const uploadUtils = require('../../middleware/upload');
 // Criar uma nova pasta - Modificado para estrutura correta
 const createPasta = async (req, res) => {
   try {
-    const { nome, id_topico, ordem } = req.body;
+    const { nome, id_topico, ordem, data_limite } = req.body;
+
+
 
     if (!nome || !id_topico) {
       return res.status(400).json({ message: "Nome e ID do tópico são obrigatórios" });
@@ -97,7 +99,8 @@ const createPasta = async (req, res) => {
       ordem: ordem || 1,
       dir_path: pastaUrlPath,
       arquivo_path: pastaUrlPath,
-      ativo: true
+      ativo: true,
+      data_limite: data_limite || null
     });
 
     res.status(201).json({ 
@@ -186,7 +189,8 @@ const getPastaById = async (req, res) => {
 const updatePasta = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, ordem, ativo } = req.body;
+    const { nome, ordem, ativo, data_limite } = req.body;
+
 
     const pasta = await PastaCurso.findByPk(id);
 
@@ -290,6 +294,7 @@ const updatePasta = async (req, res) => {
     if (nome !== undefined) pasta.nome = nome;
     if (ordem !== undefined) pasta.ordem = ordem;
     if (ativo !== undefined) pasta.ativo = ativo;
+    if (data_limite !== undefined) pasta.data_limite = data_limite;
 
     await pasta.save();
 

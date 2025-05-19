@@ -177,7 +177,8 @@ const createTablesInOrder = async () => {
       horas_totais INTEGER NOT NULL,
       horas_presenca INTEGER NOT NULL,
       data_avaliacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      url_certificado VARCHAR(500)
+      url_certificado VARCHAR(500),
+      data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
     // =============================================
@@ -323,7 +324,8 @@ const createTablesInOrder = async () => {
       arquivo_path VARCHAR(500),
       id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
       ordem INTEGER NOT NULL DEFAULT 1,
-      ativo BOOLEAN NOT NULL DEFAULT TRUE
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
     // =============================================
