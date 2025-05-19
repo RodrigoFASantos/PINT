@@ -77,6 +77,9 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
   const [submissaoSelecionada, setSubmissaoSelecionada] = useState(null);
 
+  const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
+
+
   // Verifica se o utilizador é formador
   const isFormador = () => {
     const token = localStorage.getItem('token');
@@ -96,43 +99,25 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-  // Função única de normalização - mesma que no backend
-  const normalizarNomeFrontend = (nome) => {
-    if (!nome) return '';
-
-    // Converter para minúsculas
-    let normalizado = nome.toLowerCase();
-
-    // Remover acentos
-    normalizado = normalizado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    // Substituir espaços por underscores em vez de hífens
-    normalizado = normalizado.replace(/\s+/g, '_');
-
-    // Remover caracteres especiais
-    normalizado = normalizado.replace(/[^a-z0-9-_]/g, '');
-
-    return normalizado;
-  };
 
   // Função para verificar se uma submissão está atrasada
   const isSubmissaoAtrasada = (submissao, pasta) => {
-  if (!pasta.data_limite || !submissao.data_entrega) return false;
-  
-  const dataLimite = new Date(pasta.data_limite);
-  const dataSubmissao = new Date(submissao.data_entrega);
-  
-  return dataSubmissao > dataLimite;
-};
+    if (!pasta.data_limite || !submissao.data_entrega) return false;
+
+    const dataLimite = new Date(pasta.data_limite);
+    const dataSubmissao = new Date(submissao.data_entrega);
+
+    return dataSubmissao > dataLimite;
+  };
 
   // Função para formatar data para exibição
   const formatarData = (dataString) => {
     if (!dataString) return "Sem data";
-    
+
     const data = new Date(dataString);
-    return data.toLocaleString('pt-PT', { 
-      day: '2-digit', 
-      month: '2-digit', 
+    return data.toLocaleString('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -142,10 +127,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   // Função para verificar se uma data limite já expirou
   const isDataLimiteExpirada = (dataLimite) => {
     if (!dataLimite) return false;
-    
+
     const agora = new Date();
     const limite = new Date(dataLimite);
-    
+
     return agora > limite;
   };
 
@@ -498,6 +483,14 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
+
+  // Abrir os detalhes da submissão
+  const verSubmissaoDetalhes = (submissao) => {
+    setSubmissaoSelecionada(submissao);
+    setMostrarDetalhes(true);
+  };
+
+
   // Renderização condicional para carregamento
   if (carregando) {
     return (
@@ -592,7 +585,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   </button>
                   <i className="fas fa-folder"></i>
                   <span className="pasta-nome">{pasta.nome}</span>
-                  
+
                   {/* Exibir data limite junto ao nome da pasta */}
                   {pasta.data_limite && (
                     <div className={`data-limite ${isDataLimiteExpirada(pasta.data_limite) ? 'data-limite-expirada' : ''}`}>
@@ -603,27 +596,37 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   )}
 
                   {isFormador() ? (
-                    <div className="pasta-actions">
-                      <button
-                        className="btn-add-conteudo"
-                        onClick={() => abrirModalAdicionarConteudo(pasta)}
-                        title="Adicionar conteúdo"
-                      >
-                        <i className="fas fa-file-medical"></i>
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => mostrarModalConfirmacao(
-                          'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
-                          'removerPasta',
-                          pasta.id_pasta
-                        )}
-                        title="Remover pasta"
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    </div>
-                  ) : (
+  <div className="pasta-actions">
+    <button
+      className="btn-add-conteudo"
+      onClick={() => abrirModalAdicionarConteudo(pasta)}
+      title="Adicionar conteúdo"
+    >
+      <i className="fas fa-file-medical"></i>
+    </button>
+    
+    {/* Novo botão Ver Submissões para cada pasta */}
+    <Link
+      to={`/curso/${cursoId}/avaliacao/${pasta.id_pasta}/submissoes`}
+      className="btn-ver-submissoes-pasta"
+      title="Ver submissões desta pasta"
+    >
+      <i className="fas fa-clipboard-check"></i> Ver Submissões
+    </Link>
+    
+    <button
+      className="btn-delete"
+      onClick={() => mostrarModalConfirmacao(
+        'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
+        'removerPasta',
+        pasta.id_pasta
+      )}
+      title="Remover pasta"
+    >
+      <i className="fas fa-trash"></i>
+    </button>
+  </div>
+) : (
                     <div className="pasta-actions">
                       <button
                         className="btn-submeter"
@@ -680,8 +683,8 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                           submissoes[pasta.id_pasta].map((submissao, index) => {
                             const atrasada = isSubmissaoAtrasada(submissao, pasta);
                             return (
-                              <div 
-                                key={submissao.id || index} 
+                              <div
+                                key={submissao.id || index}
                                 className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
                               >
                                 <i className="fas fa-file-upload"></i>
@@ -725,14 +728,22 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                             const atrasada = isSubmissaoAtrasada(submissao, pasta);
                             return (
                               <div key={submissao.id || index}>
-                                {submissaoSelecionada && submissaoSelecionada.id === submissao.id ? (
+                                {(submissaoSelecionada && submissaoSelecionada.id === submissao.id && mostrarDetalhes) ? (
                                   // Mostrar detalhes completos quando selecionado
-                                  <DetalhesSubmissao
-                                    submissao={submissao}
-                                    cursoId={cursoId}
-                                    pastaId={pasta.id_pasta}
-                                    atrasada={atrasada}
-                                  />
+                                  <div className="detalhes-wrapper">
+                                    <DetalhesSubmissao
+                                      submissao={submissao}
+                                      cursoId={cursoId}
+                                      pastaId={pasta.id_pasta}
+                                      atrasada={atrasada}
+                                    />
+                                    <button
+                                      className="btn-fechar-detalhes"
+                                      onClick={() => setMostrarDetalhes(false)}
+                                    >
+                                      <i className="fas fa-times"></i> Fechar
+                                    </button>
+                                  </div>
                                 ) : (
                                   // Mostrar versão resumida com opção para expandir
                                   <div className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
@@ -757,7 +768,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                                       )}
                                       <button
                                         className="btn-detalhes"
-                                        onClick={() => setSubmissaoSelecionada(submissao)}
+                                        onClick={() => verSubmissaoDetalhes(submissao)}
                                         title="Ver detalhes"
                                       >
                                         <i className="fas fa-info-circle"></i>
@@ -837,19 +848,19 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
         <div className="modal-overlay">
           <div className="modal-submissao">
             <h3>Enviar Submissão</h3>
-            
+
             {/* Verificar se a pasta selecionada possui data limite expirada */}
-            {enviarSubmissaoModal.pastaId && 
-             topicoAvaliacao && 
-             topicoAvaliacao.pastas && 
-             topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId)?.data_limite && 
-             isDataLimiteExpirada(topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId).data_limite) && (
-              <div className="aviso-atrasado">
-                <i className="fas fa-exclamation-triangle"></i>
-                <span>Atenção: O prazo de entrega já expirou. Esta submissão será marcada como atrasada.</span>
-              </div>
-            )}
-            
+            {enviarSubmissaoModal.pastaId &&
+              topicoAvaliacao &&
+              topicoAvaliacao.pastas &&
+              topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId)?.data_limite &&
+              isDataLimiteExpirada(topicoAvaliacao.pastas.find(p => p.id_pasta === enviarSubmissaoModal.pastaId).data_limite) && (
+                <div className="aviso-atrasado">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <span>Atenção: O prazo de entrega já expirou. Esta submissão será marcada como atrasada.</span>
+                </div>
+              )}
+
             <form onSubmit={enviarSubmissao}>
               <div className="form-group">
                 <label htmlFor="arquivo-submissao">Selecione o ficheiro:</label>

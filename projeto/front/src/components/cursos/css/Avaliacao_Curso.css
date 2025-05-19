@@ -390,3 +390,50 @@ button:disabled {
   margin-left: 10px;
   display: inline-block;
 }
+
+
+.detalhes-wrapper {
+  position: relative;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  margin-bottom: 15px;
+}
+
+.btn-fechar-detalhes {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-fechar-detalhes:hover {
+  background-color: #d32f2f;
+}
+
+
+.btn-ver-submissoes-pasta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background-color: #4a6fdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: none;
+  margin-right: 5px;
+}
+
+.btn-ver-submissoes-pasta:hover {
+  background-color: #3a5fc2;
+}

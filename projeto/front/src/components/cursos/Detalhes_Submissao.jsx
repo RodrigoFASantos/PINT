@@ -8,6 +8,7 @@ const DetalhesSubmissao = ({ submissao, cursoId, pastaId }) => {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
 
+
   useEffect(() => {
     const carregarDetalhes = async () => {
       try {
@@ -26,11 +27,11 @@ const DetalhesSubmissao = ({ submissao, cursoId, pastaId }) => {
 
         // Obter detalhes completos da submissão
         const response = await axios.get(
-          `${API_BASE}/trabalhos/${submissaoId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
+  `${API_BASE}/avaliacoes/submissoes/${submissaoId}`,
+  {
+    headers: { Authorization: `Bearer ${token}` }
+  }
+);
 
         // Obter detalhes da pasta para verificar prazos
         const pastaResponse = await axios.get(
@@ -63,6 +64,8 @@ const DetalhesSubmissao = ({ submissao, cursoId, pastaId }) => {
     }
   }, [submissao, cursoId, pastaId]);
 
+
+
   // Calcular tempo até o prazo ou após submissão
   const calcularTempoRestante = (dataLimite, dataSubmissao) => {
     if (!dataLimite) return "Sem prazo definido";
@@ -87,25 +90,8 @@ const DetalhesSubmissao = ({ submissao, cursoId, pastaId }) => {
     }
   };
 
-  // Função para normalizar nomes de forma semelhante ao backend
 
-  const normalizarNomeFrontend = (nome) => {
-    if (!nome) return '';
 
-    // Converter para minúsculas
-    let normalizado = nome.toLowerCase();
-
-    // Remover acentos
-    normalizado = normalizado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    // Substituir espaços por hífens
-    normalizado = normalizado.replace(/\s+/g, '-');
-
-    // Remover caracteres especiais
-    normalizado = normalizado.replace(/[^a-z0-9-_]/g, '');
-
-    return normalizado;
-  };
 
   // Formatar data em PT
   const formatarData = (dataString) => {
