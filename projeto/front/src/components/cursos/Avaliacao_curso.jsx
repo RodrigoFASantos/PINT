@@ -108,6 +108,161 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       return false;
     }
   };
+
+  // Função única de normalização - mesma que no backend
+  const normalizarNomeFrontend = (nome) => {
+    if (!nome) return '';
+
+    // Converter para minúsculas
+    let normalizado = nome.toLowerCase();
+
+    // Remover acentos
+    normalizado = normalizado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Substituir espaços por hífens
+    normalizado = normalizado.replace(/\s+/g, '-');
+
+    // Remover caracteres especiais
+    normalizado = normalizado.replace(/[^a-z0-9-_]/g, '');
+
+    return normalizado;
+  };
+
+  // Função para carregar submissões iniciais de todas as pastas
+  const carregarSubmissoes = async (topico) => {
+    try {
+      if (topico && topico.pastas) {
+        // Inicializar o estado de submissões com arrays vazios para cada pasta
+        const submissoesData = {};
+        for (const pasta of topico.pastas) {
+          submissoesData[pasta.id_pasta] = [];
+        }
+        
+        // Definir o estado inicial
+        setSubmissoes(submissoesData);
+        
+        // Carregar dados para as pastas já expandidas
+        for (const pasta of topico.pastas) {
+          if (expandedPastas.includes(pasta.id_pasta)) {
+            await carregarSubmissoesDaPasta(pasta.id_pasta);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar submissões iniciais:', error);
+    }
+  };
+
+  // Função para recarregar todas as submissões após envio
+  const recarregarSubmissoes = async () => {
+    try {
+      if (topicoAvaliacao && topicoAvaliacao.pastas) {
+        for (const pasta of topicoAvaliacao.pastas) {
+          await carregarSubmissoesDaPasta(pasta.id_pasta);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar todas as submissões:', error);
+    }
+  };
+
+  // Função otimizada para carregar submissões de uma pasta específica
+const carregarSubmissoesDaPasta = async (pastaId) => {
+  if (!pastaId) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    let submissoesAtualizadas = { ...submissoes };
+    
+    // Obter informações da pasta (nome)
+    const pasta = topicoAvaliacao.pastas.find(p => p.id_pasta === pastaId);
+    if (!pasta) {
+      console.error(`Pasta com ID ${pastaId} não encontrada`);
+      return;
+    }
+    
+    // MÉTODO 1 (CORRIGIDO): Usar o endpoint de submissões por ID de pasta
+    try {
+      console.log(`Tentando endpoint /avaliacoes/submissoes-pasta com id_pasta=${pastaId}`);
+      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes-pasta`, {
+        params: { id_pasta: pastaId },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.status === 200) {
+        submissoesAtualizadas[pastaId] = response.data;
+        setSubmissoes(submissoesAtualizadas);
+        console.log(`Sucesso! Encontradas ${response.data.length} submissões.`);
+        return;
+      }
+    } catch (err) {
+      console.log(`Método 1 falhou: ${err.message}`);
+    }
+    
+    // MÉTODO 2 (SIMPLIFICADO): Buscar trabalhos pelo curso e pasta
+    try {
+      console.log(`Tentando buscar trabalhos pelo curso ${cursoId} e pasta ${pastaId}`);
+      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
+        params: { 
+          id_curso: cursoId,
+          id_pasta: pastaId 
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.status === 200) {
+        submissoesAtualizadas[pastaId] = response.data;
+        setSubmissoes(submissoesAtualizadas);
+        console.log(`Método 2 sucesso! Encontradas ${response.data.length} submissões.`);
+        return;
+      }
+    } catch (err) {
+      console.log(`Método 2 falhou: ${err.message}`);
+    }
+    
+    // MÉTODO 3: Buscar pelo usuário atual
+    try {
+      const dadosUsuario = decodeJWT(token);
+      if (!dadosUsuario || !dadosUsuario.id_utilizador) {
+        throw new Error('Não foi possível obter dados do usuário do token');
+      }
+      
+      const idUsuario = dadosUsuario.id_utilizador;
+      
+      console.log(`Buscando submissões do usuário ${idUsuario} na pasta ${pastaId}`);
+      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
+        params: { 
+          id_curso: cursoId,
+          id_utilizador: idUsuario,
+          id_pasta: pastaId
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.status === 200) {
+        submissoesAtualizadas[pastaId] = response.data;
+        setSubmissoes(submissoesAtualizadas);
+        console.log(`Método 3 sucesso! Encontradas ${response.data.length} submissões do usuário.`);
+        return;
+      }
+    } catch (err) {
+      console.log(`Método 3 falhou: ${err.message}`);
+    }
+    
+    // Se todas as tentativas falharem, inicializar com array vazio
+    console.log("Todos os métodos falharam. Inicializando array vazio.");
+    submissoesAtualizadas[pastaId] = [];
+    setSubmissoes(submissoesAtualizadas);
+    
+  } catch (error) {
+    console.error('Erro ao carregar submissões:', error);
+    // Inicializar com array vazio em caso de erro
+    let submissoesAtualizadas = { ...submissoes };
+    submissoesAtualizadas[pastaId] = [];
+    setSubmissoes(submissoesAtualizadas);
+  }
+};
+
   // Carregar tópicos do curso
   const carregarTopicos = async () => {
     try {
@@ -145,50 +300,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-  // MODIFICADO: Carregar submissões dos formandos usando o endpoint correto
-  const carregarSubmissoes = async (topico) => {
-    try {
-      const token = localStorage.getItem('token');
-      const submissoesData = {};
-
-      if (topico && topico.pastas) {
-        for (const pasta of topico.pastas) {
-          submissoesData[pasta.id_pasta] = [];
-
-          try {
-            // Corrigido: usar trabalhos em vez de submissoes
-            const response = await axios.get(`${API_BASE}/trabalhos/pasta/${pasta.id_pasta}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (response.status === 200) {
-              submissoesData[pasta.id_pasta] = response.data;
-            }
-          } catch (submissaoError) {
-            console.log('A verificar trabalhos submetidos para a pasta:', submissaoError);
-
-            // Tentar endpoint alternativo caso o primeiro falhe
-            try {
-              const altResponse = await axios.get(`${API_BASE}/trabalhos/curso/${cursoId}/pasta/${pasta.id_pasta}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-
-              if (altResponse.status === 200) {
-                submissoesData[pasta.id_pasta] = altResponse.data;
-              }
-            } catch (altError) {
-              console.log('Nenhum trabalho encontrado para esta pasta', altError);
-            }
-          }
-        }
-      }
-
-      setSubmissoes(submissoesData);
-    } catch (error) {
-      console.error('Erro ao carregar submissões:', error);
-    }
-  };
-
   // Carregar dados iniciais
   useEffect(() => {
     if (cursoId) {
@@ -198,9 +309,16 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
 
   // Expandir/colapsar pasta
   const toggleExpandPasta = (idPasta) => {
+    const expandindo = !expandedPastas.includes(idPasta);
+
     setExpandedPastas((prev) =>
       prev.includes(idPasta) ? prev.filter((id) => id !== idPasta) : [...prev, idPasta]
     );
+
+    // Se está expandindo a pasta, carregue as submissões
+    if (expandindo) {
+      carregarSubmissoesDaPasta(idPasta);
+    }
   };
 
   // Abrir modal para criar pasta
@@ -388,117 +506,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-
-  const recarregarSubmissoes = async () => {
-    try {
-      const token = localStorage.getItem('token');
-
-      // Usar apenas o endpoint principal de trabalhos
-      const response = await axios.get(`${API_BASE}/trabalhos`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.status === 200 && Array.isArray(response.data)) {
-        console.log("Trabalhos carregados:", response.data);
-
-        // Filtrar e organizar os trabalhos por pasta
-        const submissoesAtualizadas = {};
-
-        // Inicializar entradas vazias para todas as pastas existentes
-        if (topicoAvaliacao && topicoAvaliacao.pastas) {
-          topicoAvaliacao.pastas.forEach(pasta => {
-            submissoesAtualizadas[pasta.id_pasta] = [];
-          });
-        }
-
-        // Preencher com os trabalhos correspondentes
-        response.data.forEach(trabalho => {
-          // Verificar se o trabalho pertence ao curso atual
-          if (trabalho.id_curso == cursoId) {
-            // Se a pasta existe no objeto, adicionar o trabalho
-            if (submissoesAtualizadas.hasOwnProperty(trabalho.id_pasta)) {
-              submissoesAtualizadas[trabalho.id_pasta].push(trabalho);
-            }
-          }
-        });
-
-        console.log("Submissões organizadas:", submissoesAtualizadas);
-        setSubmissoes(submissoesAtualizadas);
-      }
-    } catch (error) {
-      console.error('Erro ao recarregar submissões:', error);
-    }
-  };
-
-
-
-  const recarregarSubmissoesDaPasta = async (pastaId) => {
-    if (!pastaId) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      let submissoesAtualizadas = { ...submissoes };
-
-      // Usar um endpoint mais confiável
-      try {
-        const response = await axios.get(`${API_BASE}/trabalhos`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (response.status === 200 && Array.isArray(response.data)) {
-          // Filtrar trabalhos por curso e pasta
-          const trabalhosDaPasta = response.data.filter(trabalho =>
-            trabalho.id_curso == cursoId && trabalho.id_pasta == pastaId
-          );
-
-          // Organizar trabalhos para incluir metadados necessários para a visualização detalhada
-          const trabalhosFormatados = await Promise.all(trabalhosDaPasta.map(async (trabalho) => {
-            // Tentar obter informações adicionais se necessário
-            try {
-              const detalhesResponse = await axios.get(`${API_BASE}/trabalhos/${trabalho.id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-
-              return {
-                ...trabalho,
-                ...detalhesResponse.data
-              };
-            } catch (err) {
-              console.log(`Erro ao obter detalhes do trabalho ${trabalho.id}:`, err.message);
-              return trabalho;
-            }
-          }));
-
-          submissoesAtualizadas[pastaId] = trabalhosFormatados;
-          console.log(`Submissões recarregadas para pasta ${pastaId}:`, trabalhosFormatados);
-        }
-      } catch (err) {
-        console.log(`Erro ao obter trabalhos para pasta ${pastaId}:`, err.message);
-
-        // Tentar endpoint alternativo
-        try {
-          const altResponse = await axios.get(`${API_BASE}/trabalhos/pasta/${pastaId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (altResponse.status === 200) {
-            submissoesAtualizadas[pastaId] = altResponse.data;
-          }
-        } catch (altErr) {
-          console.log(`Erro ao usar endpoint alternativo:`, altErr.message);
-        }
-      }
-
-      // Atualizar estado
-      setSubmissoes(submissoesAtualizadas);
-    } catch (error) {
-      console.error('Erro ao recarregar submissões:', error);
-    }
-  };
-
-
-
-
   // Renderização condicional para carregamento
   if (carregando) {
     return (
@@ -685,7 +692,9 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                             <div key={submissao.id || index} className="submissao-item">
                               <i className="fas fa-file-upload"></i>
                               <span className="submissao-info">
-                                <strong>{submissao.nome_formando || "Formando"}</strong> - {submissao.data_submissao || "Data não disponível"}
+                                <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
+                                  new Date(submissao.data_submissao || submissao.data_entrega).toLocaleDateString('pt-PT')
+                                }
                               </span>
                               <button
                                 className="btn-download"

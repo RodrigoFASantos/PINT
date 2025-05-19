@@ -27,11 +27,27 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
       key: "id_curso",
     },
   },
+  
+  // Pasta do curso (adicionado)
+  id_pasta: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "pastas_curso",
+      key: "id_pasta",
+    },
+  },
 
   ficheiro_path: {
     type: DataTypes.STRING(500),
     allowNull: false,
   },
+  
+  nome_ficheiro: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  
   data_entrega: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

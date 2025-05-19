@@ -1,4 +1,3 @@
-
 const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
@@ -16,6 +15,7 @@ submitSubmissao = async (req, res) => {
 
         const cursoId = parseInt(id_curso);
         const userId = parseInt(id_utilizador);
+        const pastaId = parseInt(id_pasta);
 
         // 1) Verificar inscrição
         const inscricao = await Inscricao.findOne({
@@ -28,15 +28,18 @@ submitSubmissao = async (req, res) => {
             return res.status(403).json({ message: 'Não está inscrito neste curso' });
         }
 
-        // 2) Impedir múltiplas submissões (por utilizador + pasta)
+        // 2) Verificar se a pasta existe
+        const pasta = await PastaCurso.findByPk(pastaId);
+        if (!pasta) {
+            return res.status(404).json({ message: 'Pasta não encontrada' });
+        }
+
+        // 3) Impedir múltiplas submissões (por utilizador + pasta)
         const existente = await Trabalho.findOne({
             where: {
                 id_utilizador,
-                id_curso,
-                // procuramos no ficheiro_path se já havia submissão nesta pasta
-                ficheiro_path: {
-                    [Op.like]: `%/avaliacao/${normalizarNome((await PastaCurso.findByPk(id_pasta)).nome)}/submissoes/%`
-                }
+                id_curso: cursoId,
+                id_pasta: pastaId
             }
         });
         if (existente) {
@@ -49,9 +52,8 @@ submitSubmissao = async (req, res) => {
         }
         const email = utilizador.email;
 
-        // 3) Construir caminho físico
+        // 4) Construir caminho físico
         const curso = await Curso.findByPk(id_curso);
-        const pasta = await PastaCurso.findByPk(id_pasta);
         const cursoSlug = normalizarNome(curso.nome);
         const pastaSlug = normalizarNome(pasta.nome);
 
@@ -65,25 +67,24 @@ submitSubmissao = async (req, res) => {
         );
         ensureDir(destDir);
 
-        // 4) Mover ficheiro do temp para a pasta final
+        // 5) Mover ficheiro do temp para a pasta final
         const { filename: tempName, originalname } = req.file;
         const ext = path.extname(originalname);
-        
-        // MODIFICADO: Formatar o email substituindo @ por _ e . por _
+
+        // Formatar o email substituindo @ por _ e . por _
         const emailFormatado = email.replace(/@/g, '_').replace(/\./g, '_');
         const finalName = `${emailFormatado}${ext}`;
-        
         const destPath = path.join(destDir, finalName);
         moverArquivo(path.join(BASE_UPLOAD_DIR, 'temp', tempName), destPath);
 
-        // 5) Caminho para armazenar no banco de dados (relativo)
+        // 6) Caminho para armazenar no banco de dados (relativo)
         const ficheiro_path = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/submissoes/${finalName}`;
 
-        // 6) Gravar no BD com informações completas
+        // 7) Gravar no BD com informações completas
         const trabalho = await Trabalho.create({
             id_utilizador,
             id_curso: cursoId,
-            id_pasta: parseInt(id_pasta),
+            id_pasta: pastaId,
             ficheiro_path: ficheiro_path,
             nome_ficheiro: originalname, // Mantém o nome original para referência
             data_entrega: new Date()
@@ -91,7 +92,7 @@ submitSubmissao = async (req, res) => {
 
         res.status(201).json(trabalho);
     } catch (error) {
-        console.error(error);
+        console.error('Erro ao submeter avaliação:', error);
         res.status(500).json({ message: 'Erro ao submeter avaliação' });
     }
 };
@@ -115,7 +116,8 @@ getTrabalhoById = async (req, res) => {
         }
 
         // Obter comentários relacionados ao trabalho
-        const comentarios = await require('../../database/models/ComentarioTrabalho').findAll({
+        const ComentarioTrabalho = require('../../database/models/ComentarioTrabalho');
+        const comentarios = await ComentarioTrabalho.findAll({
             where: { id_trabalho },
             include: [
                 {
@@ -145,14 +147,62 @@ getTrabalhoById = async (req, res) => {
     }
 };
 
+getSubmissoesByPasta = async (req, res) => {
+    try {
+        const { pastaNome } = req.params;
+
+        // 1) Encontrar a pasta pelo nome
+        const pasta = await PastaCurso.findOne({ where: { nome: pastaNome } });
+        if (!pasta) {
+            return res.status(404).json({ message: 'Pasta não encontrada' });
+        }
+
+        // 2) Buscar todas as submissões dessa pasta
+        const trabalhos = await Trabalho.findAll({
+            where: { id_pasta: pasta.id_pasta },
+            include: [
+                {
+                    model: require('../../database/models/Utilizador'),
+                    as: 'utilizador',
+                    attributes: ['id_utilizador', 'nome', 'email']
+                }
+            ],
+            order: [['data_entrega', 'DESC']]
+        });
+
+        res.json(trabalhos);
+    } catch (error) {
+        console.error('Erro ao obter submissões por pasta:', error);
+        res.status(500).json({ message: 'Erro ao obter submissões por pasta' });
+    }
+};
+
 getTrabalhosByPastaECurso = async (req, res) => {
     try {
-        const { cursoId, pastaId } = req.params;
+        const { cursoNome, pastaNome } = req.params;
 
+        // 1) Encontrar o curso pelo nome
+        const curso = await Curso.findOne({ where: { nome: cursoNome } });
+        if (!curso) {
+            return res.status(404).json({ message: 'Curso não encontrado' });
+        }
+
+        // 2) Encontrar a pasta dentro desse curso
+        const pasta = await PastaCurso.findOne({
+            where: {
+                nome: pastaNome,
+                id_curso: curso.id_curso
+            }
+        });
+        if (!pasta) {
+            return res.status(404).json({ message: 'Pasta não encontrada' });
+        }
+
+        // 3) Buscar submissões que casem ambos
         const trabalhos = await Trabalho.findAll({
             where: {
-                id_curso: cursoId,
-                id_pasta: pastaId
+                id_curso: curso.id_curso,
+                id_pasta: pasta.id_pasta
             },
             include: [
                 {
@@ -171,13 +221,26 @@ getTrabalhosByPastaECurso = async (req, res) => {
     }
 };
 
-getSubmissoesByPasta = async (req, res) => {
+getSubmissoes = async (req, res) => {
     try {
-        const id_pasta = req.params.pastaId;
+        // Verificar se o id_curso está presente
+        const { id_curso, id_utilizador } = req.query;
+        
+        if (!id_curso) {
+            return res.status(400).json({ message: 'ID do curso é obrigatório' });
+        }
 
-        // Melhorar a consulta utilizando id_pasta diretamente 
+        // Construir o where com filtros condicionais
+        const whereClause = { id_curso: parseInt(id_curso) };
+        
+        // Adicionar id_utilizador se fornecido
+        if (id_utilizador) {
+            whereClause.id_utilizador = parseInt(id_utilizador);
+        }
+        
+        // Buscar os trabalhos com os filtros aplicados
         const trabalhos = await Trabalho.findAll({
-            where: { id_pasta },
+            where: whereClause,
             include: [
                 {
                     model: require('../../database/models/Utilizador'),
@@ -187,26 +250,63 @@ getSubmissoesByPasta = async (req, res) => {
             ],
             order: [['data_entrega', 'DESC']]
         });
-
+        
         res.json(trabalhos);
     } catch (error) {
-        console.error('Erro ao obter submissões por pasta:', error);
-        res.status(500).json({ message: 'Erro ao obter submissões por pasta' });
-    }
-};
-
-getSubmissoes = async (req, res) => {
-    try {
-        const id_curso = req.query.id_curso;
-        const trabalhos = await Trabalho.findAll({
-            where: { id_curso }
-        });
-        res.json(trabalhos);
-    } catch (error) {
-        console.error(error);
+        console.error('Erro ao obter submissões:', error);
         res.status(500).json({ message: 'Erro ao obter submissões' });
     }
 };
 
+getTrabalhosByPastaId = async (req, res) => {
+    try {
+        // Extrair o id_pasta da query string
+        const id_pasta = req.query.id_pasta;
+        
+        console.log('Recebida requisição para id_pasta:', id_pasta);
+        
+        if (!id_pasta) {
+            return res.status(400).json({ message: 'ID da pasta não fornecido' });
+        }
+        
+        // Converter para número
+        const pastaId = parseInt(id_pasta);
+        
+        // Verificar se a pasta existe
+        const pasta = await PastaCurso.findByPk(pastaId);
+        if (!pasta) {
+            return res.status(404).json({ message: `Pasta com ID ${pastaId} não encontrada` });
+        }
+        
+        console.log(`Buscando trabalhos para pasta: ${pasta.nome} (ID: ${pastaId})`);
+        
+        // Buscar trabalhos com essa pasta
+        const trabalhos = await Trabalho.findAll({
+            where: { id_pasta: pastaId },
+            include: [
+                {
+                    model: Utilizador,
+                    as: 'utilizador',
+                    attributes: ['id_utilizador', 'nome', 'email']
+                }
+            ],
+            order: [['data_entrega', 'DESC']]
+        });
+        
+        console.log(`Encontrados ${trabalhos.length} trabalhos para a pasta ID ${pastaId}`);
+        
+        res.json(trabalhos);
+    } catch (error) {
+        console.error('Erro ao buscar trabalhos por ID da pasta:', error);
+        res.status(500).json({ message: 'Erro ao buscar trabalhos por ID da pasta' });
+    }
+};
 
-module.exports = { getSubmissoesByPasta, submitSubmissao, getSubmissoes, getTrabalhoById, getTrabalhosByPastaECurso };
+module.exports = { 
+    getSubmissoesByPasta, 
+    submitSubmissao, 
+    getSubmissoes, 
+    getTrabalhoById, 
+    getTrabalhosByPastaECurso, 
+    getTrabalhosByPastaId 
+};
