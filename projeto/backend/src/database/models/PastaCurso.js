@@ -33,6 +33,10 @@ const PastaCurso = sequelize.define("curso_topico_pasta", {
     allowNull: false,
     defaultValue: true,
   },
+  data_limite: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  }
 }, {
   tableName: "curso_topico_pasta",
   timestamps: false,

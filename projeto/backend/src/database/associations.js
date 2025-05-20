@@ -204,7 +204,10 @@ ChatDenuncia.belongsTo(ChatMensagem, { foreignKey: "id_mensagem", as: "mensagem"
 ChatDenuncia.belongsTo(User, { foreignKey: "id_denunciante", as: "denunciante" });
 
 // === Associações Trabalho_Entregue ===
-Trabalho_Entregue.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
+Trabalho_Entregue.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
+Trabalho_Entregue.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
+User.hasMany(Trabalho_Entregue, { foreignKey: "id_utilizador", as: "trabalhos" });
+Curso.hasMany(Trabalho_Entregue, { foreignKey: "id_curso", as: "trabalhos_entregues" });
 
 // === Associações Avaliacao ===
 Avaliacao.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });

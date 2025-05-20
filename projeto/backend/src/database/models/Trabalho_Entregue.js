@@ -7,25 +7,65 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
     primaryKey: true,
     autoIncrement: true,
   },
-  id_inscricao: {
+
+  // passa a guardar diretamente quem submeteu
+  id_utilizador: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "inscricoes_cursos",
-      key: "id_inscricao",
+      model: "utilizadores",
+      key: "id_utilizador",
     },
   },
+
+  // Curso
+  id_curso: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "curso",
+      key: "id_curso",
+    },
+  },
+  
+  // Pasta do curso (adicionado)
+  id_pasta: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "pastas_curso",
+      key: "id_pasta",
+    },
+  },
+
   ficheiro_path: {
     type: DataTypes.STRING(500),
     allowNull: false,
   },
+  
+  nome_ficheiro: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  
   data_entrega: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+
+  // avaliaçao 0–20
   avaliacao: {
-    type: DataTypes.TEXT,
+    type: DataTypes.INTEGER,
     allowNull: true,
+    validate: {
+      min: 0,
+      max: 20
+    }
+  },
+
+  observacoes: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   tableName: "trabalhos_entregues",

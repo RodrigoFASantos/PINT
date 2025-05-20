@@ -6,6 +6,8 @@ require('dotenv').config();
 // Importar funções dos outros scripts
 const { createTablesInOrder } = require('./criarTabelas');
 const { criarPastasCompletas } = require('./criar_pastas_completas');
+const { criarPastasEImagens } = require('./criar_pastas_cursos');
+const { criarPastasEImagensUsuarios } = require('./criar_pastas_users');
 
 // Função principal que orquestra o processo de sincronização completo
 async function syncronizarTudo() {
@@ -73,15 +75,25 @@ async function syncronizarTudo() {
     console.log("\n==================================================");
     console.log("📚 ETAPA 5: CRIANDO PASTAS PARA CURSOS");
     console.log("==================================================");
-    await criarPastasParaCursos();
-    console.log("✅ Pastas para cursos criadas com sucesso!");
+    try {
+      await criarPastasEImagens(); // Usando a função completa importada
+      console.log("✅ Pastas para cursos criadas com sucesso!");
+    } catch (error) {
+      console.error("❌ ERRO ao criar pastas para cursos:", error.message);
+      console.error("Continuando com o próximo passo...");
+    }
 
     // ETAPA 6: Criar pastas para usuários
     console.log("\n==================================================");
     console.log("👥 ETAPA 6: CRIANDO PASTAS PARA USUÁRIOS");
     console.log("==================================================");
-    await criarPastasParaUsuarios();
-    console.log("✅ Pastas para usuários criadas com sucesso!");
+    try {
+      await criarPastasEImagensUsuarios(); // Usando a função completa importada
+      console.log("✅ Pastas para usuários criadas com sucesso!");
+    } catch (error) {
+      console.error("❌ ERRO ao criar pastas para usuários:", error.message);
+      console.error("Continuando finalização...");
+    }
 
     console.log("\n==================================================");
     console.log("🎉 SINCRONIZAÇÃO COMPLETA FINALIZADA COM SUCESSO! 🎉");
@@ -177,225 +189,6 @@ async function apagarTodasTabelas() {
     return true;
   } catch (error) {
     console.error("❌ Erro ao apagar tabelas:", error.message);
-    throw error;
-  }
-}
-
-/**
- * Função para criar pastas para cursos
- * (Adaptado do arquivo criar_pastas_cursos.js)
- */
-async function criarPastasParaCursos() {
-  const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS || 'uploads');
-  
-  try {
-    console.log('Conectando ao banco de dados...');
-    const conexaoOk = await sequelize.testConnection();
-    if (!conexaoOk) {
-      throw new Error('Não foi possível conectar ao banco de dados.');
-    }
-
-    console.log('Buscando cursos na base de dados...');
-    const [cursos] = await sequelize.query(
-      'SELECT id_curso, nome, imagem_path, dir_path FROM curso WHERE imagem_path IS NOT NULL'
-    );
-
-    console.log(`Encontrados ${cursos.length} cursos para processar.`);
-
-    for (const curso of cursos) {
-      const imagemPath = path.join(process.cwd(), curso.imagem_path);
-      const dirPath = path.dirname(imagemPath);
-
-      console.log(`\nProcessando curso: ${curso.nome} (ID: ${curso.id_curso})`);
-      console.log(`Caminho da imagem: ${imagemPath}`);
-      console.log(`Diretório: ${dirPath}`);
-
-      if (!fs.existsSync(dirPath)) {
-        try {
-          fs.mkdirSync(dirPath, { recursive: true });
-          console.log(`✅ Diretório criado com sucesso.`);
-        } catch (error) {
-          console.error(`❌ Erro ao criar diretório: ${error.message}`);
-          continue;
-        }
-      } else {
-        console.log(`ℹ️ Diretório já existe.`);
-      }
-
-      if (!fs.existsSync(imagemPath)) {
-        try {
-          const placeholderPath = path.join(BASE_UPLOAD_DIR, 'placeholder.png');
-
-          if (fs.existsSync(placeholderPath)) {
-            fs.copyFileSync(placeholderPath, imagemPath);
-            console.log(`✅ Imagem placeholder copiada.`);
-          } else {
-            fs.writeFileSync(
-              imagemPath,
-              `Este é um placeholder para: ${curso.nome}\nSubstitua este arquivo por uma imagem real.`
-            );
-            console.log(`✅ Arquivo placeholder de texto criado.`);
-          }
-        } catch (error) {
-          console.error(`❌ Erro ao criar imagem: ${error.message}`);
-        }
-      } else {
-        console.log(`ℹ️ Imagem já existe.`);
-      }
-    }
-
-    console.log('Processo de criação de pastas para cursos concluído!');
-  } catch (error) {
-    console.error('❌ Erro durante o processamento de pastas para cursos:', error);
-    throw error;
-  }
-}
-
-/**
- * Função para criar pastas para usuários
- * (Adaptado do arquivo criar_pastas_users.js)
- */
-async function criarPastasParaUsuarios() {
-  const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS || 'uploads');
-  
-  try {
-    console.log('Conectando ao banco de dados...');
-    const conexaoOk = await sequelize.testConnection();
-    if (!conexaoOk) {
-      throw new Error('Não foi possível conectar ao banco de dados.');
-    }
-
-    console.log('Buscando usuários na base de dados...');
-    const [usuarios] = await sequelize.query(
-      'SELECT id_utilizador, nome, email, foto_perfil, foto_capa FROM utilizadores'
-    );
-
-    console.log(`Encontrados ${usuarios.length} usuários para processar.`);
-
-    // Garantir que a pasta base de uploads/users exista
-    const usersBaseDir = path.join(BASE_UPLOAD_DIR, 'users');
-    if (!fs.existsSync(usersBaseDir)) {
-      fs.mkdirSync(usersBaseDir, { recursive: true });
-      console.log(`✅ Diretório base de usuários criado: ${usersBaseDir}`);
-    }
-
-    // Verificar se existem as imagens padrão
-    const avatarPadrao = path.join(usersBaseDir, 'AVATAR.png');
-    const capaPadrao = path.join(usersBaseDir, 'CAPA.png');
-
-    if (!fs.existsSync(avatarPadrao)) {
-      console.log('⚠️ Imagem padrão de avatar não encontrada. Criando placeholder...');
-      try {
-        // Você pode substituir isto por uma cópia de uma imagem real
-        fs.writeFileSync(
-          avatarPadrao,
-          'Este é um placeholder para avatar. Substitua por uma imagem real.'
-        );
-        console.log(`✅ Arquivo placeholder de avatar criado em ${avatarPadrao}`);
-      } catch (error) {
-        console.error(`❌ Erro ao criar avatar padrão: ${error.message}`);
-      }
-    }
-
-    if (!fs.existsSync(capaPadrao)) {
-      console.log('⚠️ Imagem padrão de capa não encontrada. Criando placeholder...');
-      try {
-        // Você pode substituir isto por uma cópia de uma imagem real
-        fs.writeFileSync(
-          capaPadrao,
-          'Este é um placeholder para capa. Substitua por uma imagem real.'
-        );
-        console.log(`✅ Arquivo placeholder de capa criado em ${capaPadrao}`);
-      } catch (error) {
-        console.error(`❌ Erro ao criar capa padrão: ${error.message}`);
-      }
-    }
-
-    // Processar cada usuário
-    for (const usuario of usuarios) {
-      console.log(`\nProcessando usuário: ${usuario.nome} (ID: ${usuario.id_utilizador})`);
-
-      // Verificar se o usuário tem email
-      if (!usuario.email) {
-        console.log(`⚠️ Usuário ${usuario.nome} (ID: ${usuario.id_utilizador}) não tem email. Pulando.`);
-        continue;
-      }
-
-      // Criar slug do usuário baseado no email
-      const userSlug = usuario.email.replace(/@/g, '_at_').replace(/\./g, '_');
-      const userDir = path.join(usersBaseDir, userSlug);
-
-      console.log(`Diretório de usuário: ${userDir}`);
-
-      // Criar pasta do usuário
-      if (!fs.existsSync(userDir)) {
-        try {
-          fs.mkdirSync(userDir, { recursive: true });
-          console.log(`✅ Diretório de usuário criado com sucesso.`);
-        } catch (error) {
-          console.error(`❌ Erro ao criar diretório de usuário: ${error.message}`);
-          continue;
-        }
-      } else {
-        console.log(`ℹ️ Diretório de usuário já existe.`);
-      }
-
-      // Definir caminhos para as imagens
-      const avatarFilename = `${usuario.email}_AVATAR.png`;
-      const capaFilename = `${usuario.email}_CAPA.png`;
-      
-      const avatarPath = path.join(userDir, avatarFilename);
-      const capaPath = path.join(userDir, capaFilename);
-
-      // Verificar e criar imagem de perfil
-      if (!fs.existsSync(avatarPath)) {
-        try {
-          fs.copyFileSync(avatarPadrao, avatarPath);
-          console.log(`✅ Imagem de perfil (avatar) criada: ${avatarPath}`);
-        } catch (error) {
-          console.error(`❌ Erro ao criar imagem de perfil: ${error.message}`);
-        }
-      } else {
-        console.log(`ℹ️ Imagem de perfil já existe.`);
-      }
-
-      // Verificar e criar imagem de capa
-      if (!fs.existsSync(capaPath)) {
-        try {
-          fs.copyFileSync(capaPadrao, capaPath);
-          console.log(`✅ Imagem de capa criada: ${capaPath}`);
-        } catch (error) {
-          console.error(`❌ Erro ao criar imagem de capa: ${error.message}`);
-        }
-      } else {
-        console.log(`ℹ️ Imagem de capa já existe.`);
-      }
-
-      // Atualizar referências no banco de dados se necessário
-      const dbPathAvatar = `uploads/users/${userSlug}/${avatarFilename}`;
-      const dbPathCapa = `uploads/users/${userSlug}/${capaFilename}`;
-
-      // Verificar se precisa atualizar as referências no banco
-      if (usuario.foto_perfil !== dbPathAvatar || usuario.foto_capa !== dbPathCapa) {
-        try {
-          await sequelize.query(
-            'UPDATE utilizadores SET foto_perfil = ?, foto_capa = ? WHERE id_utilizador = ?',
-            {
-              replacements: [dbPathAvatar, dbPathCapa, usuario.id_utilizador]
-            }
-          );
-          console.log(`✅ Referências de imagens atualizadas no banco de dados.`);
-        } catch (error) {
-          console.error(`❌ Erro ao atualizar banco de dados: ${error.message}`);
-        }
-      } else {
-        console.log(`ℹ️ Referências de imagens já estão corretas no banco de dados.`);
-      }
-    }
-
-    console.log('Processo de criação de pastas para usuários concluído!');
-  } catch (error) {
-    console.error('❌ Erro durante o processamento de pastas para usuários:', error);
     throw error;
   }
 }

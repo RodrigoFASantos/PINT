@@ -13,34 +13,41 @@ const Gerir_Cursos = () => {
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [formadores, setFormadores] = useState([]);
+  const [formadoresFiltrados, setFormadoresFiltrados] = useState([]);
+  const [topicos, setTopicos] = useState([]);
+  const [topicosFiltrados, setTopicosFiltrados] = useState([]);
   const [totalCursos, setTotalCursos] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [cursoParaExcluir, setCursoParaExcluir] = useState(null);
-  
-  // Auth context
+
+  // Context de autenticação
   const { currentUser } = useAuth();
-  
+
   // Estados para paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
   const cursosPorPagina = 20;
-  
+
   // Estados para filtros
   const [filtros, setFiltros] = useState({
     nome: '',
     idCategoria: '',
+    idArea: '',
+    idTopico: '',
     idFormador: '',
     estado: '',
     vagas: ''
   });
 
-  // Ref para controlar debounce nos filtros
+  // Referência para controlar o debounce nos filtros
   const filterTimeoutRef = useRef(null);
 
-  // Toggle para a sidebar
+  // Alternar a visibilidade da barra lateral
   const toggleSidebar = () => {
-    console.log('[DEBUG] Gerir_Cursos: Toggling sidebar');
+    console.log('[DEBUG] Gerir_Cursos: A alternar a barra lateral');
     setIsSidebarOpen(!isSidebarOpen);
   };
 
@@ -51,69 +58,77 @@ const Gerir_Cursos = () => {
       console.log('[DEBUG] Gerir_Cursos: Filtros aplicados:', filtrosAtuais);
       setLoading(true);
       const token = localStorage.getItem('token');
-      
+
       // Criar objeto de parâmetros para a requisição
       const params = {
         page: pagina,
         limit: cursosPorPagina,
       };
-      
+
       // Adicionar filtros válidos - mapear nomes dos campos para API
       if (filtrosAtuais.nome) {
         params.search = filtrosAtuais.nome;
       }
-      
+
       if (filtrosAtuais.idCategoria) {
         params.categoria = filtrosAtuais.idCategoria;
       }
-      
+
+      if (filtrosAtuais.idArea) {
+        params.area = filtrosAtuais.idArea;
+      }
+
+      if (filtrosAtuais.idTopico) {
+        params.topico = filtrosAtuais.idTopico;
+      }
+
       if (filtrosAtuais.idFormador) {
         params.formador = filtrosAtuais.idFormador;
       }
-      
+
       // CORREÇÃO FILTRO DE ESTADO
       if (filtrosAtuais.estado) {
         // Log específico para debug do estado
         console.log('[DEBUG] Gerir_Cursos: Estado original do filtro:', filtrosAtuais.estado);
-        
+
         // Mapeamento exato entre valores da interface e valores da API
         const mapeamentoEstados = {
           'Planeado': 'planeado',
           'Em curso': 'em_curso',
           'Terminado': 'terminado'
         };
-        
+
         // Se for "Inativo", não enviamos estado, apenas ativo=false
         if (filtrosAtuais.estado === 'Inativo') {
           params.ativo = false;
           console.log('[DEBUG] Gerir_Cursos: A configurar parâmetro ativo=false');
-        } 
+        }
         // Para outros estados, usar o mapeamento
         else if (mapeamentoEstados[filtrosAtuais.estado]) {
           params.estado = mapeamentoEstados[filtrosAtuais.estado];
           console.log('[DEBUG] Gerir_Cursos: Estado mapeado para API:', params.estado);
         }
       }
-      
+
       if (filtrosAtuais.vagas) {
         // Se filtro de vagas for preenchido, enviar para o backend
         params.vagas = parseInt(filtrosAtuais.vagas, 10);
       }
-      
+
       // Remover parâmetros vazios
-      Object.keys(params).forEach(key => 
+      Object.keys(params).forEach(key =>
         (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
       );
-      
+
       console.log('[DEBUG] Gerir_Cursos: A buscar cursos com os parâmetros finais:', params);
-      
+
       const response = await axios.get(`${API_BASE}/cursos`, {
         params,
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       console.log('[DEBUG] Gerir_Cursos: Resposta da API:', response.data);
-      
+
       // Verifica a estrutura dos dados recebidos
       if (response.data) {
         if (Array.isArray(response.data.cursos)) {
@@ -135,17 +150,17 @@ const Gerir_Cursos = () => {
         setCursos([]);
         setTotalCursos(0);
       }
-      
+
       setPaginaAtual(pagina);
       setLoading(false);
     } catch (error) {
       console.error('[DEBUG] Gerir_Cursos: Erro ao buscar cursos:', error);
-      
+
       if (error.response) {
         console.error('[DEBUG] Gerir_Cursos: Dados do erro:', error.response.data);
         console.error('[DEBUG] Gerir_Cursos: Status:', error.response.status);
         console.error('[DEBUG] Gerir_Cursos: Headers:', error.response.headers);
-        
+
         if (error.response.status === 401) {
           console.log('[DEBUG] Gerir_Cursos: Erro 401 - Não autorizado. A redirecionar para login...');
           toast.error('Não autorizado. Faça login novamente.');
@@ -162,7 +177,7 @@ const Gerir_Cursos = () => {
         console.error('[DEBUG] Gerir_Cursos: Erro:', error.message);
         toast.error('Erro ao processar a requisição.');
       }
-      
+
       setCursos([]);
       setTotalCursos(0);
       setLoading(false);
@@ -176,19 +191,19 @@ const Gerir_Cursos = () => {
         console.log('[DEBUG] Gerir_Cursos: ===== A INICIAR VERIFICAÇÕES DE AUTENTICAÇÃO =====');
         setLoading(true);
         const token = localStorage.getItem('token');
-        
+
         console.log('[DEBUG] Gerir_Cursos: Token no localStorage:', token ? 'SIM' : 'NÃO');
         console.log('[DEBUG] Gerir_Cursos: Token value:', token ? token.substring(0, 50) + '...' : 'null');
-        
+
         if (!token) {
           console.log('[DEBUG] Gerir_Cursos: Token não encontrado. A redirecionar para login...');
           navigate('/login');
           return;
         }
-        
+
         // Log do usuário atual do AuthContext
         console.log('[DEBUG] Gerir_Cursos: Utilizador atual do AuthContext:', currentUser);
-        
+
         if (currentUser) {
           console.log('[DEBUG] Gerir_Cursos: Dados do utilizador do AuthContext:', {
             id_utilizador: currentUser.id_utilizador,
@@ -199,36 +214,76 @@ const Gerir_Cursos = () => {
             cargo: currentUser.cargo
           });
         }
-        
+
         console.log('[DEBUG] Gerir_Cursos: Autenticação verificada com sucesso. A buscar dados...');
-        
+
         // Obter categorias para o filtro
         const categoriasResponse = await axios.get(`${API_BASE}/categorias`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         console.log('[DEBUG] Gerir_Cursos: Categorias carregadas:', categoriasResponse.data);
         setCategorias(categoriasResponse.data);
-        
+
+        // Obter áreas para o filtro
+        const areasResponse = await axios.get(`${API_BASE}/areas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        console.log('[DEBUG] Gerir_Cursos: Áreas carregadas:', areasResponse.data);
+        setAreas(areasResponse.data);
+
         // Obter formadores para o filtro
         const formadoresResponse = await axios.get(`${API_BASE}/users/formadores`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         console.log('[DEBUG] Gerir_Cursos: Formadores carregados:', formadoresResponse.data);
         setFormadores(formadoresResponse.data);
-        
+        setFormadoresFiltrados(formadoresResponse.data);
+
+        // Obter tópicos para o filtro
+        try {
+          const topicosResponse = await axios.get(`${API_BASE}/topicos-area`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          console.log('[DEBUG] Gerir_Cursos: Tópicos carregados:', topicosResponse.data);
+
+          // Verificar se a resposta é um array
+          const topicoData = topicosResponse.data;
+          if (Array.isArray(topicoData)) {
+            setTopicos(topicoData);
+          } else if (topicoData && typeof topicoData === 'object') {
+            // Se for um objeto com uma propriedade que é array (comum em APIs)
+            const possibleArrayProps = ['data', 'items', 'results', 'topicos'];
+            for (const prop of possibleArrayProps) {
+              if (Array.isArray(topicoData[prop])) {
+                console.log(`[DEBUG] Gerir_Cursos: Usando propriedade '${prop}' como array de tópicos`);
+                setTopicos(topicoData[prop]);
+                break;
+              }
+            }
+          } else {
+            console.error("[DEBUG] Gerir_Cursos: Formato de dados inesperado para tópicos:", topicoData);
+            setTopicos([]);
+          }
+        } catch (topicoError) {
+          console.error('[DEBUG] Gerir_Cursos: Erro ao carregar tópicos:', topicoError);
+          setTopicos([]);
+        }
+
         // Obter cursos (primeira página) - com filtros vazios inicialmente
         await buscarCursos(1, filtros);
-        
+
       } catch (error) {
         console.error('[DEBUG] Gerir_Cursos: Erro ao carregar dados:', error);
-        
+
         // Tratamento mais específico de erros
         if (error.response) {
           console.error('[DEBUG] Gerir_Cursos: Erro da resposta:', error.response.data);
           console.error('[DEBUG] Gerir_Cursos: Status do erro:', error.response.status);
-          
+
           if (error.response.status === 403) {
             console.log('[DEBUG] Gerir_Cursos: Erro 403 - Acesso negado. A redirecionar para página inicial...');
             toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
@@ -244,7 +299,7 @@ const Gerir_Cursos = () => {
           console.error('[DEBUG] Gerir_Cursos: Erro de conexão:', error.message);
           toast.error('Erro de conexão. Verifique sua conexão com a internet.');
         }
-        
+
         setLoading(false);
       }
     };
@@ -252,58 +307,204 @@ const Gerir_Cursos = () => {
     fetchData();
   }, [navigate, buscarCursos, currentUser]); // Removido 'filtros' das dependências
 
+  // Filtrar áreas com base na categoria selecionada
+  useEffect(() => {
+    if (filtros.idCategoria) {
+      const catId = String(filtros.idCategoria);
+      const areasFiltered = areas.filter(area => {
+        const areaCategoriaId = area.id_categoria ?? area.categoria_id ?? area.idCategoria ?? area.categoriaId;
+        return areaCategoriaId && String(areaCategoriaId) === catId;
+      });
+      setAreasFiltradas(areasFiltered);
+
+      // Se a área selecionada não pertencer à categoria atual, limpe a seleção
+      if (filtros.idArea && !areasFiltered.some(a => String(a.id_area || a.id) === String(filtros.idArea))) {
+        setFiltros(prev => ({ ...prev, idArea: '', idTopico: '' }));
+      }
+    } else {
+      setAreasFiltradas([]);
+      if (filtros.idArea) {
+        setFiltros(prev => ({ ...prev, idArea: '', idTopico: '' }));
+      }
+    }
+  }, [filtros.idCategoria, areas, filtros.idArea]);
+
+  // Filtrar tópicos com base na área selecionada
+  useEffect(() => {
+    if (filtros.idArea && Array.isArray(topicos)) {
+      const areId = String(filtros.idArea);
+      // Utilizar o campo correto conforme definido no modelo Topico_Area
+      const topicosFiltered = topicos.filter(topico => {
+        return topico.id_area && String(topico.id_area) === areId;
+      });
+      setTopicosFiltrados(topicosFiltered);
+
+      // Se o tópico selecionado não pertencer à área atual, limpe a seleção
+      if (filtros.idTopico && !topicosFiltered.some(t => String(t.id_topico) === String(filtros.idTopico))) {
+        setFiltros(prev => ({ ...prev, idTopico: '' }));
+      }
+
+      // Log para depuração
+      if (topicos.length > 0) {
+        console.log("[DEBUG] Gerir_Cursos: Estrutura de um objeto tópico:", topicos[0]);
+        console.log("[DEBUG] Gerir_Cursos: Tópicos filtrados para área", areId, ":", topicosFiltered);
+        console.log("[DEBUG] Gerir_Cursos: Quantidade de tópicos filtrados:", topicosFiltered.length);
+      }
+    } else {
+      setTopicosFiltrados([]);
+      if (filtros.idTopico) {
+        setFiltros(prev => ({ ...prev, idTopico: '' }));
+      }
+    }
+  }, [filtros.idArea, topicos, filtros.idTopico]);
+
+  // Filtrar formadores com base na categoria selecionada
+  useEffect(() => {
+    if (filtros.idCategoria) {
+      // Se houver uma categoria selecionada, filtrar formadores por essa categoria
+      const formadoresDaCategoria = formadores.filter(formador => {
+        // Aqui haveria de existir uma lógica para verificar quais formadores pertencem à categoria
+        // Como não temos essa informação no código atual, vamos apenas filtrar por exemplo
+        // Isto deve ser ajustado conforme a lógica real do seu aplicativo
+        return formador.categorias?.includes(parseInt(filtros.idCategoria)) || true;
+      });
+      setFormadoresFiltrados(formadoresDaCategoria);
+    } else {
+      // Se não houver categoria selecionada, mostrar todos os formadores
+      setFormadoresFiltrados(formadores);
+    }
+  }, [filtros.idCategoria, formadores]);
+
   // Handler para mudança de filtros com debounce melhorado
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     console.log(`[DEBUG] Gerir_Cursos: Filtro alterado: ${name} = ${value}`);
-    
+
     // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
-    
+
     // Atualizar o estado dos filtros
     setFiltros(prev => {
       const novosFiltros = {
         ...prev,
         [name]: value
       };
-      
+
       console.log('[DEBUG] Gerir_Cursos: Novos filtros:', novosFiltros);
-      
+
       // Ativar o indicador de carregamento imediatamente
       setLoading(true);
-      
+
       // Configurar novo temporizador de debounce
       filterTimeoutRef.current = setTimeout(() => {
         // Quando o temporizador disparar, usar os valores atuais dos filtros
         buscarCursos(1, novosFiltros);
       }, 600); // Aumentar ligeiramente o tempo de debounce
-      
+
       return novosFiltros;
+    });
+  };
+
+  // Handler específico para o filtro de área com validação
+  const handleAreaChange = (e) => {
+    const value = e.target.value;
+
+    // Verificar se uma categoria foi selecionada antes
+    if (!filtros.idCategoria && value) {
+      toast.warning("Por favor, selecione uma Categoria primeiro!", { position: "top-center" });
+      return;
+    }
+
+    // Se chegou aqui, atualizar normalmente
+    handleFiltroChange({
+      target: {
+        name: 'idArea',
+        value: value
+      }
+    });
+  };
+
+  // Handler específico para o filtro de tópico com validação
+  const handleTopicoChange = (e) => {
+    const value = e.target.value;
+
+    // Verificar se uma área foi selecionada antes
+    if (!filtros.idArea && value) {
+      toast.warning("Por favor, selecione uma Área primeiro!", { position: "top-center" });
+      return;
+    }
+
+    // Se chegou aqui, atualizar normalmente
+    handleFiltroChange({
+      target: {
+        name: 'idTopico',
+        value: value
+      }
+    });
+  };
+
+  // Handler específico para o filtro de formador com validação
+  const handleFormadorChange = (e) => {
+    const value = e.target.value;
+
+    // Verificar se uma categoria foi selecionada antes
+    if (!filtros.idCategoria && value) {
+      toast.warning("Por favor, selecione uma Categoria primeiro!", { position: "top-center" });
+      return;
+    }
+
+    // Se chegou aqui, atualizar normalmente
+    handleFiltroChange({
+      target: {
+        name: 'idFormador',
+        value: value
+      }
+    });
+  };
+
+  // Handler específico para o filtro de vagas com validação
+  const handleVagasChange = (e) => {
+    const value = e.target.value;
+
+    // Verificar se um estado foi selecionado antes
+    if (!filtros.estado && value) {
+      toast.warning("Por favor, selecione um Estado primeiro!", { position: "top-center" });
+      return;
+    }
+
+    // Se chegou aqui, atualizar normalmente
+    handleFiltroChange({
+      target: {
+        name: 'vagas',
+        value: value
+      }
     });
   };
 
   // Handler para limpar filtros
   const handleLimparFiltros = () => {
     console.log('[DEBUG] Gerir_Cursos: A limpar filtros');
-    
+
     // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
-    
+
     const filtrosLimpos = {
       nome: '',
       idCategoria: '',
+      idArea: '',
+      idTopico: '',
       idFormador: '',
       estado: '',
       vagas: ''
     };
-    
+
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
-    
+
     // Buscar dados com filtros limpos
     buscarCursos(1, filtrosLimpos);
   };
@@ -356,34 +557,34 @@ const Gerir_Cursos = () => {
   // Função para excluir o curso
   const handleExcluirCurso = async () => {
     if (!cursoParaExcluir) return;
-    
+
     const cursoId = cursoParaExcluir.id_curso || cursoParaExcluir.id;
     console.log('[DEBUG] Gerir_Cursos: A iniciar exclusão do curso:', cursoId);
-    
+
     try {
       const token = localStorage.getItem('token');
       console.log(`[DEBUG] Gerir_Cursos: A enviar requisição de exclusão para curso ${cursoId}`);
-      
+
       await axios.delete(`${API_BASE}/cursos/${cursoId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       console.log('[DEBUG] Gerir_Cursos: Curso excluído com sucesso');
       toast.success('Curso excluído com sucesso!');
-      
+
       // Atualizar a lista de cursos
       buscarCursos(paginaAtual, filtros);
-      
+
     } catch (error) {
       console.error(`[DEBUG] Gerir_Cursos: Erro ao excluir curso ${cursoId}:`, error);
-      
+
       if (error.response) {
         console.error('[DEBUG] Gerir_Cursos: Detalhes da resposta:', {
           status: error.response.status,
           data: error.response.data
         });
       }
-      
+
       toast.error(`Erro ao excluir curso: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
     } finally {
       setShowDeleteConfirmation(false);
@@ -403,18 +604,27 @@ const Gerir_Cursos = () => {
   // Formatar estado do curso para exibição
   const formatarEstado = (estado) => {
     if (!estado) return "Desconhecido";
-    
+
     // Mapear estados do banco para exibição
     const estadosMap = {
       'planeado': 'PLANEADO',
       'em_curso': 'EM CURSO',
       'terminado': 'TERMINADO'
     };
-    
+
     // Normalizar para minúsculas e remover espaços para comparação
     const estadoNormalizado = estado.toLowerCase().replace(/[\s_]+/g, '_');
-    
     return estadosMap[estadoNormalizado] || estado.toUpperCase();
+  };
+
+  // Função para obter a classe CSS do estado
+  const getEstadoClass = (estado, ativo) => {
+    if (ativo === false) return 'inativo';
+    
+    if (!estado) return 'desconhecido';
+    
+    // Normalizar para minúsculas e usar hífen para classes CSS
+    return estado.toLowerCase().replace(/[\s_]+/g, '-');
   };
 
   // Limpar timeout quando o componente for desmontado
@@ -446,22 +656,23 @@ const Gerir_Cursos = () => {
   return (
     <div className="gerenciar-cursos-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
+
       <div className="main-content">
         <div className="cursos-header">
           <h1>Cursos</h1>
-          <button 
+          <button
             className="criar-curso-btn"
             onClick={handleCriarCurso}
           >
             Criar Novo Curso
           </button>
         </div>
-        
+
+        {/* Secção de filtros */}
         <div className="filtros-container">
           <div className="filtro">
             <label htmlFor="nome">Nome do Curso:</label>
-            <input 
+            <input
               type="text"
               id="nome"
               name="nome"
@@ -470,27 +681,7 @@ const Gerir_Cursos = () => {
               placeholder="Filtrar por nome"
             />
           </div>
-          
-          <div className="filtro">
-            <label htmlFor="idFormador">Formador:</label>
-            <select
-              id="idFormador"
-              name="idFormador"
-              value={filtros.idFormador}
-              onChange={handleFiltroChange}
-            >
-              <option value="">Todos os formadores</option>
-              {formadores.map(formador => (
-                <option 
-                  key={formador.id_utilizador || formador.id_user || formador.id} 
-                  value={formador.id_utilizador || formador.id_user || formador.id}
-                >
-                  {formador.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          
+
           <div className="filtro">
             <label htmlFor="idCategoria">Categoria:</label>
             <select
@@ -501,8 +692,8 @@ const Gerir_Cursos = () => {
             >
               <option value="">Todas as categorias</option>
               {categorias.map(categoria => (
-                <option 
-                  key={categoria.id_categoria || categoria.id} 
+                <option
+                  key={categoria.id_categoria || categoria.id}
                   value={categoria.id_categoria || categoria.id}
                 >
                   {categoria.nome}
@@ -510,7 +701,69 @@ const Gerir_Cursos = () => {
               ))}
             </select>
           </div>
-          
+
+          <div className="filtro">
+            <label htmlFor="idArea">Área:</label>
+            <select
+              id="idArea"
+              name="idArea"
+              value={filtros.idArea}
+              onChange={handleAreaChange}
+              disabled={!filtros.idCategoria}
+            >
+              <option value="">Todas as áreas</option>
+              {areasFiltradas.map(area => (
+                <option
+                  key={area.id_area || area.id}
+                  value={area.id_area || area.id}
+                >
+                  {area.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filtro">
+            <label htmlFor="idTopico">Tópico:</label>
+            <select
+              id="idTopico"
+              name="idTopico"
+              value={filtros.idTopico}
+              onChange={handleTopicoChange}
+              disabled={!filtros.idArea}
+            >
+              <option value="">Todos os tópicos</option>
+              {topicosFiltrados.map(topico => (
+                <option
+                  key={topico.id_topico || topico.id}
+                  value={topico.id_topico || topico.id}
+                >
+                  {topico.titulo || topico.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filtro">
+            <label htmlFor="idFormador">Formador:</label>
+            <select
+              id="idFormador"
+              name="idFormador"
+              value={filtros.idFormador}
+              onChange={handleFormadorChange}
+            >
+              <option value="">Todos os formadores</option>
+              {formadoresFiltrados.map(formador => (
+                <option
+                  key={formador.id_utilizador || formador.id_user || formador.id}
+                  value={formador.id_utilizador || formador.id_user || formador.id}
+                >
+                  {formador.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="filtro">
             <label htmlFor="estado">Estado:</label>
             <select
@@ -526,22 +779,22 @@ const Gerir_Cursos = () => {
               <option value="Inativo">Inativo</option>
             </select>
           </div>
-          
+
           <div className="filtro">
             <label htmlFor="vagas">Vagas disponíveis:</label>
-            <input 
+            <input
               type="number"
               id="vagas"
               name="vagas"
               value={filtros.vagas}
-              onChange={handleFiltroChange}
+              onChange={handleVagasChange}
               placeholder="Mínimo de vagas"
               min="0"
             />
           </div>
-          
+
           <div className="filtro-acoes limpar-filtros-container">
-            <button 
+            <button
               className="btn-limpar"
               onClick={handleLimparFiltros}
               disabled={loading}
@@ -550,7 +803,8 @@ const Gerir_Cursos = () => {
             </button>
           </div>
         </div>
-        
+
+        {/* Área de exibição dos cursos */}
         <div className="cursos-table-container">
           {loading ? (
             <div className="loading-container">
@@ -571,63 +825,56 @@ const Gerir_Cursos = () => {
                     <th>Formador</th>
                     <th>Período</th>
                     <th>Vagas</th>
-                    <th></th>
-                    <th></th>
+                    <th>Estado</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cursos.map(curso => {
                     // Obter ID do curso de maneira consistente
                     const cursoId = curso.id_curso || curso.id;
-                    
+
                     // Obter nome da categoria
-                    const categoriaNome = curso.categoria 
-                      ? (typeof curso.categoria === 'object' ? curso.categoria.nome : curso.categoria) 
+                    const categoriaNome = curso.categoria
+                      ? (typeof curso.categoria === 'object' ? curso.categoria.nome : curso.categoria)
                       : curso.nome_categoria || "Não especificada";
-                    
+
                     // Obter informações do formador
-                    const formadorNome = curso.formador 
-                      ? (typeof curso.formador === 'object' ? curso.formador.nome : curso.formador) 
+                    const formadorNome = curso.formador
+                      ? (typeof curso.formador === 'object' ? curso.formador.nome : curso.formador)
                       : curso.nome_formador || "Curso Assíncrono";
-                    
+
                     const formadorId = curso.formador && typeof curso.formador === 'object'
                       ? (curso.formador.id_utilizador || curso.formador.id)
                       : curso.id_formador;
-                    
+
                     // Normalizar estado para exibição
                     let estadoExibicao = formatarEstado(curso.estado);
-                    
-                    // Obter classe CSS para a badge de estado
-                    let estadoClass = 'desconhecido';
-                    if (curso.estado) {
-                      // Normalizar o estado para o formato da classe CSS
-                      const estadoNormalizado = curso.estado.toLowerCase().replace(/[\s_]+/g, '-');
-                      estadoClass = estadoNormalizado || 'desconhecido';
-                    } 
-                    
-                    // Verificar se o curso está inativo
+
+                    // Se o curso estiver inativo, mostrar "INATIVO"
                     if (curso.ativo === false) {
-                      estadoClass = 'inativo';
                       estadoExibicao = 'INATIVO';
                     }
-                    
+
+                    // Obter a classe CSS para o badge
+                    const estadoClass = getEstadoClass(curso.estado, curso.ativo);
+
                     // Formatar datas
                     const dataInicio = curso.data_inicio || curso.dataInicio;
                     const dataFim = curso.data_fim || curso.dataFim;
-                    
+
                     // Calcular vagas disponíveis
-                    const vagasOcupadas = curso.vagas_ocupadas || curso.inscritos || 0;
                     const totalVagas = curso.vagas || curso.totalVagas || 0;
-                    
+
                     return (
-                      <tr 
-                        key={cursoId} 
+                      <tr
+                        key={cursoId}
                         className={!curso.ativo ? 'inativo' : ''}
                         onClick={() => handleVerCurso(cursoId)}
                       >
                         <td className="curso-nome">{curso.nome || curso.titulo}</td>
                         <td>{categoriaNome}</td>
-                        <td 
+                        <td
                           className={formadorId ? "formador-cell" : ""}
                           onClick={e => {
                             e.stopPropagation();
@@ -635,37 +882,36 @@ const Gerir_Cursos = () => {
                           }}
                         >
                           {formadorNome}
-                        </td>                      
+                        </td>
 
                         <td>
-                          {dataInicio ? 
+                          {dataInicio ?
                             `${new Date(dataInicio).toLocaleDateString()} - 
                             ${new Date(dataFim).toLocaleDateString()}`
                             : "Datas não disponíveis"}
                         </td>
 
                         <td>
-                          {/* Mostrar apenas o número total de vagas ou "?" se for null */}
-                          {totalVagas !== null && totalVagas !== undefined 
+                          {totalVagas !== null && totalVagas !== undefined
                             ? totalVagas
                             : "?"}
                         </td>
-                        
-                        <td>
-                          <span className={`status-badge perfil ${estadoClass}`}>
+
+                        <td className="status-cell">
+                          <span className={`estado ${estadoClass}`}>
                             {estadoExibicao}
                           </span>
                         </td>
 
                         <td className="acoes">
-                          <button 
+                          <button
                             className="btn-icon btn-editar"
                             onClick={(e) => handleEditarCurso(cursoId, e)}
                             title="Editar"
                           >
                             ✏️
                           </button>
-                          <button 
+                          <button
                             className="btn-icon btn-excluir"
                             onClick={(e) => handleConfirmarExclusao(curso, e)}
                             title="Excluir"
@@ -677,26 +923,25 @@ const Gerir_Cursos = () => {
                     );
                   })}
                 </tbody>
-
               </table>
-              
+
               {/* Paginação */}
               {totalPaginas > 1 && (
                 <div className="paginacao">
-                  <button 
-                    onClick={handlePaginaAnterior} 
+                  <button
+                    onClick={handlePaginaAnterior}
                     disabled={paginaAtual === 1 || loading}
                     className="btn-pagina"
                     aria-label="Página anterior"
                   >
                     <span className="pagination-icon">&#10094;</span>
                   </button>
-                  
+
                   <span className="pagina-atual">
                     {paginaAtual}/{totalPaginas}
                   </span>
-                  
-                  <button 
+
+                  <button
                     onClick={handleProximaPagina}
                     disabled={paginaAtual === totalPaginas || loading}
                     className="btn-pagina"
@@ -706,12 +951,11 @@ const Gerir_Cursos = () => {
                   </button>
                 </div>
               )}
-
             </>
           )}
         </div>
       </div>
-      
+
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmation && (
         <div className="modal-overlay">
@@ -722,13 +966,13 @@ const Gerir_Cursos = () => {
               Esta ação não pode ser desfeita.
             </p>
             <div className="modal-actions">
-              <button 
+              <button
                 className="btn-cancelar"
                 onClick={() => setShowDeleteConfirmation(false)}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 className="btn-confirmar"
                 onClick={handleExcluirCurso}
               >
@@ -738,7 +982,7 @@ const Gerir_Cursos = () => {
           </div>
         </div>
       )}
-      
+
       <ToastContainer />
     </div>
   );

@@ -8,7 +8,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import "./css/Lista_Cursos.css";
 import fallbackCurso from '../../images/default_image.png';
 
-
 export default function CursosPage() {
   const [cursos, setCursos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,16 +17,24 @@ export default function CursosPage() {
   const { currentUser } = useAuth();
   const [userRole, setUserRole] = useState(null);
 
+
   useEffect(() => {
     if (currentUser && currentUser.id_cargo) {
       setUserRole(currentUser.id_cargo);
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    // Verificar se não há cursos carregados e recarregar
+    if (cursos.length === 0 && !isLoading) {
+      console.log("Não há cursos carregados, tentando recarregar...");
+      fetchCursos();
+    }
+  }, [cursos.length]);
+
   // Estados para a barra de pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
 
   // Estados para os filtros
   const [categorias, setCategorias] = useState([]);
@@ -46,154 +53,12 @@ export default function CursosPage() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Carregar tópicos
-  useEffect(() => {
-    const fetchTopicos = async () => {
-      if (areaId) {
-        try {
-          const response = await axios.get(`${API_BASE}/topicos-curso/area/${areaId}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          setTopicos(response.data);
-        } catch (error) {
-          console.error("Erro ao carregar tópicos:", error);
-        }
-      }
-    };
-
-    fetchTopicos();
-  }, [areaId]);
-
-  // Função para verificar os diferentes campos possíveis de id_categoria
-  const getCategoriaId = (area) => {
-    if (area.id_categoria !== undefined) return area.id_categoria;
-    if (area.categoria_id !== undefined) return area.categoria_id;
-    if (area.idCategoria !== undefined) return area.idCategoria;
-    if (area.categoriaId !== undefined) return area.categoriaId;
-
-    const categoriaKey = Object.keys(area).find(k =>
-      k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
-    );
-
-    return categoriaKey ? area[categoriaKey] : null;
-  };
-
-  // Carregar tópicos junto com categorias e áreas
-  useEffect(() => {
-    const fetchTopicos = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/topicos-curso`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        setTopicos(response.data);
-      } catch (error) {
-        console.error("Erro ao carregar tópicos:", error);
-      }
-    };
-
-    fetchTopicos();
-  }, []);
-
-  // Filtrar tópicos com base na área selecionada
-  useEffect(() => {
-    if (areaId) {
-      const areId = String(areaId);
-      const topicosFiltered = topicos.filter(topico =>
-        String(topico.id_area) === areId
-      );
-      setTopicosFiltrados(topicosFiltered);
-      setTopicoId('');
-    } else {
-      setTopicosFiltrados([]);
-      setTopicoId('');
-    }
-  }, [areaId, topicos]);
-
-  // Filtrar áreas com base na categoria selecionada
-  useEffect(() => {
-    if (categoriaId) {
-      const catId = String(categoriaId);
-      const areasFiltered = areas.filter(area => {
-        const areaCategoriaId = getCategoriaId(area);
-        return areaCategoriaId !== null && String(areaCategoriaId) === catId;
-      });
-      setAreasFiltradas(areasFiltered);
-      setAreaId('');
-    } else {
-      setAreasFiltradas([]);
-      setAreaId('');
-    }
-  }, [categoriaId, areas]);
-
-
-
-  // Função para buscar cursos com filtros
-  const fetchCursos = async () => {
-    try {
-      setIsLoading(true);
-
-      // Construir parâmetros da query
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: cursosPerPage.toString()
-      });
-
-      // Adicionar filtros se estiverem ativos
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-      if (categoriaId) {
-        params.append('categoria', categoriaId);
-      }
-      if (areaId) {
-        params.append('area', areaId);
-      }
-      if (topicoId) {
-        params.append('topico', topicoId);
-      }
-      if (tipoFiltro !== 'todos') {
-        params.append('tipo', tipoFiltro);
-      }
-
-      const url = `${API_BASE}/cursos?${params.toString()}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      setCursos(data.cursos || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalCursos(data.total || 0);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Erro ao carregar cursos:", error);
-      setIsLoading(false);
-    }
-  };
-
-
-
-
-  // Buscar cursos sempre que a página ou filtros mudarem
-  useEffect(() => {
-    fetchCursos();
-  }, [currentPage, searchTerm, categoriaId, areaId, tipoFiltro]);
-
-  // Resetar para primeira página quando filtros mudarem
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, categoriaId, areaId, tipoFiltro]);
-
   // Carregar categorias e áreas
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
         const response = await axios.get(`${API_BASE}/categorias`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         setCategorias(response.data);
       } catch (error) {
@@ -204,9 +69,7 @@ export default function CursosPage() {
     const fetchAreas = async () => {
       try {
         const response = await axios.get(`${API_BASE}/areas`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         setAreas(response.data);
       } catch (error) {
@@ -218,89 +81,203 @@ export default function CursosPage() {
     fetchAreas();
   }, []);
 
-  // Funções para navegação de páginas
-  const goToPreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+  // Carregar todos os tópicos
+useEffect(() => {
+  const fetchAllTopicos = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/topicos-area`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Verificar se a resposta é um array
+      const topicoData = response.data;
+      if (Array.isArray(topicoData)) {
+        setTopicos(topicoData);
+      } else if (topicoData && typeof topicoData === 'object') {
+        // Se for um objeto com uma propriedade que é array (comum em APIs)
+        // Tentar encontrar uma propriedade que seja array
+        const possibleArrayProps = ['data', 'items', 'results', 'topicos'];
+        for (const prop of possibleArrayProps) {
+          if (Array.isArray(topicoData[prop])) {
+            console.log(`Usando propriedade '${prop}' como array de tópicos`);
+            setTopicos(topicoData[prop]);
+            break;
+          }
+        }
+      } else {
+        console.error("Formato de dados inesperado para tópicos:", topicoData);
+        setTopicos([]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar tópicos:", error);
+      setTopicos([]);
     }
   };
 
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+  fetchAllTopicos();
+}, []);
+
+useEffect(() => {
+  if (areaId && Array.isArray(topicos)) {
+    const areId = String(areaId);
+    // Use o campo correto conforme definido no modelo Topico_Area
+    const topicosFiltered = topicos.filter(topico => {
+      return topico.id_area && String(topico.id_area) === areId;
+    });
+    setTopicosFiltrados(topicosFiltered);
+    setTopicoId('');
+
+    // Log para depuração
+    if (topicos.length > 0) {
+      console.log("Estrutura de um objeto tópico:", topicos[0]);
+      console.log("Tópicos filtrados para área", areId, ":", topicosFiltered);
+      console.log("Quantidade de tópicos filtrados:", topicosFiltered.length);
+    }
+  } else {
+    setTopicosFiltrados([]);
+    setTopicoId('');
+  }
+}, [areaId, topicos]);
+
+
+  // Filtrar áreas com base na categoria selecionada
+  useEffect(() => {
+    if (categoriaId) {
+      const catId = String(categoriaId);
+      const areasFiltered = areas.filter(area => {
+        const areaCategoriaId = area.id_categoria ?? area.categoria_id ?? area.idCategoria ?? area.categoriaId;
+        return areaCategoriaId && String(areaCategoriaId) === catId;
+      });
+      setAreasFiltradas(areasFiltered);
+      setAreaId('');
+      setTopicoId('');
+    } else {
+      setAreasFiltradas([]);
+      setAreaId('');
+      setTopicoId('');
+    }
+  }, [categoriaId, areas]);
+
+  // Filtrar tópicos com base na área selecionada
+  useEffect(() => {
+    if (areaId) {
+      const areId = String(areaId);
+      // Use o campo correto conforme definido no modelo Topico_Area
+      const topicosFiltered = topicos.filter(topico => {
+        return topico.id_area && String(topico.id_area) === areId;
+      });
+      setTopicosFiltrados(topicosFiltered);
+      setTopicoId('');
+
+      // Log para depuração
+      if (topicos.length > 0) {
+        console.log("Estrutura de um objeto tópico:", topicos[0]);
+        console.log("Tópicos filtrados para área", areId, ":", topicosFiltered);
+        console.log("Quantidade de tópicos filtrados:", topicosFiltered.length);
+      }
+    } else {
+      setTopicosFiltrados([]);
+      setTopicoId('');
+    }
+  }, [areaId, topicos]);
+
+  // Função para buscar cursos com filtros
+  const fetchCursos = async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: cursosPerPage.toString()
+      });
+
+      if (searchTerm) params.append('search', searchTerm);
+      if (categoriaId) params.append('categoria', categoriaId);
+      if (areaId) params.append('area', areaId);
+      if (topicoId) params.append('topico', topicoId);
+      if (tipoFiltro !== 'todos') params.append('tipo', tipoFiltro);
+
+      const url = `${API_BASE}/cursos?${params.toString()}`;
+      console.log("Buscando cursos na URL:", url);
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+
+        console.log("Resposta da API:", data);
+        setCursos(data.cursos || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalCursos(data.total || 0);
+      } catch (fetchError) {
+        console.error("Erro na requisição:", fetchError);
+        toast.error("Erro ao carregar cursos. Por favor, tente novamente.");
+      } finally {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Erro ao processar requisição:", error);
+      setIsLoading(false);
+      toast.error("Erro ao processar dados. Por favor, tente novamente.");
     }
   };
 
+  // Ação ao clicar no curso
   const handleCursoClick = async (cursoId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/cursos/${cursoId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await axios.get(`${API_BASE}/cursos/${cursoId}`, { headers: { Authorization: `Bearer ${token}` } });
       const cursoData = response.data;
-      const dataAtual = new Date();
-      const dataFimCurso = new Date(cursoData.data_fim);
-      const cursoTerminado = dataFimCurso < dataAtual;
-
-      // Verificar acesso - permitir se for admin (role 1)
-      if (cursoTerminado && !cursoData.acessoPermitido && userRole !== 1) {
-        toast.error(
-          "Este curso já terminou e só está disponível para alunos inscritos.",
-          {
-            position: "top-center",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true
-          }
-        );
-        return; // Impede a navegação
+      const now = new Date();
+      const fim = new Date(cursoData.data_fim);
+      const terminado = fim < now;
+      if (terminado && !cursoData.acessoPermitido && userRole !== 1) {
+        return toast.error("Este curso já terminou e só está disponível para alunos inscritos.", { position: "top-center" });
       }
-
-      // Se passou pela verificação, navega para a página
       navigate(`/cursos/${cursoId}`);
     } catch (error) {
-      console.error('Erro ao verificar acesso ao curso:', error);
+      console.error('Erro ao verificar acesso:', error);
       toast.error("Erro ao verificar acesso ao curso. Tente novamente mais tarde.");
     }
   };
 
+  // Buscar cursos sempre que a página ou filtros mudarem
+  useEffect(() => {
+    fetchCursos();
+  }, [currentPage, searchTerm, categoriaId, areaId, tipoFiltro, topicoId]);
+
+  // Resetar para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoriaId, areaId, tipoFiltro, topicoId]);
+
+  // Funções para navegação de páginas
+  const goToPreviousPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const goToNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+
   // Funções para manipular os filtros
-  const toggleFilters = () => {
-    setShowFilters(!showFilters);
-  };
+  const toggleFilters = () => setShowFilters(!showFilters);
 
-  const handleCategoriaChange = (e) => {
-    const id = e.target.value;
-    setCategoriaId(id);
-  };
+  const handleCategoriaChange = e => setCategoriaId(e.target.value);
 
-  const handleAreaChange = (e) => {
-    const id = e.target.value;
-    setAreaId(id);
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const getImageUrl = (curso) => {
-    if (curso && curso.imagem_path) {
-      return `${API_BASE}/${curso.imagem_path}`;
+  const handleAreaChange = e => {
+    if (!categoriaId) {
+      toast.warning("Por favor, selecione uma Categoria primeiro!", { position: "top-center" });
+      return;
     }
-
-    if (curso && curso.nome) {
-      const nomeCursoSlug = curso.nome
-        .toLowerCase()
-        .replace(/ /g, "-")
-        .replace(/[^\w-]+/g, "");
-      return IMAGES.CURSO(nomeCursoSlug);
-    }
-
-    return fallbackCurso;
+    setAreaId(e.target.value);
   };
+
+  const handleTopicoChange = e => {
+    if (!areaId) {
+      toast.warning("Por favor, selecione uma Área primeiro!", { position: "top-center" });
+      return;
+    }
+    setTopicoId(e.target.value);
+  };
+
+  const handleSearchChange = e => setSearchTerm(e.target.value);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -310,254 +287,107 @@ export default function CursosPage() {
     setTipoFiltro('todos');
   };
 
+  const getImageUrl = curso => curso?.imagem_path ? `${API_BASE}/${curso.imagem_path}` :
+    curso?.nome
+      ? IMAGES.CURSO(curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, ""))
+      : fallbackCurso;
+
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-
-      {/* Título da página Cursos */}
       <h1 className="page-title">Cursos</h1>
 
-      {/* Barra de pesquisa e filtros */}
+      {/* Busca e filtros */}
       <div className="cursos-search-container">
         <div className="cursos-search-input-container">
           <i className="fas fa-search cursos-search-icon"></i>
-          <input
-            type="text"
-            placeholder="Pesquisar cursos..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="cursos-search-input"
-          />
+          <input type="text" placeholder="Pesquisar cursos..." value={searchTerm} onChange={handleSearchChange} className="cursos-search-input" />
         </div>
-
-        <button
-          className="cursos-filter-button"
-          onClick={toggleFilters}
-        >
-          <i className="fas fa-filter cursos-filter-icon"></i>
-          <span>Filtros</span>
+        <button className="cursos-filter-button" onClick={toggleFilters}>
+          <i className="fas fa-filter cursos-filter-icon"></i><span>Filtros</span>
         </button>
       </div>
 
-      {/* Área de filtros expandida */}
       {showFilters && (
         <div className="cursos-filter-options">
           <div className="cursos-filter-group">
-            {/* Select para categoria */}
+            {/* Categoria - Sempre visível */}
             <div className="custom-select-wrapper">
-              <select
-                className="custom-select-button select-categoria"
-                value={categoriaId}
-                onChange={handleCategoriaChange}
-              >
+              <select className="custom-select-button select-categoria" value={categoriaId} onChange={handleCategoriaChange}>
                 <option value="">Selecionar Categoria</option>
-                {categorias.map(categoria => (
-                  <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                    {categoria.nome}
-                  </option>
-                ))}
+                {categorias.map(cat => <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nome}</option>)}
               </select>
               <i className="fas fa-folder custom-select-icon"></i>
             </div>
 
-            {/* Select para área */}
-            {categoriaId && (
-              <div className="custom-select-wrapper">
-                <select
-                  className="custom-select-button select-area"
-                  value={areaId}
-                  onChange={handleAreaChange}
-                  disabled={!categoriaId || isLoading}
-                >
-                  <option value="">Selecionar Área</option>
-                  {isLoading ? (
-                    <option value="" disabled>A carregar áreas...</option>
-                  ) : areasFiltradas.length > 0 ? (
-                    areasFiltradas.map(area => {
-                      const areaIdValue = area.id_area || area.id || area.idArea || area.area_id;
-                      const areaNomeValue = area.nome || area.name || area.descricao || area.description;
-
-                      return (
-                        <option key={areaIdValue} value={areaIdValue}>
-                          {areaNomeValue}
-                        </option>
-                      );
-                    })
-                  ) : (
-                    <option value="" disabled>Nenhuma área disponível</option>
-                  )}
-                </select>
-                <i className="fas fa-bookmark custom-select-icon"></i>
-              </div>
-            )}
-
-            {areaId && (
-              <div className="custom-select-wrapper">
-                <select
-                  className="custom-select-button select-topico"
-                  value={topicoId}
-                  onChange={(e) => setTopicoId(e.target.value)}
-                  disabled={!areaId || isLoading}
-                >
-                  <option value="">Selecionar Tópico</option>
-                  {isLoading ? (
-                    <option value="" disabled>A carregar tópicos...</option>
-                  ) : topicosFiltrados.length > 0 ? (
-                    topicosFiltrados.map(topico => {
-                      const topicoIdValue = topico.id_topico || topico.id || topico.idTopico;
-                      const topicoNomeValue = topico.nome || topico.name || topico.titulo;
-
-                      return (
-                        <option key={topicoIdValue} value={topicoIdValue}>
-                          {topicoNomeValue}
-                        </option>
-                      );
-                    })
-                  ) : (
-                    <option value="" disabled>Nenhum tópico disponível</option>
-                  )}
-                </select>
-                <i className="fas fa-tag custom-select-icon"></i>
-              </div>
-            )}
-
-            {/* Botões para filtrar por tipo de curso */}
-            <div className="cursos-filter-tipo">
-              <button
-                className={`cursos-filter-tipo-button ${tipoFiltro === 'todos' ? 'cursos-filter-tipo-active' : ''}`}
-                onClick={() => setTipoFiltro('todos')}
-              >
-                <i className="fas fa-th-list cursos-filter-button-icon"></i>
-                <span>Todos</span>
-              </button>
-
-              <button
-                className={`cursos-filter-tipo-button ${tipoFiltro === 'sincrono' ? 'cursos-filter-tipo-active' : ''}`}
-                onClick={() => setTipoFiltro('sincrono')}
-              >
-                <i className="fas fa-users cursos-filter-button-icon"></i>
-                <span>Síncronos</span>
-              </button>
-
-              <button
-                className={`cursos-filter-tipo-button ${tipoFiltro === 'assincrono' ? 'cursos-filter-tipo-active' : ''}`}
-                onClick={() => setTipoFiltro('assincrono')}
-              >
-                <i className="fas fa-book cursos-filter-button-icon"></i>
-                <span>Assíncronos</span>
-              </button>
+            {/* Área - Sempre visível */}
+            <div className="custom-select-wrapper">
+              <select className="custom-select-button select-area" value={areaId} onChange={handleAreaChange} disabled={isLoading}>
+                <option value="">Selecionar Área</option>
+                {isLoading
+                  ? <option disabled>A carregar áreas...</option>
+                  : areasFiltradas.length
+                    ? areasFiltradas.map(area => <option key={area.id_area} value={area.id_area}>{area.nome}</option>)
+                    : <option disabled>Selecione uma categoria primeiro</option>
+                }
+              </select>
+              <i className="fas fa-bookmark custom-select-icon"></i>
             </div>
 
-            {/* Botão para limpar todos os filtros */}
-            {(searchTerm || categoriaId || areaId || tipoFiltro !== 'todos') && (
-              <button
-                className="cursos-filter-clear-button"
-                onClick={clearFilters}
-              >
-                <i className="fas fa-times cursos-filter-button-icon"></i>
-                <span>Limpar Filtros</span>
+            {/* Tópico - Sempre visível */}
+            <div className="custom-select-wrapper">
+              <select className="custom-select-button select-topico" value={topicoId} onChange={handleTopicoChange} disabled={isLoading || !areaId}>
+                <option value="">Selecionar Tópico</option>
+                {isLoading
+                  ? <option disabled>A carregar tópicos...</option>
+                  : !areaId
+                    ? <option disabled>Selecione uma área primeiro</option>
+                    : topicosFiltrados.length
+                      ? topicosFiltrados.map(top => {
+                        const id = top.id_topico;
+                        const nome = top.titulo;
+                        return <option key={id} value={id}>{nome}</option>;
+                      })
+                      : <option disabled>Nenhum tópico disponível para esta área</option>
+                }
+              </select>
+              <i className="fas fa-tag custom-select-icon"></i>
+            </div>
+
+            {/* Tipo */}
+            <div className="cursos-filter-tipo">
+              {['todos', 'sincrono', 'assincrono'].map(tipo => (
+                <button key={tipo} className={`cursos-filter-tipo-button ${tipoFiltro === tipo ? 'cursos-filter-tipo-active' : ''}`} onClick={() => setTipoFiltro(tipo)}>
+                  <i className={`fas ${tipo === 'sincrono' ? 'fa-users' : tipo === 'assincrono' ? 'fa-book' : 'fa-th-list'} cursos-filter-button-icon`}></i>
+                  <span>{tipo === 'todos' ? 'Todos' : tipo === 'sincrono' ? 'Síncronos' : 'Assíncronos'}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Limpar */}
+            {(searchTerm || categoriaId || areaId || topicoId || tipoFiltro !== 'todos') && (
+              <button className="cursos-filter-clear-button" onClick={clearFilters}>
+                <i className="fas fa-times cursos-filter-button-icon"></i><span>Limpar Filtros</span>
               </button>
             )}
           </div>
         </div>
       )}
 
-      {areaId && (
-        <div className="custom-select-wrapper">
-          <select
-            className="custom-select-button select-topico"
-            value={topicoId}
-            onChange={(e) => setTopicoId(e.target.value)}
-            disabled={!areaId || isLoading}
-          >
-            <option value="">Selecionar Tópico</option>
-            {isLoading ? (
-              <option value="" disabled>A carregar tópicos...</option>
-            ) : topicos.length > 0 ? (
-              topicos.map(topico => {
-                const topicoIdValue = topico.id_topico || topico.id;
-                const topicoNomeValue = topico.nome || topico.titulo;
-
-                return (
-                  <option key={topicoIdValue} value={topicoIdValue}>
-                    {topicoNomeValue}
-                  </option>
-                );
-              })
-            ) : (
-              <option value="" disabled>Nenhum tópico disponível</option>
-            )}
-          </select>
-          <i className="fas fa-tag custom-select-icon"></i>
-        </div>
-      )}
-
-      {/* Indicador de carregamento */}
-      {isLoading && (
-        <div className="text-center py-8">
-          <div className="loading-spinner"></div>
-          <p className="text-gray-600 mt-4">A carregar cursos...</p>
-        </div>
-      )}
+      {/* Carregamento */}
+      {isLoading && <div className="text-center py-8"><div className="loading-spinner"></div><p className="text-gray-600 mt-4">A carregar cursos...</p></div>}
 
       {/* Lista de cursos */}
-      {!isLoading && (
-        <div className="grid">
-          {cursos.map((curso) => (
-            <div
-              key={curso.id_curso}
-              onClick={() => handleCursoClick(curso.id_curso)}
-              className="curso-card cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105"
-              style={{
-                backgroundImage: `url(${getImageUrl(curso)})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
+      {!isLoading && <div className="grid">{cursos.map(curso => <div key={curso.id_curso} onClick={() => handleCursoClick(curso.id_curso)} className="curso-card cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105" style={{ backgroundImage: `url(${getImageUrl(curso)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}><div className="curso-card-overlay"><span className="curso-overlay-title">{curso.nome}</span><span className="curso-overlay-dates">{new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}</span><span className="curso-overlay-vagas">{curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}</span></div></div>)}</div>}
 
-              <div className="curso-card-overlay">
-                <span className="curso-overlay-title">{curso.nome}</span>
-                <span className="curso-overlay-dates">
-                  {new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}
-                </span>
-                <span className="curso-overlay-vagas">
-                  {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-
-      {/* Mensagem para quando não há cursos */}
-      {!isLoading && cursos.length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p>
-        </div>
-      )}
+      {/* Sem resultados */}
+      {!isLoading && cursos.length === 0 && <div className="text-center py-10"><p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p></div>}
 
       {/* Paginação */}
       <div className="flex justify-center items-center my-6 pagination-container">
-        <button
-          onClick={goToPreviousPage}
-          disabled={currentPage === 1}
-          className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
-          aria-label="Página anterior"
-        >
-          <span className="pagination-icon">&#10094;</span>
-        </button>
-
+        <button onClick={goToPreviousPage} disabled={currentPage === 1} className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`} aria-label="Página anterior"><span className="pagination-icon">&#10094;</span></button>
         <span className="mx-4 text-lg font-medium pagination-info">{currentPage}/{totalPages}</span>
-
-        <button
-          onClick={goToNextPage}
-          disabled={currentPage === totalPages}
-          className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
-          aria-label="Próxima página"
-        >
-          <span className="pagination-icon">&#10095;</span>
-        </button>
+        <button onClick={goToNextPage} disabled={currentPage === totalPages} className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`} aria-label="Próxima página"><span className="pagination-icon">&#10095;</span></button>
       </div>
     </div>
   );

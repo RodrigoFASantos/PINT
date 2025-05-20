@@ -5,6 +5,7 @@ import API_BASE from '../../api';
 
 const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
   const [nome, setNome] = useState('');
+  const [dataLimite, setDataLimite] = useState(''); // Novo estado
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -13,32 +14,33 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!nome.trim()) {
       setErro('O nome da pasta é obrigatório.');
       return;
     }
-    
+
     setEnviando(true);
     setErro('');
-    
+
     try {
       const token = localStorage.getItem('token');
-      
+
       const dadosEnvio = {
         nome: nome.trim(),
         id_topico: topico.id_topico,
         ordem: topico.pastas?.length + 1 || 1,
-        isAvaliacao: isAvaliacao // Adicionar flag para indicar se é uma pasta de avaliação
+        isAvaliacao: isAvaliacao, // Adicionar flag para indicar se é uma pasta de avaliação
+        data_limite: dataLimite || null
       };
-      
+
       const response = await axios.post(`${API_BASE}/pastas-curso`, dadosEnvio, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('Resposta da API:', response.data);
       onSuccess(response.data.data);
       onClose();
@@ -52,19 +54,26 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
   return (
     <div className="modal-overlay">
       <div className="criar-pasta-modal">
-        <div className="modal-header">
+        <div className="modal-header" style={{ position: 'relative' }}>
           <h2>Criar Nova Pasta{isAvaliacao ? ' de Avaliação' : ''}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button
+            className="cancel-icon"
+            onClick={onClose}
+            aria-label="Fechar"
+            type="button"
+          >
+            ×
+          </button>
         </div>
-        
+
         <div className="modal-body">
           <div className="topico-info">
             <span>Tópico:</span> {topico.nome}
             {isAvaliacao && <span className="avaliacao-badge"> (Avaliação)</span>}
           </div>
-          
+
           {erro && <div className="error-message">{erro}</div>}
-          
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="nome">Nome da Pasta</label>
@@ -80,17 +89,24 @@ const CriarPastaModal = ({ topico, onClose, onSuccess }) => {
               />
             </div>
             
+            {/* Data limite */}
+            {isAvaliacao && (
+              <div className="form-group">
+                <label htmlFor="dataLimite">Data Limite de Entrega</label>
+                <input
+                  type="datetime-local"
+                  id="dataLimite"
+                  name="dataLimite"
+                  value={dataLimite}
+                  onChange={(e) => setDataLimite(e.target.value)}
+                  disabled={enviando}
+                />
+              </div>
+            )}
+
             <div className="modal-footer">
-              <button 
-                type="button" 
-                className="cancel-btn"
-                onClick={onClose}
-                disabled={enviando}
-              >
-                Cancelar
-              </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="submit-btn"
                 disabled={enviando}
               >

@@ -1,0 +1,201 @@
+.detalhes-submissao-container {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detalhes-submissao-container h3 {
+  color: #c62828;
+  font-size: 1.25rem;
+  margin-bottom: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 10px;
+}
+
+.tabela-detalhes {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela-detalhes tr {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.tabela-detalhes tr:last-child {
+  border-bottom: none;
+}
+
+.tabela-detalhes td {
+  padding: 12px 15px;
+  vertical-align: top;
+}
+
+.label-detalhe {
+  width: 30%;
+  font-weight: 500;
+  color: #343a40;
+  background-color: #f1f3f5;
+}
+
+.valor-detalhe {
+  width: 70%;
+}
+
+.row-destaque {
+  background-color: #e8f5e9;
+}
+
+.row-destaque .valor-detalhe {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.ficheiro-item {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.ficheiro-icone {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.pdf-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="%23dc3545" d="M181.9 256.1c-5-16-4.9-46.9-2-46.9 8.4 0 7.6 36.9 2 46.9zm-1.7 47.2c-7.7 20.2-17.3 43.3-28.4 62.7 18.3-7 39-17.2 62.9-21.9-12.7-9.6-24.9-23.4-34.5-40.8zM86.1 428.1c0 .8 13.2-5.4 34.9-40.2-6.7 6.3-16.8 15.8-34.9 40.2zM248 160h136v328c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V24C0 10.7 10.7 0 24 0h200v136c0 13.2 10.8 24 24 24zm-8 171.8c-20-12.2-33.3-29-42.7-53.8 4.5-18.5 11.6-46.6 6.2-64.2-4.7-29.4-42.4-26.5-47.8-6.8-5 18.3-.4 44.1 8.1 77-11.6 27.6-28.7 64.6-40.8 85.8-.1 0-.1.1-.2.1-27.1 13.9-73.6 44.5-54.5 68 5.6 6.9 16 10 21.5 10 17.9 0 35.7-18 61.1-61.8 25.8-8.5 54.1-19.1 79-23.2 21.7 11.8 47.1 19.5 64 19.5 29.2 0 31.2-32 19.7-43.4-13.9-13.6-54.3-9.7-73.6-7.2zM377 105L279 7c-4.5-4.5-10.6-7-17-7h-6v128h128v-6.1c0-6.3-2.5-12.4-7-16.9zm-74.1 255.3c4.1-2.7-2.5-11.9-42.8-9 37.1 15.8 42.8 9 42.8 9z"/></svg>');
+}
+
+.ficheiro-link {
+  color: #0d6efd;
+  text-decoration: none;
+  margin-right: 15px;
+}
+
+.ficheiro-link:hover {
+  text-decoration: underline;
+}
+
+.ficheiro-data {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.comentarios-dropdown {
+  position: relative;
+}
+
+.comentarios-toggle {
+  color: #0d6efd;
+  text-decoration: none;
+  display: block;
+  position: relative;
+  padding-right: 20px;
+}
+
+.comentarios-toggle:after {
+  content: "▼";
+  font-size: 10px;
+  position: absolute;
+  right: 0;
+  top: 5px;
+}
+
+.comentarios-toggle:hover {
+  text-decoration: underline;
+}
+
+.comentarios-lista {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 3px solid #dee2e6;
+}
+
+.sem-comentarios {
+  margin-top: 10px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.comentario-item {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #dee2e6;
+}
+
+.comentario-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.comentario-autor {
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.comentario-data {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.comentario-texto {
+  white-space: pre-line;
+}
+
+.carregando-detalhes,
+.erro-detalhes,
+.sem-detalhes {
+  padding: 15px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.erro-detalhes {
+  color: #dc3545;
+}
+
+/* Adicionando estilos para os botões na seção de submissão */
+.submissao-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-detalhes {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.btn-detalhes:hover {
+  background-color: #138496;
+}
+
+.btn-voltar {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-voltar:hover {
+  background-color: #5a6268;
+}

@@ -496,12 +496,12 @@ const createConteudo = async (req, res) => {
       return res.status(400).json({ message: 'A pasta selecionada não pertence a este curso' });
     }
 
-    // Verificação de avaliação - checando se o nome do tópico contém "avalia"
-    const isAvaliacaoTopico = 
-      topico.nome.toLowerCase() === 'avaliação' || 
-      topico.nome.toLowerCase() === 'avaliacao' || 
+    // Verificação de avaliação
+    const isAvaliacaoTopico =
+      topico.nome.toLowerCase() === 'avaliação' ||
+      topico.nome.toLowerCase() === 'avaliacao' ||
       topico.nome.toLowerCase().includes('avalia');
-    
+
     console.log(`Tópico "${topico.nome}" ${isAvaliacaoTopico ? 'identificado como avaliação' : 'não é de avaliação'}`);
 
     if (!['file', 'link', 'video'].includes(tipo)) {
@@ -514,28 +514,27 @@ const createConteudo = async (req, res) => {
       return res.status(409).json({ message: 'Já existe um conteúdo com esse título nesta pasta' });
     }
 
-    // Usar a nova estrutura de pastas
+    // === MODIFICADO: Usar a estrutura de diretórios correta ===
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
     const topicoSlug = uploadUtils.normalizarNome(topico.nome);
     const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
-    
-    // Determinar o caminho do diretório baseado no tipo (avaliação ou conteúdo regular)
+
     let conteudosDir, conteudosPath;
-    
+
     if (isAvaliacaoTopico) {
-      // Manter avaliação na pasta especial
+      // Para tópicos de avaliação - salvar na pasta conteudos
       conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug, 'conteudos');
       conteudosPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos`;
     } else {
-      // Para tópicos normais, usar a nova estrutura com "topicos"
-      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug, 'conteudos');
-      conteudosPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/conteudos`;
+      conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug, 'Conteudos');
+      conteudosPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/Conteudos`;
     }
-    
+
     console.log(`Diretório para conteúdos: ${conteudosDir}`);
-    
-    // Criar pasta se não existir
+
+    // Garantir que o diretório de conteúdos existe
     uploadUtils.ensureDir(conteudosDir);
+
 
     let conteudoData = {
       titulo,
@@ -544,10 +543,11 @@ const createConteudo = async (req, res) => {
       id_pasta,
       id_curso,
       ativo: true,
-      dir_path: conteudosPath 
+      dir_path: conteudosPath
     };
 
     const timestamp = Date.now();
+    // Usar a função uploadUtils.normalizarNome para normalização consistente
     const tituloBase = uploadUtils.normalizarNome(titulo);
 
     if (tipo === 'file') {
@@ -686,49 +686,59 @@ const updateConteudo = async (req, res) => {
     if (ordem !== undefined) dadosAtualizacao.ordem = ordem;
     if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
 
-    // MODIFICADO: Determinar a estrutura de diretórios simplificada
-    
+    // MODIFICADO: Determinar a estrutura de diretórios correta
+
     // Verificar se o tópico atual é de avaliação
-    const isAvaliacaoAtual = 
-      topicoAtual.nome.toLowerCase() === 'avaliação' || 
-      topicoAtual.nome.toLowerCase() === 'avaliacao' || 
+    const isAvaliacaoAtual =
+      topicoAtual.nome.toLowerCase() === 'avaliação' ||
+      topicoAtual.nome.toLowerCase() === 'avaliacao' ||
       topicoAtual.nome.toLowerCase().includes('avalia');
-    
+
     // Verificar se o tópico alvo é de avaliação
-    const isAvaliacaoAlvo = 
-      topicoAlvo.nome.toLowerCase() === 'avaliação' || 
-      topicoAlvo.nome.toLowerCase() === 'avaliacao' || 
+    const isAvaliacaoAlvo =
+      topicoAlvo.nome.toLowerCase() === 'avaliação' ||
+      topicoAlvo.nome.toLowerCase() === 'avaliacao' ||
       topicoAlvo.nome.toLowerCase().includes('avalia');
-    
+
     const cursoSlugAtual = uploadUtils.normalizarNome(cursoAtual.nome);
     const cursoSlugAlvo = uploadUtils.normalizarNome(cursoAlvo.nome);
-    
-    // Pastas base simplificadas
-    const pastaBaseAtual = isAvaliacaoAtual ? 'avaliacao' : 'conteudos';
-    const pastaBaseAlvo = isAvaliacaoAlvo ? 'avaliacao' : 'conteudos';
-    
-    // Diretórios atuais e alvo
-    const conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, pastaBaseAtual);
-    const conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/${pastaBaseAtual}`;
-    
-    const conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, pastaBaseAlvo);
-    const conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/${pastaBaseAlvo}`;
-    
+    const pastaSlugAtual = uploadUtils.normalizarNome(pastaAtual.nome);
+    const pastaSlugAlvo = uploadUtils.normalizarNome(pastaAlvo.nome);
+    const topicoSlugAtual = uploadUtils.normalizarNome(topicoAtual.nome);
+    const topicoSlugAlvo = uploadUtils.normalizarNome(topicoAlvo.nome);
+
+    // Diretórios atuais e alvo com estrutura correta
+    let conteudoDirAtual, conteudoPathAtual, conteudoDirAlvo, conteudoPathAlvo;
+
+    if (isAvaliacaoAtual) {
+      // Para avaliação - armazenar na pasta conteudos
+      conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'avaliacao', pastaSlugAtual, 'conteudos');
+      conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/avaliacao/${pastaSlugAtual}/conteudos`;
+    } else {
+      // Para tópicos normais: manter a estrutura atual
+      conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'topicos', topicoSlugAtual, pastaSlugAtual, 'Conteudos');
+      conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/topicos/${topicoSlugAtual}/${pastaSlugAtual}/Conteudos`;
+    }
+
+    if (isAvaliacaoAlvo) {
+      // Para avaliação - armazenar na pasta conteudos
+      conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'avaliacao', pastaSlugAlvo, 'conteudos');
+      conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/avaliacao/${pastaSlugAlvo}/conteudos`;
+    } else {
+      // Para tópicos normais: manter a estrutura atual
+      conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'topicos', topicoSlugAlvo, pastaSlugAlvo, 'Conteudos');
+      conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/topicos/${topicoSlugAlvo}/${pastaSlugAlvo}/Conteudos`;
+    }
+
     console.log(`Diretório atual: ${conteudoDirAtual}, Diretório alvo: ${conteudoDirAlvo}`);
 
     // Garantir que os diretórios existam
     uploadUtils.ensureDir(conteudoDirAlvo);
-    
-    // Se for avaliação, garantir que a pasta de submissões exista
-    if (isAvaliacaoAlvo) {
-      const submissoesDir = path.join(conteudoDirAlvo, 'submissoes');
-      uploadUtils.ensureDir(submissoesDir);
-    }
 
     // Se precisa mover o ficheiro ou estamos a mudar o tipo
     if (precisaMoverArquivo || (tipo !== undefined && tipo !== conteudo.tipo)) {
       console.log('A mover ficheiro ou alterar tipo de conteúdo');
-      
+
       // Se estiver a mudar o tipo, verificar os campos necessários
       if (tipo !== undefined && tipo !== conteudo.tipo) {
         if (!['file', 'link', 'video'].includes(tipo)) {
@@ -840,7 +850,7 @@ const updateConteudo = async (req, res) => {
     } else if (req.file) {
       // Mesmo local, mas ficheiro atualizado
       console.log('A atualizar ficheiro no mesmo local');
-      
+
       if (conteudo.tipo === 'file') {
         // Se já existe um ficheiro, remover o antigo
         if (conteudo.arquivo_path) {
@@ -872,7 +882,7 @@ const updateConteudo = async (req, res) => {
     } else if (url !== undefined && (conteudo.tipo === 'link' || conteudo.tipo === 'video')) {
       // Atualizar URL e ficheiro de referência
       console.log('A atualizar URL para conteúdo tipo link/video');
-      
+
       if (conteudo.arquivo_path) {
         // Atualizar o conteúdo do ficheiro de referência
         const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
@@ -895,7 +905,7 @@ const updateConteudo = async (req, res) => {
           } catch (fileError) {
             console.error(`Erro ao criar novo ficheiro de referência: ${fileError.message}`);
           }
-          
+
           dadosAtualizacao.arquivo_path = `${conteudoPathAtual}/${fakeFileName}`;
         }
       }
@@ -969,11 +979,11 @@ const updateConteudo = async (req, res) => {
 
 // Middleware de upload
 const uploadMiddleware = (req, res, next) => {
-  // Este middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
+  // Rapaz, este middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
   next();
 };
 
-// Exportar todas as funções
+
 module.exports = {
   uploadMiddleware,
   getAllConteudos,

@@ -12,7 +12,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
   const { id } = useParams();
   const courseId = cursoId || id;
   const navigate = useNavigate();
-  
+
   // Estados principais
   const [cursoInfo, setCursoInfo] = useState(null);
   const [topicos, setTopicos] = useState([]);
@@ -58,16 +58,16 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
         try {
           setLoadingCursoInfo(true);
           const token = localStorage.getItem('token');
-          
+
           if (!token) {
             setError('Token não encontrado. Inicie sessão novamente.');
             return;
           }
-          
+
           const response = await axios.get(`${API_BASE}/cursos/${courseId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
+
           setCursoInfo(response.data);
           console.log("Dados do curso carregados:", response.data);
         } catch (error) {
@@ -77,7 +77,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
           setLoadingCursoInfo(false);
         }
       };
-      
+
       carregarDadosCurso();
     }
   }, [courseId]);
@@ -127,7 +127,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
             isAvaliacao: topico.nome.toLowerCase() === 'avaliação' || pasta.isAvaliacao
           })) : []
         }));
-        
+
         // Filtrar tópicos de avaliação para não exibi-los na seção de conteúdos
         collapsedTopicos = collapsedTopicos.filter(topico => !topico.isAvaliacao);
 
@@ -225,23 +225,23 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
   // ===== Handlers para edição =====
   const handleEditTopico = async (topicoId, currentName) => {
     const newName = prompt("Editar nome do tópico:", currentName);
-    
+
     if (!newName || newName === currentName) return;
-    
+
     try {
       const token = localStorage.getItem('token');
-      
-      const response = await axios.put(`${API_BASE}/topicos-curso/${topicoId}`, 
+
+      const response = await axios.put(`${API_BASE}/topicos-curso/${topicoId}`,
         { nome: newName },
-        { headers: { Authorization: `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.status === 200) {
         // Update local state to avoid refetching
-        setTopicos(prevTopicos => 
-          prevTopicos.map(topico => 
-            topico.id_topico === topicoId 
-              ? { ...topico, nome: newName } 
+        setTopicos(prevTopicos =>
+          prevTopicos.map(topico =>
+            topico.id_topico === topicoId
+              ? { ...topico, nome: newName }
               : topico
           )
         );
@@ -254,25 +254,25 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
 
   const handleEditPasta = async (pastaId, currentName) => {
     const newName = prompt("Editar nome da pasta:", currentName);
-    
+
     if (!newName || newName === currentName) return;
-    
+
     try {
       const token = localStorage.getItem('token');
-      
-      const response = await axios.put(`${API_BASE}/pastas-curso/${pastaId}`, 
+
+      const response = await axios.put(`${API_BASE}/pastas-curso/${pastaId}`,
         { nome: newName },
-        { headers: { Authorization: `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.status === 200) {
         // Update local state
-        setTopicos(prevTopicos => 
+        setTopicos(prevTopicos =>
           prevTopicos.map(topico => ({
             ...topico,
-            pastas: topico.pastas.map(pasta => 
-              pasta.id_pasta === pastaId 
-                ? { ...pasta, nome: newName } 
+            pastas: topico.pastas.map(pasta =>
+              pasta.id_pasta === pastaId
+                ? { ...pasta, nome: newName }
                 : pasta
             )
           }))
@@ -468,10 +468,10 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
 
       <div className="conteudo-list-estruturada">
         {topicos.map((topico) => (
-          <div key={topico.id_topico} className="topico-item">
-            {/* Cabeçalho do tópico */}
-            <div 
-              className="topico-header"
+          <div key={topico.id_topico} className="pasta-item topico-container">
+            {/* Cabeçalho do tópico com classes de pasta */}
+            <div
+              className="pasta-header"
               onClick={() => toggleTopico(topico.id_topico)}
             >
               <button
@@ -483,10 +483,11 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
               >
                 <i className={`fas fa-chevron-${topico.expanded ? 'down' : 'right'}`}></i>
               </button>
-              <span className="topico-nome">{topico.nome}</span>
+              <i className="fas fa-folder"></i>
+              <span className="pasta-nome">{topico.nome}</span>
 
               {(userRole === 'admin' || userRole === 'formador') && (
-                <div className="topico-actions">
+                <div className="pasta-actions">
                   <button
                     className="btn-add"
                     title="Adicionar pasta"
@@ -521,14 +522,14 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
               )}
             </div>
 
-            {/* Pastas do tópico - agora fora do .topico-header */}
+            {/* Pastas do tópico - agora fora do header */}
             {topico.expanded && (
               <div className="pastas-list">
                 {topico.pastas && topico.pastas.length > 0 ? (
                   topico.pastas.map(pasta => (
                     <div key={pasta.id_pasta} className="pasta-item">
                       {/* Cabeçalho da pasta */}
-                      <div 
+                      <div
                         className="pasta-header"
                         onClick={() => togglePasta(topico.id_topico, pasta.id_pasta)}
                       >
@@ -580,7 +581,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                         )}
                       </div>
 
-                      {/* Conteúdos da pasta - agora fora do .pasta-header */}
+                      {/* Conteúdos da pasta*/}
                       {pasta.expanded && (
                         <div className="conteudos-list">
                           {pasta.conteudos && pasta.conteudos.length > 0 ? (

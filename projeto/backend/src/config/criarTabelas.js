@@ -177,7 +177,8 @@ const createTablesInOrder = async () => {
       horas_totais INTEGER NOT NULL,
       horas_presenca INTEGER NOT NULL,
       data_avaliacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      url_certificado VARCHAR(500)
+      url_certificado VARCHAR(500),
+      data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
     // =============================================
@@ -323,7 +324,8 @@ const createTablesInOrder = async () => {
       arquivo_path VARCHAR(500),
       id_topico INTEGER NOT NULL REFERENCES curso_topico(id_topico) ON DELETE CASCADE,
       ordem INTEGER NOT NULL DEFAULT 1,
-      ativo BOOLEAN NOT NULL DEFAULT TRUE
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
     // =============================================
@@ -348,10 +350,14 @@ const createTablesInOrder = async () => {
     // =============================================
     `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
       id_trabalho SERIAL PRIMARY KEY,
-      id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
+      id_pasta INTEGER NOT NULL REFERENCES curso_topico_pasta(id_pasta),
       ficheiro_path VARCHAR(500) NOT NULL,
+      nome_ficheiro VARCHAR(255),
       data_entrega TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      avaliacao TEXT
+      avaliacao INTEGER CHECK (avaliacao BETWEEN 0 AND 20),
+      observacoes TEXT
     );`,
 
     // =============================================

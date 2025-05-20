@@ -51,16 +51,38 @@ const normalizarNome = (nome) => {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9]+/g, '-')     // Substitui caracteres não alfanuméricos por hífens
-    .replace(/^-+|-+$/g, '');        // Remove hífens no início ou fim
+    .replace(/[^a-z0-9]+/g, '_')     // Substitui caracteres não alfanuméricos por UNDERSCORES
+    .replace(/^_+|_+$/g, '');        // Remove underscores no início ou fim
+};
+
+// Função para gerar nome de ficheiro único
+const gerarNomeUnico = (originalname) => {
+  const extension = path.extname(originalname);
+  const basename = path.basename(originalname, extension);
+  return `${normalizarNome(basename)}${extension}`;
 };
 
 // Função para garantir que um diretório exista
 const ensureDir = (dirPath) => {
+  console.log(`Tentando criar diretório: ${dirPath}`);
+  
+  // Verificar duplicações indesejadas
+  if (dirPath.includes('avaliacao')) {
+    if ((dirPath.includes('submissoes') && dirPath.includes('Submissoes')) ||
+        (dirPath.includes('conteudos') && dirPath.includes('Conteudos')) ||
+        dirPath.includes('enunciado')) {  // Bloquear qualquer pasta com "enunciado"
+      console.log(`⛔ Bloqueando criação de pasta indesejada: ${dirPath}`);
+      return false;
+    }
+  }
+  
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
+    console.log(`Diretório criado: ${dirPath}`);
     return true;
   }
+  
+  console.log(`Diretório já existe: ${dirPath}`);
   return false;
 };
 
@@ -74,13 +96,6 @@ const getFileType = (mimetype) => {
   return 'ficheiro';
 };
 
-// Função para gerar nome de ficheiro único
-const gerarNomeUnico = (originalname) => {
-  const timestamp = Date.now();
-  const randomString = crypto.randomBytes(8).toString('hex');
-  const extension = path.extname(originalname);
-  return `${timestamp}-${randomString}${extension}`;
-};
 
 // Configuração do armazenamento de utilizadores
 const userStorage = multer.diskStorage({
@@ -262,6 +277,50 @@ const criarDiretoriosCurso = (curso) => {
   };
 };
 
+
+
+
+
+const criarPastasAvaliacao = (cursoSlug, pastaSlug) => {
+  // Caminho principal da pasta de avaliação
+  const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
+  
+  // Criar a pasta principal
+  console.log(`Criando pasta principal de avaliação: ${pastaDir}`);
+  if (!fs.existsSync(pastaDir)) {
+    fs.mkdirSync(pastaDir, { recursive: true });
+  }
+  
+  // Criar APENAS as pastas submissoes e conteudos (sem enunciado)
+  const submissoesDir = path.join(pastaDir, 'submissoes');
+  const conteudosDir = path.join(pastaDir, 'conteudos');
+  
+  console.log(`Criando pasta submissoes: ${submissoesDir}`);
+  if (!fs.existsSync(submissoesDir)) {
+    fs.mkdirSync(submissoesDir, { recursive: true });
+  }
+  
+  console.log(`Criando pasta conteudos: ${conteudosDir}`);
+  if (!fs.existsSync(conteudosDir)) {
+    fs.mkdirSync(conteudosDir, { recursive: true });
+  }
+  
+  return {
+    pastaPath: pastaDir,
+    pastaUrl: `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`,
+    submissoesPath: submissoesDir,
+    submissoesUrl: `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/submissoes`,
+    conteudosPath: conteudosDir,
+    conteudosUrl: `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos`
+  };
+};
+
+
+
+
+
+
+
 const criarDiretorosAvaliacaoCurso = (curso, topico) => {
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = 'avaliacao'; // Nome fixo para a pasta de avaliação
@@ -373,147 +432,78 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   console.log(`[CRIAR_DIRETORIOS_PASTA] Curso: ${curso.nome}, Tópico: ${topico.nome}, Pasta: ${pasta.nome}`);
   console.log(`[CRIAR_DIRETORIOS_PASTA] É avaliação? ${isAvaliacao ? 'SIM' : 'NÃO'}`);
   
-  let pastaDir;
-  let urlPath;
-  
   if (isAvaliacao) {
-    // Para tópicos de avaliação, usar o diretório "avaliacao" diretamente sob o curso
-    pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
-    urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}`;
-    console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta de avaliação em: ${pastaDir}`);
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Usando função específica para pasta de avaliação`);
+    return criarPastasAvaliacao(cursoSlug, pastaSlug);
   } else {
-    // Garantir que a pasta topicos exista
-    const topicosDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos');
-    console.log(`[CRIAR_DIRETORIOS_PASTA] Verificando pasta topicos: ${topicosDir}`);
-    ensureDir(topicosDir);
+    // Para pastas normais (não avaliação), usar a estrutura padrão
+    const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug);
+    const urlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}`;
     
-    // Garantir que a pasta do tópico exista
-    const topicoDir = path.join(topicosDir, topicoSlug);
-    console.log(`[CRIAR_DIRETORIOS_PASTA] Verificando pasta do tópico: ${topicoDir}`);
-    ensureDir(topicoDir);
+    // Criar diretório principal da pasta
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório principal: ${pastaDir}`);
+    ensureDir(pastaDir);
     
-    // Para outros tópicos, colocar na estrutura dentro de "topicos"
-    pastaDir = path.join(topicoDir, pastaSlug);
-    urlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}`;
-    console.log(`[CRIAR_DIRETORIOS_PASTA] Pasta normal em: ${pastaDir}`);
+    // Construir objeto de resultado com todos os caminhos
+    const result = {
+      dirPath: pastaDir,
+      urlPath: urlPath,
+      conteudosPath: pastaDir,
+      quizesPath: pastaDir,
+      conteudosUrlPath: urlPath,
+      quizesUrlPath: urlPath
+    };
+    
+    console.log(`[CRIAR_DIRETORIOS_PASTA] Estrutura criada com sucesso:`, result);
+    return result;
   }
-  
-  // Criar diretório principal da pasta
-  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório principal: ${pastaDir}`);
-  ensureDir(pastaDir);
-  
-  // Criar diretórios para conteúdos e quizes
-  const conteudosDir = path.join(pastaDir, 'conteudos');
-  const quizesDir = path.join(pastaDir, 'quizes');
-  
-  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório conteúdos: ${conteudosDir}`);
-  ensureDir(conteudosDir);
-  
-  console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório quizes: ${quizesDir}`);
-  ensureDir(quizesDir);
-  
-  // Para avaliações, criar também um diretório de submissões
-  let submissoesDir = null;
-  let submissoesUrlPath = null;
-  
-  if (isAvaliacao) {
-    submissoesDir = path.join(pastaDir, 'submissoes');
-    submissoesUrlPath = `${urlPath}/submissoes`;
-    console.log(`[CRIAR_DIRETORIOS_PASTA] Criando diretório submissões: ${submissoesDir}`);
-    ensureDir(submissoesDir);
-  }
-  
-  // Verificar se os diretórios foram criados
-  const todosDir = [pastaDir, conteudosDir, quizesDir];
-  if (submissoesDir) todosDir.push(submissoesDir);
-  
-  const todosCriados = todosDir.every(dir => fs.existsSync(dir));
-  if (todosCriados) {
-    console.log(`✅ Todos os diretórios foram criados com sucesso`);
-  } else {
-    console.error(`❌ Falha ao criar algum diretório`);
-  }
-  
-  // Construir objeto de resultado com todos os caminhos
-  const result = {
-    dirPath: pastaDir,
-    conteudosPath: conteudosDir,
-    quizesPath: quizesDir,
-    urlPath: urlPath,
-    conteudosUrlPath: `${urlPath}/conteudos`,
-    quizesUrlPath: `${urlPath}/quizes`,
-  };
-  
-  // Adicionar caminhos de submissões apenas para avaliações
-  if (isAvaliacao) {
-    result.submissoesPath = submissoesDir;
-    result.submissoesUrlPath = submissoesUrlPath;
-  }
-  
-  console.log(`[CRIAR_DIRETORIOS_PASTA] Estrutura criada com sucesso:`, result);
-  return result;
 };
+
+
+
+
+
+
+
+
+
+
 
 const criarDiretoriosPastaAvaliacao = (curso, topico, pasta) => {
   const cursoSlug = normalizarNome(curso.nome);
   const topicoSlug = normalizarNome(topico.nome);
   const pastaSlug = normalizarNome(pasta.nome);
   
-  // Garantir que a pasta do curso exista
   const cursoDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+  const avaliacaoDir = path.join(cursoDir, 'avaliacao');
+  const topicoDir = path.join(avaliacaoDir, topicoSlug);
+
+  // Garantir que a pasta do curso exista
   console.log(`Verificando se o diretório do curso existe: ${cursoDir}`);
   ensureDir(cursoDir);
   
   // Garantir que a pasta avaliacao exista
-  const avaliacaoDir = path.join(cursoDir, 'avaliacao');
   console.log(`Verificando se o diretório de avaliação existe: ${avaliacaoDir}`);
   ensureDir(avaliacaoDir);
   
   // Garantir que a pasta do tópico exista dentro de avaliacao
-  const topicoDir = path.join(avaliacaoDir, topicoSlug);
   console.log(`Verificando se o diretório do tópico de avaliação existe: ${topicoDir}`);
   ensureDir(topicoDir);
   
   // Estrutura correta para pastas de avaliação
   const pastaDir = path.join(topicoDir, pastaSlug);
-  const conteudosDir = path.join(pastaDir, 'conteudos');
-  const quizesDir = path.join(pastaDir, 'quizes');
-  const submissoesDir = path.join(pastaDir, 'submissoes');
   
-  // Criar os diretórios
+  // Criar o diretório principal da pasta (sem subpastas)
   console.log(`A criar diretório da pasta: ${pastaDir}`);
   ensureDir(pastaDir);
-  
-  console.log(`A criar diretório de conteúdos: ${conteudosDir}`);
-  ensureDir(conteudosDir);
-  
-  console.log(`A criar diretório de quizes: ${quizesDir}`);
-  ensureDir(quizesDir);
-  
-  console.log(`A criar diretório de submissões: ${submissoesDir}`);
-  ensureDir(submissoesDir);
-  
-  // Verificar se os diretórios foram criados
-  const todosDir = [pastaDir, conteudosDir, quizesDir, submissoesDir];
-  const todosCriados = todosDir.every(dir => fs.existsSync(dir));
-  if (todosCriados) {
-    console.log(`✅ Todos os diretórios de avaliação foram criados com sucesso`);
-  } else {
-    console.error(`❌ Falha ao criar algum diretório de avaliação`);
-  }
   
   // URLs relativas para acesso web
   const urlPath = `uploads/cursos/${cursoSlug}/avaliacao/${topicoSlug}/${pastaSlug}`;
   
   return {
     dirPath: pastaDir,
-    conteudosPath: conteudosDir,
-    quizesPath: quizesDir,
-    submissoesPath: submissoesDir,
-    urlPath: urlPath,
-    conteudosUrlPath: `${urlPath}/conteudos`,
-    quizesUrlPath: `${urlPath}/quizes`,
-    submissoesUrlPath: `${urlPath}/submissoes`
+    urlPath: urlPath
+    // Removida a criação das propriedades submissoesPath e submissoesUrlPath
   };
 };
 

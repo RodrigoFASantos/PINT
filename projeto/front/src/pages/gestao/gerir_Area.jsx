@@ -10,34 +10,31 @@ import Sidebar from '../../components/Sidebar';
 
 const Gerir_Area = () => {
   const navigate = useNavigate();
-  const [areas, setAreas] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalAreas, setTotalAreas] = useState(0);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [areaParaExcluir, setAreaParaExcluir] = useState(null);
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [formMode, setFormMode] = useState('criar'); // 'criar' ou 'editar'
-  const [formData, setFormData] = useState({ 
-    nome: '',
-    id_categoria: ''
-  });
   
   // Auth context
   const { currentUser } = useAuth();
   
-  // Estados para paginação
-  const [paginaAtual, setPaginaAtual] = useState(1);
-  const areasPorPagina = 20;
+  // Estados para sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Estados para filtros
-  const [filtros, setFiltros] = useState({
-    nome: '',
-    idCategoria: ''
-  });
-
-  // Ref para controlar debounce nos filtros
+  // Estados para áreas
+  const [areas, setAreas] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [totalAreas, setTotalAreas] = useState(0);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const areasPorPagina = 10;
+  const [filtros, setFiltros] = useState({ nome: '', idCategoria: '' });
+  const [areaParaExcluir, setAreaParaExcluir] = useState(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [editArea, setEditArea] = useState(null);
+  const [newAreaNome, setNewAreaNome] = useState('');
+  const [newAreaCategoria, setNewAreaCategoria] = useState('');
+  const [showAreaForm, setShowAreaForm] = useState(false);
+  
+  // Estado de carregamento
+  const [loading, setLoading] = useState(true);
+  
+  // Ref para debounce
   const filterTimeoutRef = useRef(null);
 
   // Toggle para a sidebar
@@ -46,7 +43,7 @@ const Gerir_Area = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Função para buscar áreas com paginação e filtros (usando useCallback)
+  // Função para buscar áreas com paginação e filtros
   const buscarAreas = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
       console.log('[DEBUG] Gerir_Area: A iniciar busca de áreas - Página:', pagina);
@@ -81,15 +78,13 @@ const Gerir_Area = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Area: Resposta da API:', response.data);
+      console.log('[DEBUG] Gerir_Area: Resposta da API (áreas):', response.data);
       
-      // Verifica a estrutura dos dados recebidos
       if (response.data) {
         if (Array.isArray(response.data.areas)) {
           setAreas(response.data.areas);
           setTotalAreas(response.data.total || response.data.areas.length);
         } else if (Array.isArray(response.data)) {
-          // Se a resposta for um array direto
           setAreas(response.data);
           setTotalAreas(response.data.length);
         } else {
@@ -119,10 +114,11 @@ const Gerir_Area = () => {
           toast.error('Não autorizado. Faça login novamente.');
           navigate('/login');
         } else {
-          toast.error(`Erro ao carregar áreas: ${error.response.data.message || 'Erro desconhecido'}`);
+          toast.error(`Erro ao carregar áreas: ${error.response.data?.message || 'Erro desconhecido'}`);
         }
       } else {
-        toast.error('Erro de conexão com o servidor. Verifique sua internet.');
+        console.error('[DEBUG] Gerir_Area: Erro:', error.message);
+        toast.error('Erro ao processar a requisição.');
       }
       
       setAreas([]);
@@ -131,7 +127,33 @@ const Gerir_Area = () => {
     }
   }, [areasPorPagina, navigate]);
 
-  // Buscar dados iniciais
+  // Função para buscar categorias para o select
+  const buscarCategorias = useCallback(async () => {
+    try {
+      console.log('[DEBUG] Gerir_Area: A buscar categorias para o filtro');
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(`${API_BASE}/categorias`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('[DEBUG] Gerir_Area: Categorias carregadas:', response.data);
+      
+      if (response.data && (Array.isArray(response.data.categorias) || Array.isArray(response.data))) {
+        setCategorias(Array.isArray(response.data.categorias) ? response.data.categorias : response.data);
+      } else {
+        console.error('[DEBUG] Gerir_Area: Formato de resposta inesperado:', response.data);
+        toast.error('Erro ao carregar categorias para o filtro.');
+        setCategorias([]);
+      }
+    } catch (error) {
+      console.error('[DEBUG] Gerir_Area: Erro ao buscar categorias:', error);
+      toast.error('Erro ao carregar categorias para o filtro.');
+      setCategorias([]);
+    }
+  }, []);
+
+  // Efeito para carregar dados iniciais
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -139,25 +161,41 @@ const Gerir_Area = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         
+        console.log('[DEBUG] Gerir_Area: Token no localStorage:', token ? 'SIM' : 'NÃO');
+        
         if (!token) {
           console.log('[DEBUG] Gerir_Area: Token não encontrado. A redirecionar para login...');
           navigate('/login');
           return;
         }
         
+        // Log do usuário atual do AuthContext
+        console.log('[DEBUG] Gerir_Area: Utilizador atual do AuthContext:', currentUser);
+        
+        if (currentUser) {
+          console.log('[DEBUG] Gerir_Area: Dados do utilizador do AuthContext:', {
+            id_utilizador: currentUser.id_utilizador,
+            nome: currentUser.nome,
+            id_cargo: currentUser.id_cargo,
+            email: currentUser.email,
+            cargo: currentUser.cargo
+          });
+          
+          // Verificar se o usuário tem permissão (admin ou gestor)
+          if (currentUser.id_cargo !== 1) {
+            console.log('[DEBUG] Gerir_Area: Usuário não é administrador. Redirecionando...');
+            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            navigate('/');
+            return;
+          }
+        }
+        
         console.log('[DEBUG] Gerir_Area: Autenticação verificada com sucesso. A buscar dados...');
         
-        // Obter categorias para o formulário e filtros
-        const categoriasResponse = await axios.get(`${API_BASE}/categorias`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Buscar categorias para o filtro
+        await buscarCategorias();
         
-        console.log('[DEBUG] Gerir_Area: Categorias carregadas:', categoriasResponse.data);
-        setCategorias(Array.isArray(categoriasResponse.data) 
-          ? categoriasResponse.data 
-          : categoriasResponse.data.categorias || []);
-        
-        // Obter áreas (primeira página) - com filtros vazios inicialmente
+        // Buscar áreas iniciais
         await buscarAreas(1, filtros);
         
       } catch (error) {
@@ -176,26 +214,33 @@ const Gerir_Area = () => {
     };
 
     fetchData();
-  }, [navigate, buscarAreas]);
+  }, [navigate, currentUser, buscarAreas, buscarCategorias]);
 
   // Handler para mudança de filtros com debounce
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     console.log(`[DEBUG] Gerir_Area: Filtro alterado: ${name} = ${value}`);
     
+    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
+    // Atualizar o estado dos filtros
     setFiltros(prev => {
       const novosFiltros = {
         ...prev,
         [name]: value
       };
       
+      console.log('[DEBUG] Gerir_Area: Novos filtros:', novosFiltros);
+      
+      // Ativar o indicador de carregamento imediatamente
       setLoading(true);
       
+      // Configurar novo temporizador de debounce
       filterTimeoutRef.current = setTimeout(() => {
+        // Quando o temporizador disparar, usar os valores atuais dos filtros
         buscarAreas(1, novosFiltros);
       }, 600);
       
@@ -207,150 +252,158 @@ const Gerir_Area = () => {
   const handleLimparFiltros = () => {
     console.log('[DEBUG] Gerir_Area: A limpar filtros');
     
+    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
-    const filtrosLimpos = {
-      nome: '',
-      idCategoria: ''
-    };
+    const filtrosLimpos = { nome: '', idCategoria: '' };
     
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
     
+    // Buscar dados com filtros limpos
     buscarAreas(1, filtrosLimpos);
   };
 
   // Funções de navegação
   const handlePaginaAnterior = () => {
+    console.log('[DEBUG] Gerir_Area: A navegar para página anterior');
     if (paginaAtual > 1) {
       buscarAreas(paginaAtual - 1, filtros);
     }
   };
 
   const handleProximaPagina = () => {
+    console.log('[DEBUG] Gerir_Area: A navegar para próxima página');
     const totalPaginas = Math.ceil(totalAreas / areasPorPagina);
     if (paginaAtual < totalPaginas) {
       buscarAreas(paginaAtual + 1, filtros);
     }
   };
 
-  // Função para mostrar o modal de criação
-  const handleCriarArea = () => {
-    setFormData({ 
-      nome: '',
-      id_categoria: categorias.length > 0 ? categorias[0].id_categoria || categorias[0].id : ''
-    });
-    setFormMode('criar');
-    setShowFormModal(true);
+  // Funções para criar nova área
+  const handleOpenAreaForm = () => {
+    setShowAreaForm(true);
+    setEditArea(null);
+    setNewAreaNome('');
+    setNewAreaCategoria('');
   };
 
-  // Função para mostrar o modal de edição
-  const handleEditarArea = (area, e) => {
-    e.stopPropagation();
-    setFormData({ 
-      id: area.id_area || area.id,
-      nome: area.nome,
-      id_categoria: area.id_categoria || (area.categoria ? area.categoria.id_categoria || area.categoria.id : '')
-    });
-    setFormMode('editar');
-    setShowFormModal(true);
+  const handleCloseAreaForm = () => {
+    setShowAreaForm(false);
+    setEditArea(null);
+    setNewAreaNome('');
+    setNewAreaCategoria('');
   };
 
-  // Função para mostrar confirmação de exclusão
-  const handleConfirmarExclusao = (area, e) => {
-    e.stopPropagation();
-    console.log('[DEBUG] Gerir_Area: A solicitar confirmação de exclusão para área:', area);
-    setAreaParaExcluir(area);
-    setShowDeleteConfirmation(true);
-  };
-
-  // Função para salvar área (criar ou editar)
-  const handleSalvarArea = async () => {
-    if (!formData.nome.trim()) {
-      toast.error('O nome da área é obrigatório!');
-      return;
-    }
-    
-    if (!formData.id_categoria) {
-      toast.error('A categoria é obrigatória!');
-      return;
-    }
-    
+  const handleSaveArea = async () => {
     try {
       const token = localStorage.getItem('token');
       
-      if (formMode === 'criar') {
-        console.log('[DEBUG] Gerir_Area: A criar nova área:', formData);
-        
-        const response = await axios.post(`${API_BASE}/areas`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('[DEBUG] Gerir_Area: Área criada com sucesso:', response.data);
-        toast.success('Área criada com sucesso!');
-      } else {
-        console.log('[DEBUG] Gerir_Area: A atualizar área:', formData);
-        
-        const response = await axios.put(`${API_BASE}/areas/${formData.id}`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('[DEBUG] Gerir_Area: Área atualizada com sucesso:', response.data);
-        toast.success('Área atualizada com sucesso!');
+      if (!newAreaNome.trim()) {
+        toast.error('Por favor, insira um nome para a área.');
+        return;
       }
       
-      setShowFormModal(false);
+      if (!newAreaCategoria) {
+        toast.error('Por favor, selecione uma categoria para a área.');
+        return;
+      }
+      
+      // Modo edição
+      if (editArea) {
+        console.log(`[DEBUG] Gerir_Area: A atualizar área ID ${editArea.id_area}`);
+        
+        await axios.put(`${API_BASE}/areas/${editArea.id_area}`, {
+          nome: newAreaNome,
+          id_categoria: newAreaCategoria
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        toast.success('Área atualizada com sucesso!');
+      } 
+      // Modo criação
+      else {
+        console.log('[DEBUG] Gerir_Area: A criar nova área');
+        
+        await axios.post(`${API_BASE}/areas`, {
+          nome: newAreaNome,
+          id_categoria: newAreaCategoria
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        toast.success('Área criada com sucesso!');
+      }
+      
+      // Fechar o formulário e atualizar a lista
+      handleCloseAreaForm();
       buscarAreas(paginaAtual, filtros);
       
     } catch (error) {
       console.error('[DEBUG] Gerir_Area: Erro ao salvar área:', error);
       
       if (error.response) {
-        toast.error(`Erro: ${error.response.data.message || 'Falha ao processar a requisição.'}`);
+        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro de conexão. Verifique sua conexão com a internet.');
+        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
       }
     }
   };
 
-  // Função para excluir a área
+  // Funções para editar área
+  const handleEditarArea = (area) => {
+    console.log(`[DEBUG] Gerir_Area: A editar área ID ${area.id_area}`);
+    setEditArea(area);
+    setNewAreaNome(area.nome);
+    setNewAreaCategoria(area.id_categoria || (area.categoria ? area.categoria.id_categoria : ''));
+    setShowAreaForm(true);
+  };
+
+  // Funções para excluir área
+  const handleConfirmarExclusao = (area) => {
+    console.log(`[DEBUG] Gerir_Area: A confirmar exclusão da área ID ${area.id_area}`);
+    setAreaParaExcluir(area);
+    setShowDeleteConfirmation(true);
+  };
+
   const handleExcluirArea = async () => {
     if (!areaParaExcluir) return;
     
-    const areaId = areaParaExcluir.id_area || areaParaExcluir.id;
-    console.log('[DEBUG] Gerir_Area: A iniciar exclusão da área:', areaId);
-    
     try {
       const token = localStorage.getItem('token');
+      console.log(`[DEBUG] Gerir_Area: A excluir área ID ${areaParaExcluir.id_area}`);
       
-      await axios.delete(`${API_BASE}/areas/${areaId}`, {
+      await axios.delete(`${API_BASE}/areas/${areaParaExcluir.id_area}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Area: Área excluída com sucesso');
       toast.success('Área excluída com sucesso!');
+      setShowDeleteConfirmation(false);
+      setAreaParaExcluir(null);
       
-      // Atualizar a lista de áreas
+      // Atualizar a lista
       buscarAreas(paginaAtual, filtros);
       
     } catch (error) {
       console.error('[DEBUG] Gerir_Area: Erro ao excluir área:', error);
       
       if (error.response) {
-        if (error.response.status === 400 && error.response.data.message.includes('cursos associados')) {
-          toast.error('Esta área não pode ser excluída porque possui cursos associados.');
-        } else {
-          toast.error(`Erro ao excluir área: ${error.response.data.message || 'Erro desconhecido'}`);
-        }
+        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro de conexão. Verifique sua conexão com a internet.');
+        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
       }
-    } finally {
+      
       setShowDeleteConfirmation(false);
       setAreaParaExcluir(null);
     }
+  };
+
+  // Função para navegar para a página de categorias
+  const handleIrParaCategorias = () => {
+    navigate('/admin/categorias');
   };
 
   // Calcular número total de páginas
@@ -387,13 +440,21 @@ const Gerir_Area = () => {
       
       <div className="main-content">
         <div className="areas-header">
-          <h1>Áreas</h1>
-          <button 
-            className="criar-area-btn"
-            onClick={handleCriarArea}
-          >
-            Criar Nova Área
-          </button>
+          <h1>Gestão de Áreas</h1>
+          <div className="header-actions">
+            <button 
+              className="btn-navegacao"
+              onClick={handleIrParaCategorias}
+            >
+              Gerir Categorias
+            </button>
+            <button 
+              className="criar-btn"
+              onClick={handleOpenAreaForm}
+            >
+              Criar Nova Área
+            </button>
+          </div>
         </div>
         
         <div className="filtros-container">
@@ -420,8 +481,8 @@ const Gerir_Area = () => {
               <option value="">Todas as categorias</option>
               {categorias.map(categoria => (
                 <option 
-                  key={categoria.id_categoria || categoria.id} 
-                  value={categoria.id_categoria || categoria.id}
+                  key={categoria.id_categoria} 
+                  value={categoria.id_categoria}
                 >
                   {categoria.nome}
                 </option>
@@ -447,7 +508,7 @@ const Gerir_Area = () => {
               <p>A carregar áreas...</p>
             </div>
           ) : areas.length === 0 ? (
-            <div className="no-areas">
+            <div className="no-items">
               <p>Nenhuma área encontrada com os filtros aplicados.</p>
             </div>
           ) : (
@@ -464,38 +525,30 @@ const Gerir_Area = () => {
                 </thead>
                 <tbody>
                   {areas.map(area => {
-                    // Obter ID da área de maneira consistente
-                    const areaId = area.id_area || area.id;
-                    
-                    // Obter categoria
-                    const categoriaNome = area.categoria 
-                      ? (typeof area.categoria === 'object' ? area.categoria.nome : area.categoria) 
-                      : area.nome_categoria || "Não especificada";
-                    
-                    // Obter número de cursos (se disponível)
-                    const numCursos = area.cursos_count || 0;
+                    // Obter o nome da categoria de maneira segura
+                    const categoriaNome = area.categoria ? 
+                      (typeof area.categoria === 'object' ? area.categoria.nome : area.categoria) : 
+                      "Não especificada";
                     
                     return (
-                      <tr 
-                        key={areaId} 
-                        className="area-row"
-                      >
-                        <td>{areaId}</td>
+                      <tr key={area.id_area}>
+                        <td>{area.id_area}</td>
                         <td className="area-nome">{area.nome}</td>
                         <td>{categoriaNome}</td>
-                        <td>{numCursos} curso{numCursos !== 1 ? 's' : ''}</td>
+                        <td>{area.cursos_count || 0}</td>
                         <td className="acoes">
                           <button 
                             className="btn-icon btn-editar"
-                            onClick={(e) => handleEditarArea(area, e)}
+                            onClick={() => handleEditarArea(area)}
                             title="Editar"
                           >
                             ✏️
                           </button>
                           <button 
                             className="btn-icon btn-excluir"
-                            onClick={(e) => handleConfirmarExclusao(area, e)}
+                            onClick={() => handleConfirmarExclusao(area)}
                             title="Excluir"
+                            disabled={area.cursos_count > 0}
                           >
                             🗑️
                           </button>
@@ -537,33 +590,33 @@ const Gerir_Area = () => {
         </div>
       </div>
       
-      {/* Modal de formulário (criar/editar) */}
-      {showFormModal && (
+      {/* Modal de formulário de área */}
+      {showAreaForm && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>{formMode === 'criar' ? 'Criar Nova Área' : 'Editar Área'}</h3>
+            <h3>{editArea ? 'Editar Área' : 'Nova Área'}</h3>
             <div className="form-group">
-              <label htmlFor="area-nome">Nome da Área:</label>
+              <label htmlFor="newAreaNome">Nome da Área:</label>
               <input 
-                type="text"
-                id="area-nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                placeholder="Nome da área"
+                type="text" 
+                id="newAreaNome" 
+                value={newAreaNome}
+                onChange={(e) => setNewAreaNome(e.target.value)}
+                placeholder="Digite o nome da área"
               />
             </div>
             <div className="form-group">
-              <label htmlFor="area-categoria">Categoria:</label>
+              <label htmlFor="newAreaCategoria">Categoria:</label>
               <select
-                id="area-categoria"
-                value={formData.id_categoria}
-                onChange={(e) => setFormData({...formData, id_categoria: e.target.value})}
+                id="newAreaCategoria"
+                value={newAreaCategoria}
+                onChange={(e) => setNewAreaCategoria(e.target.value)}
               >
                 <option value="">Selecione uma categoria</option>
                 {categorias.map(categoria => (
                   <option 
-                    key={categoria.id_categoria || categoria.id} 
-                    value={categoria.id_categoria || categoria.id}
+                    key={categoria.id_categoria} 
+                    value={categoria.id_categoria}
                   >
                     {categoria.nome}
                   </option>
@@ -573,15 +626,15 @@ const Gerir_Area = () => {
             <div className="modal-actions">
               <button 
                 className="btn-cancelar"
-                onClick={() => setShowFormModal(false)}
+                onClick={handleCloseAreaForm}
               >
                 Cancelar
               </button>
               <button 
                 className="btn-confirmar"
-                onClick={handleSalvarArea}
+                onClick={handleSaveArea}
               >
-                {formMode === 'criar' ? 'Criar Área' : 'Salvar Alterações'}
+                {editArea ? 'Atualizar' : 'Criar'}
               </button>
             </div>
           </div>

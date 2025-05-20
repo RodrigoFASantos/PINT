@@ -17,6 +17,7 @@ import ListaCursos from './pages/cursos/Lista_Cursos';
 import CriarCurso from './pages/cursos/Criar_Curso';
 import CursoPagina from './pages/cursos/Pagina_Curso';
 import EditarCurso from './pages/cursos/Editar_Curso';
+import AvaliarTrabalhos from './components/cursos/Avaliar_Trabalhos';
 
 // Páginas de Utilizadores
 import PerfilUser from './pages/users/Perfil_Utilizador';
@@ -239,9 +240,9 @@ const App = () => {
 
               {/* Rotas para formadores */}
               <Route
-                path="/area-professor"
+                path="/area-formador"
                 element={
-                  <RouteWrapper path="/area-professor">
+                  <RouteWrapper path="/area-formador">
                     <ProtectedRoute allowedRoles={[1, 2]}>
                       <AreaProfessor />
                     </ProtectedRoute>
@@ -344,6 +345,17 @@ const App = () => {
                   <RouteWrapper path="/admin/cursos/:id/editar">
                     <ProtectedRoute allowedRoles={[1]}>
                       <EditarCurso />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
+                path="/curso/:cursoId/avaliacao/:pastaId/submissoes"
+                element={
+                  <RouteWrapper path="/curso/:cursoId/avaliacao/:pastaId/submissoes">
+                    <ProtectedRoute allowedRoles={[1,2]}>
+                      <AvaliarTrabalhos />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }

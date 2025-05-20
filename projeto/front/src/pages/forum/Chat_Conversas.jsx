@@ -32,7 +32,7 @@ const Chat_Conversas = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    
+
     logInfo(`Iniciando carregamento para tópico ID: ${topicoId}`);
 
     // Inicializar socket
@@ -109,34 +109,34 @@ const Chat_Conversas = () => {
     };
 
     // Obter temas existentes
-const fetchTemas = async () => {
-  try {
-    logInfo(`Buscando temas para o tópico ID: ${topicoId}, filtro: ${filtro}, página: ${pagina}`);
-    
-    // Altere esta linha para usar o endpoint correto para buscar temas
-    const response = await axios.get(`${API_BASE}/forum-tema/topico/${topicoId}/temas`, {
-      params: { filtro, page: pagina, limit: 10 },
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const fetchTemas = async () => {
+      try {
+        logInfo(`Buscando temas para o tópico ID: ${topicoId}, filtro: ${filtro}, página: ${pagina}`);
 
-    if (response.data && response.data.data) {
-      setTemas(response.data.data);
-      if (response.data.pagination) {
-        setTotalPaginas(response.data.pagination.totalPages);
+        // Altere esta linha para usar o endpoint correto para buscar temas
+        const response = await axios.get(`${API_BASE}/forum-tema/topico/${topicoId}/temas`, {
+          params: { filtro, page: pagina, limit: 10 },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data && response.data.data) {
+          setTemas(response.data.data);
+          if (response.data.pagination) {
+            setTotalPaginas(response.data.pagination.totalPages);
+          }
+          logInfo(`Obtidos ${response.data.data.length} temas`);
+        } else {
+          setTemas([]);
+          logInfo('Nenhum tema encontrado');
+        }
+
+        setLoading(false);
+      } catch (error) {
+        logInfo('Erro ao carregar temas:', error.message);
+        setErro(`Erro ao carregar temas: ${error.message}`);
+        setLoading(false);
       }
-      logInfo(`Obtidos ${response.data.data.length} temas`);
-    } else {
-      setTemas([]);
-      logInfo('Nenhum tema encontrado');
-    }
-    
-    setLoading(false);
-  } catch (error) {
-    logInfo('Erro ao carregar temas:', error.message);
-    setErro(`Erro ao carregar temas: ${error.message}`);
-    setLoading(false);
-  }
-};
+    };
     fetchUsuario();
     fetchTopico();
     fetchTemas();
@@ -154,7 +154,7 @@ const fetchTemas = async () => {
   // Função para atualizar avaliação de um tema recebida via websocket
   const atualizarAvaliacaoTema = (data) => {
     const { id_tema, likes, dislikes } = data;
-    
+
     setTemas(prev => prev.map(tema => {
       if (tema.id_tema === id_tema) {
         return {
@@ -340,9 +340,9 @@ const fetchTemas = async () => {
       );
     } else {
       return (
-        <div 
-          className="tema-arquivo" 
-          key={anexoKey} 
+        <div
+          className="tema-arquivo"
+          key={anexoKey}
           onClick={(e) => {
             e.stopPropagation();
             window.open(anexoUrl, '_blank');
@@ -395,57 +395,66 @@ const fetchTemas = async () => {
       <button className="voltar-btn" onClick={() => navigate('/forum')}>
         <i className="fas fa-arrow-left"></i>
       </button>
-      
+
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        
+
         <div className="temas-content">
+
           {topico && (
             <div className="topico-header">
-              <h2>{topico.titulo}</h2>
-              <p className="topico-description">{topico.descricao}</p>
-              <div className="topico-meta">
-                <span className="categoria">Categoria: {topico.categoria?.nome || 'Não disponível'}</span>
-                <span className="criado-por">Criado por: {topico.criador?.nome || 'Não disponível'}</span>
+              <span className="categoria-label">Categoria: {topico.categoria?.nome || 'Não disponível'}</span>
+
+              <div className="topico-center">
+                <h2 className="topico-titulo">{topico.titulo}</h2>
+                <p className="topico-description">{topico.descricao}</p>
+              </div>
+
+              <div className="topico-info">
                 <span className="data-criacao">Data: {formatarData(topico.data_criacao)}</span>
               </div>
             </div>
           )}
 
+          {/* Filtros e botão criar tema */}
+
+
           <div className="filtros-container">
-            <div className="filtros-buttons">
-              <button 
+            <div className="filtros-grupo-esquerda">
+              <button
                 className={`filtro-btn ${filtro === 'recentes' ? 'active' : ''}`}
-                onClick={() => {setFiltro('recentes'); setPagina(1);}}
+                onClick={() => { setFiltro('recentes'); setPagina(1); }}
               >
                 Mais Recentes
               </button>
-              <button 
+              <button
                 className={`filtro-btn ${filtro === 'likes' ? 'active' : ''}`}
-                onClick={() => {setFiltro('likes'); setPagina(1);}}
+                onClick={() => { setFiltro('likes'); setPagina(1); }}
               >
                 Mais Curtidos
               </button>
-              <button 
+              <button
                 className={`filtro-btn ${filtro === 'dislikes' ? 'active' : ''}`}
-                onClick={() => {setFiltro('dislikes'); setPagina(1);}}
+                onClick={() => { setFiltro('dislikes'); setPagina(1); }}
               >
                 Mais Descurtidos
               </button>
-              <button 
+              <button
                 className={`filtro-btn ${filtro === 'comentarios' ? 'active' : ''}`}
-                onClick={() => {setFiltro('comentarios'); setPagina(1);}}
+                onClick={() => { setFiltro('comentarios'); setPagina(1); }}
               >
                 Mais Comentados
               </button>
             </div>
-            
-            <button 
-              className="criar-tema-btn"
-              onClick={() => setShowCriarTema(true)}
-            >
-              <i className="fas fa-plus"></i> Criar Tema
-            </button>
+
+            <div className="filtros-grupo-direita">
+              <button
+                className="criar-tema-btn"
+                onClick={() => setShowCriarTema(true)}
+              >
+                <i className="fas fa-plus"></i> Criar Tema
+              </button>
+            </div>
           </div>
 
           <div className="temas-lista">
@@ -458,16 +467,16 @@ const fetchTemas = async () => {
               temas.map(tema => {
                 const temaId = tema.id_tema;
                 return (
-                  <div 
+                  <div
                     key={`tema-${temaId}`}
                     className={`tema-card ${tema.foi_denunciado ? 'tema-denunciado' : ''}`}
                     onClick={() => navegarParaTema(temaId)}
                   >
                     <div className="tema-header">
                       <div className="tema-autor">
-                        <img 
-                          src={tema.utilizador?.foto_perfil ? `${API_BASE.split('/api')[0]}/${tema.utilizador.foto_perfil}` : IMAGES.DEFAULT_AVATAR} 
-                          alt="Avatar" 
+                        <img
+                          src={tema.utilizador?.foto_perfil ? `${API_BASE.split('/api')[0]}/${tema.utilizador.foto_perfil}` : IMAGES.DEFAULT_AVATAR}
+                          alt="Avatar"
                           className="avatar"
                           onError={(e) => e.target.src = IMAGES.DEFAULT_AVATAR}
                         />
@@ -492,7 +501,7 @@ const fetchTemas = async () => {
                           <i className="fas fa-thumbs-up"></i>
                           <span>{tema.likes || 0}</span>
                         </button>
-                        
+
                         <button
                           className={`acao-btn ${avaliacoes[temaId] === 'dislike' ? 'active' : ''}`}
                           onClick={() => avaliarTema(temaId, 'dislike')}
@@ -504,7 +513,7 @@ const fetchTemas = async () => {
                       </div>
 
                       <div className="acoes-centro">
-                        <button 
+                        <button
                           className="comentar-btn"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -540,7 +549,7 @@ const fetchTemas = async () => {
           {/* Paginação */}
           {totalPaginas > 1 && (
             <div className="paginacao">
-              <button 
+              <button
                 onClick={() => setPagina(Math.max(1, pagina - 1))}
                 disabled={pagina === 1}
                 className="paginacao-btn"
@@ -548,7 +557,7 @@ const fetchTemas = async () => {
                 <i className="fas fa-chevron-left"></i>
               </button>
               <span className="pagina-info">Página {pagina} de {totalPaginas}</span>
-              <button 
+              <button
                 onClick={() => setPagina(Math.min(totalPaginas, pagina + 1))}
                 disabled={pagina === totalPaginas}
                 className="paginacao-btn"

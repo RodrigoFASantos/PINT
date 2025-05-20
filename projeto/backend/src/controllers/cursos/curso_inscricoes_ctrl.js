@@ -4,6 +4,7 @@ const Curso = require("../../database/models/Curso");
 const Categoria = require("../../database/models/Categoria");
 const Area = require("../../database/models/Area");
 const { sequelize } = require("../../config/db");
+const emailService = require('../../utils/emailService');
 
 
 // Obter todas as inscrições
@@ -173,6 +174,26 @@ const createInscricao = async (req, res) => {
       data_inscricao: new Date(),
       estado: "inscrito"
     });
+
+    // Buscar dados completos do utilizador e do curso para o email
+    const utilizador = await User.findByPk(id_utilizador);
+
+    // Buscar curso com informações do formador
+    const cursoCompleto = await Curso.findByPk(id_curso, {
+      include: [
+        { model: User, as: 'formador', attributes: ['nome', 'email'] }
+      ]
+    });
+
+    // Enviar email de confirmação
+    try {
+      await emailService.sendCourseInscricaoEmail(utilizador, cursoCompleto);
+      console.log(`Email de confirmação enviado para ${utilizador.email}`);
+    } catch (emailError) {
+      console.error('Erro ao enviar email de confirmação:', emailError);
+      // Não abortamos a operação se o email falhar
+    }
+
 
     // Resposta
     res.status(201).json({

@@ -7,17 +7,15 @@ import CriarConteudoModal from '../../components/cursos/Criar_Conteudo_Modal';
 import CriarAvaliacaoModal from '../../components/cursos/Criar_Avaliacao_Modal';
 import '../users/css/Area_Formador.css';
 
-export default function AreaProfessor() {
+export default function AreaFormador() {
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const cursosPerPage = 10;
 
-  // Adicionar estado para controlar a sidebar
+  // Sidebar
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Modais
   const [showAddConteudo, setShowAddConteudo] = useState(false);
   const [showAvaliacao, setShowAvaliacao] = useState(false);
   const [cursoSelecionado, setCursoSelecionado] = useState(null);
@@ -25,65 +23,53 @@ export default function AreaProfessor() {
 
   const navigate = useNavigate();
 
+  // Busca de cursos ministrados
   useEffect(() => {
     const fetchCursosFormador = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        // Rota correta de inscrições do utilizador
-        const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, {
+        const response = await axios.get(`${API_BASE}/formadores/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Ajustar para a estrutura de dados que vem da API
-        setCursos(response.data);
-        // Se a API retornar paginação, usar as linhas abaixo:
-        // setCursos(response.data.cursos);
-        // setTotalPages(response.data.totalPages);
-        setLoading(false);
+        // Extrai e formata os cursos ministrados
+        const { cursosMinistrados = [] } = response.data;
+        const formatados = cursosMinistrados.map(c => ({
+          cursoId: c.id,
+          nomeCurso: c.nome,
+          categoria: c.categoria,
+          area: c.area,
+          dataInicio: c.dataInicio,
+          dataFim: c.dataFim,
+          tipoCurso: c.tipo,
+          vagasTotais: c.vagas,
+          status: c.status // se o backend enviar
+        }));
+
+        setCursos(formatados);
       } catch (error) {
-        console.error('Erro ao carregar cursos do utilizador:', error);
+        console.error('Erro ao carregar cursos do formador:', error);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchCursosFormador();
-  }, [currentPage]);
+  }, []);
 
-  const handleGerirConteudo = (curso) => {
-    setCursoSelecionado(curso);
-    setShowAddConteudo(true);
-  };
+  // Redireciona para detalhe do curso
+  const handleVerCurso = (id) => navigate(`/cursos/${id}`);
 
-  const handleAvaliarAluno = (curso, aluno) => {
-    setCursoSelecionado(curso);
-    setAlunoSelecionado(aluno);
-    setShowAvaliacao(true);
-  };
-
-  const handleVerCurso = (id) => {
-    navigate(`/cursos/${id}`);
-  };
-
-  // Função de verificação de status, mas o controller já envia o status calculado
+  // Calcula status se não vier do backend
   const verificarStatusCurso = (curso) => {
-    if (curso.status) return curso.status; // Usar o status já calculado no backend
-    
+    if (curso.status) return curso.status;
     const hoje = new Date();
-    const dataInicio = new Date(curso.dataInicio);
-    const dataFim = new Date(curso.dataFim);
-
-    if (hoje >= dataInicio && hoje <= dataFim) {
-      return "Em curso";
-    } else if (hoje > dataFim) {
-      return "Terminado";
-    } else {
-      return "Agendado";
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+    const inicio = new Date(curso.dataInicio);
+    const fim = new Date(curso.dataFim);
+    if (hoje >= inicio && hoje <= fim) return "Em curso";
+    if (hoje > fim) return "Terminado";
+    return "Agendado";
   };
 
   if (loading) {
@@ -98,118 +84,123 @@ export default function AreaProfessor() {
           <h1>Os Meus Cursos</h1>
 
           {cursos.length === 0 ? (
-            <p className="no-cursos">Não possui cursos inscritos no momento.</p>
+            <p className="no-cursos">Não ministra nenhum curso no momento.</p>
           ) : (
-            <>
-              <div className="cursos-list">
-                {cursos.map(curso => {
-                  const status = curso.status || verificarStatusCurso(curso);
-                  
-                  return (
-                    <div key={curso.cursoId} className="curso-panel">
-                      <div className="curso-header">
-                        <div>
-                          <h2>{curso.nomeCurso}</h2>
-                          <p className="categoria">{curso.categoria} &gt; {curso.area}</p>
-                        </div>
-                        <span className={`status-badge ${status.toLowerCase().replace(' ', '-')}`}>
-                          {status}
-                        </span>
+            <div className="cursos-list">
+              {cursos.map(curso => {
+                const status = verificarStatusCurso(curso);
+                return (
+                  <div
+                    key={curso.cursoId}
+                    className="curso-panel"
+                    onClick={() => handleVerCurso(curso.cursoId)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="curso-header">
+                      <div>
+                        <h2>{curso.nomeCurso}</h2>
+                        <p className="categoria">{curso.categoria} &gt; {curso.area}</p>
                       </div>
-                      
-                      <div className="curso-meta">
-                        <div className="meta-item">
-                          <span className="label">Início:</span>
-                          <span>{new Date(curso.dataInicio).toLocaleDateString()}</span>
-                        </div>
-                        <div className="meta-item">
-                          <span className="label">Término:</span>
-                          <span>{new Date(curso.dataFim).toLocaleDateString()}</span>
-                        </div>
-                        <div className="meta-item">
-                          <span className="label">Tipo:</span>
-                          <span>{curso.tipoCurso}</span>
-                        </div>
-                        {curso.vagasTotais && (
-                          <div className="meta-item">
-                            <span className="label">Vagas:</span>
-                            <span>{curso.vagasTotais}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="curso-actions">
-                        <button 
-                          className="ver-curso-btn"
-                          onClick={() => handleVerCurso(curso.cursoId)}
-                        >
-                          Ver Detalhes
-                        </button>
-                      </div>
+                      <span className={`status-badge ${status.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {status}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
 
-              {totalPages > 1 && (
-                <div className="pagination">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={currentPage === page ? 'active' : ''}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
+                    <div className="curso-meta">
+                      <div className="meta-item">
+                        <span className="label">Início:</span>
+                        <span>{new Date(curso.dataInicio).toLocaleDateString()}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="label">Término:</span>
+                        <span>{new Date(curso.dataFim).toLocaleDateString()}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="label">Tipo:</span>
+                        <span>{curso.tipoCurso}</span>
+                      </div>
+                      {curso.vagasTotais != null && (
+                        <div className="meta-item">
+                          <span className="label">Vagas:</span>
+                          <span>{curso.vagasTotais}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="curso-actions">
+                      <button
+                        className="ver-curso-btn"
+                        onClick={e => { e.stopPropagation(); handleVerCurso(curso.cursoId); }}
+                      >
+                        Ver Detalhes
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
-      
+
+
+      {/* Modal de criar conteúdo */}
       {showAddConteudo && cursoSelecionado && (
-        <CriarConteudoModal 
-          curso={cursoSelecionado} 
+        <CriarConteudoModal
+          curso={cursoSelecionado}
           onClose={() => setShowAddConteudo(false)}
           onSuccess={() => {
             setShowAddConteudo(false);
-            const fetchCursosFormador = async () => {
-              try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                setCursos(response.data);
-              } catch (error) {
-                console.error('Erro ao actualizar cursos:', error);
-              }
-            };
-            fetchCursosFormador();
+            // Recarrega cursos ao criar conteúdo
+            (async () => {
+              const token = localStorage.getItem('token');
+              const resp = await axios.get(`${API_BASE}/formadores/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              const { cursosMinistrados = [] } = resp.data;
+              setCursos(cursosMinistrados.map(c => ({
+                cursoId: c.id,
+                nomeCurso: c.nome,
+                categoria: c.categoria,
+                area: c.area,
+                dataInicio: c.dataInicio,
+                dataFim: c.dataFim,
+                tipoCurso: c.tipo,
+                vagasTotais: c.vagas,
+                status: c.status
+              })));
+            })();
           }}
         />
       )}
-      
+
+      {/* Modal de criar avaliação */}
       {showAvaliacao && cursoSelecionado && alunoSelecionado && (
-        <CriarAvaliacaoModal 
+        <CriarAvaliacaoModal
           curso={cursoSelecionado}
           aluno={alunoSelecionado}
           onClose={() => setShowAvaliacao(false)}
           onSuccess={() => {
             setShowAvaliacao(false);
-            const fetchCursosFormador = async () => {
-              try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                setCursos(response.data);
-              } catch (error) {
-                console.error('Erro ao actualizar cursos:', error);
-              }
-            };
-            fetchCursosFormador();
+            // Recarrega cursos ao avaliar aluno
+            (async () => {
+              const token = localStorage.getItem('token');
+              const resp = await axios.get(`${API_BASE}/formadores/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              const { cursosMinistrados = [] } = resp.data;
+              setCursos(cursosMinistrados.map(c => ({
+                cursoId: c.id,
+                nomeCurso: c.nome,
+                categoria: c.categoria,
+                area: c.area,
+                dataInicio: c.dataInicio,
+                dataFim: c.dataFim,
+                tipoCurso: c.tipo,
+                vagasTotais: c.vagas,
+                status: c.status
+              })));
+            })();
           }}
         />
       )}

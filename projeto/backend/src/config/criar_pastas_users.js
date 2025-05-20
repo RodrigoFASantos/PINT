@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config();
 const sequelize = require('../config/db');
 
-const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS);
+const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS || 'uploads');
 
 async function criarPastasEImagensUsuarios() {
   try {
@@ -15,7 +15,7 @@ async function criarPastasEImagensUsuarios() {
 
     console.log('Procurar utilizadores na base de dados...');
     const [usuarios] = await sequelize.query(
-      'SELECT id_utilizador, nome, email, foto_perfil, foto_capa FROM user'
+      'SELECT id_utilizador, nome, email, foto_perfil, foto_capa FROM utilizadores'
     );
 
     console.log(`Encontrados ${usuarios.length} utilizadores para processar.`);
@@ -121,7 +121,7 @@ async function criarPastasEImagensUsuarios() {
       if (usuario.foto_perfil !== dbPathAvatar || usuario.foto_capa !== dbPathCapa) {
         try {
           await sequelize.query(
-            'UPDATE user SET foto_perfil = ?, foto_capa = ? WHERE id_utilizador = ?',
+            'UPDATE utilizadores SET foto_perfil = ?, foto_capa = ? WHERE id_utilizador = ?',
             {
               replacements: [dbPathAvatar, dbPathCapa, usuario.id_utilizador]
             }
@@ -136,16 +136,11 @@ async function criarPastasEImagensUsuarios() {
     }
 
     console.log('\n🎉 Processo concluído com sucesso!');
+    return true;
   } catch (error) {
     console.error('❌ Erro durante o processamento:', error);
-  } finally {
-    try {
-      await sequelize.close();
-      console.log('Conexão com a base de dados fechada.');
-    } catch (error) {
-      console.error('Erro ao fechar conexão com a base de dados:', error);
-    }
+    throw error; // Propagando o erro para o chamador
   }
 }
 
-criarPastasEImagensUsuarios();
+module.exports = { criarPastasEImagensUsuarios };
