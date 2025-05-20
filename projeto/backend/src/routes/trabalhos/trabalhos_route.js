@@ -40,7 +40,7 @@ const uploadTrabalho = async (req, res, next) => {
           where: {
             id_utilizador: id_utilizador,
             id_curso: id_curso,
-            estado: 'ativa' // Adaptar ao campo correto do modelo
+            estado: 'inscrito' // Adaptar ao campo correto do modelo
           }
         });
 
