@@ -327,12 +327,12 @@ const createCurso = async (req, res) => {
     console.log("Dados recebidos:", req.body);
 
     const {
-      nome, descricao, tipo, vagas, data_inicio, data_fim,
+      nome, descricao, tipo, vagas, duracao, data_inicio, data_fim,
       id_formador, id_area, id_categoria, topicos, id_topico_categoria
     } = req.body;
 
     // Validação de campos obrigatórios
-    if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria) {
+    if (!nome || !tipo || !data_inicio || !data_fim || !id_area || !id_categoria || !duracao) {
       return res.status(400).json({ message: "Campos obrigatórios em falta!" });
     }
 
@@ -382,6 +382,7 @@ const createCurso = async (req, res) => {
         id_topico_area: id_topico_categoria,
         imagem_path: imagemPath,
         dir_path: dirPath,
+        duracao: parseInt(duracao, 10),
         ativo: true
       }, { transaction: t });
 
@@ -462,7 +463,7 @@ const updateCurso = async (req, res) => {
     console.log("Request body:", req.body);
 
     const id = req.params.id;
-    const { nome, descricao, tipo, vagas, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
+    const { nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
 
     // Procurar dados atuais do curso para comparação
     const cursoAtual = await Curso.findByPk(id, {
@@ -514,6 +515,7 @@ const updateCurso = async (req, res) => {
       id_formador: id_formador || cursoAtual.id_formador,
       id_area: id_area || cursoAtual.id_area,
       id_categoria: id_categoria || cursoAtual.id_categoria,
+      duracao: duracao !== undefined ? parseInt(duracao, 10) : cursoAtual.duracao,
       ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
       estado: novoEstado // Atualizar o estado do curso
     });

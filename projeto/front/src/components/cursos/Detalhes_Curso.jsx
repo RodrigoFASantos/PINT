@@ -558,30 +558,17 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                     : 'Sem limite'}
                 </div>
               </div>
-            </div>
-
-            {/* Terceira linha */}
-            <div className="campo-container">
-              <div className="campo campo-tipo">
+              
+              <div className="campo campo-vagas">
                 <label>Tipo Curso</label>
                 <div className="campo-valor">
                   {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
                 </div>
               </div>
 
-              <div className="campo campo-inicio">
-                <label>Início</label>
-                <div className="campo-valor">
-                  {new Date(curso.data_inicio).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="campo campo-fim">
-                <label>Fim</label>
-                <div className="campo-valor">
-                  {new Date(curso.data_fim).toLocaleDateString()}
-                </div>
-              </div>
             </div>
+
+            
 
             {/* Quarta linha */}
             <div className="campos-grid-3">
@@ -614,6 +601,29 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                   ) : (
                     "Tópico de área não disponível"
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Terceira linha */}
+            <div className="campo-container">
+              <div className="campo campo-tipo">
+                <label>Duração</label>
+                <div className="campo-valor">
+                  {curso.duracao}h
+                </div>
+              </div>
+
+              <div className="campo campo-inicio">
+                <label>Início</label>
+                <div className="campo-valor">
+                  {new Date(curso.data_inicio).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="campo campo-fim">
+                <label>Fim</label>
+                <div className="campo-valor">
+                  {new Date(curso.data_fim).toLocaleDateString()}
                 </div>
               </div>
             </div>

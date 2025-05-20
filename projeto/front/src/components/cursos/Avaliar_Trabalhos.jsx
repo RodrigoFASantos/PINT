@@ -1,543 +1,985 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useParams } from 'react-router-dom';
 import API_BASE from '../../api';
+import Sidebar from "../Sidebar";
+import ApagarCertificadoModal from './Apagar_Certificado_Modal';
 import './css/Avaliar_Trabalhos.css';
-
-const decodeJWT = (token) => {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.error('Token JWT inválido: formato incorreto');
-      return null;
-    }
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-    try {
-      const decoded = atob(padded);
-      return JSON.parse(decoded);
-    } catch (e) {
-      console.error('Erro ao decodificar payload JWT:', e);
-      return null;
-    }
-  } catch (error) {
-    console.error('Erro ao processar token JWT:', error);
-    return null;
-  }
-};
 
 const Avaliar_Trabalhos = () => {
   const { cursoId, pastaId } = useParams();
-  const navigate = useNavigate();
-
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [submissoes, setSubmissoes] = useState([]);
-  const [pastas, setPastas] = useState([]);
-  const [pastaSelecionada, setPastaSelecionada] = useState('');
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(null);
-  const [notasAlteradas, setNotasAlteradas] = useState({});
-  const [salvandoNotas, setSalvandoNotas] = useState(false);
-  const [filtro, setFiltro] = useState('');
-  const [ordenacao, setOrdenacao] = useState('data_desc');
+  const [notas, setNotas] = useState({});
+  const [saving, setSaving] = useState({});
 
-  // Verifica se o utilizador é formador
-  const isFormador = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
+  const [formandos, setFormandos] = useState([]);
+  const [emails, setEmails] = useState([]);
+  const [selectedFormando, setSelectedFormando] = useState('');
+  const [selectedEmail, setSelectedEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [certificadoExiste, setCertificadoExiste] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [certificadoUrl, setCertificadoUrl] = useState('');
+  // Novo estado para armazenar a média das notas e detalhes do curso
+  const [notaMedia, setNotaMedia] = useState(null);
+  const [cursoDuracao, setCursoDuracao] = useState(null);
+  const [cursoInfo, setCursoInfo] = useState(null);
+
+  // Carregar formandos ao iniciar
+  useEffect(() => {
+    carregarFormandos();
+    carregarInfoCurso();
+  }, [cursoId]);
+
+  // Nova função para carregar informações do curso
+  const carregarInfoCurso = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_BASE}/cursos/${cursoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data) {
+        setCursoInfo(response.data);
+        setCursoDuracao(response.data.duracao);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar informações do curso:', error);
+    }
+  };
+
+  // Nova função para calcular a média das notas
+  const calcularNotaMedia = () => {
+    const notasArray = Object.values(notas).filter(nota => nota !== '').map(Number);
+    if (notasArray.length > 0) {
+      const media = notasArray.reduce((sum, nota) => sum + nota, 0) / notasArray.length;
+      setNotaMedia(media.toFixed(2));
+      return media.toFixed(2);
+    } else {
+      setNotaMedia(null);
+      return null;
+    }
+  };
+
+  // Atualizar a média sempre que as notas mudarem
+  useEffect(() => {
+    calcularNotaMedia();
+  }, [notas]);
+
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedFormando) return;
+    try {
+      const token = localStorage.getItem('token');
+
+      // Get the course information to find its name
+      // Assuming you have the cursoId available in your component
+      const courseResponse = await axios.get(
+        `${API_BASE}/cursos/${cursoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!courseResponse.data || !courseResponse.data.nome) {
+        throw new Error('Não foi possível obter as informações do curso');
+      }
+
+      // Format the course name the same way it's done in the backend
+      const cursoNomeFormatado = courseResponse.data.nome.replace(/\s+/g, '_');
+      const fileName = `certificado_${cursoNomeFormatado}.pdf`;
+
+      const response = await axios.delete(
+        `${API_BASE}/certificados/eliminar-ficheiro`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { id_utilizador: selectedFormando, nome_ficheiro: fileName }
+        }
+      );
+
+      if (response.data.success) {
+        setCertificadoExiste(false);
+      } else {
+        throw new Error(response.data.message || 'Erro ao apagar certificado');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Não foi possível apagar o certificado.');
+    } finally {
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  // Função simplificada e otimizada para carregar formandos
+  const carregarFormandos = async () => {
+    setLoading(true);
+    setError(null);
 
     try {
-      const payload = decodeJWT(token);
-      if (!payload) return false;
+      const token = localStorage.getItem('token');
 
-      // Assumindo que id_cargo 1 e 2 são formadores
-      return payload.id_cargo === 1 || payload.id_cargo === 2;
-    } catch (e) {
-      console.error('Erro ao verificar permissões:', e);
+      // Rota principal para inscrições do curso
+      const response = await axios.get(
+        `${API_BASE}/inscricoes/curso/${cursoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        console.log('Inscrições encontradas:', response.data.length);
+
+        // Extrair formandos únicos das inscrições
+        const formandosMap = new Map();
+
+        response.data.forEach(inscricao => {
+          if (inscricao.utilizador && !formandosMap.has(inscricao.utilizador.id_utilizador)) {
+            formandosMap.set(inscricao.utilizador.id_utilizador, {
+              id_utilizador: inscricao.utilizador.id_utilizador,
+              nome: inscricao.utilizador.nome,
+              email: inscricao.utilizador.email
+            });
+          }
+        });
+
+        const formandosList = Array.from(formandosMap.values());
+        console.log('Formandos extraídos:', formandosList.length);
+
+        setFormandos(formandosList);
+
+        // Extrair emails
+        const emailList = formandosList
+          .filter(formando => formando.email)
+          .map(formando => ({
+            id: formando.id_utilizador,
+            email: formando.email,
+            nome: formando.nome
+          }));
+
+        setEmails(emailList);
+
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.log('Não foi possível obter inscrições, tentando método alternativo:', error);
+      await carregarFormandosAlternativo();
+    }
+  };
+
+  // Função alternativa caso a principal falhe
+  const carregarFormandosAlternativo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      // Tentar obter todos os formandos
+      const response = await axios.get(
+        `${API_BASE}/users/formandos`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        console.log('Formandos encontrados:', response.data.length);
+
+        setFormandos(response.data);
+
+        // Extrair emails
+        const emailList = response.data
+          .filter(formando => formando.email)
+          .map(formando => ({
+            id: formando.id_utilizador,
+            email: formando.email,
+            nome: formando.nome
+          }));
+
+        setEmails(emailList);
+
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Erro ao carregar formandos:', error);
+      setError('Não foi possível carregar a lista de formandos. Por favor, tente novamente.');
+      setLoading(false);
+    }
+  };
+
+  // Função simplificada para carregar submissões
+  const carregarSubmissoes = async (formandoId) => {
+    if (!formandoId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Usar a rota correta para submissões
+      const url = `${API_BASE}/avaliar/submissoes`;
+
+      const params = {
+        id_curso: cursoId,
+        id_utilizador: formandoId
+      };
+
+      // Adicionar id_pasta se fornecido
+      if (pastaId) {
+        params.id_pasta = pastaId;
+      }
+
+      console.log(`Buscando submissões: ${url} com parâmetros:`, params);
+
+      const response = await axios.get(url, {
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Verificar se temos dados
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`Encontradas ${response.data.length} submissões`, response.data);
+
+        // Mapear notas corretamente, verificando os diferentes formatos possíveis
+        const initial = {};
+        response.data.forEach(item => {
+          // Importante: Obter o ID correto independente do formato
+          const id = item.id || item.id_trabalho;
+          
+          // Verificar todos os lugares possíveis onde a nota pode estar
+          let nota = '';
+          
+          // Verificar diretamente no item
+          if (item.nota !== undefined && item.nota !== null) {
+            nota = item.nota.toString();
+          } else if (item.avaliacao !== undefined && item.avaliacao !== null) {
+            // IMPORTANTE: Verifica também o campo 'avaliacao'
+            nota = item.avaliacao.toString();
+          } 
+          // Verificar no objeto trabalho (se existir)
+          else if (item.trabalho && item.trabalho.nota !== undefined && item.trabalho.nota !== null) {
+            nota = item.trabalho.nota.toString();
+          } else if (item.trabalho && item.trabalho.avaliacao !== undefined && item.trabalho.avaliacao !== null) {
+            // IMPORTANTE: Verifica também o campo 'avaliacao' no objeto trabalho
+            nota = item.trabalho.avaliacao.toString();
+          }
+          
+          // Se o estado é "Avaliado" mas não tem nota, isso é uma inconsistência
+          if (!nota && item.estado === 'Avaliado') {
+            console.warn(`Inconsistência: Item ID ${id} está marcado como Avaliado mas não tem nota detectável`);
+          }
+
+          console.log(`Inicializando nota para trabalho ID ${id}: ${nota}`);
+          initial[id] = nota;
+          
+          // Correção do estado baseado na nota
+          if (nota && nota !== '' && item.estado !== 'Avaliado') {
+            // Se temos nota mas o estado não é 'Avaliado', corrigimos o estado
+            console.log(`Corrigindo estado para item ${id} de "${item.estado}" para "Avaliado"`);
+            item.estado = 'Avaliado';
+          }
+        });
+
+        console.log('Notas inicializadas:', initial);
+        setNotas(initial);
+        setSubmissoes(response.data);
+        
+        // Calcular média das notas após carregar as submissões
+        setTimeout(() => {
+          calcularNotaMedia();
+        }, 0);
+
+        setLoading(false);
+        return;
+      } else {
+        console.log('Formato de resposta inesperado ou vazio, tentando backup');
+        throw new Error('Formato de resposta inesperado');
+      }
+    } catch (error) {
+      console.error('Erro detalhado ao carregar submissões:', error);
+      
+      // Mostrar erro específico para facilitar debug
+      let mensagemErro = `Erro ao carregar submissões: ${error.message}`;
+      if (error.response) {
+        console.error('Resposta do servidor:', error.response.data);
+        console.error('Status:', error.response.status);
+        mensagemErro = `Erro ${error.response.status}: ${error.response.data?.message || 'Erro no servidor'}`;
+      }
+      
+      console.log('Tentando método alternativo (backup) para buscar submissões');
+
+      // Tentar backup com a API de trabalhos
+      try {
+        const token = localStorage.getItem('token');
+        const backupUrl = `${API_BASE}/trabalhos`;
+        const params = {
+          id_curso: cursoId,
+          id_utilizador: formandoId
+        };
+
+        console.log(`Tentando backup: ${backupUrl} com parâmetros:`, params);
+
+        const response = await axios.get(backupUrl, {
+          params,
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data && Array.isArray(response.data)) {
+          console.log(`Backup encontrou ${response.data.length} submissões:`, response.data);
+
+          // Mapear notas corretamente, verificando também o campo avaliacao
+          const initial = {};
+          response.data.forEach(item => {
+            const id = item.id || item.id_trabalho;
+            
+            // Verificar tanto nota quanto avaliacao, dando prioridade à nota
+            let nota = '';
+            if (item.nota !== undefined && item.nota !== null) {
+              nota = item.nota.toString();
+            } else if (item.avaliacao !== undefined && item.avaliacao !== null) {
+              nota = item.avaliacao.toString();
+            }
+            
+            console.log(`Inicializando nota para trabalho ID ${id}: ${nota}`);
+            initial[id] = nota;
+            
+            // Correção do estado baseado na nota
+            if (nota && nota !== '' && item.estado !== 'Avaliado') {
+              console.log(`Corrigindo estado para item ${id} de "${item.estado}" para "Avaliado"`);
+              item.estado = 'Avaliado';
+            }
+          });
+
+          console.log('Notas inicializadas via backup:', initial);
+          setNotas(initial);
+          setSubmissoes(response.data);
+          
+          // Calcular média das notas após carregar as submissões
+          setTimeout(() => {
+            calcularNotaMedia();
+          }, 0);
+
+          setLoading(false);
+          return;
+        } else {
+          throw new Error('Backup não retornou dados válidos');
+        }
+      } catch (backupError) {
+        console.error('Falha também no backup:', backupError);
+        setError(`${mensagemErro}. O sistema de backup também falhou.`);
+        setLoading(false);
+      }
+    }
+  };
+
+  // Ao selecionar um formando, preenche o email automaticamente e carrega as submissões
+  const handleFormandoChange = (event) => {
+    const formandoId = event.target.value;
+    setSelectedFormando(formandoId);
+
+    if (formandoId) {
+      // Encontra o formando correspondente ao ID selecionado
+      const formando = formandos.find(f => String(f.id_utilizador) === String(formandoId));
+
+      if (formando && formando.email) {
+        setSelectedEmail(formando.email);
+      } else {
+        setSelectedEmail('');
+      }
+
+      // Inicialmente assume que não há certificado até que a verificação seja concluída
+      setCertificadoExiste(false);
+
+      // Carrega as submissões automaticamente
+      carregarSubmissoes(formandoId);
+
+      // Verifica se o certificado existe - isso irá atualizar o estado quando concluído
+      verificarCertificadoExistente(formandoId);
+    } else {
+      setSelectedEmail('');
+      setSubmissoes([]);
+      setCertificadoExiste(false);
+      setNotaMedia(null);
+    }
+  };
+
+  // Ao selecionar um email, preenche o formando automaticamente e carrega as submissões
+  const handleEmailChange = (event) => {
+    const email = event.target.value;
+    setSelectedEmail(email);
+
+    if (email) {
+      // Encontra o formando correspondente ao email selecionado
+      const emailObj = emails.find(e => e.email === email);
+
+      if (emailObj) {
+        const formandoId = String(emailObj.id);
+        setSelectedFormando(formandoId);
+
+        // Carrega as submissões automaticamente
+        carregarSubmissoes(formandoId);
+      }
+    } else {
+      setCertificadoExiste(false);
+      setSelectedFormando('');
+      setSubmissoes([]);
+      setNotaMedia(null);
+    }
+  };
+
+  // Ao alterar nota no campo - validando o intervalo 0-20
+  const handleNotaChange = (id, value) => {
+    // Converter para número para validação
+    const numValue = Number(value);
+
+    // Se o valor for um número válido e estiver dentro do intervalo 0-20, atualize o estado
+    // Se estiver vazio, permitir (para poder limpar o campo)
+    if (value === '' || (numValue >= 0 && numValue <= 20)) {
+      setNotas(prev => ({ ...prev, [id]: value }));
+      
+      // Atualizamos a média sempre que uma nota é alterada
+      setTimeout(() => {
+        calcularNotaMedia();
+      }, 0);
+    }
+  };
+
+  // Salvar nota de uma submissão - Simplificado e melhorado
+  const handleSave = async (id) => {
+    // Verificar se a nota está no intervalo válido
+    const notaValue = notas[id];
+    const numValue = Number(notaValue);
+
+    // Validação antes de salvar
+    if (notaValue !== '' && (isNaN(numValue) || numValue < 0 || numValue > 20)) {
+      alert('A nota deve ser um valor entre 0 e 20.');
+      return;
+    }
+
+    setSaving(prev => ({ ...prev, [id]: true }));
+
+    try {
+      const token = localStorage.getItem('token');
+
+      console.log(`Salvando nota ${notaValue} para o trabalho ID ${id}`);
+
+      // Tentar salvar usando a rota de avaliações de submissões
+      const response = await axios.put(
+        `${API_BASE}/avaliar/submissoes/${id}/nota`,
+        { nota: notaValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log(`Resposta ao salvar nota:`, response.data);
+
+      // Atualizar o estado global da submissão após salvar com sucesso
+      setSubmissoes(prev => prev.map(item => {
+        const itemId = item.id || item.id_trabalho;
+        if (itemId === id) {
+          // Se o item tiver um objeto trabalho, atualiza a nota nesse objeto
+          if (item.trabalho) {
+            return {
+              ...item,
+              trabalho: {
+                ...item.trabalho,
+                nota: notaValue,
+                avaliacao: notaValue, // IMPORTANTE: Atualizar também o campo avaliacao
+                estado: 'Avaliado'
+              }
+            };
+          }
+          // Caso contrário, atualiza diretamente no item
+          return {
+            ...item,
+            nota: notaValue,
+            avaliacao: notaValue, // IMPORTANTE: Atualizar também o campo avaliacao
+            estado: 'Avaliado'
+          };
+        }
+        return item;
+      }));
+
+      // Recalcular a média após salvar uma nota
+      calcularNotaMedia();
+
+    } catch (error) {
+      console.error('Erro com a primeira rota, tentando alternativa:', error);
+
+      try {
+        // Tentar rota alternativa de trabalhos
+        const token = localStorage.getItem('token');
+
+        const response = await axios.put(
+          `${API_BASE}/trabalhos/${id}`,
+          { nota: notaValue, avaliacao: notaValue }, // IMPORTANTE: Enviar também o campo avaliacao
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log(`Resposta da rota alternativa:`, response.data);
+
+        // Atualizar o estado global da submissão após salvar com sucesso
+        setSubmissoes(prev => prev.map(item => {
+          const itemId = item.id || item.id_trabalho;
+          if (itemId === id) {
+            return {
+              ...item,
+              nota: notaValue,
+              avaliacao: notaValue, // IMPORTANTE: Atualizar também o campo avaliacao
+              estado: 'Avaliado'
+            };
+          }
+          return item;
+        }));
+
+        // Recalcular a média após salvar uma nota
+        calcularNotaMedia();
+
+      } catch (altError) {
+        console.error('Erro ao salvar nota:', altError);
+        alert('Não foi possível salvar a nota. Tente novamente.');
+      }
+    } finally {
+      setSaving(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const verificarCertificadoExistente = async (formandoId) => {
+    if (!formandoId || !cursoId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const courseResponse = await axios.get(
+        `${API_BASE}/cursos/${cursoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!courseResponse.data || !courseResponse.data.nome) {
+        return false;
+      }
+
+      // Get email for file path construction
+      const formando = formandos.find(f => String(f.id_utilizador) === String(formandoId));
+      if (!formando || !formando.email) {
+        return false;
+      }
+
+      const emailFormatado = formando.email.replace(/@/g, '_at_').replace(/\./g, '_');
+      const cursoNome = courseResponse.data.nome.replace(/\s+/g, '_');
+      const filePath = `/uploads/users/${emailFormatado}/certificados/certificado_${cursoNome}.pdf`;
+
+      // Check if the file exists by making a HEAD request
+      try {
+        await axios.head(`${API_BASE}${filePath}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // If we get here, the file exists
+        setCertificadoUrl(`${API_BASE}${filePath}`);
+        setCertificadoExiste(true);
+
+        console.log(`Certificado encontrado para formando ID ${formandoId}: ${filePath}`);
+        return true;
+      } catch (error) {
+        // File doesn't exist
+        setCertificadoExiste(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao verificar certificado existente:', error);
       return false;
     }
   };
 
-  // Verificar permissões ao iniciar
-  useEffect(() => {
-    if (!isFormador()) {
-      alert('Acesso restrito a formadores.');
-      navigate(`/curso/${cursoId}`);
+  // Gerar certificado
+const handleGerarCertificado = async () => {
+    if (!selectedFormando) {
+      alert('Selecione um formando para gerar o certificado');
+      return;
     }
-  }, [cursoId, navigate]);
 
-  // Função para carregar pastas do tópico
-  const carregarPastas = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/topicos-curso/${pastaId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data.pastas && response.data.pastas.length > 0) {
-        setPastas(response.data.pastas);
-        setPastaSelecionada(response.data.pastas[0].id_pasta);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar pastas:', error);
-      setErro('Não foi possível carregar as pastas de avaliação.');
-    }
-  };
-
-  // Função para carregar submissões
-  const carregarSubmissoes = async () => {
-    if (!pastaSelecionada) return;
-
-    try {
-      setCarregando(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
-        params: {
-          id_curso: cursoId,
-          id_pasta: pastaSelecionada
-        },
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Preparar as submissões com as notas atuais
-      const submissoesComNotas = await Promise.all(response.data.map(async (submissao) => {
-        try {
-          // Tentar obter a nota da avaliação
-          const avaliacaoResponse = await axios.get(`${API_BASE}/avaliacoes`, {
-            params: {
-              id_curso: cursoId,
-              id_utilizador: submissao.id_trabalho_utilizador
-            },
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (avaliacaoResponse.data && avaliacaoResponse.data.length > 0) {
-            return { ...submissao, nota: avaliacaoResponse.data[0].nota || 0 };
-          }
-        } catch (err) {
-          console.error('Erro ao obter nota:', err);
-        }
-
-        // Se não houver avaliação ou ocorrer erro, retornar com nota 0
-        return { ...submissao, nota: 0 };
-      }));
-
-      setSubmissoes(submissoesComNotas);
-      setCarregando(false);
-    } catch (error) {
-      console.error('Erro ao carregar submissões:', error);
-      setErro('Não foi possível carregar as submissões.');
-      setCarregando(false);
-    }
-  };
-
-  // Carregar pastas ao iniciar
-  useEffect(() => {
-    if (cursoId && pastaId) {
-      carregarPastas();
-    }
-  }, [cursoId, pastaId]);
-
-  // Carregar submissões quando pasta selecionada mudar
-  useEffect(() => {
-    if (pastaSelecionada) {
-      carregarSubmissoes();
-    }
-  }, [pastaSelecionada]);
-
-  // Função para mudar a pasta selecionada
-  const handleChangePasta = (e) => {
-    setPastaSelecionada(e.target.value);
-  };
-
-  // Função para atualizar nota localmente
-  const handleChangeNota = (id, valor) => {
-    // Validar nota entre 0 e 20
-    const nota = parseFloat(valor);
-    if (isNaN(nota) || nota < 0 || nota > 20) return;
-
-    setNotasAlteradas({
-      ...notasAlteradas,
-      [id]: nota
-    });
-  };
-
-  // Função para salvar notas
-  const salvarNotas = async () => {
-    if (Object.keys(notasAlteradas).length === 0) return;
-
-    try {
-      setSalvandoNotas(true);
-      const token = localStorage.getItem('token');
-
-      // Processar cada nota alterada
-      const promises = Object.entries(notasAlteradas).map(async ([id, nota]) => {
-        const submissao = submissoes.find(s => s.id_trabalho.toString() === id);
-                if (!submissao) return;
-
-        try {
-          // Verificar se já existe uma avaliação
-          const avaliacoesResponse = await axios.get(`${API_BASE}/avaliacoes`, {
-            params: {
-              id_curso: cursoId,
-              id_utilizador: submissao.id_trabalho_utilizador
-            },
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (avaliacoesResponse.data && avaliacoesResponse.data.length > 0) {
-            // Atualizar avaliação existente
-            const avaliacao = avaliacoesResponse.data[0];
-            await axios.put(`${API_BASE}/avaliacoes/${avaliacao.id_avaliacao}`, {
-              nota: nota
-            }, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-          } else {
-            // Criar nova avaliação
-            // Primeiro, precisamos obter o id_inscricao
-            const inscricoesResponse = await axios.get(`${API_BASE}/inscricoes`, {
-              params: {
-                id_curso: cursoId,
-                id_utilizador: submissao.id_trabalho_utilizador
-              },
-              headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (inscricoesResponse.data && inscricoesResponse.data.length > 0) {
-              const inscricao = inscricoesResponse.data[0];
-              await axios.post(`${API_BASE}/avaliacoes`, {
-                id_inscricao: inscricao.id_inscricao,
-                nota: nota,
-                certificado: false,
-                horas_totais: 0,
-                horas_presenca: 0
-              }, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-            }
-          }
-        } catch (err) {
-          console.error(`Erro ao salvar nota para submissão ${id}:`, err);
-          throw err;
-        }
-      });
-
-      await Promise.all(promises);
-
-      // Atualizar submissões com novas notas
-      setSubmissoes(submissoes.map(submissao => {
-        if (notasAlteradas[submissao.id_trabalho]) {
-          return { ...submissao, nota: notasAlteradas[submissao.id_trabalho] };
-        }
-        return submissao;
-      }));
-
-      setNotasAlteradas({});
-      alert('Notas salvas com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar notas:', error);
-      alert('Erro ao salvar notas. Por favor, tente novamente.');
-    } finally {
-      setSalvandoNotas(false);
-    }
-  };
-
-  // Função para formatar data
-  const formatarData = (dataString) => {
-    if (!dataString) return "Sem data";
-
-    const data = new Date(dataString);
-    return data.toLocaleString('pt-PT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Função para verificar se uma submissão está atrasada
-  const isSubmissaoAtrasada = (submissao, dataLimite) => {
-    if (!dataLimite || !submissao.data_entrega) return false;
-
-    const limite = new Date(dataLimite);
-    const entrega = new Date(submissao.data_entrega);
-
-    return entrega > limite;
-  };
-
-  // Filtrar submissões
-  const submissoesFiltradas = submissoes.filter(submissao => {
-    if (!filtro) return true;
-
-    const termoLowerCase = filtro.toLowerCase();
-    return (
-      (submissao.utilizador?.nome || '').toLowerCase().includes(termoLowerCase) ||
-      (submissao.utilizador?.email || '').toLowerCase().includes(termoLowerCase) ||
-      (submissao.nome_ficheiro || '').toLowerCase().includes(termoLowerCase)
-    );
-  });
-
-  // Ordenar submissões
-  const submissoesOrdenadas = [...submissoesFiltradas].sort((a, b) => {
-    switch (ordenacao) {
-      case 'nome_asc':
-        return (a.utilizador?.nome || '').localeCompare(b.utilizador?.nome || '');
-      case 'nome_desc':
-        return (b.utilizador?.nome || '').localeCompare(a.utilizador?.nome || '');
-      case 'data_asc':
-        return new Date(a.data_entrega) - new Date(b.data_entrega);
-      case 'data_desc':
-        return new Date(b.data_entrega) - new Date(a.data_entrega);
-      case 'nota_asc':
-        return (a.nota || 0) - (b.nota || 0);
-      case 'nota_desc':
-        return (b.nota || 0) - (a.nota || 0);
-      default:
-        return 0;
-    }
-  });
-
-  // Obter a data limite da pasta selecionada
-  const obterDataLimite = () => {
-    if (!pastaSelecionada) return null;
-    const pasta = pastas.find(p => p.id_pasta.toString() === pastaSelecionada.toString());
-    return pasta?.data_limite || null;
-  };
-
-
-  const gerarCertificado = async (submissao) => {
-    try {
-      // Verificar se o aluno tem nota de aprovação (≥ 10)
-      if (!submissao.nota || submissao.nota < 10) {
-        alert('O aluno precisa ter nota igual ou superior a 10 para obter certificado.');
+    // Verificar se há notas para calcular média
+    if (!notaMedia) {
+      const confirmar = window.confirm('Não há média de notas calculada. Deseja gerar o certificado mesmo assim?');
+      if (!confirmar) {
         return;
       }
+    }
 
+    try {
+      setLoading(true); // Mostrar indicador de carregamento
+
+      // Manter o código que salva dados no sessionStorage
       const token = localStorage.getItem('token');
+      const courseResponse = await axios.get(
+        `${API_BASE}/cursos/${cursoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      // Primeiro, obter a inscrição do aluno
-      const inscricoesResponse = await axios.get(`${API_BASE}/inscricoes`, {
-        params: {
-          id_curso: cursoId,
-          id_utilizador: submissao.id_trabalho_utilizador
-        },
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Armazenar dados do curso
+      if (courseResponse.data) {
+        sessionStorage.setItem('certificado_cursoId', cursoId);
+        sessionStorage.setItem('certificado_curso_nome', courseResponse.data.nome);
+        sessionStorage.setItem('certificado_curso_duracao', courseResponse.data.duracao || 0);
 
-      if (!inscricoesResponse.data || inscricoesResponse.data.length === 0) {
-        alert('Não foi possível encontrar a inscrição do aluno.');
-        return;
+        const categoria = typeof courseResponse.data.categoria === 'object'
+          ? courseResponse.data.categoria.nome
+          : courseResponse.data.categoria;
+        sessionStorage.setItem('certificado_curso_categoria', categoria || 'N/A');
+
+        const area = typeof courseResponse.data.area === 'object'
+          ? courseResponse.data.area.nome
+          : courseResponse.data.area;
+        sessionStorage.setItem('certificado_curso_area', area || 'N/A');
+
+        if (courseResponse.data.id_formador) {
+          const formadorResponse = await axios.get(
+            `${API_BASE}/formadores/${courseResponse.data.id_formador}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (formadorResponse.data) {
+            sessionStorage.setItem('certificado_formador', formadorResponse.data.nome);
+          }
+        }
       }
 
-      const inscricao = inscricoesResponse.data[0];
+      // Armazenar dados do formando
+      const formando = formandos.find(f => f.id_utilizador === selectedFormando);
+      if (formando) {
+        sessionStorage.setItem('certificado_utilizadorId', selectedFormando);
+        sessionStorage.setItem('certificado_nome', formando.nome);
+        sessionStorage.setItem('certificado_email', formando.email);
+      }
 
-      // Obter a avaliação atual
-      const avaliacoesResponse = await axios.get(`${API_BASE}/avaliacoes`, {
-        params: {
-          id_curso: cursoId,
-          id_utilizador: submissao.id_trabalho_utilizador
-        },
+      // Usar a nota média calculada ou calcular novamente
+      const notaFinal = notaMedia || calcularNotaMedia();
+      if (notaFinal) {
+        sessionStorage.setItem('certificado_nota', notaFinal);
+      }
+
+      // Registrar certificado no backend
+      const registrarResponse = await axios.post(`${API_BASE}/certificados/registrar`, {
+        userId: selectedFormando,
+        cursoId: cursoId
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (avaliacoesResponse.data && avaliacoesResponse.data.length > 0) {
-        // Atualizar avaliação com certificado = true
-        const avaliacao = avaliacoesResponse.data[0];
-        await axios.put(`${API_BASE}/avaliacoes/${avaliacao.id_avaliacao}`, {
-          certificado: true
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      if (!registrarResponse.data.success) {
+        throw new Error("Erro ao registrar certificado");
+      }
 
-        alert(`Certificado gerado com sucesso para ${submissao.utilizador?.nome}!`);
+      // 1. Primeiro, criar o diretório para certificados
+      await axios.post(`${API_BASE}/certificados/criar-diretorio`,
+        { id_utilizador: selectedFormando },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        // Opcionalmente, abrir a página de impressão do certificado
-        // window.open(`/certificado/${avaliacao.id_avaliacao}`, '_blank');
+      // 2. Agora, gerar e salvar o certificado usando a função SalvarCertificado no backend
+      const gerarESalvarResponse = await axios.post(
+        `${API_BASE}/certificados/gerar-e-salvar`,
+        {
+          userId: selectedFormando,
+          cursoId: cursoId
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
+      if (gerarESalvarResponse.data && gerarESalvarResponse.data.path) {
+        // Armazenar o URL para acessar o certificado
+        setCertificadoUrl(`${API_BASE}${gerarESalvarResponse.data.path}`);
+        // Marcar certificado como existente
+        setCertificadoExiste(true);
+        setTimeout(() => {
+          console.log("Certificate URL:", `${API_BASE}${gerarESalvarResponse.data.path}`);
+          console.log("Certificate exists state:", certificadoExiste);
+        }, 0);
+        alert('Certificado gerado e salvo com sucesso!');
+        console.log("Certificate URL:", `${API_BASE}${gerarESalvarResponse.data.path}`);
+        console.log("Certificate exists state:", certificadoExiste);
       } else {
-        alert('Avaliação não encontrada para este aluno.');
+        throw new Error("Falha ao salvar o certificado");
+      }
+
+    } catch (error) {
+      console.error('Erro ao processar certificado:', error);
+      alert('Não foi possível gerar o certificado. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+};
+
+  // Adicione a função para abrir o certificado
+const handleVerCertificado = () => {
+    // Cria o certificado temporário e obtém o ID
+    const tempCertId = `temp_${Date.now()}`;
+    
+    try {
+        window.open(`/certificado/${tempCertId}?bypass=true&cursoId=${cursoId}&utilizadorId=${selectedFormando}`, '_blank');
+    } catch (error) {
+        alert('Não foi possível abrir o certificado. Por favor, tente novamente.');
+        console.error('Erro ao abrir certificado:', error);
+    }
+};
+
+  // Apagar o certificado
+  const handleApagarCertificado = async () => {
+    if (!selectedFormando) {
+      alert('Selecione um formando para apagar o certificado');
+      return;
+    }
+
+    // Confirmação antes de apagar
+    setIsDeleteModalOpen(true);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Obter o nome formatado do curso para o nome do arquivo
+      const formando = formandos.find(f => String(f.id_utilizador) === String(selectedFormando));
+      const fileName = `certificado_${formando?.nome.replace(/\s+/g, '_')}.pdf`;
+
+      const response = await axios.delete(
+        `${API_BASE}/certificados/eliminar-ficheiro`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: {
+            id_utilizador: selectedFormando,
+            nome_ficheiro: fileName
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setCertificadoExiste(false);
+      } else {
+        throw new Error(response.data.message || 'Erro ao apagar certificado');
       }
     } catch (error) {
-      console.error('Erro ao gerar certificado:', error);
-      alert('Erro ao gerar certificado. Por favor, tente novamente.');
+      console.error('Erro ao apagar certificado:', error);
+      alert('Não foi possível apagar o certificado.');
     }
   };
 
 
 
-  if (carregando && submissoes.length === 0) {
+  // Download do trabalho
+  const handleDownload = (ficheiro_path, nome_ficheiro) => {
+    if (!ficheiro_path) return;
+
+    // Verificar se o caminho já contém "submissoes"
+    let path = ficheiro_path;
+    if (path.includes('/teste/') && !path.includes('/submissoes/')) {
+      // Inserir "submissoes/" no caminho
+      const parts = path.split('/teste/');
+      path = `${parts[0]}/teste/submissoes/${parts[1]}`;
+    }
+
+    const downloadUrl = `${API_BASE}/${path}`;
+
+    // Criando um link temporário para download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.setAttribute('download', nome_ficheiro || 'trabalho');
+    link.setAttribute('target', '_blank');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (loading) {
     return (
-      <div className="avaliar-trabalhos-loading">
-        <div className="loading-spinner"></div>
-        <p>A carregar submissões...</p>
+      <div className="avaliar-trabalhos-container">
+        <h2>Avaliar Trabalhos</h2>
+        <div className="loading-message">
+          <div className="spinner"></div>
+          <p>A carregar dados...</p>
+        </div>
       </div>
     );
   }
-
-  if (erro) {
-    return (
-      <div className="avaliar-trabalhos-erro">
-        <p className="erro-mensagem">{erro}</p>
-        <button onClick={() => { setErro(null); carregarPastas(); }} className="btn-retry">
-          Tentar novamente
-        </button>
-      </div>
-    );
-  }
-
-  const dataLimite = obterDataLimite();
 
   return (
-    <div className="avaliar-trabalhos-container">
-      <div className="avaliar-trabalhos-header">
+    <div>
+
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+
+      <div className="avaliar-trabalhos-container">
         <h2>Avaliar Trabalhos</h2>
-        <button
-          className="btn-voltar"
-          onClick={() => navigate(`/curso/${cursoId}`)}
-        >
-          <i className="fas fa-arrow-left"></i> Voltar
-        </button>
-      </div>
 
-      <div className="avaliar-trabalhos-filtros">
-        <div className="filtro-pasta">
-          <label htmlFor="pasta-select">Pasta:</label>
-          <select
-            id="pasta-select"
-            value={pastaSelecionada}
-            onChange={handleChangePasta}
-          >
-            {pastas.map(pasta => (
-              <option key={pasta.id_pasta} value={pasta.id_pasta}>
-                {pasta.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Mensagem de erro */}
+        {error && (
+          <div className="error-message">{error}</div>
+        )}
 
-        <div className="filtro-busca">
-          <input
-            type="text"
-            placeholder="Filtrar por nome ou email..."
-            value={filtro}
-            onChange={e => setFiltro(e.target.value)}
-          />
-        </div>
+        {/* Filtros */}
+        {formandos.length > 0 && (
+          <div className="filtros-container">
+            <div className="filtro-grupo">
+              <label htmlFor="formando">Formando:</label>
+              <select
+                id="formando"
+                value={selectedFormando}
+                onChange={handleFormandoChange}
+              >
+                <option value="">Selecione um formando</option>
+                {formandos.map(formando => (
+                  <option key={formando.id_utilizador} value={formando.id_utilizador}>
+                    {formando.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="filtro-ordenacao">
-          <label htmlFor="ordenacao-select">Ordenar por:</label>
-          <select
-            id="ordenacao-select"
-            value={ordenacao}
-            onChange={e => setOrdenacao(e.target.value)}
-          >
-            <option value="data_desc">Data (mais recente)</option>
-            <option value="data_asc">Data (mais antiga)</option>
-            <option value="nome_asc">Nome (A-Z)</option>
-            <option value="nome_desc">Nome (Z-A)</option>
-            <option value="nota_desc">Nota (maior)</option>
-            <option value="nota_asc">Nota (menor)</option>
-          </select>
-        </div>
-      </div>
+            <div className="filtro-grupo">
+              <label htmlFor="email">Email:</label>
+              <select
+                id="email"
+                value={selectedEmail}
+                onChange={handleEmailChange}
+              >
+                <option value="">Selecione um email</option>
+                {emails.map(email => (
+                  <option key={email.id} value={email.email}>
+                    {email.email}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {dataLimite && (
-        <div className="info-data-limite">
-          <i className="fas fa-clock"></i>
-          <span>Data limite de entrega: {formatarData(dataLimite)}</span>
-        </div>
-      )}
+            {/* Informação do curso e média de notas */}
+            {selectedFormando && (
+              <div className="info-certificado">
+                <div className="info-curso">
+                  <strong>Curso:</strong> {cursoInfo?.nome || 'N/A'}
+                  <span className="separador">|</span>
+                  <strong>Duração:</strong> {cursoDuracao || 0} horas
+                </div>
+                <div className="info-nota">
+                  <strong>Nota Média:</strong> {notaMedia ? `${notaMedia}/20` : 'Sem notas'}
+                </div>
+              </div>
+            )}
 
-      {Object.keys(notasAlteradas).length > 0 && (
-        <div className="notas-alteradas-info">
-          <i className="fas fa-info-circle"></i>
-          <span>Existem notas alteradas que não foram salvas</span>
-          <button
-            className="btn-salvar-notas"
-            onClick={salvarNotas}
-            disabled={salvandoNotas}
-          >
-            {salvandoNotas ? 'A salvar...' : 'Salvar Notas'}
-          </button>
-        </div>
-      )}
+            <div className="filtro-acoes">
+              {certificadoExiste ? (
+                <>
+                  <button className="btn-apagar-certificado" onClick={handleDeleteClick} disabled={!selectedFormando}>
+                    Apagar Certificado
+                  </button>
+                  <button className="btn-ver-certificado" onClick={handleVerCertificado} disabled={!selectedFormando}>
+                    <i className="fas fa-eye"></i> Ver Certificado
+                  </button>
+                </>
+              ) : (
+                <button className="btn-gerar-certificado" onClick={handleGerarCertificado} disabled={!selectedFormando || loading}>
+                  {loading ? <i className="fas fa-spinner fa-spin"></i> : null}
+                  {loading ? " Gerando..." : "Gerar Certificado"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
-      {submissoesOrdenadas.length > 0 ? (
-        <div className="tabela-submissoes-wrapper">
-          <table className="tabela-submissoes">
+        {loading && (
+          <div className="loading-message">
+            <div className="spinner"></div>
+            <p>A carregar dados...</p>
+          </div>
+        )}
+        {/* Modal de confirmação */}
+        <ApagarCertificadoModal
+          isOpen={isDeleteModalOpen}
+          message="Tem certeza que deseja apagar o certificado deste formando?"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+
+
+        {/* Tabela de submissões */}
+        {submissoes.length > 0 ? (
+          <table className="tabela-avaliar">
             <thead>
               <tr>
-                <th>Formando</th>
-                <th>Email</th>
-                <th>Ficheiro</th>
+                <th>Pasta</th>
+                <th>Submissão</th>
                 <th>Data de Submissão</th>
+                <th>Data Limite</th>
                 <th>Estado</th>
-                <th>Nota (0-20)</th>
+                <th>Nota</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {submissoesOrdenadas.map(submissao => {
-                const atrasada = isSubmissaoAtrasada(submissao, dataLimite);
+              {submissoes.map(item => {
                 return (
-                  <tr key={submissao.id_trabalho} className={atrasada ? 'submissao-atrasada' : ''}>
-                    <td>{submissao.utilizador?.nome || 'Sem nome'}</td>
-                    <td>{submissao.utilizador?.email || 'Sem email'}</td>
-                    <td className="ficheiro-cell">
-                      {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop()}
-                    </td>
-                    <td>{formatarData(submissao.data_entrega)}</td>
+                  <tr key={item.id || item.id_trabalho || `trabalho-${item.ficheiro_path}`}>
                     <td>
-                      {atrasada ? (
-                        <span className="status-atrasado">Atrasado</span>
+                      {item.pasta ? item.pasta.nome : 
+                       (item.nome_pasta || 
+                        (item.id_pasta ? `Pasta ID: ${item.id_pasta}` : 'N/A'))}
+                    </td>
+                    <td>
+                      {item.ficheiro_path ? (
+                        <a
+                          href={`${API_BASE}/${item.ficheiro_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {item.nome_ficheiro || item.ficheiro_path.split('/').pop() || 'Ver Ficheiro'}
+                        </a>
                       ) : (
-                        <span className="status-entregue">Entregue</span>
+                        'Sem submissão'
                       )}
                     </td>
-                    <td className="nota-cell">
+                    <td>{item.data_submissao || item.data_entrega ? new Date(item.data_submissao || item.data_entrega).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      {item.data_limite ? 
+                       new Date(item.data_limite).toLocaleDateString() : 
+                       (item.limite ? new Date(item.limite).toLocaleDateString() : 'N/A')}
+                    </td>
+                    <td>{item.estado || (item.trabalho && item.trabalho.estado) || 'Pendente'}</td>
+                    <td>
                       <input
                         type="number"
                         min="0"
                         max="20"
-                        step="0.1"
-                        value={notasAlteradas[submissao.id_trabalho] !== undefined ? notasAlteradas[submissao.id_trabalho] : submissao.nota || 0}
-                        onChange={e => handleChangeNota(submissao.id_trabalho, e.target.value)}
-                        className={notasAlteradas[submissao.id_trabalho] !== undefined ? 'nota-alterada' : ''}
+                        step="any"
+                        value={notas[item.id || item.id_trabalho] || ''}
+                        onChange={e => handleNotaChange(item.id || item.id_trabalho, e.target.value)}
+                        onKeyPress={e => {
+                          // Impedir a entrada de valores não numéricos
+                          if (!/[\d\.]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     </td>
-                    <td className="acoes-cell">
+                    <td className="acoes-coluna">
                       <button
                         className="btn-download"
-                        onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                        onClick={() => handleDownload(item.ficheiro_path, item.nome_ficheiro)}
+                        disabled={!item.ficheiro_path}
                         title="Descarregar ficheiro"
                       >
                         <i className="fas fa-download"></i>
                       </button>
                       <button
-                        className="btn-comentarios"
-                        onClick={() => navigate(`/curso/${cursoId}/avaliacao/submissao/${submissao.id_trabalho}`)}
-                        title="Ver detalhes e adicionar comentários"
+                        className="btn-salvar-nota"
+                        onClick={() => handleSave(item.id || item.id_trabalho)}
+                        disabled={saving[item.id || item.id_trabalho]}
+                        title="Guardar nota"
                       >
-                        <i className="fas fa-comment"></i>
-                      </button>
-                      <button
-                        className="btn-certificado"
-                        onClick={() => gerarCertificado(submissao)}
-                        title="Gerar certificado"
-                        disabled={!submissao.nota || submissao.nota < 10}
-                      >
-                        <i className="fas fa-certificate"></i>
+                        {saving[item.id || item.id_trabalho] ? (
+                          <i className="fas fa-spinner fa-spin"></i>
+                        ) : (
+                          <i className="fas fa-save"></i>
+                        )}
                       </button>
                     </td>
                   </tr>
@@ -545,24 +987,17 @@ const Avaliar_Trabalhos = () => {
               })}
             </tbody>
           </table>
-        </div>
-      ) : (
-        <div className="sem-submissoes">
-          <p>Nenhuma submissão encontrada para esta pasta.</p>
-        </div>
-      )}
+        ) : (
+          selectedFormando && !loading ? (
+            <div className="info-message">
+              Nenhuma submissão encontrada para este formando. Verifique se ele já submeteu trabalhos.
+            </div>
+          ) : (
+            <div className="info-message">Selecione um formando para ver suas submissões.</div>
+          )
+        )}
+      </div>
 
-      {submissoesOrdenadas.length > 0 && (
-        <div className="actions-footer">
-          <button
-            className="btn-salvar-notas"
-            onClick={salvarNotas}
-            disabled={salvandoNotas || Object.keys(notasAlteradas).length === 0}
-          >
-            {salvandoNotas ? 'A salvar...' : 'Salvar Notas'}
-          </button>
-        </div>
-      )}
     </div>
   );
 };

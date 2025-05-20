@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs");
 const verificarToken = require('../../middleware/auth');
-const { getAllTrabalhos, createTrabalho } = require("../../controllers/trabalhos/trabalhos_ctrl");
+const { getAllTrabalhos, createTrabalho, updateTrabalhoNota } = require("../../controllers/trabalhos/trabalhos_ctrl");
 const uploadMiddleware = require("../../middleware/upload_middleware");
 const uploadUtils = require("../../middleware/upload");
 const Curso = require("../../database/models/Curso");
@@ -208,5 +208,8 @@ router.post("/avaliacao", verificarToken, (req, res, next) => {
 // Rotas
 router.get("/", verificarToken, getAllTrabalhos);
 router.post("/", verificarToken, uploadTrabalho, createTrabalho);
+
+// NOVA ROTA: Atualizar nota de um trabalho
+router.put("/:id", verificarToken, updateTrabalhoNota);
 
 module.exports = router;

@@ -124,6 +124,7 @@ const createTablesInOrder = async () => {
       descricao TEXT,
       tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('sincrono', 'assincrono')),
       vagas INTEGER,
+      duracao INTEGER NOT NULL,
       data_inicio TIMESTAMP WITH TIME ZONE NOT NULL,
       data_fim TIMESTAMP WITH TIME ZONE NOT NULL,
       estado VARCHAR(30) NOT NULL DEFAULT 'planeado' CHECK (estado IN ('planeado', 'em_curso', 'terminado')),
@@ -164,6 +165,31 @@ const createTablesInOrder = async () => {
       horas_presenca INTEGER,
       motivo_cancelamento TEXT,
       data_cancelamento TIMESTAMP WITH TIME ZONE
+    );`,
+
+
+    // =============================================
+    // CURSO_PRESENCA (adicione após a tabela curso ou onde achar apropriado)
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS curso_presenca (
+      id_curso_presenca SERIAL PRIMARY KEY,
+      id_curso INTEGER NOT NULL REFERENCES curso(id_curso),
+      data_inicio DATE NOT NULL,
+      data_fim DATE NOT NULL,
+      hora_inicio TIME NOT NULL,
+      hora_fim TIME NOT NULL,
+      codigo VARCHAR(20) NOT NULL
+    );`,
+
+    // =============================================
+    // FORMANDO_PRESENCA (adicione após a tabela curso_presenca)
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS formando_presenca (
+      id_formando_presenca SERIAL PRIMARY KEY,
+      id_curso_presenca INTEGER NOT NULL REFERENCES curso_presenca(id_curso_presenca),
+      id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),
+      presenca BOOLEAN NOT NULL DEFAULT TRUE,
+      duracao DECIMAL(5,2) NULL
     );`,
 
     // =============================================
@@ -404,10 +430,10 @@ const createTablesInOrder = async () => {
       acao_tomada VARCHAR(50)
     );`,
 
-      // =============================================
-      // 31. FORUM_TEMA
-      // =============================================
-      `CREATE TABLE IF NOT EXISTS forum_tema (
+    // =============================================
+    // 31. FORUM_TEMA
+    // =============================================
+    `CREATE TABLE IF NOT EXISTS forum_tema (
       id_tema SERIAL PRIMARY KEY,
       id_topico INTEGER NOT NULL REFERENCES topico_area(id_topico),
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador),

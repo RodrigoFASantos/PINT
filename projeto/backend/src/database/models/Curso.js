@@ -23,6 +23,11 @@ const Curso = sequelize.define("curso", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  duracao: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    comment: "Duração do curso em horas"
+  },
   data_inicio: {
     type: DataTypes.DATE,
     allowNull: false,

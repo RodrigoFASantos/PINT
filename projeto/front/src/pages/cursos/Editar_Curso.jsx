@@ -39,6 +39,7 @@ const EditarCurso = () => {
     id_formador: '',
     id_area: '',
     id_categoria: '',
+    duracao: '',
     imagem: null,
   });
   useEffect(() => {
@@ -88,6 +89,7 @@ const EditarCurso = () => {
           id_formador: cursoData.id_formador || '',
           id_area: cursoData.id_area || '',
           id_categoria: cursoData.id_categoria || '',
+          duracao: cursoData.duracao || '',
           imagem: null // A imagem não vem preenchida, apenas o utilizador pode escolher uma nova
         });
 
@@ -494,9 +496,24 @@ const EditarCurso = () => {
                 A data limite de inscrição já passou. As vagas não podem ser alteradas.
               </div>
             )}
+
           </div>
 
           <div className="row">
+
+
+
+            <div className="input-group">
+              <label>Duração</label>
+              <input
+                type="number"
+                name="duracao"
+                placeholder="Duração"
+                value={formData.duracao}
+                onChange={handleChange}
+              />
+            </div>
+
             <div className="input-group">
               <label>Data de Início</label>
               <input

@@ -32,6 +32,8 @@ const ForumTema = require('./models/ForumTema');
 const ForumTemaInteracao = require('./models/ForumTemaInteracao');
 const ForumTemaDenuncia = require('./models/ForumTemaDenuncia');
 const ForumComentario = require('./models/ForumComentario');
+const Curso_Presenca = require('./models/Curso_Presenca');
+const Formando_Presenca = require('./models/Formando_Presenca');
 
 // Coleção de todos os modelos para uso nas funções associate
 const models = {
@@ -68,7 +70,9 @@ const models = {
   ForumTema,
   ForumTemaInteracao,
   ForumTemaDenuncia,
-  ForumComentario
+  ForumComentario,
+  Curso_Presenca,
+  Formando_Presenca
 };
 
 // ========== DEFINIÇÃO DE TODAS AS ASSOCIAÇÕES ==========
@@ -242,5 +246,22 @@ ForumTemaDenuncia.belongsTo(User, { foreignKey: 'id_denunciante', as: 'denuncian
 // Criar associações para ForumComentario
 ForumComentario.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumComentario.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
+
+
+// Associação entre Trabalho e Pasta
+Trabalho_Entregue.belongsTo(PastaCurso, {  foreignKey: "id_pasta",  as: "pasta"});
+
+// Associação recíproca
+PastaCurso.hasMany(Trabalho_Entregue, {  foreignKey: "id_pasta",  as: "trabalhos"});
+
+// Associações Curso_Presenca
+Curso_Presenca.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
+Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
+
+// Associações Formando_Presenca
+Formando_Presenca.belongsTo(Curso_Presenca, { foreignKey: "id_curso_presenca", as: "presenca_curso" });
+Formando_Presenca.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
+User.hasMany(Formando_Presenca, { foreignKey: "id_utilizador", as: "presencas_marcadas" });
+Curso_Presenca.hasMany(Formando_Presenca, { foreignKey: "id_curso_presenca", as: "registros_presenca" });
 
 module.exports = models;

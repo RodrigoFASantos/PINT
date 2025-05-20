@@ -21,6 +21,7 @@ const CriarCurso = () => {
     descricao: '',
     tipo: '',
     vagas: '',
+    duracao: '',
     data_inicio: '',
     data_fim: '',
     id_formador: '',
@@ -374,6 +375,12 @@ const CriarCurso = () => {
       return false;
     }
 
+    // Validar duração
+    if (!formData.duracao || parseInt(formData.duracao) <= 0) {
+    toast.error("Defina uma duração válida para o curso em horas");
+    return false;
+  }
+
     return true;
   };
 
@@ -438,6 +445,7 @@ const CriarCurso = () => {
         descricao: '',
         tipo: '',
         vagas: '',
+        duracao: '',
         data_inicio: '',
         data_fim: '',
         id_formador: '',
@@ -654,7 +662,15 @@ const CriarCurso = () => {
                     required
                   />
                 </>
-              )}
+              )}<input
+                type="number"
+                name="duracao"
+                placeholder="Duração (horas)"
+                value={formData.duracao}
+                onChange={handleChange}
+                min="1"
+                required
+              />
             </div>
 
 

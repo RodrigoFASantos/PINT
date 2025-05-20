@@ -1,0 +1,390 @@
+.presencas-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.presencas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  border-bottom: 1px solid #ddd;
+}
+
+.presencas-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.presencas-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-criar-presenca,
+.btn-marcar-presenca {
+  padding: 6px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.expand-icon {
+  font-size: 12px;
+  transition: transform 0.3s;
+}
+
+.expand-icon.expanded {
+  transform: rotate(0deg);
+}
+
+.presencas-content {
+  padding: 15px;
+}
+
+.loading-indicator {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  margin: 20px auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-message {
+  color: #dc3545;
+  padding: 10px;
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.empty-message {
+  text-align: center;
+  color: #6c757d;
+  padding: 20px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.presencas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.presencas-table th,
+.presencas-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.presencas-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.presenca-marcada {
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.presenca-ausente {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.presenca-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.codigo-field {
+  display: flex;
+  gap: 10px;
+}
+
+.codigo-field input {
+  flex: 1;
+}
+
+.btn-gerar {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.btn-cancel {
+  padding: 8px 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-submit {
+  padding: 8px 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-submit:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Estilo para o botão desabilitado */
+.btn-criar-presenca:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+
+/* Estilo para a seção de informações de horas */
+.horas-info {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-left: 4px solid #3498db;
+}
+
+.horas-info-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.horas-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.horas-label {
+  font-weight: 500;
+  color: #555;
+}
+
+.horas-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.horas-disponiveis .horas-value {
+  color: #2ecc71;
+  font-size: 1.1em;
+}
+
+.nova-presenca .horas-value {
+  color: #3498db;
+}
+
+.nova-presenca .horas-value.excesso {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Estilo para o botão desabilitado quando exceder horas */
+.btn-submit:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+
+.btn-editar {
+  background-color: #f8f9fa;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.btn-editar:hover {
+  background-color: #e2e6ea;
+}
+
+
+/* Estilos para a coluna de ações */
+.acoes-column {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Botão para listar formandos */
+.btn-listar-formandos {
+  background-color: #4a6da7;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.btn-listar-formandos:hover {
+  background-color: #365683;
+}
+
+/* Modal de lista de formandos */
+.lista-formandos-modal {
+  max-width: 700px;
+  width: 80%;
+}
+
+.formandos-lista-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.formandos-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.formandos-table th,
+.formandos-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
+
+.formandos-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.formandos-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Estilos para formandos presentes/ausentes */
+.formando-presente {
+  background-color: #e8f5e9 !important;
+}
+
+.formando-presente td:last-child {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.formando-ausente td:last-child {
+  color: #c62828;
+  font-weight: bold;
+}
+
+/* Estilo para erro de validação */
+.validation-error {
+  background-color: #ffebee;
+  border-color: #ef9a9a;
+}
+
+/* Estilos responsivos para o modal */
+@media (max-width: 600px) {
+  .lista-formandos-modal {
+    width: 95%;
+  }
+
+  .formandos-table th,
+  .formandos-table td {
+    padding: 8px 5px;
+    font-size: 14px;
+  }
+}

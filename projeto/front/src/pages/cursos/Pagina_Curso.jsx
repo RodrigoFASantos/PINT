@@ -5,6 +5,7 @@ import axios from 'axios';
 import API_BASE from "../../api";
 import Sidebar from "../../components/Sidebar";
 import DetalhesCurso from "../../components/cursos/Detalhes_Curso";
+import PresencasCurso from "../../components/cursos/PresencasCurso";
 import CursoConteudos from "../../components/cursos/Curso_Conteudos";
 import AvaliacaoCurso from "../../components/cursos/Avaliacao_curso";
 import "./css/Pagina_Curso.css";
@@ -144,6 +145,8 @@ export default function CursoPagina() {
     );
   }
 
+  
+
   return (
     <div className="pagina pagina-principal">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -159,15 +162,26 @@ export default function CursoPagina() {
           />
         </div>
 
-        {/* Seção 2: Conteúdo do Curso */}
+        
+        {/* Seção 2: Presenças do Curso */}
+        <div className="secao-curso">
+          <PresencasCurso
+            cursoId={id}
+            userRole={userRole}
+            formadorId={curso.id_formador}
+          />
+        </div>
+
+         {/* Seção 3: Conteúdo do Curso */}
         <div className="secao-curso">
           <CursoConteudos
             cursoId={id}
             inscrito={inscrito}
           />
         </div>
+        
 
-        {/* Seção 3: Avaliação do Curso */}
+        {/* Seção 4: Avaliação do Curso */}
         <div className="secao-curso">
           <AvaliacaoCurso
             cursoId={id}

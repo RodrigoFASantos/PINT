@@ -722,7 +722,7 @@ const PerfilUser = () => {
                 className={`cursos-tab ${activeTab === 'ministrados' ? 'active' : ''}`}
                 onClick={() => handleTabChange('ministrados')}
               >
-                Cursos Ministrados
+                Cursos Administrados
               </button>
               <button
                 className={`cursos-tab ${activeTab === 'inscritos' ? 'active' : ''}`}
@@ -738,7 +738,6 @@ const PerfilUser = () => {
                 className="cursos-table-container"
                 style={{ display: activeTab === 'ministrados' ? 'block' : 'none' }}
               >
-                <h3>Cursos Ministrados</h3>
                 {formadorData.cursosMinistrados && formadorData.cursosMinistrados.length > 0 ? (
                   <table className="cursos-table">
                     <thead>
@@ -776,7 +775,6 @@ const PerfilUser = () => {
                 className="cursos-table-container"
                 style={{ display: activeTab === 'inscritos' ? 'block' : 'none' }}
               >
-                <h3>Cursos Inscritos</h3>
                 {formadorData.cursosInscritos && formadorData.cursosInscritos.length > 0 ? (
                   <table className="cursos-table">
                     <thead>

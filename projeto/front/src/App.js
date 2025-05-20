@@ -18,6 +18,7 @@ import CriarCurso from './pages/cursos/Criar_Curso';
 import CursoPagina from './pages/cursos/Pagina_Curso';
 import EditarCurso from './pages/cursos/Editar_Curso';
 import AvaliarTrabalhos from './components/cursos/Avaliar_Trabalhos';
+import Certificado from './components/cursos/Certificado';
 
 // Páginas de Utilizadores
 import PerfilUser from './pages/users/Perfil_Utilizador';
@@ -354,8 +355,19 @@ const App = () => {
                 path="/curso/:cursoId/avaliacao/:pastaId/submissoes"
                 element={
                   <RouteWrapper path="/curso/:cursoId/avaliacao/:pastaId/submissoes">
-                    <ProtectedRoute allowedRoles={[1,2]}>
+                    <ProtectedRoute allowedRoles={[1, 2]}>
                       <AvaliarTrabalhos />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
+                path="/certificado"
+                element={
+                  <RouteWrapper path="/certificado">
+                    <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                      <Certificado />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }

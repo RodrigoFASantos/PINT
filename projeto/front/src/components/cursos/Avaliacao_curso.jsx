@@ -522,7 +522,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
           <div className="topico-actions">
             {topicoAvaliacao ? (
               <>
-                {/* botão para criar pastas */}
+                {/* Criar pastas */}
                 <button
                   className="btn-add"
                   onClick={abrirModalCriarPasta}
@@ -531,16 +531,16 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   <i className="fas fa-folder-plus"></i>
                 </button>
 
-                {/* NOVO: botão Ver submissões */}
+                {/* Ver submissões */}
                 <Link
                   to={`/curso/${cursoId}/avaliacao/${topicoAvaliacao.id_topico}/submissoes`}
-                  className="btn-ver-submissoes"
+                  className="btn-ver-submissoes-pasta"
                   title="Ver submissões"
                 >
                   <i className="fas fa-list"></i> Ver submissões
                 </Link>
 
-                {/* botão para remover avaliação */}
+                {/* Remover avaliação */}
                 <button
                   className="btn-delete"
                   onClick={() => mostrarModalConfirmacao(
@@ -596,37 +596,28 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
                   )}
 
                   {isFormador() ? (
-  <div className="pasta-actions">
-    <button
-      className="btn-add-conteudo"
-      onClick={() => abrirModalAdicionarConteudo(pasta)}
-      title="Adicionar conteúdo"
-    >
-      <i className="fas fa-file-medical"></i>
-    </button>
-    
-    {/* Novo botão Ver Submissões para cada pasta */}
-    <Link
-      to={`/curso/${cursoId}/avaliacao/${pasta.id_pasta}/submissoes`}
-      className="btn-ver-submissoes-pasta"
-      title="Ver submissões desta pasta"
-    >
-      <i className="fas fa-clipboard-check"></i> Ver Submissões
-    </Link>
-    
-    <button
-      className="btn-delete"
-      onClick={() => mostrarModalConfirmacao(
-        'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
-        'removerPasta',
-        pasta.id_pasta
-      )}
-      title="Remover pasta"
-    >
-      <i className="fas fa-trash"></i>
-    </button>
-  </div>
-) : (
+                    <div className="pasta-actions">
+                      <button
+                        className="btn-add-conteudo"
+                        onClick={() => abrirModalAdicionarConteudo(pasta)}
+                        title="Adicionar conteúdo"
+                      >
+                        <i className="fas fa-file-medical"></i>
+                      </button>
+
+                      <button
+                        className="btn-delete"
+                        onClick={() => mostrarModalConfirmacao(
+                          'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
+                          'removerPasta',
+                          pasta.id_pasta
+                        )}
+                        title="Remover pasta"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  ) : (
                     <div className="pasta-actions">
                       <button
                         className="btn-submeter"

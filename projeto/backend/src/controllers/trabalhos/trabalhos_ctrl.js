@@ -81,4 +81,55 @@ const createTrabalho = async (req, res) => {
   }
 };
 
-module.exports = { getAllTrabalhos, createTrabalho };
+// Atualizar nota de um trabalho entregue
+const updateTrabalhoNota = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nota } = req.body;
+    
+    console.log(`Atualizando nota do trabalho ${id} para ${nota}`);
+    
+    // Validação da nota
+    if (nota !== '' && nota !== null && (isNaN(Number(nota)) || Number(nota) < 0 || Number(nota) > 20)) {
+      return res.status(400).json({ message: "A nota deve ser um valor entre 0 e 20" });
+    }
+    
+    // Buscar o trabalho
+    const trabalho = await Trabalho_Entregue.findByPk(id);
+    
+    if (!trabalho) {
+      return res.status(404).json({ message: "Trabalho não encontrado" });
+    }
+    
+    // IMPORTANTE: Atualizar tanto a coluna 'nota' quanto 'avaliacao'
+    // para garantir compatibilidade com diferentes partes do sistema
+    await trabalho.update({
+      nota: nota !== '' ? nota : null,
+      avaliacao: nota !== '' ? nota : null,  // Garantir que o campo avaliacao também seja atualizado
+      estado: nota !== '' ? 'Avaliado' : 'Pendente'
+    });
+    
+    console.log(`Nota atualizada com sucesso para o trabalho ${id}: ${nota}`);
+    
+    res.json({
+      message: "Nota atualizada com sucesso",
+      trabalho: {
+        id: trabalho.id_trabalho || trabalho.id,
+        nota,
+        estado: nota ? 'Avaliado' : 'Pendente'
+      }
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar nota do trabalho:", error);
+    res.status(500).json({ 
+      message: "Erro ao atualizar nota do trabalho",
+      error: error.message 
+    });
+  }
+};
+
+module.exports = { 
+  getAllTrabalhos, 
+  createTrabalho,
+  updateTrabalhoNota
+};

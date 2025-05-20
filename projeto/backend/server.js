@@ -152,6 +152,7 @@ const rotas = [
   { caminho: "./src/routes/users/users_route", prefixo: "/api/users" },
   { caminho: "./src/routes/users/areas_route", prefixo: "/api/areas" },
   { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" },
+  { caminho: "./src/routes/users/presencas_route", prefixo: "/api/presencas" },
 
   // Cursos
   { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },
@@ -162,11 +163,13 @@ const rotas = [
   { caminho: "./src/routes/cursos/curso_inscricoes_route", prefixo: "/api/inscricoes" },
   { caminho: "./src/routes/cursos/tipos_conteudo_route", prefixo: "/api/tipos-conteudo" },
   { caminho: "./src/routes/quiz/quiz_route", prefixo: "/api/quiz" },
+
   // Mantém trabalhos genéricos, se ainda precisares
   { caminho: "./src/routes/trabalhos/trabalhos_route", prefixo: "/api/trabalhos" },
 
-  // Novas submissões de avaliação
+  // Avaliação
   { caminho: "./src/routes/avaliacoes/submissoes_route", prefixo: "/api/avaliacoes/submissoes" },
+  { caminho: "./src/routes/avaliacoes/avaliar_submissoes_routes", prefixo: "/api/avaliar" },
 
   // Módulo geral de avaliações (se existir)
   { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" },

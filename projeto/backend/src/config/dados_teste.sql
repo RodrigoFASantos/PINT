@@ -139,13 +139,13 @@ VALUES
 -- =============================================
 -- 13. CURSO
 -- =============================================
-INSERT INTO curso (nome, descricao, tipo, vagas, data_inicio, data_fim, estado, ativo, id_formador, id_categoria, id_area, id_topico_area, imagem_path, dir_path)
+INSERT INTO curso (nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, estado, ativo, id_formador, id_categoria, id_area, id_topico_area, imagem_path, dir_path)
 VALUES
-  ('JavaScript Avançado', 'Curso completo de JavaScript moderno', 'assincrono', 20, '2025-06-01', '2025-08-30', 'planeado', TRUE, 4, 1, 1, 1, 'uploads/cursos/javascript_avancado.jpg', 'uploads/cursos/javascript_avancado/'),
-  ('React Native do Zero', 'Aprenda a desenvolver apps mobile', 'sincrono', 15, '2025-07-15', '2025-09-30', 'planeado', TRUE, 4, 1, 2, 2, 'uploads/cursos/react_native.jpg', 'uploads/cursos/react_native/'),
-  ('Design UX/UI Profissional', 'Princípios e técnicas de design de interface', 'assincrono', 25, '2025-06-15', '2025-08-15', 'planeado', TRUE, 5, 2, 4, 3, 'uploads/cursos/ux_ui.jpg', 'uploads/cursos/ux_ui/'),
-  ('SEO Avançado', 'Estratégias de otimização para mecanismos de busca', 'sincrono', 18, '2025-08-01', '2025-10-15', 'planeado', TRUE, 6, 3, 6, 4, 'uploads/cursos/seo.jpg', 'uploads/cursos/seo/'),
-  ('Gestão Ágil de Projetos', 'Metodologias ágeis para gerenciamento de projetos', 'sincrono', 20, '2025-07-01', '2025-09-15', 'planeado', TRUE, 7, 4, 8, 5, 'uploads/cursos/agile.jpg', 'uploads/cursos/agile/');
+  ('JavaScript Avançado', 'Curso completo de JavaScript moderno', 'assincrono', 20, 40, '2025-06-01', '2025-08-30', 'planeado', TRUE, 4, 1, 1, 1, 'uploads/cursos/javascript_avancado.jpg', 'uploads/cursos/javascript_avancado/'),
+  ('React Native do Zero', 'Aprenda a desenvolver apps mobile', 'sincrono', 15, 60, '2025-07-15', '2025-09-30', 'planeado', TRUE, 4, 1, 2, 2, 'uploads/cursos/react_native.jpg', 'uploads/cursos/react_native/'),
+  ('Design UX/UI Profissional', 'Princípios e técnicas de design de interface', 'assincrono', 25, 30, '2025-06-15', '2025-08-15', 'planeado', TRUE, 5, 2, 4, 3, 'uploads/cursos/ux_ui.jpg', 'uploads/cursos/ux_ui/'),
+  ('SEO Avançado', 'Estratégias de otimização para mecanismos de busca', 'sincrono', 18, 25, '2025-08-01', '2025-10-15', 'planeado', TRUE, 6, 3, 6, 4, 'uploads/cursos/seo.jpg', 'uploads/cursos/seo/'),
+  ('Gestão Ágil de Projetos', 'Metodologias ágeis para gerenciamento de projetos', 'sincrono', 20, 45, '2025-07-01', '2025-09-15', 'planeado', TRUE, 7, 4, 8, 5, 'uploads/cursos/agile.jpg', 'uploads/cursos/agile/');
 
 -- =============================================
 -- 14. NOTIFICACOES_UTILIZADORES
@@ -260,13 +260,6 @@ VALUES
   (2, 1, NOW() - INTERVAL '3 hours', NOW() - INTERVAL '2 hours', 7.0, TRUE),
   (3, 3, NOW() - INTERVAL '1 hour', NULL, NULL, FALSE);
 
--- =============================================
--- 24. TRABALHOS_ENTREGUES
--- =============================================
-INSERT INTO trabalhos_entregues (id_inscricao, ficheiro_path, data_entrega, avaliacao)
-VALUES
-  (1, 'uploads/trabalhos/javascript_projeto_final_aluno1.zip', NOW() - INTERVAL '5 days', 'Bom trabalho, implementação correta dos conceitos aprendidos.'),
-  (2, 'uploads/trabalhos/javascript_exercicio_aluno2.zip', NOW() - INTERVAL '10 days', 'Precisa melhorar a organização do código e a aplicação de promises.');
 
 -- =============================================
 -- 25. AVALIACOES
