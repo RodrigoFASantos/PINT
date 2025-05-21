@@ -118,6 +118,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   </Link>
                 </li>
 
+                <Link to="/admin/denuncias" className="menu-item">
+                  <i className="fas fa-flag"></i>
+                  <span>Gerenciar Denúncias</span>
+                </Link>
 
 
 

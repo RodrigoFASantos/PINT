@@ -43,6 +43,7 @@ import GerirCategoria from './pages/gestao/gerir_Categoria';
 import GerirArea from './pages/gestao/gerir_Area';
 import GerirTopicos from './pages/gestao/gerir_Topicos';
 import GerirCursos from './pages/gestao/gerir_Cursos';
+import GerirDenuncias from './pages/gestao/gerir_Denuncias.jsx';
 
 // Páginas de Avaliações
 import QuizPage from './pages/cursos/QuizPage';
@@ -313,6 +314,17 @@ const App = () => {
                   <RouteWrapper path="/admin/cursos">
                     <ProtectedRoute allowedRoles={[1]}>
                       <GerirCursos />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
+                path="/admin/denuncias"
+                element={
+                  <RouteWrapper path="/admin/denuncias">
+                    <ProtectedRoute allowedRoles={[1]}>
+                      <GerirDenuncias />
                     </ProtectedRoute>
                   </RouteWrapper>
                 }

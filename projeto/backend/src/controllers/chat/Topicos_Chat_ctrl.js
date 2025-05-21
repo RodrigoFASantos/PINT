@@ -1,4 +1,4 @@
-const { Topico_Area, ChatMensagem, User, Categoria } = require('../../database/associations');
+const { Topico_Area, ChatMensagem, User, Categoria, ChatDenuncia } = require('../../database/associations');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
@@ -265,15 +265,16 @@ const avaliarMensagem = async (req, res) => {
   }
 };
 
-// Controlador para denunciar uma mensagem
+// Denunciar uma mensagem
 const denunciarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
-    const { motivo } = req.body;
-    const userId = req.user.id_utilizador || req.user.id;
+    const { motivo, descricao } = req.body;
+    const id_utilizador = req.user.id_utilizador || req.user.id;
 
     console.log(`Denunciando comentário ${idComentario} por motivo: ${motivo}`);
 
+    // Validação básica
     if (!motivo) {
       return res.status(400).json({
         success: false,
@@ -281,6 +282,7 @@ const denunciarMensagem = async (req, res) => {
       });
     }
 
+    // Verificar se a mensagem existe
     const mensagem = await ChatMensagem.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
@@ -289,11 +291,38 @@ const denunciarMensagem = async (req, res) => {
       });
     }
 
-    await mensagem.update({
-      denuncias: mensagem.denuncias + 1,
-      motivo_denuncia: motivo
+    // Verificar se o utilizador já denunciou esta mensagem
+    const denunciaExistente = await ChatDenuncia.findOne({
+      where: {
+        id_mensagem: idComentario,
+        id_denunciante: id_utilizador
+      }
     });
 
+    if (denunciaExistente) {
+      return res.status(400).json({
+        success: false,
+        message: 'Você já denunciou esta mensagem anteriormente'
+      });
+    }
+
+    // Criar a denúncia na tabela específica
+    await ChatDenuncia.create({
+      id_mensagem: idComentario,
+      id_denunciante: id_utilizador,
+      motivo,
+      descricao: descricao || null,
+      data_denuncia: new Date(),
+      resolvida: false
+    });
+
+    // Marcar a mensagem como denunciada e incrementar o contador
+    await mensagem.update({
+      foi_denunciado: true,
+      denuncias: mensagem.denuncias + 1
+    });
+
+    // Notificar administradores via Socket.IO
     if (req.io) {
       req.io.to('admin_channel').emit('comentarioDenunciado', {
         id_comentario: mensagem.id_comentario,
@@ -305,7 +334,7 @@ const denunciarMensagem = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Mensagem denunciada com sucesso',
+      message: 'Mensagem denunciada com sucesso. Obrigado pela sua contribuição.',
       data: {
         denuncias: mensagem.denuncias
       }
@@ -319,7 +348,6 @@ const denunciarMensagem = async (req, res) => {
     });
   }
 };
-
 
 
 

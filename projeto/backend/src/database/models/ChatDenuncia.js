@@ -13,7 +13,7 @@ const ChatDenuncia = sequelize.define('chat_denuncias', {
     allowNull: false,
     references: {
       model: 'chat_mensagens',
-      key: 'id'  // Referência ao campo 'id' em vez de 'id_comentario'
+      key: 'id'
     }
   },
   id_denunciante: {
@@ -46,6 +46,19 @@ const ChatDenuncia = sequelize.define('chat_denuncias', {
     type: DataTypes.STRING(50),
     allowNull: true
   }
+}, {
+  tableName: 'chat_denuncias',
+  timestamps: false,
+  indexes: [
+    {
+      name: 'idx_chat_denuncia_mensagem',
+      fields: ['id_mensagem']
+    },
+    {
+      name: 'idx_chat_denuncia_denunciante',
+      fields: ['id_denunciante']
+    }
+  ]
 });
 
 module.exports = ChatDenuncia;

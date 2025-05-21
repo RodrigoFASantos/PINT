@@ -181,6 +181,7 @@ const rotas = [
   { caminho: "./src/routes/chat/Topicos_Chat_routes", prefixo: "/api/forum" },
   { caminho: "./src/routes/chat/Forum_Tema_routes", prefixo: "/api/forum-tema" },
   { caminho: "./src/routes/chat/comentarios_routes", prefixo: "/api/comentarios" },
+  { caminho: "./src/routes/chat/denuncias_routes", prefixo: "/api/denuncias" },
 
   // Outros
   { caminho: "./src/routes/certificados/certificado_routes", prefixo: "/api/certificados" },

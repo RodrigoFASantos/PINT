@@ -18,6 +18,8 @@ const {
   denunciarComentario
 } = require("../../controllers/chat/Topico_area_ctrl");
 
+const { denunciarMensagem } = require("../../controllers/chat/Topicos_Chat_ctrl");
+
 // Middleware para verificar autenticação
 router.use(authMiddleware);
 
@@ -43,6 +45,8 @@ router.post(
 
 // Rotas para Comentários
 router.post("/:id_topico/comentarios/:id_comentario/avaliar", avaliarComentario);
-router.post("/:id_topico/comentarios/:id_comentario/denunciar", denunciarComentario);
+
+// Rota para denunciar comentários
+router.post("/comentario/:idComentario/denunciar", denunciarMensagem);
 
 module.exports = router;
