@@ -1,69 +1,109 @@
-// certificados_ctrl.js completo
 const User = require("../../database/models/User");
 const Curso = require("../../database/models/Curso");
 const Avaliacao = require("../../database/models/Avaliacao");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const Trabalho = require("../../database/models/Trabalho_Entregue");
+const Formando_Presenca = require("../../database/models/Formando_Presenca");
+const Categoria = require("../../database/models/Categoria");
+const Area = require("../../database/models/Area");
+const CursoPresenca = require("../../database/models/Curso_Presenca");
 const { generateCertificate } = require("../../utils/certificateGenerator");
+
+const API_BASE = "http://localhost:4000/api";
 
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
-
-// Importação corrigida para jsPDF
 const { jsPDF } = require('jspdf');
 require('jspdf-autotable');
 
-// Gerar certificado para um formando
-const gerarCertificado = async (req, res) => {
+
+// Função para verificar se o formador completou as horas totais do curso
+const verificarHorasFormador = async (req, res) => {
   try {
-    const { id_avaliacao } = req.params;
+    const { cursoId } = req.params;
+    console.log(`Verificando horas para o curso ID: ${cursoId}`);
 
-    const avaliacao = await Avaliacao.findByPk(id_avaliacao);
-    if (!avaliacao) {
-      return res.status(404).json({ message: "Avaliação não encontrada" });
-    }
-
-    // Verificar se já tem certificado gerado
-    if (avaliacao.certificado) {
-      return res.json({
-        message: "Certificado já existente",
-        url: avaliacao.url_certificado
+    // Obter informações do curso
+    const curso = await Curso.findByPk(cursoId);
+    if (!curso) {
+      return res.status(404).json({
+        success: false,
+        message: "Curso não encontrado"
       });
     }
+    console.log(`Curso encontrado: ${curso.nome}, Duração: ${curso.duracao}`);
 
-    // Procurar informações do formando e curso
-    const inscricao = await Inscricao_Curso.findByPk(avaliacao.id_inscricao);
-    if (!inscricao) {
-      return res.status(404).json({ message: "Inscrição não encontrada" });
+    // Obter o ID do formador do curso
+    const idFormador = curso.id_formador;
+    if (!idFormador) {
+      return res.status(400).json({
+        success: false,
+        message: "Curso não possui formador designado"
+      });
     }
+    console.log(`Formador ID: ${idFormador}`);
 
-    const formando = await User.findByPk(inscricao.id_utilizador);
-    const curso = await Curso.findByPk(inscricao.id_curso);
-
-    if (!formando || !curso) {
-      return res.status(404).json({ message: "Formando ou curso não encontrado" });
-    }
-
-    // Gerar o certificado
-    const certificado = await generateCertificate(formando, curso, avaliacao);
-
-    // Atualizar a avaliação com a informação do certificado
-    await avaliacao.update({
-      certificado: true,
-      url_certificado: certificado.url
+    // Obter todas as presenças do curso
+    const presencasCurso = await CursoPresenca.findAll({
+      where: { id_curso: cursoId }
     });
 
-    res.json({
-      message: "Certificado gerado com sucesso",
-      url: certificado.url
+    // Array para armazenar IDs de presença do curso
+    const idsPresencasCurso = presencasCurso.map(p => p.id_curso_presenca);
+
+    // Calcular horas registradas pelo formador
+    let horasRegistradas = 0;
+
+    if (idsPresencasCurso.length > 0) {
+      try {
+        const { sequelize } = Formando_Presenca;
+
+        // Usando consulta SQL direta com os IDs específicos
+        const query = `
+          SELECT COALESCE(SUM(fp.duracao), 0) as total 
+          FROM formando_presenca fp 
+          WHERE fp.id_curso_presenca IN (?) AND fp.id_utilizador = ?
+        `;
+
+        const [results] = await sequelize.query(query, {
+          replacements: [idsPresencasCurso, idFormador],
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        if (results && results.total !== null && !isNaN(results.total)) {
+          horasRegistradas = Number(results.total);
+        }
+      } catch (sqlError) {
+        console.error("Erro na consulta SQL:", sqlError);
+      }
+    }
+
+    // Verificar se as horas registradas atingiram as horas totais do curso
+    const horasTotaisCurso = curso.duracao || 0;
+    const horasConcluidas = horasRegistradas >= horasTotaisCurso;
+
+    console.log(`Resultado: Horas registradas = ${horasRegistradas}, Horas necessárias = ${horasTotaisCurso}, Concluído = ${horasConcluidas}`);
+
+    return res.json({
+      success: true,
+      horasConcluidas,
+      horasRegistradas,
+      horasTotaisCurso
     });
+
   } catch (error) {
-    console.error("Erro ao gerar certificado:", error);
-    res.status(500).json({ message: "Erro ao gerar certificado" });
+    console.error("Erro ao verificar horas do formador:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao verificar horas do formador",
+      error: error.message
+    });
   }
 };
+
+
 
 // Procurar certificado existente
 const getCertificado = async (req, res) => {
@@ -317,7 +357,7 @@ const criarDiretorio = async (req, res) => {
 };
 
 // Função para gerar certificado pelo ID do utilizador e curso
-const registrarCertificado = async (req, res) => {
+const registarCertificado = async (req, res) => {
   try {
     const { userId, cursoId } = req.body;
 
@@ -341,13 +381,17 @@ const registrarCertificado = async (req, res) => {
       return res.status(404).json({ message: "Inscrição não encontrada" });
     }
 
-    // Registrar informação de certificado (se necessário)
-    // Este é um registro simples que pode ser usado para controle
+    // Registrar informação de certificado
+    console.log("Registro de certificado para:", {
+      userId: userId,
+      cursoId: cursoId
+    });
 
     return res.json({
       success: true,
       message: "Certificado registrado com sucesso"
     });
+    
   } catch (error) {
     console.error("Erro ao registrar certificado:", error);
     return res.status(500).json({
@@ -362,127 +406,36 @@ const registrarCertificado = async (req, res) => {
 
 const SalvarCertificado = async (req, res) => {
   try {
-    const { userId, cursoId } = req.body;
+    const { id_utilizador, id_curso } = req.body;
 
-    // 1. Verificar se o usuário e curso existem
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Utilizador não encontrado" });
+    if (!req.file || !id_utilizador || !id_curso) {
+      return res.status(400).json({
+        success: false,
+        message: "Dados insuficientes para salvar o certificado"
+      });
     }
 
-    const curso = await Curso.findByPk(cursoId);
-    if (!curso) {
-      return res.status(404).json({ message: "Curso não encontrado" });
+    // Buscar informações do utilizador e curso para logs e verificações
+    const utilizador = await User.findByPk(id_utilizador);
+    const curso = await Curso.findByPk(id_curso);
+
+    if (!utilizador || !curso) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilizador ou curso não encontrado"
+      });
     }
 
-    // 2. Verificar se existe inscrição
-    const inscricao = await Inscricao_Curso.findOne({
-      where: { id_utilizador: userId, id_curso: cursoId }
-    });
+    // Formatar e-mail para uso em caminho de arquivo
+    const emailFormatado = utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
 
-    if (!inscricao) {
-      return res.status(404).json({ message: "Inscrição não encontrada" });
-    }
-
-    // 3. Calcular nota média dos trabalhos
-    const trabalhos = await Trabalho.findAll({
-      where: { id_utilizador: userId, id_curso: cursoId }
-    });
-
-    let notaFinal = 0;
-    let trabalhosAvaliados = 0;
-
-    trabalhos.forEach(trabalho => {
-      if (trabalho.nota !== null && trabalho.nota !== undefined) {
-        notaFinal += Number(trabalho.nota);
-        trabalhosAvaliados++;
-      }
-    });
-
-    if (trabalhosAvaliados > 0) {
-      notaFinal = (notaFinal / trabalhosAvaliados).toFixed(2);
-    }
-
-    // 4. Gerar o PDF
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    // Definir fonte e estilo
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
-    doc.setTextColor(44, 62, 80);
-
-    // Título do certificado
-    doc.text('CERTIFICADO', doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
-
-    // Subtítulo
-    doc.setFontSize(14);
-    doc.text('de Conclusão de Curso', doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
-
-    // Linha decorativa
-    doc.setDrawColor(52, 152, 219);
-    doc.setLineWidth(0.5);
-    doc.line(40, 45, doc.internal.pageSize.getWidth() - 40, 45);
-
-    // Texto principal
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-
-    const startY = 70;
-    doc.text(`Certificamos que`, doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
-
-    // Nome do aluno
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text(`${user.nome}`, doc.internal.pageSize.getWidth() / 2, startY + 10, { align: 'center' });
-
-    // Texto de conclusão
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(12);
-    doc.text(`concluiu com aproveitamento o curso:`, doc.internal.pageSize.getWidth() / 2, startY + 20, { align: 'center' });
-
-    // Nome do curso
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text(`${curso.nome}`, doc.internal.pageSize.getWidth() / 2, startY + 35, { align: 'center' });
-
-    // Detalhes da formação
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(12);
-    
-    // Obter o nome da categoria e área (objeto ou string)
-    let categoriaNome = 'N/A';
-    let areaNome = 'N/A';
-    
-    if (curso.categoria) {
-      categoriaNome = typeof curso.categoria === 'object' ? curso.categoria.nome : curso.categoria;
-    }
-    
-    if (curso.area) {
-      areaNome = typeof curso.area === 'object' ? curso.area.nome : curso.area;
-    }
-    
-    doc.text(`Categoria: ${categoriaNome}`, doc.internal.pageSize.getWidth() / 2, startY + 50, { align: 'center' });
-    doc.text(`Área: ${areaNome}`, doc.internal.pageSize.getWidth() / 2, startY + 60, { align: 'center' });
-    
-    // Adicionar duração do curso
-    doc.text(`Duração: ${curso.duracao || 0} horas`, doc.internal.pageSize.getWidth() / 2, startY + 70, { align: 'center' });
-    
-    // Mover nota final para baixo
-    doc.text(`Nota Final: ${notaFinal || 0}/20`, doc.internal.pageSize.getWidth() / 2, startY + 80, { align: 'center' });
-
-    // 5. Salvar o certificado no servidor
-    const emailFormatado = user.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    // Preparar diretórios
     const baseDir = process.cwd();
     const uploadsPath = process.env.CAMINHO_PASTA_UPLOADS || 'uploads';
     const userDir = path.join(baseDir, uploadsPath, 'users', emailFormatado);
     const certDir = path.join(userDir, 'certificados');
 
-    // Garantir que o diretório existe
+    // Criar estrutura de diretórios se não existir
     if (!fs.existsSync(certDir)) {
       fs.mkdirSync(certDir, { recursive: true });
     }
@@ -492,24 +445,22 @@ const SalvarCertificado = async (req, res) => {
     const fileName = `certificado_${cursoNomeFormatado}.pdf`;
     const filePath = path.join(certDir, fileName);
 
-    // Salvar o PDF no servidor
-    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-    fs.writeFileSync(filePath, pdfBuffer);
+    // Salvar o PDF enviado pelo frontend
+    fs.writeFileSync(filePath, req.file.buffer);
 
     console.log(`Certificado salvo com sucesso em: ${filePath}`);
-    console.log(`URL path: /uploads/users/${emailFormatado}/certificados/${fileName}`);
 
     return res.json({
       success: true,
-      message: "Certificado gerado e salvo com sucesso",
+      message: "Certificado salvo com sucesso",
       path: `/uploads/users/${emailFormatado}/certificados/${fileName}`
     });
 
   } catch (error) {
-    console.error("Erro ao gerar e salvar certificado:", error);
+    console.error("Erro ao salvar certificado:", error);
     return res.status(500).json({
       success: false,
-      message: "Erro ao gerar e salvar certificado",
+      message: "Erro ao salvar certificado",
       error: error.message
     });
   }
@@ -517,14 +468,12 @@ const SalvarCertificado = async (req, res) => {
 
 
 
-
-
 module.exports = {
-  gerarCertificado,
+  verificarHorasFormador,
   getCertificado,
   salvarCertificado,
   eliminarFicheiro,
   criarDiretorio,
-  registrarCertificado,
+  registarCertificado,
   SalvarCertificado
 };

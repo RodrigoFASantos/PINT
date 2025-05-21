@@ -92,7 +92,7 @@ submitSubmissao = async (req, res) => {
 
         // Formatar o email substituindo @ por _ e . por _
         const emailFormatado = email.replace(/@/g, '_').replace(/\./g, '_');
-        const finalName = `${normalizarNome(emailFormatado)}_${normalizarNome(baseName)}${ext}`;
+        const finalName = `${normalizarNome(emailFormatado)}}${ext}`;
         const destPath = path.join(destDir, finalName);
         moverArquivo(path.join(BASE_UPLOAD_DIR, 'temp', tempName), destPath);
 

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import API_BASE from '../../api';
 import './css/Certificado.css';
 
@@ -19,6 +17,7 @@ const Certificado = () => {
     const [trabalhos, setTrabalhos] = useState([]);
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState(null);
+    const [certificadoPath, setCertificadoPath] = useState(null);
 
     useEffect(() => {
         const carregarDados = async () => {
@@ -38,7 +37,10 @@ const Certificado = () => {
                 const cursoId = searchParams.get('cursoId') || sessionStorage.getItem('certificado_cursoId');
                 const utilizadorId = searchParams.get('utilizadorId') || sessionStorage.getItem('certificado_utilizadorId');
 
-                console.log("Parâmetros iniciais:", { bypassMode, cursoId, utilizadorId });
+                // Verificar se temos dados passados pela URL
+                const certDataEncoded = searchParams.get('certData');
+
+                console.log("Parâmetros iniciais:", { bypassMode, cursoId, utilizadorId, temCertData: !!certDataEncoded });
                 console.log("Dados do sessionStorage:");
                 console.log({
                     curso_id: sessionStorage.getItem('certificado_cursoId'),
@@ -53,6 +55,46 @@ const Certificado = () => {
                     nota_final: sessionStorage.getItem('certificado_nota')
                 });
 
+                // Primeiro, verificar se temos dados codificados na URL
+                if (bypassMode && certDataEncoded) {
+                    try {
+                        console.log('Tentando usar dados da URL (certData)');
+                        const certData = JSON.parse(decodeURIComponent(certDataEncoded));
+
+                        // Usar os dados decodificados
+                        setCurso({
+                            nome: certData.cursoNome || 'Nome do Curso',
+                            categoria: certData.cursoCategoria || 'Categoria',
+                            area: certData.cursoArea || 'Área',
+                            duracao: certData.cursoDuracao || 0
+                        });
+
+                        setUtilizador({
+                            nome: certData.nome || 'Nome do Aluno',
+                            email: certData.email || 'email@example.com'
+                        });
+
+                        setCertificado({
+                            id_avaliacao: `temp_${Date.now()}`,
+                            nota: certData.nota || 10,
+                            certificado: true
+                        });
+
+                        console.log('Dados encontrados e processados via URL:', certData);
+
+                        // Adicionar também ao sessionStorage desta aba
+                        Object.entries(certData).forEach(([key, value]) => {
+                            if (value) sessionStorage.setItem(`certificado_${key}`, value);
+                        });
+
+                        setCarregando(false);
+                        return; // Não precisamos continuar, temos tudo o que precisamos
+                    } catch (error) {
+                        console.error('Erro ao decodificar dados do certificado da URL:', error);
+                        // Continuar com o fluxo normal, tentando outros métodos
+                    }
+                }
+
                 if (bypassMode) {
                     console.log('Usando modo bypass para certificado temporário');
 
@@ -65,7 +107,7 @@ const Certificado = () => {
 
                     // Não temos dados completos da avaliação, pular para obter dados do curso
                 } else if (avaliacaoId) {
-                    // Modo normal - carregar dados da avaliação
+                    // Código original para carregar avaliação...
                     try {
                         const avaliacaoResponse = await axios.get(`${API_BASE}/avaliacoes/${avaliacaoId}`, {
                             headers: { Authorization: `Bearer ${token}` }
@@ -120,6 +162,7 @@ const Certificado = () => {
                     return;
                 }
 
+                // Resto do código permanece igual...
                 // 3. Carregar dados do curso
                 try {
                     const cursoResponse = await axios.get(`${API_BASE}/cursos/${cursoId}`, {
@@ -215,6 +258,9 @@ const Certificado = () => {
                     console.warn('Erro ao carregar trabalhos, continuando sem dados de trabalhos:', error);
                 }
 
+                // Verificar se o certificado já existe
+                verificarCertificadoExistente(utilizadorId, cursoId);
+
                 setCarregando(false);
             } catch (error) {
                 console.error('Erro ao carregar dados do certificado:', error);
@@ -224,56 +270,103 @@ const Certificado = () => {
         };
 
         carregarDados();
-        
-        console.log("=== DADOS FINAIS PARA RENDERIZAÇÃO DO CERTIFICADO ===");
-        console.log({
-            utilizador: utilizador,
-            curso: curso,
-            formador: formador,
-            certificado: certificado,
-            trabalhos: trabalhos.length
-        });
     }, [avaliacaoId, navigate, searchParams]);
 
-    // Função para gerar o PDF do certificado e salvar na pasta do usuário
-    const gerarPDF = async () => {
+    // Função para verificar se o certificado já existe
+    const verificarCertificadoExistente = async (userId, cursoId) => {
         try {
             const token = localStorage.getItem('token');
-            const userId = utilizador?.id_utilizador || sessionStorage.getItem('certificado_utilizadorId');
-            const cursoId = curso?.id || sessionStorage.getItem('certificado_cursoId');
             
-            if (!userId || !cursoId) {
-                alert('Dados insuficientes para gerar o certificado');
-                return false;
+            // Usar IDs fornecidos ou recuperar do state/sessionStorage
+            const userIdToUse = userId || utilizador?.id_utilizador || sessionStorage.getItem('certificado_utilizadorId');
+            const cursoIdToUse = cursoId || curso?.id || sessionStorage.getItem('certificado_cursoId');
+            
+            if (!userIdToUse || !cursoIdToUse) return;
+
+            // Obter o email formatado para construir o caminho
+            let email;
+            if (utilizador?.email) {
+                email = utilizador.email;
+            } else {
+                email = sessionStorage.getItem('certificado_email');
+                if (!email) {
+                    // Tentar buscar o email a partir do ID do utilizador
+                    try {
+                        const userResponse = await axios.get(`${API_BASE}/users/${userIdToUse}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (userResponse.data && userResponse.data.email) {
+                            email = userResponse.data.email;
+                        }
+                    } catch (error) {
+                        console.error('Erro ao buscar email do utilizador:', error);
+                        return;
+                    }
+                }
             }
             
-            const response = await axios.post(`${API_BASE}/certificados/gerar-e-salvar`, {
-                userId,
-                cursoId
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data && response.data.success) {
-                console.log('Certificado gerado com sucesso em:', response.data.path);
-                alert('Certificado salvo com sucesso na sua pasta de utilizador!');
-                return true;
+            if (!email) return;
+
+            // Obter o nome do curso formatado
+            let cursoNome;
+            if (curso?.nome) {
+                cursoNome = curso.nome.replace(/\s+/g, '_');
             } else {
-                throw new Error('Erro ao gerar certificado');
+                cursoNome = sessionStorage.getItem('certificado_curso_nome');
+                if (cursoNome) {
+                    cursoNome = cursoNome.replace(/\s+/g, '_');
+                } else {
+                    // Tentar buscar o nome do curso a partir do ID
+                    try {
+                        const cursoResponse = await axios.get(`${API_BASE}/cursos/${cursoIdToUse}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (cursoResponse.data && cursoResponse.data.nome) {
+                            cursoNome = cursoResponse.data.nome.replace(/\s+/g, '_');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao buscar nome do curso:', error);
+                        return;
+                    }
+                }
+            }
+            
+            if (!cursoNome) {
+                cursoNome = 'curso';
+            }
+
+            const emailFormatado = email.replace(/@/g, '_at_').replace(/\./g, '_');
+            const path = `/uploads/users/${emailFormatado}/certificados/certificado_${cursoNome}.pdf`;
+
+            try {
+                // Tentar acessar o arquivo para ver se existe
+                await axios.head(`${API_BASE}${path}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                // Se chegou aqui, o arquivo existe
+                setCertificadoPath(path);
+            } catch (error) {
+                // Arquivo não existe, deixar certificadoPath como null
+                setCertificadoPath(null);
             }
         } catch (error) {
-            console.error('Erro ao gerar PDF:', error);
-            alert('Erro ao gerar certificado. Por favor, tente novamente.');
-            return false;
+            console.error('Erro ao verificar certificado existente:', error);
         }
     };
 
     // Função para imprimir o certificado
     const imprimirCertificado = () => {
-        if (gerarPDF()) {
-            // A maioria dos navegadores abrirá automaticamente o diálogo de impressão 
-            // quando o PDF for aberto. Se necessário, você pode implementar uma 
-            // funcionalidade de impressão direta aqui.
+        if (certificadoPath) {
+            // Abrir o certificado em uma nova aba para impressão
+            const printWindow = window.open(`${API_BASE}${certificadoPath}`, '_blank');
+            if (printWindow) {
+                printWindow.addEventListener('load', () => {
+                    printWindow.print();
+                });
+            }
+        } else {
+            alert('Certificado não encontrado. Verifique se foi gerado corretamente.');
         }
     };
 
@@ -365,19 +458,39 @@ const Certificado = () => {
             </div>
 
             <div className="certificado-actions">
-                <button
-                    className="btn-gerar-pdf"
-                    onClick={gerarPDF}
-                >
-                    <i className="fas fa-file-pdf"></i> Gerar PDF
-                </button>
-
-                <button
-                    className="btn-imprimir"
-                    onClick={imprimirCertificado}
-                >
-                    <i className="fas fa-print"></i> Imprimir
-                </button>
+                {certificadoPath ? (
+                    <div className="certificado-sucesso">
+                        <p>Certificado encontrado!</p>
+                        <button
+                            className="btn-visualizar"
+                            onClick={() => window.open(`${API_BASE}${certificadoPath}`, '_blank')}
+                        >
+                            <i className="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button
+                            className="btn-download"
+                            onClick={() => window.location.href = `${API_BASE}${certificadoPath}?download=true`}
+                        >
+                            <i className="fas fa-download"></i> Download
+                        </button>
+                        <button
+                            className="btn-imprimir"
+                            onClick={imprimirCertificado}
+                        >
+                            <i className="fas fa-print"></i> Imprimir
+                        </button>
+                    </div>
+                ) : (
+                    <div className="certificado-nao-encontrado">
+                        <p>O certificado ainda não foi gerado. Por favor, volte à página de avaliação de trabalhos para gerar o certificado.</p>
+                        <button 
+                            className="btn-voltar"
+                            onClick={() => navigate(-1)}
+                        >
+                            <i className="fas fa-arrow-left"></i> Voltar
+                        </button>
+                    </div>
+                )}
             </div>
 
             {trabalhos.length > 0 && (

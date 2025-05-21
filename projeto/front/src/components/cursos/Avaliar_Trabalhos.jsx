@@ -550,53 +550,60 @@ const Avaliar_Trabalhos = () => {
     }
   };
 
-  const verificarCertificadoExistente = async (formandoId) => {
+const verificarCertificadoExistente = async (formandoId) => {
     if (!formandoId || !cursoId) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const courseResponse = await axios.get(
-        `${API_BASE}/cursos/${cursoId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (!courseResponse.data || !courseResponse.data.nome) {
-        return false;
-      }
-
-      // Get email for file path construction
-      const formando = formandos.find(f => String(f.id_utilizador) === String(formandoId));
-      if (!formando || !formando.email) {
-        return false;
-      }
-
-      const emailFormatado = formando.email.replace(/@/g, '_at_').replace(/\./g, '_');
-      const cursoNome = courseResponse.data.nome.replace(/\s+/g, '_');
-      const filePath = `/uploads/users/${emailFormatado}/certificados/certificado_${cursoNome}.pdf`;
-
-      // Check if the file exists by making a HEAD request
-      try {
-        await axios.head(`${API_BASE}${filePath}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const token = localStorage.getItem('token');
+        const courseResponse = await axios.get(
+            `${API_BASE}/cursos/${cursoId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
         );
-        // If we get here, the file exists
-        setCertificadoUrl(`${API_BASE}${filePath}`);
-        setCertificadoExiste(true);
 
-        console.log(`Certificado encontrado para formando ID ${formandoId}: ${filePath}`);
-        return true;
-      } catch (error) {
-        // File doesn't exist
-        setCertificadoExiste(false);
-        return false;
-      }
+        if (!courseResponse.data || !courseResponse.data.nome) {
+            return false;
+        }
+
+        // Get email for file path construction
+        const formando = formandos.find(f => String(f.id_utilizador) === String(formandoId));
+        if (!formando || !formando.email) {
+            return false;
+        }
+
+        const emailFormatado = formando.email.replace(/@/g, '_at_').replace(/\./g, '_');
+        const cursoNome = courseResponse.data.nome.replace(/\s+/g, '_');
+        const filePath = `/uploads/users/${emailFormatado}/certificados/certificado_${cursoNome}.pdf`;
+        const fullUrl = `${API_BASE}${filePath}`;
+
+        // Check if the file exists by making a HEAD request
+        try {
+            await axios.head(fullUrl, { headers: { Authorization: `Bearer ${token}` } });
+            
+            // If we get here, the file exists
+            console.log(`Certificado encontrado para formando ID ${formandoId}: ${filePath}`);
+            
+            // Salvar o URL completo para acesso direto
+            setCertificadoUrl(fullUrl);
+            setCertificadoExiste(true);
+            
+            return true;
+        } catch (error) {
+            // File doesn't exist
+            setCertificadoExiste(false);
+            setCertificadoUrl('');
+            return false;
+        }
     } catch (error) {
-      console.error('Erro ao verificar certificado existente:', error);
-      return false;
+        console.error('Erro ao verificar certificado existente:', error);
+        setCertificadoExiste(false);
+        setCertificadoUrl('');
+        return false;
     }
-  };
+};
 
-  // Gerar certificado
+
+
+// Gerar certificado
 const handleGerarCertificado = async () => {
     if (!selectedFormando) {
       alert('Selecione um formando para gerar o certificado');
@@ -613,18 +620,65 @@ const handleGerarCertificado = async () => {
 
     try {
       setLoading(true); // Mostrar indicador de carregamento
-
-      // Manter o código que salva dados no sessionStorage
       const token = localStorage.getItem('token');
+      
+      // Flag para controlar se devemos continuar mesmo com erro na verificação
+      let continuarProcesso = false;
+      
+      try {
+        // Tentar verificar as horas do formador
+        const verificacaoResponse = await axios.get(
+          `${API_BASE}/certificados/verificar-horas-formador/${cursoId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Se tudo ok e a verificação foi bem-sucedida
+        if (verificacaoResponse.data.success) {
+          if (verificacaoResponse.data.horasConcluidas) {
+            // Formador completou as horas, pode prosseguir
+            continuarProcesso = true;
+          } else {
+            // Formador não completou horas, exibir mensagem e perguntar se quer prosseguir
+            const mensagem = `Atenção: O formador completou apenas ${verificacaoResponse.data.horasRegistradas} de ${verificacaoResponse.data.horasTotaisCurso} horas necessárias.\n\nDeseja gerar o certificado mesmo assim?`;
+            continuarProcesso = window.confirm(mensagem);
+          }
+        } else {
+          // Resposta com sucesso=false, exibir mensagem e perguntar se quer prosseguir
+          const mensagem = `Aviso: Não foi possível verificar as horas do formador.\n\nDeseja gerar o certificado mesmo assim?`;
+          continuarProcesso = window.confirm(mensagem);
+        }
+      } catch (verificacaoError) {
+        console.error('Erro ao verificar horas do formador:', verificacaoError);
+        // Em caso de erro na verificação, perguntar se deseja continuar
+        const mensagem = `Aviso: Não foi possível verificar as horas do formador devido a um erro no sistema.\n\nDeseja gerar o certificado mesmo assim?`;
+        continuarProcesso = window.confirm(mensagem);
+      }
+      
+      // Se não estiver autorizado a continuar, encerra a função
+      if (!continuarProcesso) {
+        setLoading(false);
+        return;
+      }
+
+      // Obter dados do formando selecionado
+      const formandoSelecionado = formandos.find(f => String(f.id_utilizador) === String(selectedFormando));
+      
+      if (!formandoSelecionado) {
+        throw new Error("Dados do formando não encontrados");
+      }
+      
+      console.log("Dados do formando selecionado:", formandoSelecionado);
+      
+      // Obter dados do curso
       const courseResponse = await axios.get(
         `${API_BASE}/cursos/${cursoId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Armazenar dados do curso
+      // Armazenar dados do curso no sessionStorage com validação
       if (courseResponse.data) {
         sessionStorage.setItem('certificado_cursoId', cursoId);
-        sessionStorage.setItem('certificado_curso_nome', courseResponse.data.nome);
+        sessionStorage.setItem('certificado_curso_nome', courseResponse.data.nome || '');
         sessionStorage.setItem('certificado_curso_duracao', courseResponse.data.duracao || 0);
 
         const categoria = typeof courseResponse.data.categoria === 'object'
@@ -643,18 +697,15 @@ const handleGerarCertificado = async () => {
             { headers: { Authorization: `Bearer ${token}` } }
           );
           if (formadorResponse.data) {
-            sessionStorage.setItem('certificado_formador', formadorResponse.data.nome);
+            sessionStorage.setItem('certificado_formador', formadorResponse.data.nome || '');
           }
         }
       }
 
-      // Armazenar dados do formando
-      const formando = formandos.find(f => f.id_utilizador === selectedFormando);
-      if (formando) {
-        sessionStorage.setItem('certificado_utilizadorId', selectedFormando);
-        sessionStorage.setItem('certificado_nome', formando.nome);
-        sessionStorage.setItem('certificado_email', formando.email);
-      }
+      // Armazenar dados do formando no sessionStorage
+      sessionStorage.setItem('certificado_utilizadorId', selectedFormando);
+      sessionStorage.setItem('certificado_nome', formandoSelecionado.nome || '');
+      sessionStorage.setItem('certificado_email', formandoSelecionado.email || '');
 
       // Usar a nota média calculada ou calcular novamente
       const notaFinal = notaMedia || calcularNotaMedia();
@@ -662,9 +713,18 @@ const handleGerarCertificado = async () => {
         sessionStorage.setItem('certificado_nota', notaFinal);
       }
 
-      // Registrar certificado no backend
-      const registrarResponse = await axios.post(`${API_BASE}/certificados/registrar`, {
+      console.log("Dados para geração do certificado:");
+      console.log({
         userId: selectedFormando,
+        cursoId: cursoId,
+        formandoNome: formandoSelecionado.nome,
+        formandoEmail: formandoSelecionado.email,
+        nota: notaFinal
+      });
+
+      // Registrar certificado no backend - CORRIGIDO: usar "registar" em vez de "registrar"
+      const registrarResponse = await axios.post(`${API_BASE}/certificados/registar`, {
+        userId: selectedFormando, // ID do FORMANDO, não do formador logado
         cursoId: cursoId
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -674,58 +734,189 @@ const handleGerarCertificado = async () => {
         throw new Error("Erro ao registrar certificado");
       }
 
-      // 1. Primeiro, criar o diretório para certificados
+      // 1. Primeiro, criar o diretório para certificados para o FORMANDO
       await axios.post(`${API_BASE}/certificados/criar-diretorio`,
-        { id_utilizador: selectedFormando },
+        { id_utilizador: selectedFormando }, // ID do FORMANDO, não do formador logado
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // 2. Agora, gerar e salvar o certificado usando a função SalvarCertificado no backend
+      // 2. Agora, gerar o PDF diretamente no frontend com jsPDF e enviar para o backend
+      // SOLUÇÃO CORRIGIDA: Usar método similar ao de Certificado.jsx
+      
+      // Importar jsPDF se ainda não estiver disponível
+      const jsPDF = await import('jspdf').then(module => module.default);
+      
+      // Criar o documento PDF
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Definir fonte e estilo
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(44, 62, 80);
+
+      // Título do certificado
+      doc.text('CERTIFICADO', doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+      // Subtítulo
+      doc.setFontSize(14);
+      doc.text('de Conclusão de Curso', doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+
+      // Linha decorativa
+      doc.setDrawColor(52, 152, 219);
+      doc.setLineWidth(0.5);
+      doc.line(40, 45, doc.internal.pageSize.getWidth() - 40, 45);
+
+      // Texto principal
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+
+      const startY = 70;
+      doc.text(`Certificamos que`, doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
+
+      // Nome do aluno
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`${formandoSelecionado.nome}`, doc.internal.pageSize.getWidth() / 2, startY + 10, { align: 'center' });
+
+      // Texto de conclusão
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.text(`concluiu com aproveitamento o curso:`, doc.internal.pageSize.getWidth() / 2, startY + 20, { align: 'center' });
+
+      // Nome do curso
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text(`${courseResponse.data.nome}`, doc.internal.pageSize.getWidth() / 2, startY + 35, { align: 'center' });
+
+      // Detalhes da formação
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+
+      // Determinar categoria e área
+      let categoria = 'N/A';
+      let area = 'N/A';
+
+      if (courseResponse.data.categoria) {
+        categoria = typeof courseResponse.data.categoria === 'object' 
+          ? courseResponse.data.categoria.nome 
+          : courseResponse.data.categoria;
+      }
+
+      if (courseResponse.data.area) {
+        area = typeof courseResponse.data.area === 'object' 
+          ? courseResponse.data.area.nome 
+          : courseResponse.data.area;
+      }
+
+      doc.text(`Categoria: ${categoria}`, doc.internal.pageSize.getWidth() / 2, startY + 50, { align: 'center' });
+      doc.text(`Área: ${area}`, doc.internal.pageSize.getWidth() / 2, startY + 60, { align: 'center' });
+
+      // Duração e nota
+      doc.text(`Duração: ${courseResponse.data.duracao || 0} horas`, doc.internal.pageSize.getWidth() / 2, startY + 70, { align: 'center' });
+      doc.text(`Nota Final: ${notaFinal || 0}/20`, doc.internal.pageSize.getWidth() / 2, startY + 80, { align: 'center' });
+
+      // Data atual
+      const dataAtual = new Date().toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+      doc.text(`${dataAtual}`, doc.internal.pageSize.getWidth() / 2, startY + 100, { align: 'center' });
+
+      // Obter o PDF como array buffer
+      const pdfBuffer = doc.output('arraybuffer');
+
+      // Formatar o nome do curso para o nome do arquivo
+      const cursoNomeFormatado = courseResponse.data.nome.replace(/\s+/g, '_');
+      
+      // Criar um FormData para enviar o arquivo
+      const formData = new FormData();
+      formData.append('pdfCertificado', new Blob([pdfBuffer], { type: 'application/pdf' }));
+      formData.append('id_utilizador', selectedFormando);
+      formData.append('id_curso', cursoId);
+
+      // Enviar o PDF para o servidor usando a rota existente
       const gerarESalvarResponse = await axios.post(
-        `${API_BASE}/certificados/gerar-e-salvar`,
+        `${API_BASE}/certificados/salvar-do-frontend`,
+        formData,
         {
-          userId: selectedFormando,
-          cursoId: cursoId
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
 
       if (gerarESalvarResponse.data && gerarESalvarResponse.data.path) {
         // Armazenar o URL para acessar o certificado
-        setCertificadoUrl(`${API_BASE}${gerarESalvarResponse.data.path}`);
+        const certificadoUrl = `${API_BASE}${gerarESalvarResponse.data.path}`;
+        setCertificadoUrl(certificadoUrl);
+        
         // Marcar certificado como existente
         setCertificadoExiste(true);
-        setTimeout(() => {
-          console.log("Certificate URL:", `${API_BASE}${gerarESalvarResponse.data.path}`);
-          console.log("Certificate exists state:", certificadoExiste);
-        }, 0);
+        
+        console.log("Certificado gerado com sucesso:", certificadoUrl);
         alert('Certificado gerado e salvo com sucesso!');
-        console.log("Certificate URL:", `${API_BASE}${gerarESalvarResponse.data.path}`);
-        console.log("Certificate exists state:", certificadoExiste);
       } else {
         throw new Error("Falha ao salvar o certificado");
       }
 
     } catch (error) {
       console.error('Erro ao processar certificado:', error);
-      alert('Não foi possível gerar o certificado. Tente novamente.');
+      
+      // Melhoramos a mensagem de erro para informar o motivo específico
+      if (error.response && error.response.data && error.response.data.message) {
+        alert(`Não foi possível gerar o certificado: ${error.response.data.message}`);
+      } else {
+        alert(`Não foi possível gerar o certificado: ${error.message || 'Erro desconhecido'}`);
+      }
     } finally {
       setLoading(false);
     }
 };
 
-  // Adicione a função para abrir o certificado
+
+
+  // Abrir o certificado
 const handleVerCertificado = () => {
-    // Cria o certificado temporário e obtém o ID
-    const tempCertId = `temp_${Date.now()}`;
-    
     try {
-        window.open(`/certificado/${tempCertId}?bypass=true&cursoId=${cursoId}&utilizadorId=${selectedFormando}`, '_blank');
+        // Buscar o formando selecionado pelos dados
+        const formando = formandos.find(f => String(f.id_utilizador) === String(selectedFormando));
+        
+        if (!formando || !formando.email) {
+            alert('Email do formando não encontrado. Impossível visualizar o certificado.');
+            return;
+        }
+        
+        // Importante: usar o email do FORMANDO, não do formador logado
+        const emailFormatado = formando.email.replace(/@/g, '_at_').replace(/\./g, '_');
+        
+        // Obter o nome do curso formatado
+        const cursoNomeFormatado = cursoInfo?.nome?.replace(/\s+/g, '_') || 'curso';
+        
+        // Usar certificadoUrl se disponível, ou construir URL
+        if (certificadoUrl && certificadoUrl.includes('.pdf')) {
+            console.log("Abrindo certificado com URL armazenado:", certificadoUrl);
+            window.open(certificadoUrl, '_blank');
+        } else {
+            // Construir URL direta para o PDF
+            const pdfUrl = `${API_BASE}/uploads/users/${emailFormatado}/certificados/certificado_${cursoNomeFormatado}.pdf`;
+            
+            console.log("URL do certificado construída:", pdfUrl);
+            window.open(pdfUrl, '_blank');
+        }
     } catch (error) {
-        alert('Não foi possível abrir o certificado. Por favor, tente novamente.');
         console.error('Erro ao abrir certificado:', error);
+        alert('Não foi possível abrir o certificado. Por favor, tente novamente.');
     }
 };
+
+
 
   // Apagar o certificado
   const handleApagarCertificado = async () => {
