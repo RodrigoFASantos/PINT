@@ -43,7 +43,7 @@ const ChatDenuncia = sequelize.define('chat_denuncias', {
     defaultValue: false
   },
   acao_tomada: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(255),
     allowNull: true
   }
 }, {

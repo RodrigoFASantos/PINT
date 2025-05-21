@@ -489,9 +489,18 @@ const Gerir_Denuncias = () => {
                                 <p><strong>ID:</strong> {denunciaSelecionada.id_denuncia}</p>
                                 <p><strong>Tipo:</strong> {traduzirTipo(denunciaSelecionada.tipo)}</p>
                                 <p><strong>Data:</strong> {formatarData(denunciaSelecionada.data_denuncia)}</p>
-                                <p><strong>Status:</strong> {denunciaSelecionada.resolvida ? 'Resolvida' : 'Pendente'}</p>
+                                <p><strong>Status:</strong>
+                                    <span className={`status-badge ${denunciaSelecionada.resolvida ? 'resolvida' : 'pendente'}`}>
+                                        {denunciaSelecionada.resolvida ? 'Resolvida' : 'Pendente'}
+                                    </span>
+                                </p>
+
+                                {/* Destaque especial para a ação tomada quando resolvida */}
                                 {denunciaSelecionada.resolvida && (
-                                    <p><strong>Ação tomada:</strong> {denunciaSelecionada.acao_tomada || 'Não informada'}</p>
+                                    <p className="acao-tomada">
+                                        <strong>Ação tomada:</strong>
+                                        <span>{denunciaSelecionada.acao_tomada || 'Não informada'}</span>
+                                    </p>
                                 )}
                             </div>
 
@@ -520,37 +529,40 @@ const Gerir_Denuncias = () => {
                                 <p><strong>Nome:</strong> {denunciaSelecionada.denunciante?.nome || 'Usuário desconhecido'}</p>
                                 <p><strong>Email:</strong> {denunciaSelecionada.denunciante?.email || 'Email não disponível'}</p>
                             </div>
-                        </div>
 
-                        {!denunciaSelecionada.resolvida && (
-                            <div className="modal-acoes">
-                                <div className="acao-grupo">
-                                    <h4>Resolver denúncia</h4>
-                                    <div className="acao-input-grupo">
-                                        <textarea
-                                            placeholder="Informe a ação tomada..."
-                                            value={acaoTomada}
-                                            onChange={(e) => setAcaoTomada(e.target.value)}
-                                            className="acao-input"
-                                        />
-                                    </div>
-                                    <div className="acao-botoes">
-                                        <button
-                                            className="btn-resolver"
-                                            onClick={() => resolverDenuncia(acaoTomada || 'Denúncia analisada e resolvida')}
-                                        >
-                                            <i className="fas fa-check"></i> Resolver
-                                        </button>
-                                        <button
-                                            className="btn-ocultar"
-                                            onClick={ocultarConteudo}
-                                        >
-                                            <i className="fas fa-eye-slash"></i> Ocultar Conteúdo
-                                        </button>
+                            {!denunciaSelecionada.resolvida && (
+                                <div className="modal-acoes">
+                                    <div className="acao-grupo">
+                                        <h4>Resolver denúncia</h4>
+                                        <div className="acao-input-grupo">
+                                            <textarea
+                                                placeholder="Informe a ação tomada..."
+                                                value={acaoTomada}
+                                                onChange={(e) => setAcaoTomada(e.target.value)}
+                                                className="acao-input"
+                                            />
+                                        </div>
+                                        <div className="acao-botoes">
+                                            <button
+                                                className="btn-resolver"
+                                                onClick={() => resolverDenuncia(acaoTomada || 'Denúncia analisada e resolvida')}
+                                            >
+                                                <i className="fas fa-check"></i> Resolver
+                                            </button>
+                                            <button
+                                                className="btn-ocultar"
+                                                onClick={ocultarConteudo}
+                                            >
+                                                <i className="fas fa-eye-slash"></i> Ignorar Denúncia
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                        </div>
+
+
                     </div>
                 </div>
             )}

@@ -10,6 +10,8 @@
   padding: 20px;
   margin-left: 80px;
   transition: margin-left 0.3s;
+  max-width: 1200px;
+  margin: 0 auto; /* Centro o conteúdo horizontalmente */
 }
 
 .pagina-header {
@@ -19,12 +21,14 @@
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid #ddd;
+  text-align: center; /* Centraliza o texto */
 }
 
 .pagina-header h1 {
   font-size: 1.8rem;
   color: #2c3e50;
   margin: 0;
+  text-align: center;
 }
 
 .btn-voltar {
@@ -55,6 +59,7 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  justify-content: center; /* Centraliza os filtros */
 }
 
 .filtro-grupo,
@@ -108,6 +113,7 @@
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
+  justify-content: center; /* Centraliza estatísticas */
 }
 
 .estatistica-item {
@@ -119,6 +125,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
 }
 
 .estatistica-titulo {
@@ -138,13 +145,14 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow-x: auto; /* Permite rolagem horizontal em telas pequenas */
   margin-bottom: 20px;
 }
 
 .tabela-denuncias {
   width: 100%;
   border-collapse: collapse;
+  margin: 0 auto; /* Centraliza a tabela */
 }
 
 .tabela-denuncias th {
@@ -257,17 +265,6 @@
   cursor: not-allowed;
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /* === Modal Detalhes === */
 .modal-backdrop {
   width: 100%;
@@ -277,17 +274,22 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
+  padding: 15px;
 }
 
 .modal-denuncia {
   width: 90%;
+  max-width: 900px; /* Limita a largura em telas grandes */
   height: 70%;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 5px 20px rgba(0,0,0,0.2);
   overflow: hidden;
+  margin: 0 auto; /* Centraliza o modal */
 }
 
 .modal-header {
@@ -298,70 +300,84 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  text-align: center;
 }
 
-
+/* CORREÇÃO: Ajuste do modal-conteudo para ocupar a largura total */
 .modal-conteudo {
   box-sizing: border-box;
   width: 100%;
   flex: 1;
   min-width: 0;
   padding: 24px 32px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  overflow-y: auto;
-}
-
-
-
-.modal-acoes {
-  width: 100%;
-  flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 0 32px 24px;
-  box-sizing: border-box;
+  flex-direction: column;
+  overflow-y: auto;
+  max-width: none; /* Remove qualquer limitação de largura */
 }
 
-
-
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 600;
+/* CORREÇÃO: Remoção de qualquer layout em grid que esteja dividindo o conteúdo */
+.denuncia-detalhes,
+.denuncia-motivo,
+.denuncia-conteudo,
+.denuncia-denunciante {
+  width: 100%;
+  margin-bottom: 15px;
 }
 
-.btn-fechar {
-  font-size: 1.3rem;
-  color: rgba(255,255,255,0.8);
+/* CORREÇÃO: Ajuste para os parágrafos não centralizados */
+.modal-conteudo p {
+  margin: 4px 0 12px;
+  line-height: 1.5;
+  color: #333;
+  text-align: left; /* Alinha texto à esquerda para melhor legibilidade */
 }
 
-.btn-fechar:hover {
-  color: #eee;
-}
-
+/* Mantém os títulos das seções centralizados */
 .modal-conteudo h4 {
   font-size: 1.1rem;
   color: #2c3e50;
   margin-bottom: 8px;
   border-bottom: 1px solid #eee;
   padding-bottom: 4px;
+  text-align: center;
 }
 
-.modal-conteudo p {
-  margin: 4px 0 12px;
-  line-height: 1.5;
-  color: #333;
+.modal-acoes {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center; /* Centraliza os botões de ação */
+  gap: 12px;
+  padding: 0 32px 24px;
+  box-sizing: border-box;
 }
 
-/* Faz títulos largos ocupar ambas colunas */
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0 auto; /* Centraliza o título */
+}
+
+.btn-fechar {
+  font-size: 1.3rem;
+  color: rgba(255,255,255,0.8);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-fechar:hover {
+  color: #eee;
+}
+
+/* CORREÇÃO: Remove grid columns que podem estar causando o problema */
 .denuncia-motivo,
 .denuncia-denunciante,
 .modal-acoes {
-  grid-column: span 2;
+  width: 100%;
+  grid-column: unset; /* Remove a propriedade grid-column */
 }
 
 /* Deixa a seção de detalhes bem alinhada */
@@ -378,35 +394,169 @@
   font-weight: 500;
 }
 
+.acao-grupo {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.acao-input-grupo {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.acao-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.acao-botoes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
 .btn-resolver,
 .btn-ocultar {
   min-width: 140px;
   padding: 10px 16px;
   font-size: 0.95rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .modal-denuncia {
-    width: 95vw;
-    height: auto;
-    max-height: 90vh;
-  }
+.btn-resolver {
+  background-color: #27ae60;
+  color: white;
+}
 
+.btn-resolver:hover {
+  background-color: #219955;
+}
+
+.btn-ocultar {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-ocultar:hover {
+  background-color: #c0392b;
+}
+
+/* CORREÇÃO: Remove elementos com cores de fundo que aparecem nas imagens */
+[id^="div.modal"] {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Garante que qualquer elemento dentro do modal ocupe toda a largura */
+.modal-denuncia > div {
+  width: 100%;
+}
+
+/* Media queries para design responsivo */
+@media (max-width: 992px) {
+  .main-content {
+    padding: 15px;
+  }
+  
+  .estatisticas-container {
+    flex-wrap: wrap;
+  }
+  
+  .estatistica-item {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pagina-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+  }
+  
+  .filtros-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .filtro-grupo, .pesquisa-grupo {
+    width: 100%;
+  }
+  
+  /* CORREÇÃO: Remove qualquer grid layout em telas menores */
   .modal-conteudo {
-    grid-template-columns: 1fr;
     padding: 16px;
   }
-
+  
+  /* CORREÇÃO: Ajusta para que em dispositivos móveis, todos os elementos ocupem a largura total */
+  .denuncia-motivo,
+  .denuncia-denunciante,
   .modal-acoes {
-    flex-direction: column;
-    padding: 0 16px 16px;
+    width: 100%;
   }
-
+  
+  .acao-botoes {
+    flex-direction: column;
+  }
+  
   .btn-resolver,
   .btn-ocultar {
     width: 100%;
   }
+}
 
+@media (max-width: 576px) {
+  .estatisticas-container {
+    flex-direction: column;
+  }
+  
+  .estatistica-item {
+    width: 100%;
+  }
+  
+  .tabela-denuncias th, 
+  .tabela-denuncias td {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+  
+  /* Oculta colunas menos importantes em telas muito pequenas */
+  .tabela-denuncias th:nth-child(1),
+  .tabela-denuncias td:nth-child(1),
+  .tabela-denuncias th:nth-child(4),
+  .tabela-denuncias td:nth-child(4) {
+    display: none;
+  }
+  
+  .modal-denuncia {
+    height: 90%;
+  }
+}
 
+/* Destaque para a ação tomada nas denúncias resolvidas */
+.acao-tomada {
+  background-color: #d4f1e5;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border-left: 4px solid #27ae60;
+  font-weight: 500;
+}
+
+.acao-tomada strong {
+  color: #27ae60;
+  font-weight: 600;
 }

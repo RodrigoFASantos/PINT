@@ -43,7 +43,7 @@ const ForumTemaDenuncia = sequelize.define('forum_tema_denuncia', {
     defaultValue: false
   },
   acao_tomada: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(255),
     allowNull: true
   }
 }, {

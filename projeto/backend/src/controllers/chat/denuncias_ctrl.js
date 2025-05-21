@@ -151,6 +151,74 @@ const getForumComentarioDenuncias = async (req, res) => {
 };
 
 
+// Criar denúncia de tema
+const criarForumTemaDenuncia = async (req, res) => {
+  try {
+    const { id_tema, motivo, descricao } = req.body;
+    const id_denunciante = req.user.id_utilizador;
+    
+    console.log(`Criando denúncia para tema ID: ${id_tema}`);
+    
+    const denuncia = await ForumTemaDenuncia.create({
+      id_tema,
+      id_denunciante,
+      motivo,
+      descricao,
+      data_denuncia: new Date(),
+      resolvida: false
+    });
+    
+    console.log(`Denúncia de tema criada com sucesso, ID: ${denuncia.id_denuncia}`);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Denúncia criada com sucesso',
+      data: denuncia
+    });
+  } catch (error) {
+    console.error('Erro ao criar denúncia de tema:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao criar denúncia de tema',
+      error: error.message
+    });
+  }
+};
+
+
+// Obter temas já denunciados pelo utilizador logado
+const getUsuarioDenunciasTemas = async (req, res) => {
+  try {
+    const id_denunciante = req.user.id_utilizador;
+    
+    console.log(`Buscando temas denunciados pelo usuário ID: ${id_denunciante}`);
+    
+    const denuncias = await ForumTemaDenuncia.findAll({
+      where: { id_denunciante },
+      attributes: ['id_tema']
+    });
+    
+    // Extrair apenas os IDs dos temas
+    const temasDenunciados = denuncias.map(d => d.id_tema);
+    
+    console.log(`Encontrados ${temasDenunciados.length} temas denunciados pelo usuário`);
+    
+    res.status(200).json({
+      success: true,
+      data: temasDenunciados
+    });
+  } catch (error) {
+    console.error('Erro ao buscar temas denunciados pelo usuário:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar temas denunciados pelo usuário',
+      error: error.message
+    });
+  }
+};
+
+
+
 // Obter todas as denúncias de mensagens de chat
 const getChatDenuncias = async (req, res) => {
   try {
@@ -517,6 +585,8 @@ const ocultarChatMensagem = async (req, res) => {
 module.exports = {
   getForumTemaDenuncias,
   getForumComentarioDenuncias,
+  criarForumTemaDenuncia,
+  getUsuarioDenunciasTemas,
   getChatDenuncias,
   resolverForumTemaDenuncia,
   resolverForumComentarioDenuncia,

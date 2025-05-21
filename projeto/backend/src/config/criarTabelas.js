@@ -427,7 +427,7 @@ const createTablesInOrder = async () => {
       descricao TEXT,
       data_denuncia TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       resolvida BOOLEAN NOT NULL DEFAULT FALSE,
-      acao_tomada VARCHAR(50)
+      acao_tomada VARCHAR(255)
     );`,
 
     // =============================================
@@ -473,7 +473,7 @@ const createTablesInOrder = async () => {
       descricao TEXT,
       data_denuncia TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       resolvida BOOLEAN NOT NULL DEFAULT FALSE,
-      acao_tomada VARCHAR(50)
+      acao_tomada VARCHAR(255)
     );`,
 
     // =============================================

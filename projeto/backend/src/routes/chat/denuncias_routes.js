@@ -6,6 +6,8 @@ const autorizar = require("../../middleware/autorizar");
 const {
   getForumTemaDenuncias,
   getForumComentarioDenuncias,
+  criarForumTemaDenuncia,
+  getUsuarioDenunciasTemas,
   getChatDenuncias,
   resolverForumTemaDenuncia,
   resolverForumComentarioDenuncia,
@@ -20,6 +22,8 @@ router.use(authMiddleware);
 router.use(autorizar([1])); // ID do cargo de admin
 
 // Rotas para obter denúncias
+router.post("/forum-tema/denunciar", criarForumTemaDenuncia);// Rota para criar denúncia de tema
+router.get("/usuario/denuncias-temas", getUsuarioDenunciasTemas);// Rota para verificar denúncias feitas pelo utilizador
 router.get("/denuncias/forum-tema", getForumTemaDenuncias);
 router.get("/denuncias/forum-comentario", getForumComentarioDenuncias);
 router.get("/denuncias/chat", getChatDenuncias);

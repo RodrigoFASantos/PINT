@@ -164,7 +164,6 @@
   border-color: #4a90e2;
 }
 
-
 .criar-tema-btn {
   background-color: #4caf50;
   color: white;
@@ -198,6 +197,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  position: relative;
 }
 
 .tema-card:hover {
@@ -209,16 +209,47 @@
   border-left: 4px solid #ff5252;
 }
 
+/* Botão de apagar tema */
+.apagar-tema-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background-color: #ff5252;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.apagar-tema-btn:hover {
+  background-color: #ff1744;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(255, 82, 82, 0.3);
+}
+
+.apagar-tema-btn:active {
+  transform: scale(0.95);
+}
+
 .tema-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 15px;
+  padding-right: 45px; /* Espaço para o botão de apagar */
 }
 
 .tema-autor {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -227,16 +258,24 @@
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
-.nome-usuario {
+.autor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nome-utilizador {
   font-weight: 500;
   color: #333;
+  font-size: 14px;
 }
 
 .data-tema {
   color: #777;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tema-conteudo {
@@ -538,5 +577,29 @@
 
   .criar-tema-btn {
     margin-left: 0;
+  }
+
+  .tema-header {
+    padding-right: 45px;
+  }
+
+  .apagar-tema-btn {
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .autor-info {
+    gap: 1px;
+  }
+
+  .nome-utilizador {
+    font-size: 13px;
+  }
+
+  .data-tema {
+    font-size: 11px;
   }
 }
