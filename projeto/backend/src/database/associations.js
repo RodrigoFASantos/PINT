@@ -35,7 +35,9 @@ const ForumComentario = require('./models/ForumComentario');
 const Curso_Presenca = require('./models/Curso_Presenca');
 const Formando_Presenca = require('./models/Formando_Presenca');
 
-const models = { Area, AssociarCursos, Avaliacao, Cargo, Categoria, ChatMensagem, ChatInteracao, ChatDenuncia, ConteudoCurso, Curso, FormadorCategoria, FormadorArea, Inscricao_Curso, OcorrenciaCurso, PastaCurso, PushSubscription, Quiz, QuizOpcao, QuizPergunta, QuizResposta, QuizRespostaDetalhe, TipoConteudo, Topico_Area, Curso_Topicos, Trabalho_Entregue, User, User_Pendente, FormadorAssociacoesPendentes, Notificacao, NotificacaoUtilizador, ForumTema, ForumTemaInteracao, ForumTemaDenuncia, ForumComentario, Curso_Presenca, Formando_Presenca };
+const models = { 
+  Area, AssociarCursos, Avaliacao, Cargo, Categoria, ChatMensagem, ChatInteracao, ChatDenuncia, ConteudoCurso, Curso, FormadorCategoria, FormadorArea, Inscricao_Curso, OcorrenciaCurso, PastaCurso, PushSubscription, Quiz, QuizOpcao, QuizPergunta, QuizResposta, QuizRespostaDetalhe, TipoConteudo, Topico_Area, Curso_Topicos, Trabalho_Entregue, User, User_Pendente, FormadorAssociacoesPendentes, Notificacao, NotificacaoUtilizador, ForumTema, ForumTemaInteracao, ForumTemaDenuncia, ForumComentario, Curso_Presenca, Formando_Presenca 
+};
 
 // ========== ASSOCIAÇÕES ==========
 // === Associações User_Pendente ===
@@ -50,6 +52,7 @@ User.belongsTo(Cargo, { foreignKey: "id_cargo", as: "cargo" });
 User.hasMany(PushSubscription, { foreignKey: "id_utilizador", as: "subscriptions" });
 User.hasMany(Curso, { foreignKey: "id_formador", as: "cursos_ministrados" });
 User.belongsToMany(Curso, { through: Inscricao_Curso, foreignKey: "id_utilizador", otherKey: "id_curso", as: "cursos" });
+User.hasMany(Inscricao_Curso, { foreignKey: "id_utilizador", as: "inscricoes" });
 
 // === Associações AssociarCursos ===
 AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_origem", as: "cursoOrigem" });
@@ -136,7 +139,6 @@ QuizRespostaDetalhe.belongsTo(QuizOpcao, { foreignKey: "id_opcao", as: "opcao" }
 
 // === Associações OcorrenciaCurso ===
 OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_original", as: "curso_original" });
-
 OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_nova_ocorrencia", as: "curso_nova_ocorrencia" });
 
 // === Associações Topico_Area ===
@@ -186,14 +188,6 @@ Curso.hasMany(Trabalho_Entregue, { foreignKey: "id_curso", as: "trabalhos_entreg
 // Uma avaliação PERTENCE A uma inscrição (belongsTo)
 Avaliacao.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
 
-// === Chamar funções associate para os modelos que as têm === 
-Object.values(models).forEach(model => { 
-  if (typeof model.associate === 'function') { 
-    model.associate(models); 
-    console.log(`✅ Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`); 
-  } 
-});
-
 // === Associações Notificação ===
 Notificacao.hasMany(NotificacaoUtilizador, { foreignKey: "id_notificacao", as: "destinatarios" });
 NotificacaoUtilizador.belongsTo(Notificacao, { foreignKey: "id_notificacao", as: "notificacao" });
@@ -225,6 +219,8 @@ Trabalho_Entregue.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" })
 // === Associação recíproca === 
 PastaCurso.hasMany(Trabalho_Entregue, { foreignKey: "id_pasta", as: "trabalhos" });
 
+// === ASSOCIAÇÕES CURSO_PRESENCA E FORMANDO_PRESENCA (CRÍTICAS PARA O PERCURSO) ===
+
 // === Associações Curso_Presenca === 
 Curso_Presenca.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
@@ -232,8 +228,18 @@ Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
 // === Associações Formando_Presenca === 
 Formando_Presenca.belongsTo(Curso_Presenca, { foreignKey: "id_curso_presenca", as: "presenca_curso" });
 Formando_Presenca.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
+
+// === Associações bidirecionais críticas para o cálculo de horas ===
 User.hasMany(Formando_Presenca, { foreignKey: "id_utilizador", as: "presencas_marcadas" });
 Curso_Presenca.hasMany(Formando_Presenca, { foreignKey: "id_curso_presenca", as: "registros_presenca" });
+
+// === Chamar funções associate para os modelos que as têm === 
+Object.values(models).forEach(model => { 
+  if (typeof model.associate === 'function') { 
+    model.associate(models); 
+    console.log(`✅ Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`); 
+  } 
+});
 
 // === LOG DE CONFIRMAÇÃO DAS ASSOCIAÇÕES CRÍTICAS ===
 console.log("🔗 ASSOCIAÇÕES CRÍTICAS CONFIGURADAS:");
@@ -241,5 +247,11 @@ console.log("✅ Inscricao_Curso -> Avaliacao (hasOne)");
 console.log("✅ Avaliacao -> Inscricao_Curso (belongsTo)");
 console.log("✅ Inscricao_Curso -> Curso (belongsTo)");
 console.log("✅ Inscricao_Curso -> User (belongsTo)");
+console.log("✅ Curso_Presenca -> Curso (belongsTo)");
+console.log("✅ Curso -> Curso_Presenca (hasMany)");
+console.log("✅ Formando_Presenca -> Curso_Presenca (belongsTo)");
+console.log("✅ Formando_Presenca -> User (belongsTo)");
+console.log("✅ User -> Formando_Presenca (hasMany)");
+console.log("✅ Curso_Presenca -> Formando_Presenca (hasMany)");
 
 module.exports = models;

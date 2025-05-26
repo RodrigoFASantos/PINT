@@ -112,32 +112,85 @@ server.timeout = 3600000; // 1 hora
 
 // Função utilitária para carregar rotas com segurança
 function carregarRota(caminho, prefixo) {
+  console.log(`\n🔄 [SERVER] === CARREGANDO ROTA: ${prefixo} ===`);
+  console.log(`📁 [SERVER] Caminho: ${caminho}`);
+  
   try {
     const rotaPath = path.resolve(caminho);
+    console.log(`📁 [SERVER] Caminho resolvido: ${rotaPath}`);
+    console.log(`📁 [SERVER] Arquivo esperado: ${rotaPath}.js`);
 
     if (!fs.existsSync(`${rotaPath}.js`)) {
-      console.warn(`⚠️ Arquivo não encontrado: ${rotaPath}.js`);
+      console.error(`❌ [SERVER] Arquivo não encontrado: ${rotaPath}.js`);
       app.use(prefixo, (req, res) =>
         res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Arquivo de rota não encontrado" })
       );
       return false;
     }
+    console.log(`✅ [SERVER] Arquivo existe: ${rotaPath}.js`);
 
+    console.log(`🔄 [SERVER] Fazendo require do arquivo...`);
     const rota = require(rotaPath);
+    console.log(`✅ [SERVER] Require executado com sucesso`);
+    
+    console.log(`🔍 [SERVER] Verificando rota carregada:`);
+    console.log(`📋 [SERVER] Tipo da rota: ${typeof rota}`);
+    console.log(`📋 [SERVER] É função: ${typeof rota === "function"}`);
+    console.log(`📋 [SERVER] É null: ${rota === null}`);
+    console.log(`📋 [SERVER] É undefined: ${rota === undefined}`);
+    console.log(`📋 [SERVER] Tem stack: ${!!rota.stack}`);
+    
+    if (rota && rota.stack) {
+      console.log(`📋 [SERVER] Stack length: ${rota.stack.length}`);
+      console.log(`📋 [SERVER] Stack é array: ${Array.isArray(rota.stack)}`);
+    }
 
-    if (!rota || typeof rota !== "function" || !rota.stack) {
-      console.warn(`⚠️ Módulo de rota inválido: ${prefixo}`);
+    if (!rota) {
+      console.error(`❌ [SERVER] Rota é null/undefined para ${prefixo}`);
       app.use(prefixo, (req, res) =>
-        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Módulo de rota inválido" })
+        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Rota é null" })
       );
       return false;
     }
 
+    if (typeof rota !== "function") {
+      console.error(`❌ [SERVER] Rota não é função para ${prefixo}`);
+      console.error(`❌ [SERVER] Tipo actual: ${typeof rota}`);
+      app.use(prefixo, (req, res) =>
+        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Rota não é função" })
+      );
+      return false;
+    }
+
+    if (!rota.stack) {
+      console.error(`❌ [SERVER] Rota não tem stack para ${prefixo}`);
+      app.use(prefixo, (req, res) =>
+        res.status(503).json({ message: "Serviço temporariamente indisponível", error: "Rota sem stack" })
+      );
+      return false;
+    }
+
+    console.log(`🔄 [SERVER] Registrando rota no Express: app.use('${prefixo}', rota)`);
+    
+    // TESTAR ANTES DE REGISTRAR
+    if (typeof app.use !== 'function') {
+      console.error(`❌ [SERVER] app.use não é função!`);
+      return false;
+    }
+    
     app.use(prefixo, rota);
-    console.log(`✅ Rota carregada: ${prefixo} (${rotaPath})`);
+    console.log(`✅ [SERVER] Rota registrada com sucesso: ${prefixo} (${rotaPath})`);
+    console.log(`🔚 [SERVER] === FIM CARREGAMENTO: ${prefixo} ===\n`);
+    
     return true;
+    
   } catch (error) {
-    console.warn(`⚠️ Erro ao carregar rota ${prefixo}: ${error.message}`);
+    console.error(`❌ [SERVER] === ERRO AO CARREGAR ROTA: ${prefixo} ===`);
+    console.error(`❌ [SERVER] Mensagem: ${error.message}`);
+    console.error(`❌ [SERVER] Stack: ${error.stack}`);
+    console.error(`❌ [SERVER] Nome do erro: ${error.name}`);
+    console.error(`🔚 [SERVER] === FIM ERRO: ${prefixo} ===\n`);
+    
     app.use(prefixo, (req, res) =>
       res.status(503).json({ message: "Erro ao carregar rota", details: error.message })
     );
