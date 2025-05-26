@@ -39,6 +39,7 @@ const getAllAvaliacoes = async (req, res) => {
         horas_presenca: plainAvaliacao.horas_presenca,
         data_criacao: plainAvaliacao.data_criacao,
         data_limite: plainAvaliacao.data_limite,
+        url_certificado: plainAvaliacao.url_certificado,
         aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
         email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
         curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -55,7 +56,7 @@ const getAllAvaliacoes = async (req, res) => {
 // Criar uma nova avaliação
 const createAvaliacao = async (req, res) => {
   try {
-    const { id_inscricao, nota, certificado, horas_totais, horas_presenca, data_limite } = req.body;
+    const { id_inscricao, nota, certificado, horas_totais, horas_presenca, data_limite, url_certificado } = req.body;
 
     // Validação básica
     if (!id_inscricao || nota === undefined || horas_totais === undefined || horas_presenca === undefined) {
@@ -74,7 +75,7 @@ const createAvaliacao = async (req, res) => {
     });
 
     if (avaliacaoExistente) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         message: "Já existe uma avaliação para esta inscrição. Use o endpoint de atualização.",
         avaliacao: avaliacaoExistente
       });
@@ -87,7 +88,8 @@ const createAvaliacao = async (req, res) => {
       certificado: certificado || false,
       horas_totais,
       horas_presenca,
-      data_limite: data_limite || null, // Novo campo
+      data_limite: data_limite || null,
+      url_certificado: url_certificado || null, // Novo campo adicionado
     });
 
     // Carregar informações completas com relacionamentos
@@ -123,14 +125,15 @@ const createAvaliacao = async (req, res) => {
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
       data_limite: plainAvaliacao.data_limite,
+      url_certificado: plainAvaliacao.url_certificado, // Incluído na resposta
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
     };
 
-    res.status(201).json({ 
-      message: "Avaliação criada com sucesso!", 
-      avaliacao: formattedAvaliacao 
+    res.status(201).json({
+      message: "Avaliação criada com sucesso!",
+      avaliacao: formattedAvaliacao
     });
   } catch (error) {
     console.error("Erro ao criar avaliação:", error);
@@ -178,7 +181,8 @@ const getAvaliacaoById = async (req, res) => {
       horas_totais: plainAvaliacao.horas_totais,
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
-      data_limite: plainAvaliacao.data_limite, // Novo campo
+      data_limite: plainAvaliacao.data_limite,
+      url_certificado: plainAvaliacao.url_certificado, // Incluído na resposta
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
@@ -195,7 +199,7 @@ const getAvaliacaoById = async (req, res) => {
 const updateAvaliacao = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nota, certificado, horas_totais, horas_presenca, data_limite } = req.body;
+    const { nota, certificado, horas_totais, horas_presenca, data_limite, url_certificado } = req.body;
 
     // Procurar a avaliação
     const avaliacao = await Avaliacao.findByPk(id);
@@ -209,7 +213,8 @@ const updateAvaliacao = async (req, res) => {
     if (certificado !== undefined) dadosAtualizacao.certificado = certificado;
     if (horas_totais !== undefined) dadosAtualizacao.horas_totais = horas_totais;
     if (horas_presenca !== undefined) dadosAtualizacao.horas_presenca = horas_presenca;
-    if (data_limite !== undefined) dadosAtualizacao.data_limite = data_limite; // Novo campo
+    if (data_limite !== undefined) dadosAtualizacao.data_limite = data_limite;
+    if (url_certificado !== undefined) dadosAtualizacao.url_certificado = url_certificado; // Novo campo adicionado
 
     // Aplicar atualização
     await avaliacao.update(dadosAtualizacao);
@@ -247,14 +252,15 @@ const updateAvaliacao = async (req, res) => {
       horas_presenca: plainAvaliacao.horas_presenca,
       data_criacao: plainAvaliacao.data_criacao,
       data_limite: plainAvaliacao.data_limite,
+      url_certificado: plainAvaliacao.url_certificado, // Incluído na resposta
       aluno: plainAvaliacao.inscricao?.utilizador?.nome || 'Aluno desconhecido',
       email_aluno: plainAvaliacao.inscricao?.utilizador?.email || 'Email desconhecido',
       curso: plainAvaliacao.inscricao?.curso?.nome || 'Curso desconhecido'
     };
 
-    res.status(200).json({ 
-      message: "Avaliação atualizada com sucesso!", 
-      avaliacao: formattedAvaliacao 
+    res.status(200).json({
+      message: "Avaliação atualizada com sucesso!",
+      avaliacao: formattedAvaliacao
     });
   } catch (error) {
     console.error("Erro ao atualizar avaliação:", error);
@@ -283,8 +289,8 @@ const deleteAvaliacao = async (req, res) => {
   }
 };
 
-module.exports = { 
-  getAllAvaliacoes, 
+module.exports = {
+  getAllAvaliacoes,
   createAvaliacao,
   getAvaliacaoById,
   updateAvaliacao,

@@ -153,6 +153,7 @@ const rotas = [
   { caminho: "./src/routes/users/areas_route", prefixo: "/api/areas" },
   { caminho: "./src/routes/users/formadores_route", prefixo: "/api/formadores" },
   { caminho: "./src/routes/users/presencas_route", prefixo: "/api/presencas" },
+  { caminho: "./src/routes/users/Percurso_Formandos_routes", prefixo: "/api/percurso-formandos" },
 
   // Cursos
   { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },

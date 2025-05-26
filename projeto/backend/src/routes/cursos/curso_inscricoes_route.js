@@ -1,33 +1,26 @@
 const express = require("express");
 const router = express.Router();
-const { getAllInscricoes, getInscricoesPorCurso, createInscricao, cancelarInscricao, getInscricoesUtilizador, verificarInscricao } = require("../../controllers/cursos/curso_inscricoes_ctrl");
 const verificarToken = require('../../middleware/auth');
+const autorizar = require('../../middleware/autorizar');
+const {
+  getAllInscricoes,
+  getInscricoesPorCurso,
+  createInscricao,
+  cancelarInscricao,
+  getInscricoesUtilizador,
+  getMinhasInscricoes,
+  verificarInscricao
+} = require("../../controllers/cursos/curso_inscricoes_ctrl");
 
-// Rota para procurar todas as inscrições (protegida para administradores)
-router.get("/", verificarToken, (req, res, next) => {
-  if (req.user && req.user.id_cargo === 1) { // Cargo 1 = Gestor/Administrador
-    next();
-  } else {
-    res.status(403).json({ message: "Acesso não autorizado" });
-  }
-}, getAllInscricoes);
-
-// Rota para procurar inscrições do utilizador com sessão iniciada
-router.get("/minhas-inscricoes", verificarToken, getInscricoesUtilizador);
-
-// Rota para criar uma inscrição (requer autenticação)
+// Rotas das inscrições
+router.get("/", verificarToken, autorizar([1]), getAllInscricoes);
+router.get("/usuario", verificarToken, getInscricoesUtilizador);
+router.get("/minhas-inscricoes", verificarToken, getMinhasInscricoes);
+router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
+router.get("/verificar/:id_curso", verificarToken, verificarInscricao);
 router.post("/", verificarToken, createInscricao);
 
-// Rota para procurar inscrições por curso (protegida para administradores)
-router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
-
-// Rota para cancelar uma inscrição
+// ROTA CORRIGIDA - Cancelar inscrição (apenas formadores e admins)
 router.patch("/cancelar-inscricao/:id", verificarToken, cancelarInscricao);
-
-// Rota alternativa para suportar o método DELETE (para compatibilidade)
-router.delete("/:id", verificarToken, cancelarInscricao);
-
-// Rota para verificar se o utilizador está inscrito num curso
-router.get("/verificar/:id_curso", verificarToken, verificarInscricao);
 
 module.exports = router;

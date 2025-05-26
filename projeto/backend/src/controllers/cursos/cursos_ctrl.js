@@ -455,7 +455,7 @@ const createCurso = async (req, res) => {
   }
 };
 
-// Função updateCurso
+
 const updateCurso = async (req, res) => {
   try {
     console.log("Update course request received:");
@@ -463,7 +463,11 @@ const updateCurso = async (req, res) => {
     console.log("Request body:", req.body);
 
     const id = req.params.id;
-    const { nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, id_formador, id_area, id_categoria, ativo } = req.body;
+    // ✅ CORREÇÃO: Adicionar id_topico_area no destructuring
+    const { 
+      nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, 
+      id_formador, id_area, id_categoria, id_topico_area, ativo 
+    } = req.body;
 
     // Procurar dados atuais do curso para comparação
     const cursoAtual = await Curso.findByPk(id, {
@@ -504,7 +508,7 @@ const updateCurso = async (req, res) => {
       console.log(`Estado do curso determinado automaticamente: ${novoEstado}`);
     }
 
-    // Atualizar o curso com o novo estado
+    // ✅ CORREÇÃO: Incluir id_topico_area no update
     await cursoAtual.update({
       nome: nome || cursoAtual.nome,
       descricao: descricao || cursoAtual.descricao,
@@ -515,9 +519,10 @@ const updateCurso = async (req, res) => {
       id_formador: id_formador || cursoAtual.id_formador,
       id_area: id_area || cursoAtual.id_area,
       id_categoria: id_categoria || cursoAtual.id_categoria,
+      id_topico_area: id_topico_area || cursoAtual.id_topico_area, // ✅ ADICIONADO
       duracao: duracao !== undefined ? parseInt(duracao, 10) : cursoAtual.duracao,
       ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
-      estado: novoEstado // Atualizar o estado do curso
+      estado: novoEstado
     });
 
     // Recarregar o curso atualizado com as suas relações

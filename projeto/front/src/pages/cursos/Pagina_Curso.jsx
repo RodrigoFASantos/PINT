@@ -17,7 +17,7 @@ export default function CursoPagina() {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const { currentUser } = useAuth();
-  
+
   const [cursoData, setCursoData] = useState({
     curso: null,
     inscrito: false,
@@ -25,7 +25,7 @@ export default function CursoPagina() {
     error: null,
     acessoNegado: false
   });
-  
+
   const [userRole, setUserRole] = useState(null);
 
   // Extrair valores do estado cursoData para uso mais fácil
@@ -54,12 +54,12 @@ export default function CursoPagina() {
         });
 
         const curso = response.data;
-        
+
         // Verificar acesso ao curso
         const dataAtual = new Date();
         const dataFimCurso = new Date(curso.data_fim);
         const cursoTerminado = dataFimCurso < dataAtual;
-        
+
         if (curso.tipo === 'assincrono' && cursoTerminado && userRole !== 1) {
           setCursoData({
             curso: null,
@@ -70,12 +70,12 @@ export default function CursoPagina() {
           });
           return;
         }
-        
+
         // Verificar inscrição do usuário no curso
         const inscricaoResponse = await axios.get(`${API_BASE}/inscricoes/verificar/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         setCursoData({
           curso,
           inscrito: inscricaoResponse.data.inscrito,
@@ -83,7 +83,7 @@ export default function CursoPagina() {
           error: null,
           acessoNegado: false
         });
-        
+
       } catch (error) {
         console.error("Erro ao carregar detalhes do curso:", error);
         setCursoData({
@@ -145,7 +145,7 @@ export default function CursoPagina() {
     );
   }
 
-  
+
 
   return (
     <div className="pagina pagina-principal">
@@ -162,7 +162,7 @@ export default function CursoPagina() {
           />
         </div>
 
-        
+
         {/* Seção 2: Presenças do Curso */}
         <div className="secao-curso">
           <PresencasCurso
@@ -172,14 +172,14 @@ export default function CursoPagina() {
           />
         </div>
 
-         {/* Seção 3: Conteúdo do Curso */}
+        {/* Seção 3: Conteúdo do Curso */}
         <div className="secao-curso">
           <CursoConteudos
             cursoId={id}
             inscrito={inscrito}
           />
         </div>
-        
+
 
         {/* Seção 4: Avaliação do Curso */}
         <div className="secao-curso">
@@ -187,6 +187,7 @@ export default function CursoPagina() {
             cursoId={id}
             userRole={userRole}
             formadorId={curso.id_formador}
+            tipoCurso={curso.tipo}
           />
         </div>
       </div>

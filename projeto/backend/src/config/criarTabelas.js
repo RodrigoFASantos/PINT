@@ -244,7 +244,7 @@ const createTablesInOrder = async () => {
     );`,
 
     // =============================================
-    // 17. QUIZZES
+    // 17. QUIZZES - ATUALIZADO COM TEMPO_LIMITE_INICIO
     // =============================================
     `CREATE TABLE IF NOT EXISTS quizzes (
       id_quiz SERIAL PRIMARY KEY,
@@ -253,6 +253,7 @@ const createTablesInOrder = async () => {
       descricao TEXT,
       data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       tempo_limite INTEGER,
+      tempo_limite_inicio TIMESTAMP WITH TIME ZONE,
       ativo BOOLEAN DEFAULT TRUE
     );`,
 

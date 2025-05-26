@@ -17,8 +17,8 @@ import ListaCursos from './pages/cursos/Lista_Cursos';
 import CriarCurso from './pages/cursos/Criar_Curso';
 import CursoPagina from './pages/cursos/Pagina_Curso';
 import EditarCurso from './pages/cursos/Editar_Curso';
-import AvaliarTrabalhos from './components/cursos/Avaliar_Trabalhos';
 import Certificado from './components/cursos/Certificado';
+import AvaliarTrabalhos from './pages/cursos/Avaliar_Trabalhos';
 
 // Páginas de Utilizadores
 import PerfilUser from './pages/users/Perfil_Utilizador';
@@ -44,6 +44,7 @@ import GerirArea from './pages/gestao/gerir_Area';
 import GerirTopicos from './pages/gestao/gerir_Topicos';
 import GerirCursos from './pages/gestao/gerir_Cursos';
 import GerirDenuncias from './pages/gestao/gerir_Denuncias.jsx';
+import PercursoFormandos from './pages/gestao/Percurso_Formandos';
 
 // Páginas de Avaliações
 import QuizPage from './pages/cursos/QuizPage';
@@ -276,6 +277,17 @@ const App = () => {
               />
 
               <Route
+                path="/admin/percurso-formandos"
+                element={
+                  <RouteWrapper path="/admin/percurso-formandos">
+                    <ProtectedRoute allowedRoles={[1]}>
+                      <PercursoFormandos />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+              <Route
                 path="/admin/categorias"
                 element={
                   <RouteWrapper path="/admin/categorias">
@@ -363,16 +375,7 @@ const App = () => {
                 }
               />
 
-              <Route
-                path="/curso/:cursoId/avaliacao/:pastaId/submissoes"
-                element={
-                  <RouteWrapper path="/curso/:cursoId/avaliacao/:pastaId/submissoes">
-                    <ProtectedRoute allowedRoles={[1, 2]}>
-                      <AvaliarTrabalhos />
-                    </ProtectedRoute>
-                  </RouteWrapper>
-                }
-              />
+             
 
               <Route
                 path="/certificado"
@@ -384,6 +387,20 @@ const App = () => {
                   </RouteWrapper>
                 }
               />
+
+
+              <Route
+                path="/curso/:cursoId/avaliar-trabalhos" 
+                element={
+                  <RouteWrapper path="/curso/:cursoId/avaliar-trabalhos">
+                    <ProtectedRoute allowedRoles={[1, 2]}>
+                      <AvaliarTrabalhos />
+                    </ProtectedRoute>
+                  </RouteWrapper>
+                }
+              />
+
+
 
               <Route
                 path="/cursos/:id/inscricoes"

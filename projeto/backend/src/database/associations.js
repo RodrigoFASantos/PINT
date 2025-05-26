@@ -35,56 +35,15 @@ const ForumComentario = require('./models/ForumComentario');
 const Curso_Presenca = require('./models/Curso_Presenca');
 const Formando_Presenca = require('./models/Formando_Presenca');
 
-// Coleção de todos os modelos para uso nas funções associate
-const models = {
-  Area,
-  AssociarCursos,
-  Avaliacao,
-  Cargo,
-  Categoria,
-  ChatMensagem,
-  ChatInteracao,
-  ChatDenuncia,
-  ConteudoCurso,
-  Curso,
-  FormadorCategoria,
-  FormadorArea,
-  Inscricao_Curso,
-  OcorrenciaCurso,
-  PastaCurso,
-  PushSubscription,
-  Quiz,
-  QuizOpcao,
-  QuizPergunta,
-  QuizResposta,
-  QuizRespostaDetalhe,
-  TipoConteudo,
-  Topico_Area,
-  Curso_Topicos,
-  Trabalho_Entregue,
-  User,
-  User_Pendente,
-  FormadorAssociacoesPendentes,
-  Notificacao,
-  NotificacaoUtilizador,
-  ForumTema,
-  ForumTemaInteracao,
-  ForumTemaDenuncia,
-  ForumComentario,
-  Curso_Presenca,
-  Formando_Presenca
-};
+const models = { Area, AssociarCursos, Avaliacao, Cargo, Categoria, ChatMensagem, ChatInteracao, ChatDenuncia, ConteudoCurso, Curso, FormadorCategoria, FormadorArea, Inscricao_Curso, OcorrenciaCurso, PastaCurso, PushSubscription, Quiz, QuizOpcao, QuizPergunta, QuizResposta, QuizRespostaDetalhe, TipoConteudo, Topico_Area, Curso_Topicos, Trabalho_Entregue, User, User_Pendente, FormadorAssociacoesPendentes, Notificacao, NotificacaoUtilizador, ForumTema, ForumTemaInteracao, ForumTemaDenuncia, ForumComentario, Curso_Presenca, Formando_Presenca };
 
-// ========== DEFINIÇÃO DE TODAS AS ASSOCIAÇÕES ==========
-
+// ========== ASSOCIAÇÕES ==========
 // === Associações User_Pendente ===
 User_Pendente.belongsTo(Cargo, { foreignKey: "id_cargo", as: "cargo", constraints: false });
+User_Pendente.hasOne(FormadorAssociacoesPendentes, { foreignKey: "id_pendente", as: "associacoes" });
 
 // === Associações FormadorAssociacoesPendentes ===
 FormadorAssociacoesPendentes.belongsTo(User_Pendente, { foreignKey: "id_pendente", as: "usuario_pendente", onDelete: 'CASCADE' });
-
-// Adicione associação recíproca em User_Pendente
-User_Pendente.hasOne(FormadorAssociacoesPendentes, { foreignKey: "id_pendente", as: "associacoes" });
 
 // === Associações User ===
 User.belongsTo(Cargo, { foreignKey: "id_cargo", as: "cargo" });
@@ -96,16 +55,16 @@ User.belongsToMany(Curso, { through: Inscricao_Curso, foreignKey: "id_utilizador
 AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_origem", as: "cursoOrigem" });
 AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_destino", as: "cursoDestino" });
 
-// Adicionar associações bidirecionais em Curso
+// === Adicionar associações bidirecionais em Curso === 
 Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_origem", as: "cursosAssociadosOrigem" });
 Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_destino", as: "cursosAssociadosDestino" });
 
-// Novas associações para formadores com categorias e áreas
+// === Formadores com categorias e áreas === 
 User.belongsToMany(Categoria, { through: FormadorCategoria, foreignKey: "id_formador", otherKey: "id_categoria", as: "categorias_formador" });
 User.belongsToMany(Area, { through: FormadorArea, foreignKey: "id_formador", otherKey: "id_area", as: "areas_formador" });
 User.hasMany(ChatMensagem, { foreignKey: "id_utilizador", as: "mensagens_enviadas" });
 
-// Novas associações de User com interações e denúncias
+// === User com interações e denúncias === 
 User.hasMany(ChatInteracao, { foreignKey: "id_utilizador", as: "interacoes" });
 User.hasMany(ChatDenuncia, { foreignKey: "id_denunciante", as: "denuncias_feitas" });
 
@@ -117,14 +76,14 @@ Categoria.hasMany(Area, { foreignKey: "id_categoria", as: "areas" });
 Cargo.hasMany(User_Pendente, { foreignKey: "id_cargo", as: "utilizadores_pendentes", constraints: false });
 Categoria.hasMany(Curso, { foreignKey: "id_categoria", as: "cursos" });
 
-// Nova associação de Categoria com Formadores
+// === Categoria com Formadores === 
 Categoria.belongsToMany(User, { through: FormadorCategoria, foreignKey: "id_categoria", otherKey: "id_formador", as: "formadores" });
 
 // === Associações Area ===
 Area.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoriaParent" });
 Area.hasMany(Curso, { foreignKey: "id_area", as: "cursos" });
 
-// Nova associação de Area com Formadores
+// === Area com Formadores === 
 Area.belongsToMany(User, { through: FormadorArea, foreignKey: "id_area", otherKey: "id_formador", as: "formadores" });
 
 // === Associações Curso ===
@@ -151,6 +110,16 @@ FormadorArea.belongsTo(Area, { foreignKey: "id_area", as: "area" });
 Inscricao_Curso.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 Inscricao_Curso.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 
+// === CORREÇÃO IMPORTANTE: Associação Inscricao_Curso -> Avaliacao ===
+// Uma inscrição TEM UMA avaliação (hasOne)
+Inscricao_Curso.hasOne(Avaliacao, { 
+  foreignKey: "id_inscricao", 
+  as: "avaliacao" 
+});
+
+// === CORREÇÃO: Associação reversa QuizResposta com Inscricao_Curso ===
+Inscricao_Curso.hasMany(QuizResposta, { foreignKey: "id_inscricao", as: "quiz_respostas" });
+
 // === Associações Quiz e relacionados ===
 Quiz.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 Quiz.hasMany(QuizPergunta, { foreignKey: "id_quiz", as: "perguntas" });
@@ -175,7 +144,7 @@ Topico_Area.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoria" }
 Topico_Area.belongsTo(User, { foreignKey: "criado_por", as: "criador" });
 Topico_Area.belongsTo(Area, { foreignKey: "id_area", as: "area", required: true });
 
-// Associação recíproca opcional
+// Associação recíproca opcional === 
 Area.hasMany(Topico_Area, { foreignKey: "id_area", as: "topicos_categoria" });
 
 // === Associações Curso_Topicos ===
@@ -195,7 +164,7 @@ ChatMensagem.belongsTo(Topico_Area, { foreignKey: "id_topico", as: "topico" });
 Topico_Area.hasMany(ChatMensagem, { foreignKey: "id_topico", as: "mensagens" });
 ChatMensagem.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 
-// ChatMensagem com ChatInteracao e ChatDenuncia
+// === ChatMensagem com ChatInteracao e ChatDenuncia === 
 ChatMensagem.hasMany(ChatInteracao, { foreignKey: "id_mensagem", as: "interacoes" });
 ChatMensagem.hasMany(ChatDenuncia, { foreignKey: "id_mensagem", as: "denuncias_recebidas" });
 
@@ -214,10 +183,16 @@ User.hasMany(Trabalho_Entregue, { foreignKey: "id_utilizador", as: "trabalhos" }
 Curso.hasMany(Trabalho_Entregue, { foreignKey: "id_curso", as: "trabalhos_entregues" });
 
 // === Associações Avaliacao ===
+// Uma avaliação PERTENCE A uma inscrição (belongsTo)
 Avaliacao.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
 
-// Chamar funções associate para os modelos que as têm
-Object.values(models).forEach(model => { if (typeof model.associate === 'function') { model.associate(models); console.log(`Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`); } });
+// === Chamar funções associate para os modelos que as têm === 
+Object.values(models).forEach(model => { 
+  if (typeof model.associate === 'function') { 
+    model.associate(models); 
+    console.log(`✅ Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`); 
+  } 
+});
 
 // === Associações Notificação ===
 Notificacao.hasMany(NotificacaoUtilizador, { foreignKey: "id_notificacao", as: "destinatarios" });
@@ -225,43 +200,46 @@ NotificacaoUtilizador.belongsTo(Notificacao, { foreignKey: "id_notificacao", as:
 User.hasMany(NotificacaoUtilizador, { foreignKey: "id_utilizador", as: "notificacoes" });
 NotificacaoUtilizador.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 
-
-
-// Criar associações para ForumTema
+// === Criar associações para ForumTema === 
 ForumTema.belongsTo(Topico_Area, { foreignKey: 'id_topico', as: 'topico' });
 ForumTema.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 ForumTema.hasMany(ForumTemaInteracao, { foreignKey: 'id_tema', as: 'interacoes' });
 ForumTema.hasMany(ForumTemaDenuncia, { foreignKey: 'id_tema', as: 'denuncias' });
 ForumTema.hasMany(ForumComentario, { foreignKey: 'id_tema', as: 'tema_comentarios' });
 
-
-// Criar associações para ForumTemaInteracao
+// === Criar associações para ForumTemaInteracao === 
 ForumTemaInteracao.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumTemaInteracao.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 
-// Criar associações para ForumTemaDenuncia
+// === Criar associações para ForumTemaDenuncia === 
 ForumTemaDenuncia.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumTemaDenuncia.belongsTo(User, { foreignKey: 'id_denunciante', as: 'denunciante' });
 
-// Criar associações para ForumComentario
+// === Criar associações para ForumComentario === 
 ForumComentario.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumComentario.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 
+// === Associação entre Trabalho e Pasta === 
+Trabalho_Entregue.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" });
 
-// Associação entre Trabalho e Pasta
-Trabalho_Entregue.belongsTo(PastaCurso, {  foreignKey: "id_pasta",  as: "pasta"});
+// === Associação recíproca === 
+PastaCurso.hasMany(Trabalho_Entregue, { foreignKey: "id_pasta", as: "trabalhos" });
 
-// Associação recíproca
-PastaCurso.hasMany(Trabalho_Entregue, {  foreignKey: "id_pasta",  as: "trabalhos"});
-
-// Associações Curso_Presenca
+// === Associações Curso_Presenca === 
 Curso_Presenca.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
 
-// Associações Formando_Presenca
+// === Associações Formando_Presenca === 
 Formando_Presenca.belongsTo(Curso_Presenca, { foreignKey: "id_curso_presenca", as: "presenca_curso" });
 Formando_Presenca.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 User.hasMany(Formando_Presenca, { foreignKey: "id_utilizador", as: "presencas_marcadas" });
 Curso_Presenca.hasMany(Formando_Presenca, { foreignKey: "id_curso_presenca", as: "registros_presenca" });
+
+// === LOG DE CONFIRMAÇÃO DAS ASSOCIAÇÕES CRÍTICAS ===
+console.log("🔗 ASSOCIAÇÕES CRÍTICAS CONFIGURADAS:");
+console.log("✅ Inscricao_Curso -> Avaliacao (hasOne)");
+console.log("✅ Avaliacao -> Inscricao_Curso (belongsTo)");
+console.log("✅ Inscricao_Curso -> Curso (belongsTo)");
+console.log("✅ Inscricao_Curso -> User (belongsTo)");
 
 module.exports = models;

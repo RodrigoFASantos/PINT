@@ -3,9 +3,11 @@ const User = require("../../database/models/User");
 const Curso = require("../../database/models/Curso");
 const Categoria = require("../../database/models/Categoria");
 const Area = require("../../database/models/Area");
+const Avaliacao = require("../../database/models/Avaliacao");
+const Formando_Presenca = require("../../database/models/Formando_Presenca");
+const Curso_Presenca = require("../../database/models/Curso_Presenca");
 const { sequelize } = require("../../config/db");
 const emailService = require('../../utils/emailService');
-
 
 // Obter todas as inscrições
 const getAllInscricoes = async (req, res) => {
@@ -96,7 +98,156 @@ const getInscricoesPorCurso = async (req, res) => {
   }
 };
 
+//Obter as inscrições do user logado
+const getMinhasInscricoes = async (req, res) => {
+  try {
+    const id_utilizador = req.user.id_utilizador;
+    console.log(`🔍 [MINHAS INSCRIÇÕES] Buscando para utilizador: ${id_utilizador}`);
 
+    const inscricoes = await Inscricao_Curso.findAll({
+      where: { id_utilizador },
+      include: [
+        {
+          model: Curso,
+          as: "curso",
+          include: [
+            {
+              model: Categoria,
+              as: "categoria",
+              attributes: ['nome']
+            },
+            {
+              model: Area,
+              as: "area", 
+              attributes: ['nome']
+            }
+          ]
+        },
+        {
+          // Incluir a avaliação para obter a nota
+          model: Avaliacao,
+          as: "avaliacao", 
+          required: false, // LEFT JOIN para incluir inscrições sem avaliação
+          attributes: ['nota', 'horas_presenca', 'certificado', 'horas_totais']
+        }
+      ],
+      order: [['data_inscricao', 'DESC']]
+    });
+
+    console.log(`✅ [MINHAS INSCRIÇÕES] Encontradas ${inscricoes.length} inscrições`);
+
+    // Debug: Log da primeira inscrição
+    if (inscricoes.length > 0) {
+      const primeira = inscricoes[0];
+      console.log("📋 [DEBUG] Primeira inscrição:");
+      console.log("- ID:", primeira.id_inscricao);
+      console.log("- Curso:", primeira.curso?.nome);
+      console.log("- Avaliação exists:", !!primeira.avaliacao);
+      if (primeira.avaliacao) {
+        console.log("- Nota:", primeira.avaliacao.nota);
+        console.log("- Horas presença:", primeira.avaliacao.horas_presenca);
+      }
+    }
+
+    // Formatar os dados para o frontend
+    const inscricoesFormatadas = await Promise.all(
+      inscricoes.map(async (inscricao) => {
+        const curso = inscricao.curso;
+        const avaliacao = inscricao.avaliacao;
+
+        console.log(`📚 [PROCESSANDO] Curso: ${curso.nome}`);
+        console.log(`📊 [AVALIACAO] Existe: ${avaliacao ? 'SIM' : 'NÃO'}`);
+        
+        if (avaliacao) {
+          console.log(`📝 [NOTA] Valor: ${avaliacao.nota}`);
+          console.log(`⏰ [HORAS] Presença: ${avaliacao.horas_presenca}`);
+        }
+
+        // Calcular horas de presença se não estiver na avaliação
+        let horasPresenca = avaliacao?.horas_presenca || 0;
+        
+        if (!horasPresenca || horasPresenca === 0) {
+          try {
+            console.log(`⏰ [CALCULANDO] Horas de presença para curso ${curso.id_curso}`);
+            
+            // Buscar presenças do curso
+            const presencasCurso = await Curso_Presenca.findAll({
+              where: { id_curso: curso.id_curso }
+            });
+
+            const idsPresencasCurso = presencasCurso.map(p => p.id_curso_presenca);
+
+            if (idsPresencasCurso.length > 0) {
+              // Calcular horas de presença do utilizador
+              const resultado = await sequelize.query(`
+                SELECT COALESCE(SUM(fp.duracao), 0) as total 
+                FROM formando_presenca fp 
+                WHERE fp.id_curso_presenca IN (?) AND fp.id_utilizador = ?
+              `, {
+                replacements: [idsPresencasCurso, id_utilizador],
+                type: sequelize.QueryTypes.SELECT
+              });
+
+              if (resultado && resultado[0]) {
+                horasPresenca = Number(resultado[0].total) || 0;
+                console.log(`✅ [CALCULADO] Horas de presença: ${horasPresenca}`);
+              }
+            }
+          } catch (presencaError) {
+            console.error("❌ [ERRO] Calcular horas de presença:", presencaError);
+            horasPresenca = 0;
+          }
+        }
+
+        // Determinar o status do curso
+        let status = inscricao.estado || 'Inscrito';
+        
+        // Se tem avaliação com nota, é concluído
+        if (avaliacao && avaliacao.nota !== null && avaliacao.nota !== undefined) {
+          status = 'Concluído';
+        }
+
+        const cursoFormatado = {
+          cursoId: curso.id_curso,
+          nomeCurso: curso.nome,
+          categoria: curso.categoria?.nome || 'Não especificada',
+          area: curso.area?.nome || 'Não especificada',
+          dataInicio: curso.data_inicio,
+          dataFim: curso.data_fim,
+          cargaHoraria: curso.duracao,
+          horasPresenca: horasPresenca,
+          notaFinal: avaliacao?.nota || null, // IMPORTANTE: Esta é a nota!
+          status: status,
+          imagem_path: curso.imagem_path
+        };
+
+        console.log(`✨ [RESULTADO] ${cursoFormatado.nomeCurso}:`, {
+          nota: cursoFormatado.notaFinal,
+          horas: cursoFormatado.horasPresenca,
+          status: cursoFormatado.status
+        });
+
+        return cursoFormatado;
+      })
+    );
+
+    // Log final das notas encontradas
+    const cursosComNota = inscricoesFormatadas.filter(c => c.notaFinal !== null);
+    console.log(`🎯 [FINAL] Cursos com nota: ${cursosComNota.length}/${inscricoesFormatadas.length}`);
+    cursosComNota.forEach(c => console.log(`   - ${c.nomeCurso}: ${c.notaFinal}/20`));
+
+    console.log(`🎉 [SUCESSO] Retornando ${inscricoesFormatadas.length} inscrições`);
+    res.json(inscricoesFormatadas);
+    
+  } catch (error) {
+    console.error("❌ [ERRO GERAL] Buscar minhas inscrições:", error);
+    console.error("Stack trace:", error.stack);
+    res.status(500).json({ 
+      message: "Erro ao buscar inscrições", 
+      error: error.message 
+    });
+  }
+};
 
 // Criar uma nova inscrição
 const createInscricao = async (req, res) => {
@@ -194,7 +345,6 @@ const createInscricao = async (req, res) => {
       // Não abortamos a operação se o email falhar
     }
 
-
     // Resposta
     res.status(201).json({
       message: "Inscrição realizada com sucesso!",
@@ -255,14 +405,6 @@ const cancelarInscricao = async (req, res) => {
       });
     }
 
-    // Verificar configuração do Sequelize
-    console.log("[3] A verificar configuração do Sequelize:");
-    console.log(`- Dialeto: ${sequelize.getDialect()}`);
-    console.log(`- Host: ${sequelize.config.host}`);
-    console.log(`- Porta: ${sequelize.config.port}`);
-    console.log(`- Base de dados: ${sequelize.config.database}`);
-    console.log(`- Utilizador: ${sequelize.config.username}`);
-
     // Procurar inscrição com todos os detalhes necessários
     console.log(`[4] Procurar inscrição com ID ${id}...`);
     let inscricao;
@@ -297,7 +439,6 @@ const cancelarInscricao = async (req, res) => {
     console.log(`- ID do cargo do utilizador: ${req.user.id_cargo}`);
     console.log(`- ID do utilizador da inscrição: ${inscricao.id_utilizador}`);
 
-
     // Procurar o curso para verificar se o utilizador é o formador
     let curso;
     try {
@@ -309,23 +450,15 @@ const cancelarInscricao = async (req, res) => {
         error: findCursoError.message
       });
     }
-    // Verificar permissões: admin (cargo 1), formador do curso, ou o próprio inscrito
+    
+    // PERMISSÕES RESTRITAS: Apenas admin (cargo 1) ou formador do curso (cargo 2)
     const isAdmin = req.user.id_cargo === 1;
     const isFormadorDoCurso = req.user.id_cargo === 2 && curso && req.user.id_utilizador === curso.id_formador;
-    const isProprioUtilizador = req.user.id_utilizador === inscricao.id_utilizador;
 
-    if (!isAdmin && !isFormadorDoCurso && !isProprioUtilizador) {
-      console.log(`[6.1] Acesso negado: Utilizador ${req.user.id_utilizador} a tentar cancelar inscrição de ${inscricao.id_utilizador}`);
+    if (!isAdmin && !isFormadorDoCurso) {
+      console.log(`[6.1] Acesso negado: Utilizador ${req.user.id_utilizador} não tem permissão para cancelar inscrições`);
       return res.status(403).json({
-        message: "Não tem permissão para cancelar esta inscrição"
-      });
-    }
-    console.log(`[6.2] Verificação de permissão bem-sucedida`);
-
-    if (req.user.id_utilizador !== inscricao.id_utilizador && req.user.id_cargo !== 1) {
-      console.log(`[6.1] Acesso negado: Utilizador ${req.user.id_utilizador} a tentar cancelar inscrição de ${inscricao.id_utilizador}`);
-      return res.status(403).json({
-        message: "Não tem permissão para cancelar esta inscrição"
+        message: "Apenas administradores e formadores do curso podem cancelar inscrições"
       });
     }
     console.log(`[6.2] Verificação de permissão bem-sucedida`);
@@ -377,7 +510,6 @@ const cancelarInscricao = async (req, res) => {
 
       // PARTE 2: Atualizar vagas do curso
       console.log(`[10] Procurar curso com ID ${inscricao.id_curso}...`);
-      let curso;
       try {
         curso = await Curso.findByPk(inscricao.id_curso, { transaction });
         console.log(`[10.1] Resultado da procura: ${curso ? "Encontrado" : "Não encontrado"}`);
@@ -426,7 +558,7 @@ const cancelarInscricao = async (req, res) => {
       if (req.io) {
         console.log(`[13.1] A enviar notificação WebSocket para user_${inscricao.id_utilizador}`);
         req.io.to(`user_${inscricao.id_utilizador}`).emit('inscricao_cancelada', {
-          message: `A sua inscrição no curso "${curso ? curso.nome : 'ID: ' + inscricao.id_curso}" foi cancelada com sucesso.`,
+          message: `A sua inscrição no curso "${curso ? curso.nome : 'ID: ' + inscricao.id_curso}" foi cancelada.`,
           id_inscricao: inscricao.id_inscricao
         });
         console.log("[13.2] Notificação WebSocket enviada");
@@ -609,6 +741,7 @@ const removerInscricoesDoCurso = async (id_curso, transaction) => {
 };
 
 module.exports = {
+  getMinhasInscricoes,
   getAllInscricoes,
   getInscricoesPorCurso,
   createInscricao,

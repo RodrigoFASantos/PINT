@@ -1,0 +1,549 @@
+.avaliar-trabalhos-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.avaliar-trabalhos-container h2 {
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border: 1px solid #f5c6cb;
+}
+
+.info-message {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border: 1px solid #bee5eb;
+}
+
+.loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  flex-direction: column;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #3498db;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.filtros-container {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.filtro-grupo {
+  margin-bottom: 15px;
+}
+
+.filtro-grupo label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #34495e;
+}
+
+.filtro-grupo select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.tabela-avaliar {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tabela-avaliar th {
+  background-color: #007bff;
+  color: white;
+  text-align: left;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.tabela-avaliar td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.tabela-avaliar tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela-avaliar tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.tabela-avaliar input[type="number"] {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.acoes-coluna {
+  white-space: nowrap;
+}
+
+.acoes-coluna button {
+  margin-right: 5px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  color: #495057;
+  transition: all 0.2s;
+}
+
+.btn-download {
+  background-color: #17a2b8 !important;
+  color: white !important;
+}
+
+.btn-download:hover {
+  background-color: #138496 !important;
+}
+
+.btn-salvar-nota {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.btn-salvar-nota:hover {
+  background-color: #218838 !important;
+}
+
+.acoes-coluna button:disabled {
+  background-color: #e9ecef !important;
+  color: #868e96 !important;
+  cursor: not-allowed;
+}
+
+/* Estilos para os botões de certificado */
+.btn-gerar-certificado, .btn-ver-certificado, .btn-apagar-certificado {
+  margin: 10px 5px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-gerar-certificado {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-gerar-certificado:hover {
+  background-color: #2ecc71;
+}
+
+.btn-ver-certificado {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-ver-certificado:hover {
+  background-color: #2980b9;
+}
+
+.btn-apagar-certificado {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-apagar-certificado:hover {
+  background-color: #c0392b;
+}
+
+.btn-gerar-certificado:disabled, 
+.btn-ver-certificado:disabled, 
+.btn-apagar-certificado:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.filtro-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 15px;
+}
+
+/* Painel de informações do certificado */
+.info-certificado {
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 15px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.info-curso, .info-nota {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.info-curso strong, .info-nota strong {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-right: 8px;
+}
+
+.info-nota {
+  font-size: 1.15em;
+  margin-top: 10px;
+  color: #2c3e50;
+  padding-top: 10px;
+  border-top: 1px solid #eaeaea;
+}
+
+.separador {
+  margin: 0 10px;
+  color: #aaa;
+}
+
+/* Responsividade */
+@media (min-width: 768px) {
+  .filtro-acoes {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  
+  .filtro-acoes button {
+    margin-left: 10px;
+  }
+  
+  .filtros-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 15px;
+  }
+  
+  .info-certificado {
+    grid-column: span 2;
+  }
+}
+
+
+
+/* Badge para estado concluído dos quizzes */
+.badge-concluido {
+  background-color: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Linha de resumo dos quizzes */
+.quiz-resumo {
+  background-color: #f8f9fa;
+  font-style: italic;
+  color: #6c757d;
+  text-align: center;
+  padding: 12px;
+}
+
+/* Melhorias na informação do certificado */
+.info-certificado {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.info-curso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.info-nota {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #495057;
+}
+
+.separador {
+  color: #6c757d;
+  margin: 0 8px;
+}
+
+/* Melhorias na tabela para quizzes */
+.tabela-avaliar th {
+  background-color: #495057;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  padding: 12px;
+  border: none;
+}
+
+.tabela-avaliar td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.tabela-avaliar tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.tabela-avaliar tr:hover {
+  background-color: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+/* Destaque para notas dos quizzes */
+.tabela-avaliar td strong {
+  color: #28a745;
+  font-size: 1.1em;
+}
+
+/* Melhorias nos filtros */
+.filtros-container {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filtro-grupo {
+  margin-bottom: 16px;
+}
+
+.filtro-grupo label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.filtro-grupo select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  transition: border-color 0.2s ease;
+}
+
+.filtro-grupo select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Melhorias nas ações dos filtros */
+.filtro-acoes {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.btn-gerar-certificado,
+.btn-apagar-certificado,
+.btn-ver-certificado {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-gerar-certificado {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-gerar-certificado:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+}
+
+.btn-gerar-certificado:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-apagar-certificado {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-apagar-certificado:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220,53,69,0.3);
+}
+
+.btn-ver-certificado {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-ver-certificado:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+}
+
+/* Melhorias nas mensagens informativas */
+.info-message {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  color: #6c757d;
+  font-size: 1.1em;
+  margin: 20px 0;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  font-weight: 500;
+}
+
+.loading-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #6c757d;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (min-width: 768px) {
+  .filtros-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  
+  .info-certificado {
+    grid-column: 1 / -1;
+  }
+  
+  .filtro-acoes {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 992px) {
+  .filtros-container {
+    grid-template-columns: 1fr 1fr 2fr;
+  }
+  
+  .info-certificado {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Melhorias específicas para a tabela de quizzes */
+.tabela-avaliar tbody tr:last-child td {
+  border-bottom: 2px solid #495057;
+}
+
+/* Estilo especial para linhas de resumo */
+.tabela-avaliar .quiz-resumo {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  font-weight: 500;
+}
+
+/* Melhorias no header */
+.avaliar-trabalhos-container h2 {
+  color: #495057;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid #007bff;
+  font-weight: 700;
+}

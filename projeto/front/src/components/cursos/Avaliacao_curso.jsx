@@ -5,6 +5,7 @@ import CriarPastaModal from './Criar_Pasta_Modal';
 import CriarConteudoModal from './Criar_Conteudo_Modal';
 import Curso_Conteudo_ficheiro_Modal from './Curso_Conteudo_Ficheiro_Modal';
 import DetalhesSubmissao from './Detalhes_Submissao';
+import QuizzesAvaliacao from './QuizzesAvaliacao';
 import { Link } from 'react-router-dom';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
@@ -53,7 +54,7 @@ const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel 
   );
 };
 
-const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
+const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
   const [topicoAvaliacao, setTopicoAvaliacao] = useState(null);
   const [expandedPastas, setExpandedPastas] = useState([]);
   const [selectedConteudo, setSelectedConteudo] = useState(null);
@@ -76,9 +77,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
   const [arquivo, setArquivo] = useState(null);
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
   const [submissaoSelecionada, setSubmissaoSelecionada] = useState(null);
-
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
-
 
   // Verifica se o utilizador é formador
   const isFormador = () => {
@@ -99,6 +98,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
+  // Verificar se o curso é assíncrono
+  const isCursoAssincrono = () => {
+    return tipoCurso === 'assincrono';
+  };
 
   // Função para verificar se uma submissão está atrasada
   const isSubmissaoAtrasada = (submissao, pasta) => {
@@ -269,6 +272,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       } else {
         setTopicoAvaliacao(null);
       }
+
       setCarregando(false);
     } catch (error) {
       console.error('Erro ao carregar tópicos:', error);
@@ -282,7 +286,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     if (cursoId) {
       carregarTopicos();
     }
-  }, [cursoId]);
+  }, [cursoId, tipoCurso]);
 
   // Expandir/colapsar pasta
   const toggleExpandPasta = (idPasta) => {
@@ -483,13 +487,11 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
     }
   };
 
-
   // Abrir os detalhes da submissão
   const verSubmissaoDetalhes = (submissao) => {
     setSubmissaoSelecionada(submissao);
     setMostrarDetalhes(true);
   };
-
 
   // Renderização condicional para carregamento
   if (carregando) {
@@ -518,7 +520,8 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
       <div className="conteudos-header-avaliacao">
         <h2 className="avaliacao-titulo">Avaliação</h2>
 
-        {isFormador() && (
+        {/* Botões de ação apenas para cursos síncronos */}
+        {!isCursoAssincrono() && isFormador() && (
           <div className="topico-actions">
             {topicoAvaliacao ? (
               <>
@@ -533,7 +536,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
 
                 {/* Ver submissões */}
                 <Link
-                  to={`/curso/${cursoId}/avaliacao/${topicoAvaliacao.id_topico}/submissoes`}
+                  to={`/curso/${cursoId}/avaliar-trabalhos`}
                   className="btn-ver-submissoes-pasta"
                   title="Ver submissões"
                 >
@@ -564,232 +567,286 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
           </div>
         )}
       </div>
-      <hr />
 
-      {/* Conteúdo do tópico de avaliação */}
-      {topicoAvaliacao && (
-        <div className="pastas-list">
-          {topicoAvaliacao.pastas && topicoAvaliacao.pastas.length > 0 ? (
-            topicoAvaliacao.pastas.map((pasta) => (
-              <div key={pasta.id_pasta} className="pasta-item">
-                <div className="pasta-header">
-                  <button
-                    className="btn-toggle"
-                    onClick={() => toggleExpandPasta(pasta.id_pasta)}
-                  >
-                    {expandedPastas.includes(pasta.id_pasta) ? (
-                      <i className="fas fa-chevron-down"></i>
-                    ) : (
-                      <i className="fas fa-chevron-right"></i>
-                    )}
-                  </button>
-                  <i className="fas fa-folder"></i>
-                  <span className="pasta-nome">{pasta.nome}</span>
+      {/* ========== SEÇÃO DE QUIZZES (APENAS PARA CURSOS ASSÍNCRONOS) ========== */}
+      <QuizzesAvaliacao
+        cursoId={cursoId}
+        userRole={userRole}
+        inscrito={true} // Assumindo que está inscrito se chegou até aqui
+        tipoCurso={tipoCurso}
+      />
 
-                  {/* Exibir data limite junto ao nome da pasta */}
-                  {pasta.data_limite && (
-                    <div className={`data-limite ${isDataLimiteExpirada(pasta.data_limite) ? 'data-limite-expirada' : ''}`}>
-                      <i className="fas fa-clock"></i>
-                      Prazo: {formatarData(pasta.data_limite)}
-                      {isDataLimiteExpirada(pasta.data_limite) && " (Expirado)"}
-                    </div>
-                  )}
+      {/* ========== SEPARADOR VISUAL (SE HOUVER QUIZZES) ========== */}
+      {isCursoAssincrono() && (
+        <div style={{
+          height: '2px',
+          background: 'linear-gradient(to right, #dee2e6, transparent)',
+          margin: '30px 0'
+        }} />
+      )}
 
-                  {isFormador() ? (
-                    <div className="pasta-actions">
+      {/* ========== SEÇÃO DE SUBMISSÕES/AVALIAÇÕES TRADICIONAIS ========== */}
+      {!isCursoAssincrono() && (
+        <>
+          <hr />
+
+          {/* Conteúdo do tópico de avaliação para cursos síncronos */}
+          {topicoAvaliacao && (
+            <div className="pastas-list">
+              {topicoAvaliacao.pastas && topicoAvaliacao.pastas.length > 0 ? (
+                topicoAvaliacao.pastas.map((pasta) => (
+                  <div key={pasta.id_pasta} className="pasta-item">
+                    <div className="pasta-header">
                       <button
-                        className="btn-add-conteudo"
-                        onClick={() => abrirModalAdicionarConteudo(pasta)}
-                        title="Adicionar conteúdo"
+                        className="btn-toggle"
+                        onClick={() => toggleExpandPasta(pasta.id_pasta)}
                       >
-                        <i className="fas fa-file-medical"></i>
-                      </button>
-
-                      <button
-                        className="btn-delete"
-                        onClick={() => mostrarModalConfirmacao(
-                          'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
-                          'removerPasta',
-                          pasta.id_pasta
+                        {expandedPastas.includes(pasta.id_pasta) ? (
+                          <i className="fas fa-chevron-down"></i>
+                        ) : (
+                          <i className="fas fa-chevron-right"></i>
                         )}
-                        title="Remover pasta"
-                      >
-                        <i className="fas fa-trash"></i>
                       </button>
-                    </div>
-                  ) : (
-                    <div className="pasta-actions">
-                      <button
-                        className="btn-submeter"
-                        onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
-                        title="Submeter trabalho"
-                        disabled={isDataLimiteExpirada(pasta.data_limite)}
-                      >
-                        <i className="fas fa-upload"></i> Submeter
-                      </button>
-                    </div>
-                  )}
-                </div>
+                      <i className="fas fa-folder"></i>
+                      <span className="pasta-nome">{pasta.nome}</span>
 
-                {expandedPastas.includes(pasta.id_pasta) && (
-                  <div className="pasta-expanded-content">
-                    {/* Conteúdos */}
-                    <div className="conteudos-list">
-                      <h4 className="secao-titulo">Conteúdos</h4>
-                      {pasta.conteudos && pasta.conteudos.length > 0 ? (
-                        pasta.conteudos.map((conteudo) => {
-                          return (
-                            <div key={conteudo.id_conteudo} className="conteudo-item">
-                              <i className={`fas ${conteudo.tipo === 'video' ? 'fa-video' : 'fa-file'}`}></i>
-                              <span className="conteudo-nome" onClick={() => abrirModalFicheiro(conteudo)}>
-                                {conteudo.titulo || conteudo.arquivo_path?.split('/').pop() || "Ficheiro sem nome"}
-                              </span>
+                      {/* Exibir data limite junto ao nome da pasta */}
+                      {pasta.data_limite && (
+                        <div className={`data-limite ${isDataLimiteExpirada(pasta.data_limite) ? 'data-limite-expirada' : ''}`}>
+                          <i className="fas fa-clock"></i>
+                          Prazo: {formatarData(pasta.data_limite)}
+                          {isDataLimiteExpirada(pasta.data_limite) && " (Expirado)"}
+                        </div>
+                      )}
 
-                              {isFormador() && (
-                                <button
-                                  className="btn-delete"
-                                  onClick={() => mostrarModalConfirmacao(
-                                    'Tem certeza que deseja remover este conteúdo?',
-                                    'removerConteudo',
-                                    conteudo.id_conteudo
-                                  )}
-                                  title="Remover conteúdo"
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })
+                      {isFormador() ? (
+                        <div className="pasta-actions">
+                          <button
+                            className="btn-add-conteudo"
+                            onClick={() => abrirModalAdicionarConteudo(pasta)}
+                            title="Adicionar conteúdo"
+                          >
+                            <i className="fas fa-file-medical"></i>
+                          </button>
+
+                          <button
+                            className="btn-delete"
+                            onClick={() => mostrarModalConfirmacao(
+                              'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
+                              'removerPasta',
+                              pasta.id_pasta
+                            )}
+                            title="Remover pasta"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+
+                          {/* Botão de submissão*/}
+                          <button
+                            className="btn-submeter"
+                            onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
+                            title="Submeter trabalho (como administrador)"
+                            disabled={isDataLimiteExpirada(pasta.data_limite)}
+                            style={{ marginLeft: '10px' }}
+                          >
+                            <i className="fas fa-upload"></i> Submeter
+                          </button>
+                        </div>
                       ) : (
-                        <div className="secao-vazia">Sem conteúdos disponíveis</div>
+                        <div className="pasta-actions">
+                          <button
+                            className="btn-submeter"
+                            onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
+                            title="Submeter trabalho"
+                            disabled={isDataLimiteExpirada(pasta.data_limite)}
+                          >
+                            <i className="fas fa-upload"></i> Submeter
+                          </button>
+                        </div>
                       )}
                     </div>
 
-                    {/* Submissões dos formandos */}
-                    {isFormador() && (
-                      <div className="submissoes-list">
-                        <h4 className="secao-titulo">Submissões dos Formandos</h4>
-                        {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
-                          submissoes[pasta.id_pasta].map((submissao, index) => {
-                            const atrasada = isSubmissaoAtrasada(submissao, pasta);
-                            return (
-                              <div
-                                key={submissao.id || index}
-                                className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
-                              >
-                                <i className="fas fa-file-upload"></i>
-                                <span className="submissao-info">
-                                  <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
-                                    formatarData(submissao.data_submissao || submissao.data_entrega)
-                                  }
-                                  {atrasada && (
-                                    <span className="submissao-atrasada-badge">Atrasada</span>
-                                  )}
-                                </span>
-                                <button
-                                  className="btn-download"
-                                  onClick={() => {
-                                    if (submissao.ficheiro_path) {
-                                      window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
-                                    } else {
-                                      alert('Caminho do ficheiro não disponível');
-                                    }
-                                  }}
-                                  title="Descarregar submissão"
-                                >
-                                  <i className="fas fa-download"></i>
-                                </button>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="secao-vazia">Nenhuma submissão recebida</div>
-                        )}
-                      </div>
-                    )}
+                    {expandedPastas.includes(pasta.id_pasta) && (
+                      <div className="pasta-expanded-content">
+                        {/* Conteúdos */}
+                        <div className="conteudos-list">
+                          <h4 className="secao-titulo">Conteúdos</h4>
+                          {pasta.conteudos && pasta.conteudos.length > 0 ? (
+                            pasta.conteudos.map((conteudo) => {
+                              return (
+                                <div key={conteudo.id_conteudo} className="conteudo-item">
+                                  <i className={`fas ${conteudo.tipo === 'video' ? 'fa-video' : 'fa-file'}`}></i>
+                                  <span className="conteudo-nome" onClick={() => abrirModalFicheiro(conteudo)}>
+                                    {conteudo.titulo || conteudo.arquivo_path?.split('/').pop() || "Ficheiro sem nome"}
+                                  </span>
 
-                    {/* Para formandos, mostrar suas próprias submissões */}
-                    {!isFormador() && (
-                      <div className="minhas-submissoes">
-                        <h4 className="secao-titulo">Minhas Submissões</h4>
-                        {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
-                          // Se existem submissões
-                          submissoes[pasta.id_pasta].map((submissao, index) => {
-                            const atrasada = isSubmissaoAtrasada(submissao, pasta);
-                            return (
-                              <div key={submissao.id || index}>
-                                {(submissaoSelecionada && submissaoSelecionada.id === submissao.id && mostrarDetalhes) ? (
-                                  // Mostrar detalhes completos quando selecionado
-                                  <div className="detalhes-wrapper">
-                                    <DetalhesSubmissao
-                                      submissao={submissao}
-                                      cursoId={cursoId}
-                                      pastaId={pasta.id_pasta}
-                                      atrasada={atrasada}
-                                    />
+                                  {isFormador() && (
                                     <button
-                                      className="btn-fechar-detalhes"
-                                      onClick={() => setMostrarDetalhes(false)}
+                                      className="btn-delete"
+                                      onClick={() => mostrarModalConfirmacao(
+                                        'Tem certeza que deseja remover este conteúdo?',
+                                        'removerConteudo',
+                                        conteudo.id_conteudo
+                                      )}
+                                      title="Remover conteúdo"
                                     >
-                                      <i className="fas fa-times"></i> Fechar
+                                      <i className="fas fa-trash"></i>
                                     </button>
-                                  </div>
-                                ) : (
-                                  // Mostrar versão resumida com opção para expandir
-                                  <div className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="secao-vazia">Sem conteúdos disponíveis</div>
+                          )}
+                        </div>
+
+                        {/* Submissões dos formandos */}
+                        {isFormador() && (
+                          <div className="submissoes-list">
+                            <h4 className="secao-titulo">Submissões dos Formandos</h4>
+                            {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
+                              submissoes[pasta.id_pasta].map((submissao, index) => {
+                                const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                                return (
+                                  <div
+                                    key={submissao.id || index}
+                                    className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
+                                  >
                                     <i className="fas fa-file-upload"></i>
                                     <span className="submissao-info">
-                                      {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
+                                      <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
                                         formatarData(submissao.data_submissao || submissao.data_entrega)
                                       }
                                       {atrasada && (
                                         <span className="submissao-atrasada-badge">Atrasada</span>
                                       )}
                                     </span>
-                                    <div className="submissao-acoes">
-                                      {submissao.ficheiro_path && (
-                                        <button
-                                          className="btn-download"
-                                          onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
-                                          title="Descarregar submissão"
-                                        >
-                                          <i className="fas fa-download"></i>
-                                        </button>
-                                      )}
-                                      <button
-                                        className="btn-detalhes"
-                                        onClick={() => verSubmissaoDetalhes(submissao)}
-                                        title="Ver detalhes"
-                                      >
-                                        <i className="fas fa-info-circle"></i>
-                                      </button>
-                                    </div>
+                                    <button
+                                      className="btn-download"
+                                      onClick={() => {
+                                        if (submissao.ficheiro_path) {
+                                          window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
+                                        } else {
+                                          alert('Caminho do ficheiro não disponível');
+                                        }
+                                      }}
+                                      title="Descarregar submissão"
+                                    >
+                                      <i className="fas fa-download"></i>
+                                    </button>
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="secao-vazia">Nenhuma submissão enviada</div>
+                                );
+                              })
+                            ) : (
+                              <div className="secao-vazia">Nenhuma submissão recebida</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Para formandos, mostrar suas próprias submissões */}
+                        {!isFormador() && (
+                          <div className="minhas-submissoes">
+                            <h4 className="secao-titulo">Minhas Submissões</h4>
+                            {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
+                              // Se existem submissões
+                              submissoes[pasta.id_pasta].map((submissao, index) => {
+                                const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                                return (
+                                  <div key={submissao.id || index}>
+                                    {(submissaoSelecionada && submissaoSelecionada.id === submissao.id && mostrarDetalhes) ? (
+                                      // Mostrar detalhes completos quando selecionado
+                                      <div className="detalhes-wrapper">
+                                        <DetalhesSubmissao
+                                          submissao={submissao}
+                                          cursoId={cursoId}
+                                          pastaId={pasta.id_pasta}
+                                          atrasada={atrasada}
+                                        />
+                                        <button
+                                          className="btn-fechar-detalhes"
+                                          onClick={() => setMostrarDetalhes(false)}
+                                        >
+                                          <i className="fas fa-times"></i> Fechar
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      // Mostrar versão resumida com opção para expandir
+                                      <div className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
+                                        <i className="fas fa-file-upload"></i>
+                                        <span className="submissao-info">
+                                          {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
+                                            formatarData(submissao.data_submissao || submissao.data_entrega)
+                                          }
+                                          {atrasada && (
+                                            <span className="submissao-atrasada-badge">Atrasada</span>
+                                          )}
+                                        </span>
+                                        <div className="submissao-acoes">
+                                          {submissao.ficheiro_path && (
+                                            <button
+                                              className="btn-download"
+                                              onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                                              title="Descarregar submissão"
+                                            >
+                                              <i className="fas fa-download"></i>
+                                            </button>
+                                          )}
+                                          <button
+                                            className="btn-detalhes"
+                                            onClick={() => verSubmissaoDetalhes(submissao)}
+                                            title="Ver detalhes"
+                                          >
+                                            <i className="fas fa-info-circle"></i>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="secao-vazia">Nenhuma submissão enviada</div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="topico-empty">
-              <p>Sem pastas no tópico de avaliação</p>
-              {isFormador() && (
-                <button onClick={abrirModalCriarPasta} className="btn-add-pasta">
-                  <i className="fas fa-folder-plus"></i> Adicionar pasta
-                </button>
+                ))
+              ) : (
+                <div className="topico-empty">
+                  <p>Sem pastas no tópico de avaliação</p>
+                  {isFormador() && (
+                    <button onClick={abrirModalCriarPasta} className="btn-add-pasta">
+                      <i className="fas fa-folder-plus"></i> Adicionar pasta
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
-        </div>
+
+          {/* Mostrar mensagem se não houver tópico de avaliação para cursos síncronos */}
+          {!topicoAvaliacao && (
+            <div className="sem-avaliacao">
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#6c757d',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '2px dashed #dee2e6'
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: '15px' }}>📂</div>
+                <p>Nenhum tópico de avaliação criado ainda.</p>
+                {isFormador() && (
+                  <p style={{ fontSize: '14px' }}>Clique em "Criar Avaliação" para começar.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal para criar pastas */}
@@ -804,7 +861,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId }) => {
         />
       )}
 
-      {/* Modal para adicionar conteúdos - MANTIDO apenas para a possibilidade de ser aberto */}
+      {/* Modal para adicionar conteúdos */}
       {showCriarConteudoModal && pastaSelecionada && (
         <CriarConteudoModal
           pasta={pastaSelecionada}

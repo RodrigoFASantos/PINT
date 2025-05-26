@@ -118,14 +118,17 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   </Link>
                 </li>
 
-                <Link to="/admin/denuncias" className="menu-item">
-                  <i className="fas fa-flag"></i>
-                  <span>Gerenciar Denúncias</span>
-                </Link>
+                <li className={isActive('/admin/denuncias') ? 'active' : ''}>
+                  <Link to="/admin/denuncias" onClick={toggleSidebar}>
+                    <i className="fas fa-flag"></i> Gerenciar Denúncias
+                  </Link>
+                </li>
 
-
-
-
+                <li className={isActive('/admin/percurso-formandos') ? 'active' : ''}>
+                  <Link to="/admin/percurso-formandos" onClick={toggleSidebar}>
+                    <i className="fas fa-chart-line"></i> Percurso Formandos
+                  </Link>
+                </li>
 
                 <li className={isActive('/admin/categorias') ? 'active' : ''}>
                   <Link to="/admin/categorias" onClick={toggleSidebar}>
@@ -139,19 +142,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                   </Link>
                 </li>
 
-
                 <li className={isActive('/admin/topicos') ? 'active' : ''}>
                   <Link to="/admin/topicos" onClick={toggleSidebar}>
                     <i className="fas fa-pencil-ruler"></i> Gerir Topicos
                   </Link>
                 </li>
-
-
-
-
-
-
-
 
                 <li className={isActive('/admin/criar-curso') ? 'active' : ''}>
                   <Link to="/admin/criar-curso" onClick={toggleSidebar}>

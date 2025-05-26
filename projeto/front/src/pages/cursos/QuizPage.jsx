@@ -4,6 +4,7 @@ import axios from 'axios';
 import './css/quizPage.css';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
+import API_BASE from '../../api';
 
 const QuizPage = () => {
   const { id } = useParams(); // ID do quiz
@@ -11,34 +12,43 @@ const QuizPage = () => {
   const [quiz, setQuiz] = useState(null);
   const [respostas, setRespostas] = useState({});
   const [loading, setLoading] = useState(true);
-  const [enviar, setenviar] = useState(false);
+  const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [tempoRestante, setTempoRestante] = useState(null);
   const [quizIniciado, setQuizIniciado] = useState(false);
+  const [idResposta, setIdResposta] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
     const fetchQuizDetails = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/quizzes/${id}`, {
+        const response = await axios.get(`${API_BASE}/quiz/${id}?formato=quiz`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        setQuiz(response.data);
+        // CORREÇÃO: Verificar se a resposta tem a estrutura correta
+        let quizData = response.data;
+        if (response.data && response.data.data) {
+          quizData = response.data.data;
+        }
         
-        // Inicializar objeto de respostas
-        const respostasIniciais = {};
-        response.data.perguntas.forEach(pergunta => {
-          if (pergunta.tipo === 'multipla_escolha') {
-            respostasIniciais[pergunta.id] = null;
-          } else if (pergunta.tipo === 'multipla_resposta') {
+        setQuiz(quizData);
+        
+        // CORREÇÃO: Verificar se perguntas existe antes de tentar iterar
+        if (quizData && quizData.perguntas && Array.isArray(quizData.perguntas)) {
+          // Inicializar objeto de respostas
+          const respostasIniciais = {};
+          quizData.perguntas.forEach(pergunta => {
+            // CORREÇÃO: Todas as perguntas agora permitem múltiplas respostas
             respostasIniciais[pergunta.id] = [];
-          } else if (pergunta.tipo === 'texto_livre') {
-            respostasIniciais[pergunta.id] = '';
-          }
-        });
+          });
+          
+          setRespostas(respostasIniciais);
+        }
         
-        setRespostas(respostasIniciais);
         setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar quiz:', error);
@@ -51,8 +61,8 @@ const QuizPage = () => {
 
   useEffect(() => {
     // Configurar temporizador quando o quiz for iniciado
-    if (quizIniciado && quiz && quiz.tempoLimite) {
-      setTempoRestante(quiz.tempoLimite * 60); // Converter para segundos
+    if (quizIniciado && quiz && quiz.tempo_limite) {
+      setTempoRestante(quiz.tempo_limite * 60); // Converter para segundos
       
       const timer = setInterval(() => {
         setTempoRestante(prevTempo => {
@@ -69,58 +79,80 @@ const QuizPage = () => {
     }
   }, [quizIniciado, quiz]);
 
-  const handleRespostaChange = (perguntaId, valor, tipo) => {
-    if (tipo === 'multipla_escolha') {
-      setRespostas({
-        ...respostas,
-        [perguntaId]: valor
-      });
-    } else if (tipo === 'multipla_resposta') {
-      const respostasAtuais = respostas[perguntaId] || [];
+  // CORREÇÃO: Nova função para lidar com múltiplas seleções
+  const handleRespostaChange = (perguntaId, opcaoIndex, checked) => {
+    setRespostas(prevRespostas => {
+      const respostasAtuais = prevRespostas[perguntaId] || [];
       
-      if (respostasAtuais.includes(valor)) {
-        // Remover se já estiver selecionado
-        setRespostas({
-          ...respostas,
-          [perguntaId]: respostasAtuais.filter(r => r !== valor)
-        });
-      } else {
+      if (checked) {
         // Adicionar se não estiver selecionado
-        setRespostas({
-          ...respostas,
-          [perguntaId]: [...respostasAtuais, valor]
-        });
+        if (!respostasAtuais.includes(opcaoIndex)) {
+          return {
+            ...prevRespostas,
+            [perguntaId]: [...respostasAtuais, opcaoIndex]
+          };
+        }
+      } else {
+        // Remover se estiver selecionado
+        return {
+          ...prevRespostas,
+          [perguntaId]: respostasAtuais.filter(r => r !== opcaoIndex)
+        };
       }
-    } else if (tipo === 'texto_livre') {
-      setRespostas({
-        ...respostas,
-        [perguntaId]: valor
+      
+      return prevRespostas;
+    });
+  };
+
+  const iniciarQuiz = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE}/quiz/${id}/iniciar`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // CORREÇÃO: Verificar estrutura da resposta
+      let responseData = response.data;
+      if (response.data && response.data.data) {
+        responseData = response.data.data;
+      }
+      
+      setIdResposta(responseData.id_resposta);
+      setQuizIniciado(true);
+      
+      if (responseData.tempo_limite) {
+        setTempoRestante(responseData.tempo_limite * 60);
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar quiz:', error);
+      alert('Erro ao iniciar quiz: ' + (error.response?.data?.message || 'Erro desconhecido'));
     }
   };
 
-  const iniciarQuiz = () => {
-    setQuizIniciado(true);
-  };
-
   const handleSubmitQuiz = async () => {
-    if (enviar) return;
+    if (enviando) return;
     
-    setenviar(true);
+    setEnviando(true);
     
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/quizzes/${id}/submeter`, 
+      const response = await axios.post(`${API_BASE}/quiz/${id}/submeter`, 
         { respostas },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      setResultado(response.data);
-      setenviar(false);
+      // CORREÇÃO: Verificar estrutura da resposta
+      let resultadoData = response.data;
+      if (response.data && response.data.data) {
+        resultadoData = response.data.data;
+      }
+      
+      setResultado(resultadoData);
+      setEnviando(false);
     } catch (error) {
       console.error('Erro ao submeter quiz:', error);
       alert('Erro ao submeter suas respostas. Por favor, tente novamente.');
-      setenviar(false);
+      setEnviando(false);
     }
   };
 
@@ -132,19 +164,35 @@ const QuizPage = () => {
 
   const voltarAoCurso = () => {
     // Navegar de volta para a página do curso
-    if (quiz && quiz.cursoId) {
-      navigate(`/cursos/${quiz.cursoId}`);
+    if (quiz && quiz.curso && quiz.curso.id_curso) {
+      navigate(`/cursos/${quiz.curso.id_curso}`);
     } else {
       navigate('/cursos');
     }
   };
 
   if (loading) {
-    return <div className="loading">A carregar quiz...</div>;
+    return (
+      <div className="quiz-page-container">
+        <Navbar />
+        <div className="main-content">
+          <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+          <div className="loading">A carregar quiz...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!quiz) {
-    return <div className="error">Quiz não encontrado</div>;
+    return (
+      <div className="quiz-page-container">
+        <Navbar />
+        <div className="main-content">
+          <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+          <div className="error">Quiz não encontrado</div>
+        </div>
+      </div>
+    );
   }
 
   if (resultado) {
@@ -152,7 +200,7 @@ const QuizPage = () => {
       <div className="quiz-page-container">
         <Navbar />
         <div className="main-content">
-          <Sidebar />
+          <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <div className="quiz-result-content">
             <h1>Resultado do Quiz</h1>
             
@@ -160,126 +208,108 @@ const QuizPage = () => {
               <div className="resultado-header">
                 <h2>{quiz.titulo}</h2>
                 <p className="nota">
-                  Sua nota: <span className="valor">{resultado.nota.toFixed(1)}/10</span>
+                  Sua nota: <span className="valor">{resultado.nota}/10</span>
+                  {resultado.nota_descricao && <span className="nota-info">{resultado.nota_descricao}</span>}
                 </p>
               </div>
               
               <div className="resultado-stats">
                 <div className="stat">
-                  <span className="label">Acertos:</span>
-                  <span className="valor">{resultado.acertos}/{quiz.perguntas.length}</span>
+                  <span className="label">Pontos:</span>
+                  <span className="valor">
+                    {resultado.pontos_obtidos}/{resultado.pontos_totais}
+                  </span>
                 </div>
                 
                 <div className="stat">
-                  <span className="label">Tempo utilizado:</span>
-                  <span className="valor">{resultado.tempoUtilizado}</span>
+                  <span className="label">Percentagem:</span>
+                  <span className="valor">{resultado.percentagem}%</span>
                 </div>
+                
+                {quiz.tempo_limite && (
+                  <div className="stat">
+                    <span className="label">Tempo limite:</span>
+                    <span className="valor">{quiz.tempo_limite} minutos</span>
+                  </div>
+                )}
               </div>
               
-              {resultado.feedback && (
-                <div className="feedback">
-                  <h3>Feedback</h3>
-                  <p>{resultado.feedback}</p>
-                </div>
-              )}
+              <div className="resultado-feedback">
+                <h3>Avaliação</h3>
+                {resultado.percentagem >= 70 ? (
+                  <div className="feedback-positivo">
+                    <i className="fas fa-check-circle"></i>
+                    <p>Parabéns! Obteve uma classificação satisfatória.</p>
+                  </div>
+                ) : (
+                  <div className="feedback-negativo">
+                    <i className="fas fa-times-circle"></i>
+                    <p>Precisa melhorar. Estude mais os conteúdos do curso.</p>
+                  </div>
+                )}
+              </div>
               
               <div className="respostas-revisao">
                 <h3>Revisão das Perguntas</h3>
                 
-                {quiz.perguntas.map((pergunta, index) => (
-                  <div 
-                    key={pergunta.id} 
-                    className={`pergunta-revisao ${
-                      resultado.perguntasCorretas.includes(pergunta.id) 
-                        ? 'correta' 
-                        : 'incorreta'
-                    }`}
-                  >
-                    <div className="pergunta-header">
-                      <span className="numero">Pergunta {index + 1}</span>
-                      <span className={`status ${
-                        resultado.perguntasCorretas.includes(pergunta.id) 
-                          ? 'correto' 
-                          : 'incorreto'
-                      }`}>
-                        {resultado.perguntasCorretas.includes(pergunta.id) 
-                          ? 'Correto' 
-                          : 'Incorreto'
-                        }
-                      </span>
+                {quiz.perguntas && quiz.perguntas.map((pergunta, index) => {
+                  const respostaUtilizador = respostas[pergunta.id] || [];
+                  const respostasCorretas = pergunta.respostaCorreta || [];
+                  
+                  // Calcular quantas corretas foram selecionadas
+                  const corretasSelecionadas = respostaUtilizador.filter(r => respostasCorretas.includes(r));
+                  const pontosPergunta = pergunta.pontos || 4;
+                  const pontosObtidos = respostasCorretas.length > 0 ? 
+                    (corretasSelecionadas.length / respostasCorretas.length) * pontosPergunta : 0;
+                  
+                  return (
+                    <div 
+                      key={pergunta.id} 
+                      className={`pergunta-revisao ${pontosObtidos === pontosPergunta ? 'correta' : pontosObtidos > 0 ? 'parcial' : 'incorreta'}`}
+                    >
+                      <div className="pergunta-header">
+                        <span className="numero">Pergunta {index + 1}</span>
+                        <span className={`status ${pontosObtidos === pontosPergunta ? 'correto' : pontosObtidos > 0 ? 'parcial' : 'incorreto'}`}>
+                          {pontosObtidos === pontosPergunta ? 'Totalmente Correto' : 
+                           pontosObtidos > 0 ? 'Parcialmente Correto' : 'Incorreto'}
+                        </span>
+                        <span className="pontos-obtidos">{pontosObtidos.toFixed(1)}/{pontosPergunta} pontos</span>
+                      </div>
+                      
+                      <p className="pergunta-texto">{pergunta.texto}</p>
+                      
+                      <div className="opcoes-revisao">
+                        {pergunta.opcoes.map((opcao, i) => (
+                          <div 
+                            key={i} 
+                            className={`opcao ${
+                              respostaUtilizador.includes(i) ? 'selecionada' : ''
+                            } ${
+                              respostasCorretas.includes(i) ? 'correta' : ''
+                            }`}
+                          >
+                            {opcao}
+                            {respostaUtilizador.includes(i) && 
+                              !respostasCorretas.includes(i) && (
+                                <span className="marcador incorreto">✗</span>
+                              )
+                            }
+                            {respostasCorretas.includes(i) && (
+                              <span className="marcador correto">✓</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {pergunta.explicacao && (
+                        <div className="explicacao">
+                          <h4>Explicação:</h4>
+                          <p>{pergunta.explicacao}</p>
+                        </div>
+                      )}
                     </div>
-                    
-                    <p className="pergunta-texto">{pergunta.texto}</p>
-                    
-                    {pergunta.tipo === 'multipla_escolha' && (
-                      <div className="opcoes-revisao">
-                        {pergunta.opcoes.map((opcao, i) => (
-                          <div 
-                            key={i} 
-                            className={`opcao ${
-                              respostas[pergunta.id] === i ? 'selecionada' : ''
-                            } ${
-                              pergunta.respostaCorreta === i ? 'correta' : ''
-                            }`}
-                          >
-                            {opcao}
-                            {respostas[pergunta.id] === i && 
-                              pergunta.respostaCorreta !== i && (
-                                <span className="marcador incorreto">✗</span>
-                              )
-                            }
-                            {pergunta.respostaCorreta === i && (
-                              <span className="marcador correto">✓</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {pergunta.tipo === 'multipla_resposta' && (
-                      <div className="opcoes-revisao">
-                        {pergunta.opcoes.map((opcao, i) => (
-                          <div 
-                            key={i} 
-                            className={`opcao ${
-                              respostas[pergunta.id]?.includes(i) ? 'selecionada' : ''
-                            } ${
-                              pergunta.respostasCorretas?.includes(i) ? 'correta' : ''
-                            }`}
-                          >
-                            {opcao}
-                            {respostas[pergunta.id]?.includes(i) && 
-                              !pergunta.respostasCorretas?.includes(i) && (
-                                <span className="marcador incorreto">✗</span>
-                              )
-                            }
-                            {pergunta.respostasCorretas?.includes(i) && (
-                              <span className="marcador correto">✓</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {pergunta.tipo === 'texto_livre' && (
-                      <div className="texto-livre-revisao">
-                        <p className="sua-resposta">
-                          <strong>Sua resposta:</strong> {respostas[pergunta.id]}
-                        </p>
-                        <p className="resposta-esperada">
-                          <strong>Resposta esperada:</strong> {pergunta.respostaCorreta}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {pergunta.explicacao && (
-                      <div className="explicacao">
-                        <h4>Explicação:</h4>
-                        <p>{pergunta.explicacao}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <button className="voltar-btn" onClick={voltarAoCurso}>
@@ -296,31 +326,31 @@ const QuizPage = () => {
     <div className="quiz-page-container">
       <Navbar />
       <div className="main-content">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="quiz-content">
           {!quizIniciado ? (
             <div className="quiz-intro">
               <h1>{quiz.titulo}</h1>
               
               <div className="quiz-info">
-                <p className="descricao">{quiz.descricao}</p>
+                {quiz.descricao && <p className="descricao">{quiz.descricao}</p>}
                 
                 <div className="quiz-meta">
                   <div className="meta-item">
                     <span className="label">Total de perguntas:</span>
-                    <span>{quiz.perguntas.length}</span>
+                    <span>{quiz.perguntas ? quiz.perguntas.length : 0}</span>
                   </div>
                   
-                  {quiz.tempoLimite && (
+                  {quiz.tempo_limite && (
                     <div className="meta-item">
                       <span className="label">Tempo limite:</span>
-                      <span>{quiz.tempoLimite} minutos</span>
+                      <span>{quiz.tempo_limite} minutos</span>
                     </div>
                   )}
                   
                   <div className="meta-item">
-                    <span className="label">Tentativas permitidas:</span>
-                    <span>{quiz.tentativasPermitidas || 'Ilimitadas'}</span>
+                    <span className="label">Curso:</span>
+                    <span>{quiz.curso?.nome || 'Curso não especificado'}</span>
                   </div>
                 </div>
                 
@@ -328,11 +358,13 @@ const QuizPage = () => {
                   <h3>Instruções</h3>
                   <ul>
                     <li>Leia atentamente cada pergunta antes de responder.</li>
+                    <li><strong>Pode selecionar múltiplas respostas para cada pergunta.</strong></li>
                     <li>Responda todas as perguntas antes de enviar.</li>
-                    {quiz.tempoLimite && (
-                      <li>Você terá {quiz.tempoLimite} minutos para completar o quiz.</li>
+                    {quiz.tempo_limite && (
+                      <li>Você terá {quiz.tempo_limite} minutos para completar o quiz.</li>
                     )}
                     <li>Clique em "Iniciar Quiz" quando estiver pronto para começar.</li>
+                    <li>Após iniciar, não será possível pausar o quiz.</li>
                   </ul>
                 </div>
                 
@@ -360,68 +392,32 @@ const QuizPage = () => {
                 e.preventDefault();
                 handleSubmitQuiz();
               }}>
-                {quiz.perguntas.map((pergunta, index) => (
+                {quiz.perguntas && quiz.perguntas.map((pergunta, index) => (
                   <div key={pergunta.id} className="pergunta-container">
                     <div className="pergunta-header">
                       <h3>Pergunta {index + 1}</h3>
-                      {pergunta.pontos && (
-                        <span className="pontos">{pergunta.pontos} pontos</span>
-                      )}
+                      <span className="pontos">{pergunta.pontos || 4} pontos</span>
+                      <small className="multipla-info">Pode selecionar múltiplas respostas</small>
                     </div>
                     
                     <p className="pergunta-texto">{pergunta.texto}</p>
                     
-                    {pergunta.tipo === 'multipla_escolha' && (
-                      <div className="opcoes">
-                        {pergunta.opcoes.map((opcao, i) => (
-                          <div key={i} className="opcao">
-                            <input 
-                              type="radio" 
-                              id={`pergunta_${pergunta.id}_opcao_${i}`}
-                              name={`pergunta_${pergunta.id}`}
-                              checked={respostas[pergunta.id] === i}
-                              onChange={() => handleRespostaChange(pergunta.id, i, 'multipla_escolha')}
-                            />
-                            <label htmlFor={`pergunta_${pergunta.id}_opcao_${i}`}>
-                              {opcao}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {pergunta.tipo === 'multipla_resposta' && (
-                      <div className="opcoes">
-                        {pergunta.opcoes.map((opcao, i) => (
-                          <div key={i} className="opcao">
-                            <input 
-                              type="checkbox" 
-                              id={`pergunta_${pergunta.id}_opcao_${i}`}
-                              checked={respostas[pergunta.id]?.includes(i) || false}
-                              onChange={() => handleRespostaChange(pergunta.id, i, 'multipla_resposta')}
-                            />
-                            <label htmlFor={`pergunta_${pergunta.id}_opcao_${i}`}>
-                              {opcao}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {pergunta.tipo === 'texto_livre' && (
-                      <div className="texto-livre">
-                        <textarea 
-                          rows="4"
-                          value={respostas[pergunta.id] || ''}
-                          onChange={(e) => handleRespostaChange(
-                            pergunta.id, 
-                            e.target.value, 
-                            'texto_livre'
-                          )}
-                          placeholder="Digite sua resposta aqui..."
-                        />
-                      </div>
-                    )}
+                    {/* CORREÇÃO: Usar sempre checkboxes para permitir múltiplas seleções */}
+                    <div className="opcoes">
+                      {pergunta.opcoes.map((opcao, i) => (
+                        <div key={i} className="opcao">
+                          <input 
+                            type="checkbox" 
+                            id={`pergunta_${pergunta.id}_opcao_${i}`}
+                            checked={respostas[pergunta.id]?.includes(i) || false}
+                            onChange={(e) => handleRespostaChange(pergunta.id, i, e.target.checked)}
+                          />
+                          <label htmlFor={`pergunta_${pergunta.id}_opcao_${i}`}>
+                            {opcao}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
                 
@@ -429,9 +425,9 @@ const QuizPage = () => {
                   <button 
                     type="submit" 
                     className="enviar-btn"
-                    disabled={enviar}
+                    disabled={enviando}
                   >
-                    {enviar ? 'enviar...' : 'Finalizar Quiz'}
+                    {enviando ? 'A enviar...' : 'Finalizar Quiz'}
                   </button>
                 </div>
               </form>

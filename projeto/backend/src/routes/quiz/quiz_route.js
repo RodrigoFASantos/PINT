@@ -2,18 +2,33 @@ const express = require("express");
 const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
-const { getAllQuizzes, createQuiz, getQuizById, iniciarQuiz, responderPergunta, finalizarQuiz } = require("../../controllers/quiz/quiz_ctrl");
+const { 
+  getAllQuizzes, 
+  createQuiz, 
+  getQuizById, 
+  updateQuiz,
+  updateQuizCompleto,
+  deleteQuiz,
+  iniciarQuiz, 
+  submeterQuiz,
+  getNotasQuizzesPorCurso
+} = require("../../controllers/quiz/quiz_ctrl");
 
 // Rotas abertas para todos utilizadores autenticados
 router.get("/", verificarToken, getAllQuizzes);
 router.get("/:id", verificarToken, getQuizById);
 
-// Rotas para formadores e administradores
-router.post("/", verificarToken, autorizar([1, 2]), createQuiz);
+// Obter notas de quizzes por curso para avaliação
+router.get("/notas-curso/:cursoId", verificarToken, autorizar([1, 2]), getNotasQuizzesPorCurso);
 
-// Rotas para formandos
-router.post("/:id_quiz/iniciar", verificarToken, autorizar([3]), iniciarQuiz);
-router.post("/responder", verificarToken, autorizar([3]), responderPergunta);
-router.post("/finalizar/:id_resposta", verificarToken, autorizar([3]), finalizarQuiz);
+// Rotas apenas para administradores (formadores não podem criar/editar quizzes)
+router.post("/", verificarToken, autorizar([1]), createQuiz);
+router.put("/:id", verificarToken, autorizar([1]), updateQuiz);
+router.put("/:id/completo", verificarToken, autorizar([1]), updateQuizCompleto);
+router.delete("/:id", verificarToken, autorizar([1]), deleteQuiz);
+
+// Rotas apenas para formandos (formadores não fazem quizzes)
+router.post("/:id/iniciar", verificarToken, autorizar([3]), iniciarQuiz);
+router.post("/:id/submeter", verificarToken, autorizar([3]), submeterQuiz);
 
 module.exports = router;

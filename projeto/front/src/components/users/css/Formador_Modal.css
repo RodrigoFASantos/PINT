@@ -278,3 +278,229 @@
   font-size: 2rem !important;
   margin-bottom: 1rem !important;
 }
+
+
+
+.curso-assincrono-info {
+  background: #e0f2fe;
+  border: 1px solid #0288d1;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.curso-assincrono-info i {
+  color: #0288d1;
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.curso-assincrono-info p {
+  margin: 0;
+  color: #01579b;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.formador-cargo {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.formador-item .formador-cargo i {
+  margin-right: 4px;
+  color: #6b7280;
+}
+
+.no-results .help-text {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Estilos para o botão de formador assíncrono no Criar_Curso */
+.select-formador-button.assincrono {
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  border: 1px solid #1e40af;
+  position: relative;
+}
+
+.select-formador-button.assincrono::before {
+  content: "⚙️";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #fbbf24;
+  border-radius: 50%;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+}
+
+.select-formador-button.assincrono:hover {
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(30, 64, 175, 0.3);
+}
+
+/* Destacar administradores na lista */
+.formador-item[data-cargo="1"] {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(to right, #ecfdf5, #ffffff);
+}
+
+.formador-item[data-cargo="1"] .formador-cargo {
+  background: #10b981;
+  color: white;
+}
+
+/* Animação para novos elementos */
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.curso-assincrono-info {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+
+
+/* Estilos adicionais para Formador_Modal.css */
+
+/* Banner informativo para cursos assíncronos */
+.formador-modal__info-banner {
+  background: #e0f2fe;
+  border: 1px solid #0288d1;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.formador-modal__info-banner i {
+  color: #0288d1;
+  font-size: 1.1rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.formador-modal__info-banner p {
+  margin: 0;
+  color: #01579b;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* Informações de cargo do utilizador */
+.formador-modal__user-cargo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.formador-modal__user-cargo i {
+  font-size: 0.7rem;
+}
+
+/* Badge de administrador */
+.formador-modal__admin-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #fbbf24;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.formador-modal__admin-badge i {
+  font-size: 0.65rem;
+  margin-right: 2px;
+}
+
+/* Destaque para administradores */
+.formador-modal__user-item--admin {
+  border-left: 4px solid #fbbf24;
+  background: linear-gradient(to right, #fef3c7, #ffffff);
+}
+
+.formador-modal__user-item--admin:hover {
+  background: linear-gradient(to right, #fde68a, #f9fafb);
+}
+
+/* Texto de ajuda */
+.formador-modal__help-text {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 8px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Botão desativado */
+.formador-modal__select-button:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.formador-modal__select-button:disabled:hover {
+  background: #d1d5db;
+  transform: none;
+}
+
+/* Animações */
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formador-modal__info-banner {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .formador-modal__info-banner {
+    margin: 12px 16px;
+    padding: 10px 12px;
+  }
+  
+  .formador-modal__info-banner p {
+    font-size: 0.8rem;
+  }
+  
+  .formador-modal__admin-badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+  }
+}

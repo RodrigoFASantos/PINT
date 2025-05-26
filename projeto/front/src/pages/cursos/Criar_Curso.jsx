@@ -363,6 +363,28 @@ const CriarCurso = () => {
       return false;
     }
 
+    // Validar formador para cursos assíncronos (deve ser administrador)
+    if (formData.tipo === 'assincrono') {
+      if (!formData.id_formador) {
+        toast.error("É obrigatório selecionar um formador administrador para cursos assíncronos");
+        return false;
+      }
+
+      // Verificar se o formador selecionado é administrador
+      const formadorSelecionado = formadores.find(f => {
+        const formadorId = f.id_utilizador || f.id_user || f.id || f.idUser || f.userId;
+        return String(formadorId) === String(formData.id_formador);
+      });
+
+      if (formadorSelecionado) {
+        const cargoFormador = formadorSelecionado.cargo?.id_cargo || formadorSelecionado.id_cargo;
+        if (cargoFormador !== 1) {
+          toast.error("Para cursos assíncronos, o formador deve ser um administrador");
+          return false;
+        }
+      }
+    }
+
     // Validar número de vagas para cursos síncronos
     if (formData.tipo === 'sincrono' && (!formData.vagas || parseInt(formData.vagas) <= 0)) {
       toast.error("Defina um número válido de vagas para o curso síncrono");
@@ -377,9 +399,9 @@ const CriarCurso = () => {
 
     // Validar duração
     if (!formData.duracao || parseInt(formData.duracao) <= 0) {
-    toast.error("Defina uma duração válida para o curso em horas");
-    return false;
-  }
+      toast.error("Defina uma duração válida para o curso em horas");
+      return false;
+    }
 
     return true;
   };

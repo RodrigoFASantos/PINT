@@ -20,14 +20,19 @@ const QuizPergunta = sequelize.define("quiz_perguntas", {
     allowNull: false,
   },
   tipo: {
-    type: DataTypes.ENUM("multipla_escolha", "verdadeiro_falso", "resposta_curta"),
+    type: DataTypes.ENUM(
+      "multipla_escolha",    // Múltiplas respostas possíveis
+      "verdadeiro_falso",    // Múltiplas opções verdadeiro/falso
+      "resposta_curta",      // Texto livre (futuro)
+      "multipla_resposta"    // Múltiplas respostas corretas (futuro)
+    ),
     allowNull: false,
     defaultValue: "multipla_escolha",
   },
   pontos: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 1,
+    defaultValue: 4, // CORREÇÃO: Padrão de 4 pontos por pergunta
   },
   ordem: {
     type: DataTypes.INTEGER,

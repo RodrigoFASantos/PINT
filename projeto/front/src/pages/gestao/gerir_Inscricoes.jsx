@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Sidebar from '../../components/Sidebar';
 import './css/gerir_Inscricoes.css';
 
-const GerenciarInscricoes = () => {
+const GerirInscricoes = () => {
   const { id } = useParams(); // id do curso
   const navigate = useNavigate();
   const [curso, setCurso] = useState(null);
@@ -24,8 +24,6 @@ const GerenciarInscricoes = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // Buscar dados do curso e inscrições
-  // Modificação na função fetchData para corrigir o problema de obtenção de informações do usuário
-
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -124,7 +122,7 @@ const GerenciarInscricoes = () => {
       const isFormadorDoCurso = userInfo.id_cargo === 2 && userInfo.id_utilizador === curso.id_formador;
 
       if (!isAdmin && !isFormadorDoCurso) {
-        setError("Você não tem permissão para gerenciar inscrições neste curso.");
+        setError("Você não tem permissão para gerir inscrições neste curso.");
       }
     }
   }, [curso, userInfo]);
@@ -152,15 +150,15 @@ const GerenciarInscricoes = () => {
       setMotivoError(''); // Limpar mensagem de erro
       const token = localStorage.getItem('token');
 
-      // Modificado para usar o endpoint correto conforme definido no backend
+      // URL e método corrigidos para corresponder ao backend
       const response = await fetch(`${API_BASE}/inscricoes/cancelar-inscricao/${selectedInscricao.id_inscricao}`, {
-        method: 'PATCH', // Alterado de DELETE para PATCH para corresponder à rota
+        method: 'PATCH', // Método correto
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          motivo_cancelamento: motivoCancelamento // Usando o motivo fornecido pelo usuário
+          motivo_cancelamento: motivoCancelamento
         })
       });
 
@@ -250,7 +248,6 @@ const GerenciarInscricoes = () => {
   // Somente administradores (cargo 1) podem alterar formador
   const podeAlterarFormador = userInfo && (userInfo.id_cargo === 1 || (userInfo.id_cargo === 2 && userInfo.id_utilizador === curso?.id_formador));
 
-
   console.log("User Info:", userInfo);
   console.log("Curso:", curso);
   console.log("Permissão para alterar:", podeAlterarFormador);
@@ -261,12 +258,12 @@ const GerenciarInscricoes = () => {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="gerenciar-inscricoes-container bg-white rounded-lg shadow-md">
+          <div className="gerir-inscricoes-container bg-white rounded-lg shadow-md">
             {/* Cabeçalho */}
             <div className="header p-6 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-t-lg">
               <div className="flex justify-between items-center">
                 <div>
-                  <h1 className="text-2xl font-bold">Gerenciar Inscrições</h1>
+                  <h1 className="text-2xl font-bold">Gerir Inscrições</h1>
                   <p className="mt-1">{curso?.nome}</p>
                 </div>
                 <button
@@ -367,7 +364,7 @@ const GerenciarInscricoes = () => {
               no curso?
             </p>
             
-            {/* Novo campo para motivo do cancelamento */}
+            {/* Campo para motivo do cancelamento */}
             <div className="form-group mt-4">
               <label htmlFor="motivoCancelamento" className="font-medium text-gray-700 block mb-2">
                 Motivo do Cancelamento *
@@ -409,4 +406,4 @@ const GerenciarInscricoes = () => {
   );
 };
 
-export default GerenciarInscricoes;
+export default GerirInscricoes;

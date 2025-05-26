@@ -31,6 +31,10 @@ const Quiz = sequelize.define("quizzes", {
     type: DataTypes.INTEGER,
     allowNull: true, // Tempo em minutos (null = sem limite)
   },
+  tempo_limite_inicio: {
+    type: DataTypes.DATE,
+    allowNull: true, // Quando o tempo limite foi definido/alterado
+  },
   ativo: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
