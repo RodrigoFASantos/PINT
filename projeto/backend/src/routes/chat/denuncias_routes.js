@@ -17,25 +17,35 @@ const {
   ocultarChatMensagem
 } = require("../../controllers/chat/denuncias_ctrl");
 
-// Middleware para verificar autenticação e autorização de admin
+// Middleware para verificar autenticação em todas as rotas
 router.use(authMiddleware);
-router.use(autorizar([1])); // ID do cargo de admin
 
-// Rotas para obter denúncias
-router.post("/forum-tema/denunciar", criarForumTemaDenuncia);// Rota para criar denúncia de tema
-router.get("/usuario/denuncias-temas", getUsuarioDenunciasTemas);// Rota para verificar denúncias feitas pelo utilizador
+// ROTAS PÚBLICAS (para qualquer usuário autenticado)
+// Rota para criar denúncia de tema
+router.post("/forum-tema/denunciar", criarForumTemaDenuncia);
+
+// Rota para verificar denúncias feitas pelo utilizador
+router.get("/usuario/denuncias-temas", getUsuarioDenunciasTemas);
+
+// ROTAS ADMINISTRATIVAS (apenas para admins - cargo 1)
+// Aplicar middleware de autorização apenas para as rotas administrativas
+router.use("/denuncias", autorizar([1]));
+router.use("/resolver", autorizar([1]));
+router.use("/ocultar", autorizar([1]));
+
+// Rotas para obter denúncias (apenas admins)
 router.get("/denuncias/forum-tema", getForumTemaDenuncias);
 router.get("/denuncias/forum-comentario", getForumComentarioDenuncias);
 router.get("/denuncias/chat", getChatDenuncias);
 
-// Rotas para resolver denúncias
-router.post("/denuncias/forum-tema/:id/resolver", resolverForumTemaDenuncia);
-router.post("/denuncias/forum-comentario/:id/resolver", resolverForumComentarioDenuncia);
-router.post("/denuncias/chat/:id/resolver", resolverChatDenuncia);
+// Rotas para resolver denúncias (apenas admins)
+router.post("/resolver/forum-tema/:id", resolverForumTemaDenuncia);
+router.post("/resolver/forum-comentario/:id", resolverForumComentarioDenuncia);
+router.post("/resolver/chat/:id", resolverChatDenuncia);
 
-// Rotas para ocultar conteúdo denunciado
-router.post("/forum-tema/ocultar", ocultarForumTema);
-router.post("/forum-comentario/ocultar", ocultarForumComentario);
-router.post("/chat-mensagem/ocultar", ocultarChatMensagem);
+// Rotas para ocultar conteúdo denunciado (apenas admins)
+router.post("/ocultar/forum-tema", ocultarForumTema);
+router.post("/ocultar/forum-comentario", ocultarForumComentario);
+router.post("/ocultar/chat-mensagem", ocultarChatMensagem);
 
 module.exports = router;

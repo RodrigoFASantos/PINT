@@ -1,52 +1,103 @@
 const { Op } = require('sequelize');
-const Inscricao_Curso = require('../../database/models/Inscricao_Curso');
 const User = require('../../database/models/User');
+const Inscricao_Curso = require('../../database/models/Inscricao_Curso');
 const Curso = require('../../database/models/Curso');
 const Categoria = require('../../database/models/Categoria');
 const Area = require('../../database/models/Area');
 const Avaliacao = require('../../database/models/Avaliacao');
 
-/**
- * @desc Obter o percurso formativo de todos os formandos
- * @route GET /admin/percurso-formandos
- * @access Private (Admin only)
- */
+/*
+ FUNÇÕES DE CONSULTA PERCURSO FORMANDOS
+*/
+
+const buscarSugestoesFormandos = async (req, res) => {
+  try {
+    const { termo } = req.query;
+    
+    // Condições de busca
+    let whereConditions = {};
+    if (termo && termo.length >= 1) {
+      whereConditions = {
+        [Op.or]: [
+          { nome: { [Op.like]: `%${termo}%` } },
+          { email: { [Op.like]: `%${termo}%` } }
+        ]
+      };
+    }
+
+    // Buscar utilizadores
+    const users = await User.findAll({
+      where: whereConditions,
+      attributes: ['id_utilizador', 'nome', 'email'],
+      order: [['nome', 'ASC']],
+      limit: termo ? 50 : 200
+    });
+
+    // Filtrar apenas os que têm inscrições
+    const formandosComInscricoes = [];
+    
+    for (const user of users) {
+      const temInscricoes = await Inscricao_Curso.count({
+        where: { id_utilizador: user.id_utilizador }
+      });
+      
+      if (temInscricoes > 0) {
+        formandosComInscricoes.push({
+          id: user.id_utilizador,
+          nome: user.nome,
+          email: user.email
+        });
+      }
+    }
+
+    res.json(formandosComInscricoes);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao procurar formandos" });
+  }
+};
+
 const getPercursoFormandos = async (req, res) => {
   try {
-    console.log('📊 A processar pedido de percurso formativo dos formandos...');
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email do formando é obrigatório" });
+    }
 
-    // Buscar todas as inscrições com dados relacionados
+    // Buscar utilizador
+    const utilizador = await User.findOne({
+      where: { email: email.toLowerCase().trim() },
+      attributes: ['id_utilizador', 'nome', 'email']
+    });
+
+    if (!utilizador) {
+      return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    // Buscar inscrições do formando
     const inscricoes = await Inscricao_Curso.findAll({
+      where: { id_utilizador: utilizador.id_utilizador },
       include: [
         {
           model: User,
           as: 'utilizador',
-          attributes: ['id_utilizador', 'nome', 'email'],
-          required: true
+          attributes: ['id_utilizador', 'nome', 'email']
         },
         {
           model: Curso,
           as: 'curso',
-          attributes: [
-            'id_curso',
-            'nome',
-            'data_inicio',
-            'data_fim',
-            'duracao',
-            'estado'
-          ],
-          required: true,
+          attributes: ['id_curso', 'nome', 'data_inicio', 'data_fim', 'duracao', 'estado'],
           include: [
             {
               model: Categoria,
               as: 'categoria',
-              attributes: ['id_categoria', 'nome'],
+              attributes: ['nome'],
               required: false
             },
             {
               model: Area,
               as: 'area',
-              attributes: ['id_area', 'nome'],
+              attributes: ['nome'],
               required: false
             }
           ]
@@ -54,131 +105,133 @@ const getPercursoFormandos = async (req, res) => {
         {
           model: Avaliacao,
           as: 'avaliacao',
-          attributes: [
-            'nota',
-            'horas_presenca',
-            'horas_totais',
-            'certificado',
-            'data_avaliacao'
-          ],
+          attributes: ['nota', 'horas_presenca', 'certificado', 'data_avaliacao'],
           required: false
         }
       ],
-      attributes: [
-        'id_inscricao',
-        'data_inscricao',
-        'ativo'
-      ],
       order: [
-        [{ model: User, as: 'utilizador' }, 'nome', 'ASC'],
         [{ model: Curso, as: 'curso' }, 'data_inicio', 'DESC']
       ]
     });
 
-    console.log(`📋 Encontradas ${inscricoes.length} inscrições`);
+    if (inscricoes.length === 0) {
+      return res.status(404).json({ message: "Nenhuma inscrição encontrada para este formando" });
+    }
 
-    // Transformar os dados para o formato esperado pelo frontend
+    // Formatar dados para o frontend
     const dadosFormatados = inscricoes.map(inscricao => {
-      const utilizador = inscricao.utilizador;
       const curso = inscricao.curso;
       const avaliacao = inscricao.avaliacao;
-      const categoria = curso.categoria;
-      const area = curso.area;
-
+      
       return {
-        // Dados do utilizador
         emailUtilizador: utilizador.email,
         nomeUtilizador: utilizador.nome,
-        
-        // Dados do curso
         cursoId: curso.id_curso,
         nomeCurso: curso.nome,
-        categoria: categoria ? categoria.nome : 'Não especificada',
-        area: area ? area.nome : 'Não especificada',
+        categoria: curso.categoria?.nome || 'Não especificada',
+        area: curso.area?.nome || 'Não especificada',
         dataInicio: curso.data_inicio,
         dataFim: curso.data_fim,
-        cargaHoraria: curso.duracao || 0,
+        cargaHorariaReal: avaliacao?.horas_presenca || curso.duracao || 0,
+        cargaHorariaCurso: curso.duracao || 0,
         estadoCurso: curso.estado,
-        
-        // Dados da avaliação
-        notaFinal: avaliacao ? avaliacao.nota : null,
-        horasPresenca: avaliacao ? avaliacao.horas_presenca : null,
-        horasTotais: avaliacao ? avaliacao.horas_totais : null,
-        certificado: avaliacao ? avaliacao.certificado : false,
-        dataAvaliacao: avaliacao ? avaliacao.data_avaliacao : null,
-        
-        // Dados da inscrição
+        notaFinal: avaliacao?.nota || null,
+        horasPresenca: avaliacao?.horas_presenca || 0,
+        certificado: avaliacao?.certificado || false,
+        dataAvaliacao: avaliacao?.data_avaliacao || null,
         dataInscricao: inscricao.data_inscricao,
         inscricaoAtiva: inscricao.ativo,
-        
-        // Status calculado (pode ser usado pelo frontend se necessário)
         status: determinarStatusCurso(curso, avaliacao)
       };
     });
 
-    console.log('✅ Dados formatados com sucesso');
-    
-    res.status(200).json(dadosFormatados);
-
+    res.json(dadosFormatados);
   } catch (error) {
-    console.error('❌ Erro ao obter percurso formativo dos formandos:', error);
+    console.error("Erro ao obter percurso formativo:", error);
+    res.status(500).json({ message: "Erro ao obter percurso formativo" });
+  }
+};
+
+const getEstatisticasGerais = async (req, res) => {
+  try {
+    const totalInscricoes = await Inscricao_Curso.count();
+    const inscricoesAtivas = await Inscricao_Curso.count({ where: { ativo: true } });
     
-    res.status(500).json({
-      message: 'Erro interno do servidor ao obter percurso formativo',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
-    });
+    let certificadosEmitidos = 0;
+    let mediaGeral = 'N/A';
+    
+    try {
+      certificadosEmitidos = await Avaliacao.count({ where: { certificado: true } });
+      
+      const mediaResult = await Avaliacao.findOne({
+        attributes: [[Avaliacao.sequelize.fn('AVG', Avaliacao.sequelize.col('nota')), 'media']],
+        where: { nota: { [Op.not]: null } },
+        raw: true
+      });
+      
+      if (mediaResult?.media) {
+        mediaGeral = parseFloat(mediaResult.media).toFixed(1);
+      }
+    } catch (error) {
+      console.warn('Erro ao calcular estatísticas avançadas');
+    }
+
+    const estatisticas = {
+      totalFormandos: 0,
+      totalInscricoes,
+      inscricoesAtivas,
+      certificadosEmitidos,
+      mediaGeral,
+      taxaAtividade: totalInscricoes > 0 ? ((inscricoesAtivas / totalInscricoes) * 100).toFixed(1) : '0.0',
+      taxaCertificacao: totalInscricoes > 0 ? ((certificadosEmitidos / totalInscricoes) * 100).toFixed(1) : '0.0'
+    };
+
+    res.json(estatisticas);
+  } catch (error) {
+    console.error("Erro ao calcular estatísticas:", error);
+    res.status(500).json({ message: "Erro ao calcular estatísticas" });
   }
 };
 
 /**
  * Função auxiliar para determinar o status do curso
- * @param {Object} curso - Dados do curso
- * @param {Object} avaliacao - Dados da avaliação (pode ser null)
- * @returns {string} Status do curso
  */
 const determinarStatusCurso = (curso, avaliacao) => {
-  const hoje = new Date();
-  const dataInicio = curso.data_inicio ? new Date(curso.data_inicio) : null;
-  const dataFim = curso.data_fim ? new Date(curso.data_fim) : null;
-  
-  // Se tem avaliação com certificado, está concluído
-  if (avaliacao && avaliacao.certificado) {
-    return 'Concluído';
-  }
-  
-  // Se o curso terminou e tem nota, está concluído
-  if (avaliacao && avaliacao.nota !== null && dataFim && dataFim < hoje) {
-    return 'Concluído';
-  }
-  
-  // Se a data de início ainda não chegou, está agendado
-  if (dataInicio && dataInicio > hoje) {
-    return 'Agendado';
-  }
-  
-  // Se a data de fim já passou mas sem avaliação/nota, consideramos terminado mas não avaliado
-  if (dataFim && dataFim < hoje) {
-    return 'Terminado';
-  }
-  
-  // Se está entre as datas de início e fim, está em andamento
-  if (dataInicio && dataInicio <= hoje && dataFim && dataFim >= hoje) {
-    return 'Em Andamento';
-  }
-  
-  // Usar o estado do curso como fallback
-  switch (curso.estado) {
-    case 'planeado':
+  try {
+    const hoje = new Date();
+    const dataInicio = curso.data_inicio ? new Date(curso.data_inicio) : null;
+    const dataFim = curso.data_fim ? new Date(curso.data_fim) : null;
+    
+    if (avaliacao && avaliacao.certificado) {
+      return 'Concluído';
+    }
+    
+    if (avaliacao && avaliacao.nota !== null && dataFim && dataFim < hoje) {
+      return 'Concluído';
+    }
+    
+    if (dataInicio && dataInicio > hoje) {
       return 'Agendado';
-    case 'em_curso':
-      return 'Em Andamento';
-    case 'terminado':
+    }
+    
+    if (dataFim && dataFim < hoje) {
       return 'Terminado';
-    default:
-      return 'Indefinido';
+    }
+    
+    if (dataInicio && dataInicio <= hoje && dataFim && dataFim >= hoje) {
+      return 'Em Andamento';
+    }
+    
+    return curso.estado === 'planeado' ? 'Agendado' : 
+           curso.estado === 'em_curso' ? 'Em Andamento' : 
+           curso.estado === 'terminado' ? 'Terminado' : 'Indefinido';
+  } catch (error) {
+    return 'Indefinido';
   }
 };
 
 module.exports = {
-  getPercursoFormandos
+  buscarSugestoesFormandos,
+  getPercursoFormandos,
+  getEstatisticasGerais
 };

@@ -5,264 +5,267 @@ import Sidebar from '../../components/Sidebar';
 import './css/Percurso_Formandos.css';
 
 const PercursoFormandos = () => {
-  const [formandos, setFormandos] = useState([]);
-  const [formandosFiltrados, setFormandosFiltrados] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Estados principais
+  const [formandoSelecionado, setFormandoSelecionado] = useState(null);
+  const [percursoFormando, setPercursoFormando] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Estados para filtros
+  // Estados para os filtros de busca
   const [filtroNome, setFiltroNome] = useState('');
-  const [filtroDataInicio, setFiltroDataInicio] = useState('');
-  const [filtroDataFim, setFiltroDataFim] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroEmail, setFiltroEmail] = useState('');
   
-  // Estados para ordenação
-  const [ordenarPor, setOrdenarPor] = useState('nome');
-  const [ordemCrescente, setOrdemCrescente] = useState(true);
+  // Estados para lista de formandos
+  const [todosFormandos, setTodosFormandos] = useState([]);
+  const [loadingFormandos, setLoadingFormandos] = useState(false);
   
-  // Estado para expandir detalhes
+  // Estado para expandir detalhes dos cursos
   const [expandidos, setExpandidos] = useState({});
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Carregar lista de todos os formandos ao inicializar
   useEffect(() => {
-    const fetchPercursoFormandos = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('Utilizador não autenticado. Faça login novamente.');
-          setLoading(false);
-          return;
-        }
-
-        const config = { headers: { 'Authorization': `Bearer ${token}` } };
-        
-        // Endpoint para buscar todas as inscrições (para administradores)
-        // Nota: Este endpoint precisa ser implementado no backend
-        const response = await axios.get(`${API_BASE}/admin/percurso-formandos`, config);
-        
-        // Processar dados agrupando por utilizador
-        const formandosMap = {};
-        
-        response.data.forEach(inscricao => {
-          const email = inscricao.emailUtilizador;
-          
-          if (!formandosMap[email]) {
-            formandosMap[email] = {
-              email: email,
-              nome: inscricao.nomeUtilizador,
-              cursos: [],
-              totalCursos: 0,
-              cursosAgendados: 0,
-              cursosEmAndamento: 0,
-              cursosCompletos: 0,
-              totalHorasFormacao: 0,
-              mediaNotas: 0
-            };
-          }
-          
-          const hoje = new Date();
-          const dataInicio = inscricao.dataInicio ? new Date(inscricao.dataInicio) : null;
-          const dataFim = inscricao.dataFim ? new Date(inscricao.dataFim) : null;
-          
-          let statusCurso = 'Em Andamento';
-          if (dataInicio && dataInicio > hoje) {
-            statusCurso = 'Agendado';
-            formandosMap[email].cursosAgendados++;
-          } else if (inscricao.status === 'Concluído' || (dataFim && dataFim < hoje)) {
-            statusCurso = 'Concluído';
-            formandosMap[email].cursosCompletos++;
-          } else {
-            formandosMap[email].cursosEmAndamento++;
-          }
-          
-          const curso = {
-            id: inscricao.cursoId,
-            titulo: inscricao.nomeCurso,
-            categoria: inscricao.categoria || 'Não especificada',
-            area: inscricao.area || 'Não especificada',
-            dataInicio: inscricao.dataInicio,
-            dataFim: inscricao.dataFim,
-            cargaHoraria: inscricao.cargaHoraria || 0,
-            horasPresenca: inscricao.horasPresenca,
-            notaFinal: inscricao.notaFinal,
-            status: statusCurso,
-            dataInscricao: inscricao.dataInscricao
-          };
-          
-          formandosMap[email].cursos.push(curso);
-          formandosMap[email].totalCursos++;
-          formandosMap[email].totalHorasFormacao += curso.cargaHoraria;
-        });
-        
-        // Calcular média das notas para cada formando
-        Object.values(formandosMap).forEach(formando => {
-          const notasValidas = formando.cursos
-            .filter(curso => curso.notaFinal !== null && curso.notaFinal !== undefined)
-            .map(curso => curso.notaFinal);
-          
-          if (notasValidas.length > 0) {
-            formando.mediaNotas = (notasValidas.reduce((sum, nota) => sum + nota, 0) / notasValidas.length).toFixed(1);
-          } else {
-            formando.mediaNotas = 'N/A';
-          }
-        });
-        
-        const formandosArray = Object.values(formandosMap);
-        setFormandos(formandosArray);
-        setFormandosFiltrados(formandosArray);
-        
-      } catch (err) {
-        console.error('Erro ao carregar percurso dos formandos:', err);
-        if (err.response?.status === 403) {
-          setError('Acesso negado. Apenas administradores podem visualizar esta página.');
-        } else if (err.response?.status === 404) {
-          setError('Endpoint não encontrado. O backend ainda não implementou a rota /admin/percurso-formandos');
-        } else {
-          setError('Erro ao carregar dados dos formandos. Verifique se o backend está a funcionar.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPercursoFormandos();
+    carregarListaFormandos();
   }, []);
 
-  // Aplicar filtros
-  useEffect(() => {
-    let filtered = [...formandos];
-
-    // Filtro por nome
-    if (filtroNome) {
-      filtered = filtered.filter(formando =>
-        formando.nome.toLowerCase().includes(filtroNome.toLowerCase())
-      );
-    }
-
-    // Filtro por email
-    if (filtroEmail) {
-      filtered = filtered.filter(formando =>
-        formando.email.toLowerCase().includes(filtroEmail.toLowerCase())
-      );
-    }
-
-    // Filtro por status (aplicado aos cursos do formando)
-    if (filtroStatus) {
-      filtered = filtered.filter(formando =>
-        formando.cursos.some(curso => curso.status === filtroStatus)
-      );
-    }
-
-    // Filtro por data
-    if (filtroDataInicio || filtroDataFim) {
-      filtered = filtered.filter(formando => {
-        return formando.cursos.some(curso => {
-          const dataInicioCurso = curso.dataInicio ? new Date(curso.dataInicio) : null;
-          const dataFimCurso = curso.dataFim ? new Date(curso.dataFim) : null;
-          
-          let passaFiltroInicio = true;
-          let passaFiltroFim = true;
-          
-          if (filtroDataInicio && dataInicioCurso) {
-            passaFiltroInicio = dataInicioCurso >= new Date(filtroDataInicio);
-          }
-          
-          if (filtroDataFim && dataFimCurso) {
-            passaFiltroFim = dataFimCurso <= new Date(filtroDataFim);
-          }
-          
-          return passaFiltroInicio && passaFiltroFim;
-        });
-      });
-    }
-
-    // Ordenação
-    filtered.sort((a, b) => {
-      let valueA, valueB;
+  // Função para carregar lista de formandos com inscrições
+  const carregarListaFormandos = async () => {
+    try {
+      setLoadingFormandos(true);
+      setError(null);
       
-      switch (ordenarPor) {
-        case 'nome':
-          valueA = a.nome.toLowerCase();
-          valueB = b.nome.toLowerCase();
-          break;
-        case 'email':
-          valueA = a.email.toLowerCase();
-          valueB = b.email.toLowerCase();
-          break;
-        case 'totalCursos':
-          valueA = a.totalCursos;
-          valueB = b.totalCursos;
-          break;
-        case 'cursosCompletos':
-          valueA = a.cursosCompletos;
-          valueB = b.cursosCompletos;
-          break;
-        case 'totalHoras':
-          valueA = a.totalHorasFormacao;
-          valueB = b.totalHorasFormacao;
-          break;
-        case 'mediaNotas':
-          valueA = a.mediaNotas === 'N/A' ? -1 : parseFloat(a.mediaNotas);
-          valueB = b.mediaNotas === 'N/A' ? -1 : parseFloat(b.mediaNotas);
-          break;
-        default:
-          valueA = a.nome.toLowerCase();
-          valueB = b.nome.toLowerCase();
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Utilizador não autenticado. Faça login novamente.');
+        return;
       }
+
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
       
-      if (valueA < valueB) return ordemCrescente ? -1 : 1;
-      if (valueA > valueB) return ordemCrescente ? 1 : -1;
-      return 0;
-    });
-
-    setFormandosFiltrados(filtered);
-  }, [formandos, filtroNome, filtroEmail, filtroStatus, filtroDataInicio, filtroDataFim, ordenarPor, ordemCrescente]);
-
-  const toggleExpansao = (email) => {
-    setExpandidos(prev => ({
-      ...prev,
-      [email]: !prev[email]
-    }));
+      console.log('🔍 A carregar lista de formandos...');
+      
+      // Usar a nova rota do backend
+      const formandosResponse = await axios.get(`${API_BASE}/percurso-formandos/buscar-formandos`, config);
+      const formandosUnicos = formandosResponse.data;
+      
+      console.log(`✅ Carregados ${formandosUnicos.length} formandos únicos`);
+      
+      setTodosFormandos(formandosUnicos);
+      
+    } catch (err) {
+      console.error('❌ Erro ao carregar lista de formandos:', err);
+      if (err.response?.status === 403) {
+        setError('Acesso negado. Apenas administradores podem visualizar esta página.');
+      } else if (err.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else {
+        setError('Erro ao carregar lista de formandos. Contacte o administrador.');
+      }
+    } finally {
+      setLoadingFormandos(false);
+    }
   };
 
+  // Função para carregar percurso do formando
+  const carregarPercursoFormando = async (formandoId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Utilizador não autenticado. Faça login novamente.');
+        return;
+      }
+
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Buscar o formando selecionado
+      const formando = todosFormandos.find(f => f.id === formandoId);
+      if (!formando) {
+        setError('Formando não encontrado.');
+        return;
+      }
+
+      console.log(`🔍 A carregar percurso do formando: ${formando.nome}`);
+
+      // Usar a nova rota do backend
+      const percursoResponse = await axios.get(
+        `${API_BASE}/percurso-formandos/admin/percurso-formandos?email=${encodeURIComponent(formando.email)}`, 
+        config
+      );
+      
+      const dadosPercurso = percursoResponse.data;
+      
+      console.log(`📋 Encontrados ${dadosPercurso.length} cursos para ${formando.nome}`);
+      
+      if (dadosPercurso.length === 0) {
+        setError('Este formando não possui inscrições em cursos.');
+        return;
+      }
+
+      // Processar dados das inscrições para o formato do frontend
+      const cursosProcessados = dadosPercurso.map(curso => ({
+        id: curso.cursoId,
+        titulo: curso.nomeCurso,
+        categoria: curso.categoria,
+        area: curso.area,
+        dataInicio: curso.dataInicio,
+        dataFim: curso.dataFim,
+        cargaHoraria: curso.cargaHorariaReal, // CORREÇÃO: Usar horas reais do formando
+        cargaHorariaCurso: curso.cargaHorariaCurso, // Manter para referência
+        status: curso.status,
+        dataInscricao: curso.dataInscricao,
+        horasPresenca: curso.horasPresenca,
+        notaFinal: curso.notaFinal,
+        certificado: curso.certificado
+      }));
+
+      // Calcular estatísticas
+      const cursosTerminados = cursosProcessados.filter(c => c.status === 'Concluído' || c.status === 'Terminado');
+      const cursosEmAndamento = cursosProcessados.filter(c => c.status === 'Em Andamento');
+      const cursosAgendados = cursosProcessados.filter(c => c.status === 'Agendado');
+      
+      const totalHoras = cursosProcessados.reduce((total, curso) => total + (curso.cargaHoraria || 0), 0);
+      
+      const cursosComNota = cursosProcessados.filter(c => c.notaFinal !== null);
+      const mediaNotas = cursosComNota.length > 0 
+        ? (cursosComNota.reduce((sum, c) => sum + c.notaFinal, 0) / cursosComNota.length).toFixed(1)
+        : 'N/A';
+
+      const percurso = {
+        email: formando.email,
+        nome: formando.nome,
+        cursos: cursosProcessados,
+        totalCursos: cursosProcessados.length,
+        cursosCompletos: cursosTerminados.length,
+        cursosEmAndamento: cursosEmAndamento.length,
+        cursosAgendados: cursosAgendados.length,
+        totalHorasFormacao: totalHoras,
+        mediaNotas: mediaNotas
+      };
+
+      setPercursoFormando(percurso);
+      console.log('✅ Percurso carregado com sucesso');
+      console.log(`📊 Estatísticas: ${percurso.totalCursos} cursos, ${percurso.totalHorasFormacao}h total`);
+      
+    } catch (err) {
+      console.error('❌ Erro ao carregar percurso do formando:', err);
+      if (err.response?.status === 403) {
+        setError('Acesso negado. Apenas administradores podem visualizar esta página.');
+      } else if (err.response?.status === 404) {
+        setError('Formando não encontrado ou sem inscrições em cursos.');
+      } else if (err.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else {
+        setError('Erro ao carregar dados do formando. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manipulador para mudança no dropdown de nome
+  const handleNomeChange = (e) => {
+    const nomeSelecionado = e.target.value;
+    setFiltroNome(nomeSelecionado);
+    
+    if (nomeSelecionado) {
+      const formandoEncontrado = todosFormandos.find(f => f.nome === nomeSelecionado);
+      if (formandoEncontrado) {
+        setFiltroEmail(formandoEncontrado.email);
+        setFormandoSelecionado(formandoEncontrado);
+      }
+    } else {
+      setFiltroEmail('');
+      setFormandoSelecionado(null);
+    }
+  };
+
+  // Manipulador para mudança no dropdown de email
+  const handleEmailChange = (e) => {
+    const emailSelecionado = e.target.value;
+    setFiltroEmail(emailSelecionado);
+    
+    if (emailSelecionado) {
+      const formandoEncontrado = todosFormandos.find(f => f.email === emailSelecionado);
+      if (formandoEncontrado) {
+        setFiltroNome(formandoEncontrado.nome);
+        setFormandoSelecionado(formandoEncontrado);
+      }
+    } else {
+      setFiltroNome('');
+      setFormandoSelecionado(null);
+    }
+  };
+
+  // Função para buscar percurso
+  const buscarPercurso = () => {
+    if (!formandoSelecionado) {
+      setError('Por favor, selecione um formando.');
+      return;
+    }
+    
+    carregarPercursoFormando(formandoSelecionado.id);
+  };
+
+  // Limpar filtros
   const limparFiltros = () => {
     setFiltroNome('');
     setFiltroEmail('');
-    setFiltroStatus('');
-    setFiltroDataInicio('');
-    setFiltroDataFim('');
+    setFormandoSelecionado(null);
+    setPercursoFormando(null);
+    setError(null);
+    setExpandidos({});
   };
 
+  // Toggle expansão dos cursos
+  const toggleExpansao = (cursoId) => {
+    setExpandidos(prev => ({
+      ...prev,
+      [cursoId]: !prev[cursoId]
+    }));
+  };
+
+  // Formatação de data
   const formatarData = (data) => {
     if (!data) return 'N/A';
-    return new Date(data).toLocaleDateString('pt-PT');
+    try {
+      return new Date(data).toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Data inválida';
+    }
   };
 
+  // Classes de status
   const getStatusClass = (status) => {
     switch (status) {
       case 'Agendado': return 'status-agendado';
       case 'Em Andamento': return 'status-andamento';
+      case 'Terminado': 
       case 'Concluído': return 'status-concluido';
       default: return '';
     }
   };
 
-  // Função para exportar dados (funcionalidade extra)
+  // Exportar CSV
   const exportarCSV = () => {
-    if (formandosFiltrados.length === 0) {
+    if (!percursoFormando) {
       alert('Não há dados para exportar.');
       return;
     }
 
     const csvContent = [
-      // Cabeçalho
-      'Nome,Email,Total Cursos,Cursos Completos,Total Horas,Média Notas',
-      // Dados
-      ...formandosFiltrados.map(formando => 
-        `"${formando.nome}","${formando.email}",${formando.totalCursos},${formando.cursosCompletos},${formando.totalHorasFormacao},"${formando.mediaNotas}"`
+      'Nome,Email,Curso,Categoria,Área,Data Início,Data Fim,Horas Realizadas,Status,Nota,Certificado',
+      ...percursoFormando.cursos.map(curso => 
+        `"${percursoFormando.nome}","${percursoFormando.email}","${curso.titulo}","${curso.categoria}","${curso.area}","${formatarData(curso.dataInicio)}","${formatarData(curso.dataFim)}",${curso.cargaHoraria || 0},"${curso.status}","${curso.notaFinal || 'N/A'}","${curso.certificado ? 'Sim' : 'Não'}"`
       )
     ].join('\n');
 
@@ -270,32 +273,13 @@ const PercursoFormandos = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `percurso_formandos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `percurso_${percursoFormando.nome.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
-
-  if (loading) return <div className="loading">A carregar percurso dos formandos...</div>;
-  
-  if (error) return (
-    <div className="percurso-formandos-container">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className="error-message">
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Tentar novamente</button>
-        {error.includes('404') && (
-          <div className="backend-info">
-            <h4>Informação para o Desenvolvedor:</h4>
-            <p>É necessário implementar o endpoint no backend:</p>
-            <code>GET /admin/percurso-formandos</code>
-            <p>Este endpoint deve retornar todas as inscrições dos utilizadores para administradores.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div className="percurso-formandos-container">
@@ -303,225 +287,246 @@ const PercursoFormandos = () => {
       <div className="percurso-content">
         <div className="header-section">
           <h1>Percurso Formativo dos Formandos</h1>
-          <p className="subtitle">Gestão e acompanhamento do progresso formativo</p>
+          <p className="subtitle">Consulte o progresso formativo de um formando específico</p>
         </div>
 
-        {/* Filtros */}
-        <div className="filtros-section">
+        {/* Filtros de Busca */}
+        <div className="filtros-busca-section">
           <div className="filtros-header">
-            <h3>Filtros e Ordenação</h3>
-            <button className="btn-exportar" onClick={exportarCSV}>
-              📊 Exportar CSV
+            <h3>🔍 Selecionar Formando</h3>
+            <p>Escolha um formando pelo nome ou email para visualizar o seu percurso formativo</p>
+            {loadingFormandos && (
+              <div className="loading-formandos">
+                🔄 A carregar lista de formandos...
+              </div>
+            )}
+          </div>
+          
+          <div className="filtros-busca-grid">
+            <div className="filtro-busca-grupo">
+              <label>👤 Selecionar por Nome:</label>
+              <select
+                value={filtroNome}
+                onChange={handleNomeChange}
+                className="select-busca"
+                disabled={loadingFormandos}
+              >
+                <option value="">-- Selecione um formando --</option>
+                {todosFormandos.map((formando, index) => (
+                  <option key={index} value={formando.nome}>
+                    {formando.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="filtro-busca-grupo">
+              <label>📧 Selecionar por Email:</label>
+              <select
+                value={filtroEmail}
+                onChange={handleEmailChange}
+                className="select-busca"
+                disabled={loadingFormandos}
+              >
+                <option value="">-- Selecione um formando --</option>
+                {todosFormandos.map((formando, index) => (
+                  <option key={index} value={formando.email}>
+                    {formando.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="acoes-busca">
+            <button 
+              className="btn-buscar" 
+              onClick={buscarPercurso}
+              disabled={loading || !formandoSelecionado || loadingFormandos}
+            >
+              {loading ? '🔄 A carregar...' : '🔍 Buscar Percurso'}
+            </button>
+            <button 
+              className="btn-limpar" 
+              onClick={limparFiltros}
+              disabled={loading}
+            >
+              🗑️ Limpar
+            </button>
+            <button 
+              className="btn-refresh" 
+              onClick={carregarListaFormandos}
+              disabled={loadingFormandos}
+              title="Atualizar lista de formandos"
+            >
+              {loadingFormandos ? '🔄' : '🔄'} Atualizar Lista
             </button>
           </div>
-          <div className="filtros-grid">
-            <div className="filtro-grupo">
-              <label>Nome do Formando:</label>
-              <input
-                type="text"
-                placeholder="Pesquisar por nome..."
-                value={filtroNome}
-                onChange={(e) => setFiltroNome(e.target.value)}
-              />
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Email:</label>
-              <input
-                type="text"
-                placeholder="Pesquisar por email..."
-                value={filtroEmail}
-                onChange={(e) => setFiltroEmail(e.target.value)}
-              />
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Status do Curso:</label>
-              <select
-                value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value)}
-              >
-                <option value="">Todos os status</option>
-                <option value="Agendado">Agendado</option>
-                <option value="Em Andamento">Em Andamento</option>
-                <option value="Concluído">Concluído</option>
-              </select>
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Data Início (a partir de):</label>
-              <input
-                type="date"
-                value={filtroDataInicio}
-                onChange={(e) => setFiltroDataInicio(e.target.value)}
-              />
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Data Fim (até):</label>
-              <input
-                type="date"
-                value={filtroDataFim}
-                onChange={(e) => setFiltroDataFim(e.target.value)}
-              />
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Ordenar por:</label>
-              <select
-                value={ordenarPor}
-                onChange={(e) => setOrdenarPor(e.target.value)}
-              >
-                <option value="nome">Nome</option>
-                <option value="email">Email</option>
-                <option value="totalCursos">Total de Cursos</option>
-                <option value="cursosCompletos">Cursos Completos</option>
-                <option value="totalHoras">Total de Horas</option>
-                <option value="mediaNotas">Média das Notas</option>
-              </select>
-            </div>
-            
-            <div className="filtro-grupo">
-              <label>Ordem:</label>
-              <select
-                value={ordemCrescente ? 'asc' : 'desc'}
-                onChange={(e) => setOrdemCrescente(e.target.value === 'asc')}
-              >
-                <option value="asc">Crescente</option>
-                <option value="desc">Decrescente</option>
-              </select>
-            </div>
-            
-            <div className="filtro-grupo">
-              <button className="btn-limpar-filtros" onClick={limparFiltros}>
-                🗑️ Limpar Filtros
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Estatísticas */}
-        <div className="estatisticas-section">
-          <div className="estatistica-card">
-            <h4>Total de Formandos</h4>
-            <span className="numero">{formandosFiltrados.length}</span>
+        {/* Erro */}
+        {error && (
+          <div className="error-message">
+            <p>{error}</p>
+            <button onClick={() => setError(null)}>Fechar</button>
           </div>
-          <div className="estatistica-card">
-            <h4>Total de Inscrições</h4>
-            <span className="numero">
-              {formandosFiltrados.reduce((total, formando) => total + formando.totalCursos, 0)}
-            </span>
-          </div>
-          <div className="estatistica-card">
-            <h4>Cursos Concluídos</h4>
-            <span className="numero">
-              {formandosFiltrados.reduce((total, formando) => total + formando.cursosCompletos, 0)}
-            </span>
-          </div>
-          <div className="estatistica-card">
-            <h4>Total Horas Formação</h4>
-            <span className="numero">
-              {formandosFiltrados.reduce((total, formando) => total + formando.totalHorasFormacao, 0)}h
-            </span>
-          </div>
-        </div>
+        )}
 
-        {/* Lista de Formandos */}
-        <div className="formandos-section">
-          <h3>Lista de Formandos ({formandosFiltrados.length})</h3>
-          
-          {formandosFiltrados.length === 0 ? (
-            <p className="no-formandos">Nenhum formando encontrado com os filtros aplicados.</p>
-          ) : (
-            <div className="formandos-lista">
-              {formandosFiltrados.map(formando => (
-                <div key={formando.email} className="formando-card">
-                  <div className="formando-header" onClick={() => toggleExpansao(formando.email)}>
-                    <div className="formando-info-principal">
-                      <h4>{formando.nome}</h4>
-                      <p className="email">{formando.email}</p>
-                    </div>
-                    
-                    <div className="formando-resumo">
-                      <div className="resumo-item">
-                        <span className="label">Total:</span>
-                        <span className="valor">{formando.totalCursos} cursos</span>
-                      </div>
-                      <div className="resumo-item">
-                        <span className="label">Completos:</span>
-                        <span className="valor">{formando.cursosCompletos}</span>
-                      </div>
-                      <div className="resumo-item">
-                        <span className="label">Horas:</span>
-                        <span className="valor">{formando.totalHorasFormacao}h</span>
-                      </div>
-                      <div className="resumo-item">
-                        <span className="label">Média:</span>
-                        <span className="valor">{formando.mediaNotas}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="expand-icon">
-                      {expandidos[formando.email] ? '▼' : '▶'}
-                    </div>
-                  </div>
-                  
-                  {expandidos[formando.email] && (
-                    <div className="formando-detalhes">
-                      <div className="detalhes-header">
-                        <h5>Cursos Inscritos ({formando.cursos.length})</h5>
+        {/* Resultados */}
+        {percursoFormando && (
+          <>
+            {/* Informações do Formando */}
+            <div className="formando-info-section">
+              <div className="formando-header-card">
+                <div className="formando-details">
+                  <h2>👤 {percursoFormando.nome}</h2>
+                  <p className="formando-email">📧 {percursoFormando.email}</p>
+                </div>
+                <button className="btn-exportar-individual" onClick={exportarCSV}>
+                  📊 Exportar Percurso
+                </button>
+              </div>
+
+              {/* Estatísticas */}
+              <div className="estatisticas-formando">
+                <div className="estatistica-card">
+                  <h4>Total de Cursos</h4>
+                  <span className="numero">{percursoFormando.totalCursos}</span>
+                </div>
+                <div className="estatistica-card">
+                  <h4>Terminados</h4>
+                  <span className="numero">{percursoFormando.cursosCompletos}</span>
+                </div>
+                <div className="estatistica-card">
+                  <h4>Em Andamento</h4>
+                  <span className="numero">{percursoFormando.cursosEmAndamento}</span>
+                </div>
+                <div className="estatistica-card">
+                  <h4>Agendados</h4>
+                  <span className="numero">{percursoFormando.cursosAgendados}</span>
+                </div>
+                <div className="estatistica-card">
+                  <h4>Horas Realizadas</h4>
+                  <span className="numero">{percursoFormando.totalHorasFormacao}h</span>
+                </div>
+                <div className="estatistica-card">
+                  <h4>Média de Notas</h4>
+                  <span className="numero">{percursoFormando.mediaNotas}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Cursos */}
+            <div className="cursos-formando-section">
+              <h3>📚 Cursos do Formando ({percursoFormando.cursos.length})</h3>
+              
+              <div className="cursos-lista">
+                {percursoFormando.cursos.map((curso, index) => (
+                  <div key={curso.id || index} className="curso-card">
+                    <div className="curso-header" onClick={() => toggleExpansao(curso.id || index)}>
+                      <div className="curso-titulo-section">
+                        <h4>{curso.titulo}</h4>
+                        <div className="curso-meta">
+                          <span className="categoria">{curso.categoria}</span>
+                          <span className="area">{curso.area}</span>
+                          <span className={`status ${getStatusClass(curso.status)}`}>
+                            {curso.status}
+                          </span>
+                          {curso.certificado && (
+                            <span className="certificado-badge">📜 Certificado</span>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="cursos-lista">
-                        {formando.cursos.map(curso => (
-                          <div key={`${formando.email}-${curso.id}`} className="curso-item">
-                            <div className="curso-info">
-                              <h6>{curso.titulo}</h6>
-                              <div className="curso-detalhes">
-                                <span className="categoria">{curso.categoria}</span>
-                                <span className="area">{curso.area}</span>
-                                <span className={`status ${getStatusClass(curso.status)}`}>
-                                  {curso.status}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="curso-dados">
-                              <div className="dado-item">
-                                <span className="label">Início:</span>
-                                <span>{formatarData(curso.dataInicio)}</span>
-                              </div>
-                              <div className="dado-item">
-                                <span className="label">Fim:</span>
-                                <span>{formatarData(curso.dataFim)}</span>
-                              </div>
-                              <div className="dado-item">
-                                <span className="label">Carga:</span>
-                                <span>{curso.cargaHoraria}h</span>
-                              </div>
-                              {curso.horasPresenca !== null && curso.horasPresenca !== undefined && (
-                                <div className="dado-item">
-                                  <span className="label">Presença:</span>
-                                  <span>{curso.horasPresenca}h</span>
-                                </div>
-                              )}
-                              {curso.notaFinal !== null && curso.notaFinal !== undefined && (
-                                <div className="dado-item">
-                                  <span className="label">Nota:</span>
-                                  <span>{curso.notaFinal}/20</span>
-                                </div>
-                              )}
-                            </div>
+                      <div className="curso-resumo">
+                        <div className="resumo-item">
+                          <span className="label">Horas:</span>
+                          <span className="valor">{curso.cargaHoraria || 0}h</span>
+                        </div>
+                        {curso.notaFinal !== null && (
+                          <div className="resumo-item">
+                            <span className="label">Nota:</span>
+                            <span className="valor">{curso.notaFinal}/20</span>
                           </div>
-                        ))}
+                        )}
+                      </div>
+                      
+                      <div className="expand-icon">
+                        {expandidos[curso.id || index] ? '▼' : '▶'}
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                    
+                    {expandidos[curso.id || index] && (
+                      <div className="curso-detalhes">
+                        <div className="detalhes-grid">
+                          <div className="detalhe-item">
+                            <span className="label">📅 Data de Início:</span>
+                            <span className="valor">{formatarData(curso.dataInicio)}</span>
+                          </div>
+                          <div className="detalhe-item">
+                            <span className="label">📅 Data de Fim:</span>
+                            <span className="valor">{formatarData(curso.dataFim)}</span>
+                          </div>
+                          <div className="detalhe-item">
+                            <span className="label">⏰ Horas Realizadas:</span>
+                            <span className="valor">{curso.cargaHoraria || 0}h</span>
+                          </div>
+                          {curso.cargaHorariaCurso && curso.cargaHorariaCurso !== curso.cargaHoraria && (
+                            <div className="detalhe-item">
+                              <span className="label">⏱️ Horas do Curso:</span>
+                              <span className="valor">{curso.cargaHorariaCurso}h</span>
+                            </div>
+                          )}
+                          <div className="detalhe-item">
+                            <span className="label">📝 Data de Inscrição:</span>
+                            <span className="valor">{formatarData(curso.dataInscricao)}</span>
+                          </div>
+                          {curso.notaFinal !== null && (
+                            <div className="detalhe-item">
+                              <span className="label">📊 Nota Final:</span>
+                              <span className="valor">{curso.notaFinal}/20</span>
+                            </div>
+                          )}
+                          {curso.cargaHorariaCurso && curso.cargaHoraria && curso.cargaHorariaCurso > 0 && (
+                            <div className="detalhe-item">
+                              <span className="label">📈 Taxa de Presença:</span>
+                              <span className="valor">
+                                {Math.round((curso.cargaHoraria / curso.cargaHorariaCurso) * 100)}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {/* Estado vazio */}
+        {!loading && !error && !percursoFormando && !loadingFormandos && todosFormandos.length > 0 && (
+          <div className="estado-vazio">
+            <div className="vazio-icon">🎯</div>
+            <h3>Selecione um Formando</h3>
+            <p>Use os dropdowns acima para selecionar um formando específico.</p>
+            <p className="hint">💡 {todosFormandos.length} formandos disponíveis</p>
+          </div>
+        )}
+
+        {/* Estado sem formandos */}
+        {!loading && !error && !loadingFormandos && todosFormandos.length === 0 && (
+          <div className="estado-vazio">
+            <div className="vazio-icon">👥</div>
+            <h3>Nenhum Formando Encontrado</h3>
+            <p>Não foram encontrados formandos com inscrições em cursos.</p>
+            <button className="btn-refresh" onClick={carregarListaFormandos}>
+              🔄 Tentar Novamente
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
