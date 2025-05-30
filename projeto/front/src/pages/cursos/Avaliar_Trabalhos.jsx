@@ -886,13 +886,42 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
       const notaMaxima = tipoCurso === 'assincrono' ? 10 : 20;
       doc.text(`Nota Final: ${notaFinal || 0}/${notaMaxima}`, doc.internal.pageSize.getWidth() / 2, startY + 80, { align: 'center' });
 
-      // Data atual
-      const dataAtual = new Date().toLocaleDateString('pt-PT', {
+      // === NOVA SECÇÃO: Datas do certificado ===
+      // Data de fim do curso
+      let dataFimCurso = 'N/A';
+      if (courseResponse.data.data_fim) {
+        dataFimCurso = new Date(courseResponse.data.data_fim).toLocaleDateString('pt-PT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        });
+      }
+
+      // Data de criação do certificado (data atual)
+      const dataGeracao = new Date().toLocaleDateString('pt-PT', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
       });
-      doc.text(`${dataAtual}`, doc.internal.pageSize.getWidth() / 2, startY + 100, { align: 'center' });
+
+      // Espaçamento para as datas
+      const espacamentoFinal = startY + 95;
+
+      // Linha separadora antes das datas
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(80, espacamentoFinal - 5, doc.internal.pageSize.getWidth() - 80, espacamentoFinal - 5);
+
+      // Configurar estilo para as datas
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80); // Cor mais suave para as datas
+
+      // Data de conclusão do curso
+      doc.text(`Curso concluído em: ${dataFimCurso}`, doc.internal.pageSize.getWidth() / 2, espacamentoFinal + 5, { align: 'center' });
+
+      // Data de emissão do certificado
+      doc.text(`Certificado emitido em: ${dataGeracao}`, doc.internal.pageSize.getWidth() / 2, espacamentoFinal + 15, { align: 'center' });
 
       // Obter o PDF como array buffer
       const pdfBuffer = doc.output('arraybuffer');
@@ -1003,7 +1032,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
           // Não vamos falhar o processo inteiro por causa disso
         }
 
-        alert('Certificado gerado e salvo com sucesso!');
+        alert('Certificado gerado e salvo com sucesso!'); 
       } else {
         throw new Error("Falha ao salvar o certificado");
       }

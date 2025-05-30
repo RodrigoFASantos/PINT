@@ -223,22 +223,101 @@ useEffect(() => {
     }
   };
 
-  // Ação ao clicar no curso
+  // Função para verificar se o utilizador pode aceder ao curso
+  const podeAcederCurso = (cursoData, inscrito) => {
+    // Se é admin, sempre pode aceder
+    if (userRole === 1) return true;
+    
+    // Verificar se o curso terminou
+    const dataAtual = new Date();
+    const dataFimCurso = new Date(cursoData.data_fim);
+    const cursoTerminado = dataFimCurso < dataAtual;
+    
+    // Se o curso não terminou, pode aceder normalmente
+    if (!cursoTerminado) return true;
+    
+    // Se o curso terminou e é assíncrono, apenas admin pode aceder
+    if (cursoData.tipo === 'assincrono') return false;
+    
+    // Se o curso terminou e é síncrono, pode aceder se estava inscrito
+    if (cursoData.tipo === 'sincrono' && inscrito) return true;
+    
+    return false;
+  };
+
+  // Função para obter mensagem de bloqueio apropriada
+  const getMensagemBloqueio = (cursoData, inscrito) => {
+    const dataAtual = new Date();
+    const dataFimCurso = new Date(cursoData.data_fim);
+    const cursoTerminado = dataFimCurso < dataAtual;
+    
+    if (!cursoTerminado) {
+      return "Este curso ainda não iniciou ou não tem permissão de acesso.";
+    }
+    
+    if (cursoData.tipo === 'assincrono') {
+      return "Este curso assíncrono já terminou e não está mais disponível.";
+    }
+    
+    if (cursoData.tipo === 'sincrono' && !inscrito) {
+      return "Este curso síncrono já terminou e só está disponível para alunos que estavam inscritos.";
+    }
+    
+    return "Não tem permissão para aceder a este curso.";
+  };
+
+  // Ação ao clicar no curso - FUNÇÃO ATUALIZADA
   const handleCursoClick = async (cursoId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/cursos/${cursoId}`, { headers: { Authorization: `Bearer ${token}` } });
-      const cursoData = response.data;
-      const now = new Date();
-      const fim = new Date(cursoData.data_fim);
-      const terminado = fim < now;
-      if (terminado && !cursoData.acessoPermitido && userRole !== 1) {
-        return toast.error("Este curso já terminou e só está disponível para alunos inscritos.", { position: "top-center" });
+      
+      if (!token) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        navigate('/login');
+        return;
       }
+
+      // Obter dados do curso
+      const cursoResponse = await axios.get(`${API_BASE}/cursos/${cursoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const cursoData = cursoResponse.data;
+
+      // Verificar se o utilizador está inscrito no curso
+      let inscrito = false;
+      try {
+        const inscricaoResponse = await axios.get(`${API_BASE}/inscricoes/verificar/${cursoId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        inscrito = inscricaoResponse.data.inscrito;
+      } catch (inscricaoError) {
+        console.log("Erro ao verificar inscrição (utilizador pode não estar inscrito):", inscricaoError);
+        inscrito = false;
+      }
+
+      // Verificar se pode aceder ao curso
+      if (!podeAcederCurso(cursoData, inscrito)) {
+        toast.error(getMensagemBloqueio(cursoData, inscrito), { 
+          position: "top-center",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      // Se chegou até aqui, pode aceder ao curso
       navigate(`/cursos/${cursoId}`);
+
     } catch (error) {
-      console.error('Erro ao verificar acesso:', error);
-      toast.error("Erro ao verificar acesso ao curso. Tente novamente mais tarde.");
+      console.error('Erro ao verificar acesso ao curso:', error);
+      
+      if (error.response?.status === 401) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        navigate('/login');
+      } else if (error.response?.status === 404) {
+        toast.error("Curso não encontrado.");
+      } else {
+        toast.error("Erro ao verificar acesso ao curso. Tente novamente mais tarde.");
+      }
     }
   };
 

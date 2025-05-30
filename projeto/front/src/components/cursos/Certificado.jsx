@@ -66,7 +66,8 @@ const Certificado = () => {
                             nome: certData.cursoNome || 'Nome do Curso',
                             categoria: certData.cursoCategoria || 'Categoria',
                             area: certData.cursoArea || 'Área',
-                            duracao: certData.cursoDuracao || 0
+                            duracao: certData.cursoDuracao || 0,
+                            data_fim: certData.dataFimCurso // Adicionar data fim do curso
                         });
 
                         setUtilizador({
@@ -195,14 +196,16 @@ const Certificado = () => {
                             categoria: sessionStorage.getItem('certificado_curso_categoria') || 'Categoria',
                             area: sessionStorage.getItem('certificado_curso_area') || 'Área',
                             formador: sessionStorage.getItem('certificado_formador') || 'Formador',
-                            duracao: sessionStorage.getItem('certificado_curso_duracao') || 0
+                            duracao: sessionStorage.getItem('certificado_curso_duracao') || 0,
+                            data_fim: sessionStorage.getItem('certificado_data_fim_curso') || null
                         });
                         console.log("Dados do curso definidos via fallback:", {
                             nome: sessionStorage.getItem('certificado_curso_nome') || 'Nome do Curso',
                             categoria: sessionStorage.getItem('certificado_curso_categoria') || 'Categoria',
                             area: sessionStorage.getItem('certificado_curso_area') || 'Área',
                             formador: sessionStorage.getItem('certificado_formador') || 'Formador',
-                            duracao: sessionStorage.getItem('certificado_curso_duracao') || 0
+                            duracao: sessionStorage.getItem('certificado_curso_duracao') || 0,
+                            data_fim: sessionStorage.getItem('certificado_data_fim_curso') || null
                         });
                     }
                 } catch (error) {
@@ -212,7 +215,8 @@ const Certificado = () => {
                         nome: sessionStorage.getItem('certificado_curso_nome') || 'Nome do Curso',
                         categoria: sessionStorage.getItem('certificado_curso_categoria') || 'Categoria',
                         area: sessionStorage.getItem('certificado_curso_area') || 'Área',
-                        duracao: sessionStorage.getItem('certificado_curso_duracao') || 0
+                        duracao: sessionStorage.getItem('certificado_curso_duracao') || 0,
+                        data_fim: sessionStorage.getItem('certificado_data_fim_curso') || null
                     });
                 }
 
@@ -358,7 +362,7 @@ const Certificado = () => {
     // Função para imprimir o certificado
     const imprimirCertificado = () => {
         if (certificadoPath) {
-            // Abrir o certificado em uma nova aba para impressão
+            // Abrir o certificado em uma nova página para impressão
             const printWindow = window.open(`${API_BASE}${certificadoPath}`, '_blank');
             if (printWindow) {
                 printWindow.addEventListener('load', () => {
@@ -394,6 +398,21 @@ const Certificado = () => {
     const cursoDuracao = curso?.duracao || sessionStorage.getItem('certificado_curso_duracao') || 0;
     const notaFinal = certificado?.nota || sessionStorage.getItem('certificado_nota') || 0;
 
+    // Calcular as duas datas
+    const dataFimCurso = curso?.data_fim 
+        ? new Date(curso.data_fim).toLocaleDateString('pt-PT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        })
+        : 'Data não disponível';
+
+    const dataGeracaoCertificado = new Date().toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+
     return (
         <div className="certificado-container">
             <div className="certificado-header">
@@ -408,49 +427,65 @@ const Certificado = () => {
 
             <div className="certificado-preview">
                 <div className="certificado-documento">
-                    <div className="certificado-titulo">CERTIFICADO</div>
-                    <div className="certificado-subtitulo">de Conclusão de Curso</div>
+                    {/* Bordas decorativas */}
+                    <div className="certificado-borda-externa">
+                        <div className="certificado-borda-interna">
+                            
+                            {/* Título */}
+                            <div className="certificado-titulo">CERTIFICADO</div>
+                            <div className="certificado-subtitulo">de Conclusão de Curso</div>
+                            
+                            {/* Linha decorativa */}
+                            <div className="certificado-linha-decorativa"></div>
 
-                    <div className="certificado-conteudo">
-                        <p>
-                            Certificamos que <strong>{utilizador?.nome}</strong> concluiu com aproveitamento o curso:
-                        </p>
+                            <div className="certificado-conteudo">
+                                <p className="certificado-texto-principal">
+                                    Certificamos que <strong className="certificado-nome-aluno">{utilizador?.nome}</strong> concluiu com aproveitamento o curso:
+                                </p>
 
-                        <h3 className="certificado-nome-curso">{curso?.nome}</h3>
+                                <h3 className="certificado-nome-curso">{curso?.nome}</h3>
 
-                        <div className="certificado-detalhes">
-                            <p><span>Categoria:</span> {
-                                curso?.categoria ?
-                                    (typeof curso.categoria === 'object' ?
-                                        curso.categoria.nome || 'N/A' :
-                                        curso.categoria) :
-                                    'N/A'
-                            }</p>
-                            <p><span>Área:</span> {
-                                curso?.area ?
-                                    (typeof curso.area === 'object' ?
-                                        curso.area.nome || 'N/A' :
-                                        curso.area) :
-                                    'N/A'
-                            }</p>
-                            <p><span>Formador:</span> {formador?.nome || 'N/A'}</p>
-                            <p><span>Email:</span> {utilizador?.email || 'N/A'}</p>
-                            <p><span>Duração:</span> {cursoDuracao} horas</p>
-                            <p><span>Nota Final:</span> {notaFinal}/20</p>
-                        </div>
+                                {/* Caixa de detalhes */}
+                                <div className="certificado-detalhes-caixa">
+                                    <div className="certificado-detalhes">
+                                        <p><span>Categoria:</span> {
+                                            curso?.categoria ?
+                                                (typeof curso.categoria === 'object' ?
+                                                    curso.categoria.nome || 'N/A' :
+                                                    curso.categoria) :
+                                                'N/A'
+                                        }</p>
+                                        <p><span>Área:</span> {
+                                            curso?.area ?
+                                                (typeof curso.area === 'object' ?
+                                                    curso.area.nome || 'N/A' :
+                                                    curso.area) :
+                                                'N/A'
+                                        }</p>
+                                        <p><span>Duração:</span> {cursoDuracao} horas</p>
+                                    </div>
+                                </div>
 
-                        <div className="certificado-data">
-                            {new Date().toLocaleDateString('pt-PT', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric'
-                            })}
-                        </div>
+                                {/* Nota final */}
+                                <div className="certificado-nota-final">
+                                    <span>Nota Final: {notaFinal}/20</span>
+                                </div>
 
-                        <div className="certificado-assinaturas">
-                            <div className="assinatura">
-                                <div className="assinatura-linha"></div>
-                                <p>Formador</p>
+                                {/* Caixa das duas datas */}
+                                <div className="certificado-datas-caixa">
+                                    <div className="certificado-datas">
+                                        <p className="data-curso"><span>Curso concluído em:</span> {dataFimCurso}</p>
+                                        <p className="data-certificado"><span>Certificado emitido em:</span> {dataGeracaoCertificado}</p>
+                                    </div>
+                                </div>
+
+                                {/* Assinatura */}
+                                <div className="certificado-assinaturas">
+                                    <div className="assinatura">
+                                        <div className="assinatura-linha"></div>
+                                        <p>Assinatura do Formador</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

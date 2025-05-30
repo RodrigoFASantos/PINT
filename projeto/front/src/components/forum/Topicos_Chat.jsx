@@ -497,12 +497,6 @@ const Topicos_Chat = () => {
           <div className="erro-container">
             <h2>Ocorreu um erro</h2>
             <p>{erro}</p>
-            <button
-              className="voltar-btn"
-              onClick={() => navigate(`/forum/topico/${topicoId}`)}
-            >
-              <i className="fas fa-arrow-left"></i> Voltar ao Tópico
-            </button>
           </div>
         </div>
       </div>
@@ -525,9 +519,6 @@ const Topicos_Chat = () => {
 
   return (
     <div>
-      <button className="voltar-btn" onClick={() => navigate(`/forum/topico/${topicoId}`)} >
-        <i className="fas fa-arrow-left"></i>
-      </button>
       <div className="main-content">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="chat-content">

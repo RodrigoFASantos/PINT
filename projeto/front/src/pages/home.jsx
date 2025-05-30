@@ -270,12 +270,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="topicos-section">
-          <h2 className="section-title">Tópicos</h2>
-          <div className="topicos-grid">
-            <p className="info-message">Nenhum tópico disponível no momento.</p>
-          </div>
-        </section>
+        
       </div>
     </div>
   );

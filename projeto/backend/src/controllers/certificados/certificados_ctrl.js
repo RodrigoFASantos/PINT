@@ -105,12 +105,33 @@ const verificarHorasFormador = async (req, res) => {
 
 
 
-// Procurar certificado existente
+// Procurar certificado existente - Melhorado com informações de datas
 const getCertificado = async (req, res) => {
   try {
     const { id_avaliacao } = req.params;
 
-    const avaliacao = await Avaliacao.findByPk(id_avaliacao);
+    // Buscar avaliação com dados relacionados
+    const avaliacao = await Avaliacao.findByPk(id_avaliacao, {
+      include: [
+        {
+          model: Inscricao_Curso,
+          include: [
+            {
+              model: Curso,
+              include: [
+                { model: Categoria, as: 'categoria' },
+                { model: Area, as: 'area' }
+              ]
+            },
+            {
+              model: User,
+              as: 'utilizador'
+            }
+          ]
+        }
+      ]
+    });
+
     if (!avaliacao) {
       return res.status(404).json({ message: "Avaliação não encontrada" });
     }
@@ -119,8 +140,14 @@ const getCertificado = async (req, res) => {
       return res.status(404).json({ message: "Certificado não disponível" });
     }
 
+    // Retornar dados completos incluindo datas
     res.json({
-      url: avaliacao.url_certificado
+      url: avaliacao.url_certificado,
+      curso: avaliacao.inscricao_curso?.curso,
+      utilizador: avaliacao.inscricao_curso?.utilizador,
+      nota: avaliacao.nota,
+      data_fim_curso: avaliacao.inscricao_curso?.curso?.data_fim,
+      data_geracao: avaliacao.updatedAt || avaliacao.createdAt
     });
   } catch (error) {
     console.error("Erro ao procurar certificado:", error);
@@ -356,7 +383,7 @@ const criarDiretorio = async (req, res) => {
   }
 };
 
-// Função para gerar certificado pelo ID do utilizador e curso
+// Função para gerar certificado pelo ID do utilizador e curso - Melhorada com datas
 const registarCertificado = async (req, res) => {
   try {
     const { userId, cursoId } = req.body;
@@ -367,7 +394,12 @@ const registarCertificado = async (req, res) => {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
-    const curso = await Curso.findByPk(cursoId);
+    const curso = await Curso.findByPk(cursoId, {
+      include: [
+        { model: Categoria, as: 'categoria' },
+        { model: Area, as: 'area' }
+      ]
+    });
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
@@ -381,15 +413,28 @@ const registarCertificado = async (req, res) => {
       return res.status(404).json({ message: "Inscrição não encontrada" });
     }
 
-    // Registrar informação de certificado
+    // Registrar informação de certificado com datas
     console.log("Registro de certificado para:", {
       userId: userId,
-      cursoId: cursoId
+      cursoId: cursoId,
+      dataFimCurso: curso.data_fim,
+      dataAtual: new Date().toISOString()
     });
 
     return res.json({
       success: true,
-      message: "Certificado registrado com sucesso"
+      message: "Certificado registrado com sucesso",
+      curso: {
+        nome: curso.nome,
+        data_fim: curso.data_fim,
+        duracao: curso.duracao,
+        categoria: curso.categoria?.nome || 'N/A',
+        area: curso.area?.nome || 'N/A'
+      },
+      utilizador: {
+        nome: user.nome,
+        email: user.email
+      }
     });
     
   } catch (error) {
@@ -417,7 +462,12 @@ const SalvarCertificado = async (req, res) => {
 
     // Buscar informações do utilizador e curso para logs e verificações
     const utilizador = await User.findByPk(id_utilizador);
-    const curso = await Curso.findByPk(id_curso);
+    const curso = await Curso.findByPk(id_curso, {
+      include: [
+        { model: Categoria, as: 'categoria' },
+        { model: Area, as: 'area' }
+      ]
+    });
 
     if (!utilizador || !curso) {
       return res.status(404).json({
@@ -450,10 +500,25 @@ const SalvarCertificado = async (req, res) => {
 
     console.log(`Certificado salvo com sucesso em: ${filePath}`);
 
+    // Registrar informações de data no log
+    console.log("Informações do certificado:", {
+      utilizador: utilizador.nome,
+      curso: curso.nome,
+      dataFimCurso: curso.data_fim,
+      dataGeracao: new Date().toISOString(),
+      fileName: fileName
+    });
+
     return res.json({
       success: true,
       message: "Certificado salvo com sucesso",
-      path: `/uploads/users/${emailFormatado}/certificados/${fileName}`
+      path: `/uploads/users/${emailFormatado}/certificados/${fileName}`,
+      metadata: {
+        dataFimCurso: curso.data_fim,
+        dataGeracao: new Date().toISOString(),
+        utilizador: utilizador.nome,
+        curso: curso.nome
+      }
     });
 
   } catch (error) {
@@ -468,6 +533,147 @@ const SalvarCertificado = async (req, res) => {
 
 
 
+// Nova função para obter informações completas do certificado incluindo datas
+const obterInformacoesCertificado = async (req, res) => {
+  try {
+    const { cursoId, utilizadorId } = req.params;
+
+    // Buscar informações do curso
+    const curso = await Curso.findByPk(cursoId, {
+      include: [
+        { model: Categoria, as: 'categoria' },
+        { model: Area, as: 'area' }
+      ]
+    });
+
+    if (!curso) {
+      return res.status(404).json({
+        success: false,
+        message: "Curso não encontrado"
+      });
+    }
+
+    // Buscar informações do utilizador
+    const utilizador = await User.findByPk(utilizadorId);
+    if (!utilizador) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilizador não encontrado"
+      });
+    }
+
+    // Buscar inscrição para verificar se existe
+    const inscricao = await Inscricao_Curso.findOne({
+      where: { 
+        id_utilizador: utilizadorId, 
+        id_curso: cursoId 
+      }
+    });
+
+    if (!inscricao) {
+      return res.status(404).json({
+        success: false,
+        message: "Inscrição não encontrada"
+      });
+    }
+
+    // Buscar avaliação se existir
+    const avaliacao = await Avaliacao.findOne({
+      where: { id_inscricao: inscricao.id_inscricao }
+    });
+
+    // Verificar se o certificado físico existe
+    const emailFormatado = utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
+    const cursoNomeFormatado = curso.nome.replace(/\s+/g, '_');
+    const certificadoPath = `/uploads/users/${emailFormatado}/certificados/certificado_${cursoNomeFormatado}.pdf`;
+    
+    const fs = require('fs');
+    const path = require('path');
+    const baseDir = process.cwd();
+    const uploadsPath = process.env.CAMINHO_PASTA_UPLOADS || 'uploads';
+    const fullPath = path.join(baseDir, uploadsPath, 'users', emailFormatado, 'certificados', `certificado_${cursoNomeFormatado}.pdf`);
+    
+    const certificadoExiste = fs.existsSync(fullPath);
+
+    // Formatar datas em português
+    const formatarDataPortugues = (data) => {
+      if (!data) return null;
+      return new Date(data).toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    };
+
+    // Buscar informações do formador
+    let formador = null;
+    if (curso.id_formador) {
+      try {
+        const formadorData = await User.findByPk(curso.id_formador);
+        if (formadorData) {
+          formador = {
+            nome: formadorData.nome,
+            email: formadorData.email
+          };
+        }
+      } catch (error) {
+        console.warn('Erro ao buscar dados do formador:', error);
+      }
+    }
+
+    return res.json({
+      success: true,
+      curso: {
+        id: curso.id_curso,
+        nome: curso.nome,
+        descricao: curso.descricao,
+        tipo: curso.tipo,
+        duracao: curso.duracao,
+        data_inicio: curso.data_inicio,
+        data_fim: curso.data_fim,
+        data_fim_formatada: formatarDataPortugues(curso.data_fim),
+        categoria: curso.categoria?.nome || 'N/A',
+        area: curso.area?.nome || 'N/A',
+        formador: formador
+      },
+      utilizador: {
+        id: utilizador.id_utilizador,
+        nome: utilizador.nome,
+        email: utilizador.email
+      },
+      avaliacao: avaliacao ? {
+        id: avaliacao.id_avaliacao,
+        nota: avaliacao.nota,
+        certificado: avaliacao.certificado,
+        url_certificado: avaliacao.url_certificado,
+        data_criacao: avaliacao.createdAt,
+        data_atualizacao: avaliacao.updatedAt
+      } : null,
+      certificado: {
+        existe: certificadoExiste,
+        path: certificadoExiste ? certificadoPath : null,
+        data_geracao_formatada: new Date().toLocaleDateString('pt-PT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        })
+      },
+      inscricao: {
+        id: inscricao.id_inscricao,
+        data_inscricao: inscricao.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Erro ao obter informações do certificado:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao obter informações do certificado",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   verificarHorasFormador,
   getCertificado,
@@ -475,5 +681,6 @@ module.exports = {
   eliminarFicheiro,
   criarDiretorio,
   registarCertificado,
-  SalvarCertificado
+  SalvarCertificado,
+  obterInformacoesCertificado
 };

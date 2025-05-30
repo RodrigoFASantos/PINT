@@ -14,26 +14,26 @@
   overflow: hidden;
 }
 
-.voltar-btn {
+.botao-voltar {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  background-color: #fff;
+  top: 5% !important;
+  left: 10% !important;
+  background-color: #3b6999;
+  color: white;
   border: 1px solid #ddd;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  border-radius: 100%;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
 
-.voltar-btn:hover {
-  background-color: #f5f5f5;
+.botao-voltar:hover {
+  background-color: #1c4b7c;
   transform: scale(1.05);
 }
 

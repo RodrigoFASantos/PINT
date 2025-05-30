@@ -425,10 +425,10 @@ const Chat_Conversas = () => {
 
       // Fazer a requisição para o servidor
       const response = await axios.post(
-        `${API_BASE}/forum/tema/${temaId}/avaliar`,
-        { tipo },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  `${API_BASE}/forum-tema/tema/${temaId}/avaliar`,
+  { tipo },
+  { headers: { Authorization: `Bearer ${token}` } }
+);
 
       logInfo('Avaliação enviada com sucesso', response.data);
 
@@ -613,7 +613,7 @@ const Chat_Conversas = () => {
             <h2>Ocorreu um erro</h2>
             <p>{erro}</p>
             <button
-              className="voltar-btn"
+              className="botao-voltar"
               onClick={() => navigate('/forum')}
             >
               <i className="fas fa-arrow-left"></i> Voltar ao Fórum
@@ -640,7 +640,7 @@ const Chat_Conversas = () => {
 
   return (
     <div className="chat-conversas-container">
-      <button className="voltar-btn" onClick={() => navigate('/forum')}>
+      <button className="botao-voltar" onClick={() => navigate('/forum')}>
         <i className="fas fa-arrow-left"></i>
       </button>
 
@@ -671,19 +671,19 @@ const Chat_Conversas = () => {
                 className={`filtro-btn ${filtro === 'recentes' ? 'active' : ''}`}
                 onClick={() => { setFiltro('recentes'); setPagina(1); }}
               >
-                Mais Recentes
+                Recentes
               </button>
               <button
                 className={`filtro-btn ${filtro === 'likes' ? 'active' : ''}`}
                 onClick={() => { setFiltro('likes'); setPagina(1); }}
               >
-                Mais Curtidos
+                Likes
               </button>
               <button
                 className={`filtro-btn ${filtro === 'dislikes' ? 'active' : ''}`}
                 onClick={() => { setFiltro('dislikes'); setPagina(1); }}
               >
-                Mais Descurtidos
+                Deslikes
               </button>
               <button
                 className={`filtro-btn ${filtro === 'comentarios' ? 'active' : ''}`}

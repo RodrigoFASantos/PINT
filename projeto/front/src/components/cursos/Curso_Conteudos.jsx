@@ -82,6 +82,35 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     }
   }, [courseId]);
 
+  // Função para verificar se o utilizador pode aceder aos conteúdos
+  const podeAcederConteudos = useCallback(() => {
+    // Se não tem informações do curso ainda, não pode aceder
+    if (!cursoInfo) return false;
+    
+    // Se é admin ou formador, sempre pode aceder
+    if (userRole === 'admin' || userRole === 'formador') return true;
+    
+    // Se não está inscrito, não pode aceder
+    if (!inscrito) return false;
+    
+    // Verificar se o curso terminou
+    const dataAtual = new Date();
+    const dataFimCurso = new Date(cursoInfo.data_fim);
+    const cursoTerminado = dataFimCurso < dataAtual;
+    
+    // Se o curso não terminou, pode aceder (já está inscrito)
+    if (!cursoTerminado) return true;
+    
+    // Se o curso terminou e é assíncrono, não pode aceder (exceto admin)
+    if (cursoInfo.tipo === 'assincrono') return false;
+    
+    // Se o curso terminou e é síncrono, pode aceder se estava inscrito
+    // (assumindo que se chegou até aqui, estava inscrito antes do curso terminar)
+    if (cursoInfo.tipo === 'sincrono') return true;
+    
+    return false;
+  }, [cursoInfo, inscrito, userRole]);
+
   // Buscar tópicos e conteúdos do curso
   const fetchTopicos = useCallback(async () => {
     try {
@@ -195,6 +224,25 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
       default:
         return <i className="fas fa-file"></i>;
     }
+  };
+
+  // Função para obter mensagem de bloqueio apropriada
+  const getMensagemBloqueio = () => {
+    if (!cursoInfo) return "A carregar informações do curso...";
+    
+    if (!inscrito) {
+      return "Precisa de estar inscrito no curso para aceder a este conteúdo.";
+    }
+    
+    const dataAtual = new Date();
+    const dataFimCurso = new Date(cursoInfo.data_fim);
+    const cursoTerminado = dataFimCurso < dataAtual;
+    
+    if (cursoTerminado && cursoInfo.tipo === 'assincrono') {
+      return "Este curso assíncrono já terminou e os conteúdos não estão mais disponíveis.";
+    }
+    
+    return "Não tem permissão para aceder a este conteúdo.";
   };
 
   // ===== Handlers para abrir modais =====
@@ -443,6 +491,9 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
     );
   }
 
+  // Verificar se pode aceder aos conteúdos
+  const podeAceder = podeAcederConteudos();
+
   // Renderização principal
   return (
     <div className="curso-conteudos-container">
@@ -590,10 +641,10 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                                 {getConteudoIcon(conteudo.tipo)}
 
                                 <span
-                                  className={`conteudo-titulo ${!inscrito ? 'bloqueado' : ''}`}
+                                  className={`conteudo-titulo ${!podeAceder ? 'bloqueado' : ''}`}
                                   onClick={() => {
-                                    if (!inscrito) {
-                                      alert("Precisa de estar inscrito no curso para aceder a este conteúdo.");
+                                    if (!podeAceder) {
+                                      alert(getMensagemBloqueio());
                                       return;
                                     }
 
@@ -608,7 +659,7 @@ const CursoConteudos = ({ cursoId, inscrito = false }) => {
                                   }}
                                 >
                                   {conteudo.titulo}
-                                  {!inscrito && <i className="fas fa-lock ml-2" title="Conteúdo bloqueado"></i>}
+                                  {!podeAceder && <i className="fas fa-lock ml-2" title="Conteúdo bloqueado"></i>}
                                 </span>
 
                                 {(userRole === 'admin' || userRole === 'formador') && (

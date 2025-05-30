@@ -16,31 +16,6 @@
   position: relative;
 }
 
-/* Voltar ao Fórum button */
-.voltar-btn {
-  width: 50px;
-  height: 50px;
-  position: absolute;
-  top: 7%;
-  left: 2%;
-  z-index: 1000;
-  border-radius: 100% !important;
-  background: #3b6999 !important;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-indent: -9999px;
-  padding: 0;
-  cursor: pointer;
-}
-
-.voltar-btn i {
-  font-size: 25px;
-  color: white;
-  text-indent: 0;
-}
-
 .chat-header {
   padding-top: 20px;
   padding-bottom: 20px;
