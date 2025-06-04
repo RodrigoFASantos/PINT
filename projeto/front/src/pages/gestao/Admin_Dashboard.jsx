@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Chart from 'chart.js/auto';
+import API_BASE from "../../api";
 import Sidebar from '../../components/Sidebar';
 import './css/Admin_Dashboard.css';
 
@@ -9,19 +10,24 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // Estados para estatísticas
   const [stats, setStats] = useState({
     totalUtilizadores: 0,
-    totalCursos: 0,
-    cursosAtivos: 0,
-    inscricoesUltimos30Dias: 0,
     totalFormadores: 0,
     totalFormandos: 0,
+    totalAdministradores: 0,
+    totalCursos: 0,
+    cursosAtivos: 0,
     cursosTerminados: 0,
+    cursosSincronos: 0,
+    cursosAssincronos: 0,
+    totalInscricoes: 0,
+    inscricoesUltimos30Dias: 0,
     totalDenuncias: 0,
     denunciasResolvidasPorcentagem: 0,
-    presencasHoje: 0
+    presencasHoje: 0,
+    cursosTerminandoEmBreve: 0
   });
 
   // Estados para gráficos
@@ -33,6 +39,7 @@ const AdminDashboard = () => {
   const [evolucaoUtilizadores, setEvolucaoUtilizadores] = useState([]);
   const [topFormadores, setTopFormadores] = useState([]);
   const [cursosCompletudePorcentagem, setCursosCompletudePorcentagem] = useState([]);
+  const [atividadeRecente, setAtividadeRecente] = useState([]);
 
   const toggleSidebar = () => {
     console.log('[DEBUG] AdminDashboard: A alternar estado da sidebar');
@@ -47,180 +54,113 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         };
 
-        console.log('[DEBUG] A carregar dados do dashboard...');
-        
-        // Estatísticas gerais
+        console.log('[DEBUG] A carregar dados reais do dashboard...');
+
+        // 1. Estatísticas gerais
         try {
-          const statsResponse = await axios.get('/api/dashboard/estatisticas', config);
+          console.log('[DEBUG] A buscar estatísticas...');
+          const statsResponse = await axios.get(`${API_BASE}/dashboard/estatisticas`, config);
           console.log('[DEBUG] Estatísticas carregadas:', statsResponse.data);
           setStats(statsResponse.data);
         } catch (error) {
-          console.warn('[WARN] Erro ao carregar estatísticas:', error.message);
-          // Dados mock para desenvolvimento
-          setStats({
-            totalUtilizadores: 245,
-            totalCursos: 67,
-            cursosAtivos: 23,
-            inscricoesUltimos30Dias: 89,
-            totalFormadores: 15,
-            totalFormandos: 230,
-            cursosTerminados: 44,
-            totalDenuncias: 12,
-            denunciasResolvidasPorcentagem: 83.3,
-            presencasHoje: 156
-          });
+          console.error('[ERROR] Erro ao carregar estatísticas:', error);
         }
 
-        // Cursos por categoria
+        // 2. Cursos por categoria
         try {
-          const categoriaResponse = await axios.get('/api/cursos', { 
-            ...config, 
-            params: { stats: 'categoria' } 
-          });
-          setCursosPorCategoria(categoriaResponse.data.categorias || [
-            { categoria: 'Tecnologia', total: 25 },
-            { categoria: 'Gestão', total: 18 },
-            { categoria: 'Marketing', total: 12 },
-            { categoria: 'Design', total: 8 },
-            { categoria: 'Finanças', total: 4 }
-          ]);
+          console.log('[DEBUG] A buscar cursos por categoria...');
+          const categoriaResponse = await axios.get(`${API_BASE}/dashboard/cursos-categoria`, config);
+          console.log('[DEBUG] Cursos por categoria:', categoriaResponse.data);
+          setCursosPorCategoria(categoriaResponse.data.categorias || []);
         } catch (error) {
-          console.warn('[WARN] A usar dados mock para categorias');
-          setCursosPorCategoria([
-            { categoria: 'Tecnologia', total: 25 },
-            { categoria: 'Gestão', total: 18 },
-            { categoria: 'Marketing', total: 12 },
-            { categoria: 'Design', total: 8 },
-            { categoria: 'Finanças', total: 4 }
-          ]);
+          console.error('[ERROR] Erro ao carregar cursos por categoria:', error);
         }
 
-        // Inscrições por mês
+        // 3. Inscrições por mês
         try {
-          const inscricoesResponse = await axios.get('/api/inscricoes', { 
-            ...config, 
-            params: { stats: 'mensal' } 
-          });
-          setInscricoesPorMes(inscricoesResponse.data.mensal || [
-            { mes: 'Jan', total: 45 },
-            { mes: 'Fev', total: 52 },
-            { mes: 'Mar', total: 38 },
-            { mes: 'Abr', total: 61 },
-            { mes: 'Mai', total: 89 },
-            { mes: 'Jun', total: 73 }
-          ]);
+          console.log('[DEBUG] A buscar inscrições por mês...');
+          const inscricoesResponse = await axios.get(`${API_BASE}/dashboard/inscricoes-mes`, config);
+          console.log('[DEBUG] Inscrições por mês:', inscricoesResponse.data);
+          setInscricoesPorMes(inscricoesResponse.data.mensal || []);
         } catch (error) {
-          setInscricoesPorMes([
-            { mes: 'Jan', total: 45 },
-            { mes: 'Fev', total: 52 },
-            { mes: 'Mar', total: 38 },
-            { mes: 'Abr', total: 61 },
-            { mes: 'Mai', total: 89 },
-            { mes: 'Jun', total: 73 }
-          ]);
+          console.error('[ERROR] Erro ao carregar inscrições por mês:', error);
         }
 
-        // Utilizadores por perfil
+        // 4. Utilizadores por perfil
         try {
-          const utilizadoresResponse = await axios.get('/api/users', { 
-            ...config, 
-            params: { stats: 'perfil' } 
-          });
-          setUtilizadorePorPerfil(utilizadoresResponse.data.perfis || [
-            { perfil: 'Formandos', total: 230 },
-            { perfil: 'Formadores', total: 15 },
-            { perfil: 'Administradores', total: 3 }
-          ]);
+          console.log('[DEBUG] A buscar utilizadores por perfil...');
+          const utilizadoresResponse = await axios.get(`${API_BASE}/dashboard/utilizadores-perfil`, config);
+          console.log('[DEBUG] Utilizadores por perfil:', utilizadoresResponse.data);
+          setUtilizadorePorPerfil(utilizadoresResponse.data.perfis || []);
         } catch (error) {
-          setUtilizadorePorPerfil([
-            { perfil: 'Formandos', total: 230 },
-            { perfil: 'Formadores', total: 15 },
-            { perfil: 'Administradores', total: 3 }
-          ]);
+          console.error('[ERROR] Erro ao carregar utilizadores por perfil:', error);
         }
 
-        // Denúncias por tópico
+        // 5. Denúncias por tópico
         try {
-          const denunciasResponse = await axios.get('/api/denuncias', { 
-            ...config, 
-            params: { stats: 'topicos' } 
-          });
-          setDenunciasPorTopico(denunciasResponse.data.topicos || [
-            { topico: 'Programação Web', denuncias: 5 },
-            { topico: 'Marketing Digital', denuncias: 3 },
-            { topico: 'Design Gráfico', denuncias: 2 },
-            { topico: 'Gestão de Projetos', denuncias: 1 },
-            { topico: 'Análise de Dados', denuncias: 1 }
-          ]);
+          console.log('[DEBUG] A buscar denúncias por tópico...');
+          const denunciasResponse = await axios.get(`${API_BASE}/dashboard/denuncias-topico`, config);
+          console.log('[DEBUG] Denúncias por tópico:', denunciasResponse.data);
+          setDenunciasPorTopico(denunciasResponse.data.topicos || []);
         } catch (error) {
-          setDenunciasPorTopico([
-            { topico: 'Programação Web', denuncias: 5 },
-            { topico: 'Marketing Digital', denuncias: 3 },
-            { topico: 'Design Gráfico', denuncias: 2 },
-            { topico: 'Gestão de Projetos', denuncias: 1 },
-            { topico: 'Análise de Dados', denuncias: 1 }
-          ]);
+          console.error('[ERROR] Erro ao carregar denúncias por tópico:', error);
         }
 
-        // Cursos mais inscritos
+        // 6. Cursos mais inscritos
         try {
-          const cursosPopularesResponse = await axios.get('/api/cursos', { 
-            ...config, 
-            params: { stats: 'populares', limit: 10 } 
-          });
-          setCursosMaisInscritos(cursosPopularesResponse.data.populares || [
-            { nome: 'React.js Avançado', inscricoes: 45 },
-            { nome: 'Python para Data Science', inscricoes: 38 },
-            { nome: 'Marketing Digital', inscricoes: 32 },
-            { nome: 'UI/UX Design', inscricoes: 28 },
-            { nome: 'Gestão de Equipas', inscricoes: 25 },
-            { nome: 'Excel Avançado', inscricoes: 22 },
-            { nome: 'Photoshop Profissional', inscricoes: 19 },
-            { nome: 'Node.js Backend', inscricoes: 17 }
-          ]);
+          console.log('[DEBUG] A buscar cursos mais inscritos...');
+          const cursosPopularesResponse = await axios.get(`${API_BASE}/dashboard/cursos-populares`, config);
+          console.log('[DEBUG] Cursos mais inscritos:', cursosPopularesResponse.data);
+          setCursosMaisInscritos(cursosPopularesResponse.data.populares || []);
         } catch (error) {
-          setCursosMaisInscritos([
-            { nome: 'React.js Avançado', inscricoes: 45 },
-            { nome: 'Python para Data Science', inscricoes: 38 },
-            { nome: 'Marketing Digital', inscricoes: 32 },
-            { nome: 'UI/UX Design', inscricoes: 28 },
-            { nome: 'Gestão de Equipas', inscricoes: 25 }
-          ]);
+          console.error('[ERROR] Erro ao carregar cursos mais inscritos:', error);
         }
 
-        // Evolução de utilizadores
-        setEvolucaoUtilizadores([
-          { mes: 'Jan', novos: 15, ativos: 180 },
-          { mes: 'Fev', novos: 23, ativos: 195 },
-          { mes: 'Mar', novos: 18, ativos: 210 },
-          { mes: 'Abr', novos: 31, ativos: 225 },
-          { mes: 'Mai', novos: 27, ativos: 240 },
-          { mes: 'Jun', novos: 19, ativos: 245 }
-        ]);
+        // 7. Evolução de utilizadores
+        try {
+          console.log('[DEBUG] A buscar evolução de utilizadores...');
+          const evolucaoResponse = await axios.get(`${API_BASE}/dashboard/evolucao-utilizadores`, config);
+          console.log('[DEBUG] Evolução de utilizadores:', evolucaoResponse.data);
+          setEvolucaoUtilizadores(evolucaoResponse.data.evolucao || []);
+        } catch (error) {
+          console.error('[ERROR] Erro ao carregar evolução de utilizadores:', error);
+        }
 
-        // Top formadores
-        setTopFormadores([
-          { nome: 'Ana Silva', cursos: 8, avaliacao: 4.9 },
-          { nome: 'João Santos', cursos: 6, avaliacao: 4.8 },
-          { nome: 'Maria Costa', cursos: 5, avaliacao: 4.7 },
-          { nome: 'Pedro Oliveira', cursos: 4, avaliacao: 4.6 },
-          { nome: 'Sofia Rodrigues', cursos: 3, avaliacao: 4.5 }
-        ]);
+        // 8. Top formadores
+        try {
+          console.log('[DEBUG] A buscar top formadores...');
+          const formadoresResponse = await axios.get(`${API_BASE}/dashboard/top-formadores`, config);
+          console.log('[DEBUG] Top formadores:', formadoresResponse.data);
+          setTopFormadores(formadoresResponse.data.formadores || []);
+        } catch (error) {
+          console.error('[ERROR] Erro ao carregar top formadores:', error);
+        }
 
-        // Taxa de conclusão por curso
-        setCursosCompletudePorcentagem([
-          { curso: 'React.js', conclusao: 89 },
-          { curso: 'Python', conclusao: 76 },
-          { curso: 'Marketing', conclusao: 92 },
-          { curso: 'Design', conclusao: 68 },
-          { curso: 'Excel', conclusao: 95 }
-        ]);
+        // 9. Taxa de conclusão
+        try {
+          console.log('[DEBUG] A buscar taxa de conclusão...');
+          const conclusaoResponse = await axios.get(`${API_BASE}/dashboard/taxa-conclusao`, config);
+          console.log('[DEBUG] Taxa de conclusão:', conclusaoResponse.data);
+          setCursosCompletudePorcentagem(conclusaoResponse.data.conclusao || []);
+        } catch (error) {
+          console.error('[ERROR] Erro ao carregar taxa de conclusão:', error);
+        }
+
+        // 10. Atividade recente
+        try {
+          console.log('[DEBUG] A buscar atividade recente...');
+          const atividadeResponse = await axios.get(`${API_BASE}/dashboard/atividade-recente`, config);
+          console.log('[DEBUG] Atividade recente:', atividadeResponse.data);
+          setAtividadeRecente(atividadeResponse.data.atividades || []);
+        } catch (error) {
+          console.error('[ERROR] Erro ao carregar atividade recente:', error);
+        }
 
         setLoading(false);
-        console.log('[DEBUG] Todos os dados carregados com sucesso');
-        
+        console.log('[DEBUG] Todos os dados reais carregados com sucesso');
+
       } catch (error) {
-        console.error('[ERROR] Erro ao carregar dados do dashboard:', error);
+        console.error('[ERROR] Erro geral ao carregar dados do dashboard:', error);
         setLoading(false);
       }
     };
@@ -230,7 +170,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!loading) {
-      console.log('[DEBUG] A criar gráficos...');
+      console.log('[DEBUG] A criar gráficos com dados reais...');
       criarGraficos();
     }
   }, [loading, cursosPorCategoria, inscricoesPorMes, utilizadorePorPerfil, denunciasPorTopico, cursosMaisInscritos, evolucaoUtilizadores]);
@@ -244,7 +184,7 @@ const AdminDashboard = () => {
 
     // Gráfico de cursos por categoria
     const ctxCategorias = document.getElementById('grafico-categorias');
-    if (ctxCategorias) {
+    if (ctxCategorias && cursosPorCategoria.length > 0) {
       new Chart(ctxCategorias, {
         type: 'doughnut',
         data: {
@@ -284,7 +224,7 @@ const AdminDashboard = () => {
 
     // Gráfico de inscrições por mês
     const ctxInscricoes = document.getElementById('grafico-inscricoes');
-    if (ctxInscricoes) {
+    if (ctxInscricoes && inscricoesPorMes.length > 0) {
       new Chart(ctxInscricoes, {
         type: 'line',
         data: {
@@ -330,7 +270,7 @@ const AdminDashboard = () => {
 
     // Gráfico de utilizadores por perfil
     const ctxUtilizadores = document.getElementById('grafico-utilizadores');
-    if (ctxUtilizadores) {
+    if (ctxUtilizadores && utilizadorePorPerfil.length > 0) {
       new Chart(ctxUtilizadores, {
         type: 'bar',
         data: {
@@ -371,7 +311,7 @@ const AdminDashboard = () => {
 
     // Gráfico de denúncias por tópico
     const ctxDenuncias = document.getElementById('grafico-denuncias');
-    if (ctxDenuncias) {
+    if (ctxDenuncias && denunciasPorTopico.length > 0) {
       new Chart(ctxDenuncias, {
         type: 'bar',
         data: {
@@ -413,7 +353,7 @@ const AdminDashboard = () => {
 
     // Gráfico de cursos mais inscritos
     const ctxCursosPopulares = document.getElementById('grafico-cursos-populares');
-    if (ctxCursosPopulares) {
+    if (ctxCursosPopulares && cursosMaisInscritos.length > 0) {
       new Chart(ctxCursosPopulares, {
         type: 'bar',
         data: {
@@ -445,7 +385,7 @@ const AdminDashboard = () => {
             },
             x: {
               grid: { display: false },
-              ticks: { 
+              ticks: {
                 font: { size: 11 },
                 maxRotation: 45
               }
@@ -457,7 +397,7 @@ const AdminDashboard = () => {
 
     // Gráfico de evolução de utilizadores
     const ctxEvolucao = document.getElementById('grafico-evolucao');
-    if (ctxEvolucao) {
+    if (ctxEvolucao && evolucaoUtilizadores.length > 0) {
       new Chart(ctxEvolucao, {
         type: 'line',
         data: {
@@ -510,7 +450,7 @@ const AdminDashboard = () => {
 
     // Gráfico de taxa de conclusão
     const ctxConclusao = document.getElementById('grafico-conclusao');
-    if (ctxConclusao) {
+    if (ctxConclusao && cursosCompletudePorcentagem.length > 0) {
       new Chart(ctxConclusao, {
         type: 'doughnut',
         data: {
@@ -563,35 +503,33 @@ const AdminDashboard = () => {
   return (
     <div className="admin-dashboard-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
+
       <div className="main-content">
         <div className="dashboard-header">
-          <h1>Painel de Administração</h1>
-          <p className="dashboard-subtitle">Visão geral completa do sistema</p>
-        </div>
-
-        {/* Ações rápidas */}
-        <div className="quick-actions">
-          <button className="action-btn primary" onClick={() => navegarPara('/admin/criar-curso')}>
-            <i className="fas fa-plus"></i>
-            Criar Curso
-          </button>
-          <button className="action-btn secondary" onClick={() => navegarPara('/admin/criar-usuario')}>
-            <i className="fas fa-user-plus"></i>
-            Adicionar Utilizador
-          </button>
-          <button className="action-btn success" onClick={() => navegarPara('/admin/cursos')}>
-            <i className="fas fa-book"></i>
-            Gerir Cursos
-          </button>
-          <button className="action-btn warning" onClick={() => navegarPara('/admin/denuncias')}>
-            <i className="fas fa-flag"></i>
-            Ver Denúncias
-          </button>
+          {/* Ações rápidas */}
+          <div className="quick-actions">
+            <button className="action-btn primary" onClick={() => navegarPara('/admin/criar-curso')}>
+              <i className="fas fa-plus"></i>
+              Criar Curso
+            </button>
+            <button className="action-btn secondary" onClick={() => navegarPara('/admin/criar-usuario')}>
+              <i className="fas fa-user-plus"></i>
+              Adicionar Utilizador
+            </button>
+            <button className="action-btn success" onClick={() => navegarPara('/admin/cursos')}>
+              <i className="fas fa-book"></i>
+              Gerir Cursos
+            </button>
+            <button className="action-btn warning" onClick={() => navegarPara('/admin/denuncias')}>
+              <i className="fas fa-flag"></i>
+              Ver Denúncias
+            </button>
+          </div>
         </div>
 
         {/* Estatísticas principais */}
         <div className="stats-grid">
+
           <div className="stat-card primary">
             <div className="stat-icon">
               <i className="fas fa-users"></i>
@@ -599,7 +537,26 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Total de Utilizadores</h3>
               <p className="stat-value">{stats.totalUtilizadores}</p>
-              <span className="stat-trend positive">+12% este mês</span>
+            </div>
+          </div>
+
+          <div className="stat-card primary">
+            <div className="stat-icon">
+              <i className="fas fa-user"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Total de Formandos</h3>
+              <p className="stat-value">{stats.totalFormandos}</p>
+            </div>
+          </div>
+
+          <div className="stat-card primary">
+            <div className="stat-icon">
+              <i className="fas fa-user"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Total de Formadores</h3>
+              <p className="stat-value">{stats.totalFormadores}</p>
             </div>
           </div>
 
@@ -610,7 +567,6 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Total de Cursos</h3>
               <p className="stat-value">{stats.totalCursos}</p>
-              <span className="stat-trend positive">+5 novos</span>
             </div>
           </div>
 
@@ -621,7 +577,16 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Cursos Ativos</h3>
               <p className="stat-value">{stats.cursosAtivos}</p>
-              <span className="stat-trend neutral">{Math.round((stats.cursosAtivos / stats.totalCursos) * 100)}% do total</span>
+            </div>
+          </div>
+
+          <div className="stat-card danger">
+            <div className="stat-icon">
+              <i className="fas fa-play-circle"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Cursos Inativos</h3>
+              <p className="stat-value">{stats.cursosInativos}</p>
             </div>
           </div>
 
@@ -632,7 +597,6 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Inscrições (30d)</h3>
               <p className="stat-value">{stats.inscricoesUltimos30Dias}</p>
-              <span className="stat-trend positive">+23% vs anterior</span>
             </div>
           </div>
 
@@ -643,7 +607,6 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Denúncias Ativas</h3>
               <p className="stat-value">{stats.totalDenuncias}</p>
-              <span className="stat-trend negative">{stats.denunciasResolvidasPorcentagem}% resolvidas</span>
             </div>
           </div>
 
@@ -654,7 +617,9 @@ const AdminDashboard = () => {
             <div className="stat-info">
               <h3>Presenças Hoje</h3>
               <p className="stat-value">{stats.presencasHoje}</p>
-              <span className="stat-trend positive">85% de comparência</span>
+              <span className="stat-trend positive">
+                {Math.round((stats.presencasHoje / stats.totalUtilizadores) * 100)}% dos utilizadores
+              </span>
             </div>
           </div>
         </div>
@@ -664,7 +629,7 @@ const AdminDashboard = () => {
           <div className="chart-container large">
             <canvas id="grafico-inscricoes"></canvas>
           </div>
-          
+
           <div className="chart-container medium">
             <canvas id="grafico-categorias"></canvas>
           </div>
@@ -681,57 +646,12 @@ const AdminDashboard = () => {
             <canvas id="grafico-denuncias"></canvas>
           </div>
 
-          <div className="chart-container medium">
-            <canvas id="grafico-cursos-populares"></canvas>
-          </div>
-
-          <div className="chart-container small">
-            <canvas id="grafico-conclusao"></canvas>
-          </div>
         </div>
 
         {/* Tabelas de dados */}
         <div className="data-tables">
-          {/* Top Formadores */}
-          <div className="table-container">
-            <h3><i className="fas fa-star"></i> Top Formadores</h3>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Cursos</th>
-                    <th>Avaliação</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topFormadores.map((formador, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div className="user-info">
-                          <div className="user-avatar">{formador.nome.charAt(0)}</div>
-                          <span>{formador.nome}</span>
-                        </div>
-                      </td>
-                      <td><span className="badge">{formador.cursos}</span></td>
-                      <td>
-                        <div className="rating">
-                          <span>{formador.avaliacao}</span>
-                          <i className="fas fa-star"></i>
-                        </div>
-                      </td>
-                      <td>
-                        <button className="btn-small">Ver Perfil</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
 
-          {/* Cursos Populares */}
+          {/* Cursos Populares - Versão Melhorada */}
           <div className="table-container">
             <h3><i className="fas fa-fire"></i> Cursos Mais Procurados</h3>
             <div className="table-wrapper">
@@ -739,26 +659,67 @@ const AdminDashboard = () => {
                 <thead>
                   <tr>
                     <th>Curso</th>
+                    <th>Categoria/Área</th>
                     <th>Inscrições</th>
+                    <th>Tipo</th>
                     <th>Estado</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cursosMaisInscritos.slice(0, 5).map((curso, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div className="course-info">
-                          <strong>{curso.nome}</strong>
-                        </div>
-                      </td>
-                      <td><span className="badge success">{curso.inscricoes}</span></td>
-                      <td><span className="status active">Ativo</span></td>
-                      <td>
-                        <button className="btn-small">Ver Detalhes</button>
+                  {cursosMaisInscritos.length > 0 ? (
+                    cursosMaisInscritos.slice(0, 8).map((curso, index) => (
+                      <tr key={index}>
+                        <td>
+                          <div className="course-info">
+                            <strong>{curso.nome}</strong>
+                            {curso.data_inicio && curso.data_fim && (
+                              <small className="course-dates">
+                                {new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - 
+                                {new Date(curso.data_fim).toLocaleDateString('pt-PT')}
+                              </small>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="category-area">
+                            <span className="category">{curso.categoria || 'N/A'}</span>
+                            <small className="area">{curso.area || 'N/A'}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${curso.inscricoes > 10 ? 'success' : curso.inscricoes > 5 ? 'warning' : 'info'}`}>
+                            {curso.inscricoes || 0}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`tipo-badge ${curso.tipo}`}>
+                            {curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status ${curso.estado === 'ativo' ? 'active' : 'inactive'}`}>
+                            {curso.estado === 'ativo' ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className="btn-small"
+                            onClick={() => navegarPara(`/admin/cursos/${curso.id_curso}`)}
+                          >
+                            Ver Detalhes
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="no-data-row">
+                        <i className="fas fa-info-circle"></i>
+                        Nenhum curso com inscrições encontrado
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -769,45 +730,29 @@ const AdminDashboard = () => {
         <div className="recent-activity">
           <h3><i className="fas fa-clock"></i> Atividade Recente</h3>
           <div className="activity-list">
-            <div className="activity-item">
-              <div className="activity-icon success">
-                <i className="fas fa-user-plus"></i>
+            {atividadeRecente.length > 0 ? (
+              atividadeRecente.map((atividade, index) => (
+                <div key={index} className="activity-item">
+                  <div className={`activity-icon ${atividade.classe}`}>
+                    <i className={atividade.icon}></i>
+                  </div>
+                  <div className="activity-content">
+                    <p><strong>{atividade.descricao}</strong></p>
+                    <span className="activity-time">{atividade.tempo}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="activity-item">
+                <div className="activity-icon info">
+                  <i className="fas fa-info-circle"></i>
+                </div>
+                <div className="activity-content">
+                  <p>Nenhuma atividade recente encontrada</p>
+                  <span className="activity-time">-</span>
+                </div>
               </div>
-              <div className="activity-content">
-                <p><strong>Novo utilizador registado:</strong> Maria Santos</p>
-                <span className="activity-time">há 5 minutos</span>
-              </div>
-            </div>
-            
-            <div className="activity-item">
-              <div className="activity-icon info">
-                <i className="fas fa-book"></i>
-              </div>
-              <div className="activity-content">
-                <p><strong>Curso criado:</strong> "JavaScript Avançado"</p>
-                <span className="activity-time">há 1 hora</span>
-              </div>
-            </div>
-            
-            <div className="activity-item">
-              <div className="activity-icon warning">
-                <i className="fas fa-flag"></i>
-              </div>
-              <div className="activity-content">
-                <p><strong>Nova denúncia:</strong> Comentário inadequado no fórum</p>
-                <span className="activity-time">há 2 horas</span>
-              </div>
-            </div>
-            
-            <div className="activity-item">
-              <div className="activity-icon success">
-                <i className="fas fa-certificate"></i>
-              </div>
-              <div className="activity-content">
-                <p><strong>Certificado emitido:</strong> João Silva - React.js</p>
-                <span className="activity-time">há 3 horas</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

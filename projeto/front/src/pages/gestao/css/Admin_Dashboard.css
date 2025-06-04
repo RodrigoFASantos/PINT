@@ -1,7 +1,3 @@
-/* ======================================
-   ADMIN DASHBOARD - ESTILO COMPLETO
-   ====================================== */
-
 /* Variáveis CSS */
 :root {
   --primary-color: #3B82F6;
@@ -36,19 +32,21 @@
 
 /* Container principal */
 .admin-dashboard-container {
+  margin-top: 60px !important;
+  height: 100vh;
   min-height: 100vh;
   background-color: var(--background-color);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--text-primary);
+  overflow-x: auto;
 }
-
 /* Loading */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100%;
   gap: 1rem;
 }
 
@@ -71,7 +69,7 @@
   margin-left: 0;
   padding: 2rem;
   transition: var(--transition);
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 @media (min-width: 768px) {

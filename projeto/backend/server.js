@@ -130,6 +130,8 @@ function carregarRota(caminho, prefixo) {
     console.log(`✅ [SERVER] Arquivo existe: ${rotaPath}.js`);
 
     console.log(`🔄 [SERVER] Fazendo require do arquivo...`);
+    // Limpar cache para garantir carregamento fresco
+    delete require.cache[require.resolve(rotaPath)];
     const rota = require(rotaPath);
     console.log(`✅ [SERVER] Require executado com sucesso`);
     
@@ -198,8 +200,11 @@ function carregarRota(caminho, prefixo) {
   }
 }
 
-// Lista de rotas a carregar
+// Lista de rotas a carregar - DASHBOARD EM PRIMEIRO LUGAR
 const rotas = [
+  // Dashboard - PRIMEIRA ROTA PARA DEBUG
+  { caminho: "./src/routes/dashboard/dashboard_route", prefixo: "/api/dashboard" },
+
   // Users
   { caminho: "./src/routes/users/auth_route", prefixo: "/api/auth" },
   { caminho: "./src/routes/users/users_route", prefixo: "/api/users" },
@@ -245,7 +250,17 @@ const rotas = [
 
 // Carregar cada rota e contar as válidas
 const rotasCarregadas = rotas.filter(({ caminho, prefixo }) => carregarRota(caminho, prefixo));
-console.log(`\nRotas carregadas: ${rotasCarregadas.length}/${rotas.length}`);
+console.log(`\n📊 RESUMO DE CARREGAMENTO:`);
+console.log(`✅ Rotas carregadas: ${rotasCarregadas.length}/${rotas.length}`);
+console.log(`❌ Rotas falhadas: ${rotas.length - rotasCarregadas.length}`);
+
+// Verificar especificamente se o dashboard foi carregado
+const dashboardCarregado = rotasCarregadas.some(rota => rota.prefixo === "/api/dashboard");
+if (dashboardCarregado) {
+  console.log(`🎯 DASHBOARD: Carregado com sucesso!`);
+} else {
+  console.error(`🚨 DASHBOARD: FALHA NO CARREGAMENTO!`);
+}
 
 // Servir ficheiros estáticos de upload
 app.use("/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
@@ -256,7 +271,19 @@ app.get("/api", (req, res) => {
   res.json({
     message: "API está funcionando!",
     version: "1.0.0",
-    date: new Date().toISOString()
+    date: new Date().toISOString(),
+    rotas_carregadas: rotasCarregadas.length,
+    total_rotas: rotas.length,
+    dashboard_ativo: dashboardCarregado
+  });
+});
+
+// Rota de teste específica para o dashboard
+app.get("/api/dashboard/teste-direto", (req, res) => {
+  console.log('[DEBUG] Rota de teste direto do dashboard chamada');
+  res.json({ 
+    message: "Dashboard funcionando via rota direta!",
+    timestamp: new Date().toISOString() 
   });
 });
 
@@ -290,6 +317,15 @@ server.listen(PORT, () => {
 🌐 API: http://localhost:${PORT}/api
 🔌 Socket.IO ativo
 📂 Diretório de uploads: ${process.env.CAMINHO_PASTA_UPLOADS}
+📊 Dashboard: ${dashboardCarregado ? '✅ ATIVO' : '❌ INATIVO'}
 ===========================================
   `);
+  
+  if (dashboardCarregado) {
+    console.log(`
+🎯 TESTA O DASHBOARD:
+📊 http://localhost:${PORT}/api/dashboard/teste
+📈 http://localhost:${PORT}/api/dashboard/estatisticas
+    `);
+  }
 });
