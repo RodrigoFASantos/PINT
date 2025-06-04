@@ -316,7 +316,7 @@ const clienteBuildPath = path.join(__dirname, "../front/build");
 
 // 2) Se a pasta existir, servir todos os ficheiros estáticos dela
 if (fs.existsSync(clienteBuildPath)) {
-  console.log(`👉 Serve estático do React em: ${clienteBuildPath}`);
+  console.log(`Server estático do React em: ${clienteBuildPath}`);
   app.use(express.static(clienteBuildPath));
 
   // 3) Rotas “catch-all”: se não for chamado de API (/api/*) nem de arquivos de upload (/uploads/*),
