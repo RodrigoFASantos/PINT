@@ -88,11 +88,13 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 app.use(express.json());
+
 // Middleware para adicionar io a todas as requisições
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
+
 // Middleware para logar todas as requisições
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -266,7 +268,7 @@ if (dashboardCarregado) {
 app.use("/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
 app.use("/api/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
 
-// Rota raiz
+// Rota raiz da API
 app.get("/api", (req, res) => {
   res.json({
     message: "API está funcionando!",
@@ -307,6 +309,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Erro interno do servidor", error: err.message });
 });
 
+/* ─────────────── BLOCO PARA SERVIR O REACT EM PRODUÇÃO ─────────────── */
+
+// 1) Caminho para a pasta onde está a build do React
+const clienteBuildPath = path.join(__dirname, "../front/build");
+
+// 2) Se a pasta existir, servir todos os ficheiros estáticos dela
+if (fs.existsSync(clienteBuildPath)) {
+  console.log(`👉 Serve estático do React em: ${clienteBuildPath}`);
+  app.use(express.static(clienteBuildPath));
+
+  // 3) Rotas “catch-all”: se não for chamado de API (/api/*) nem de arquivos de upload (/uploads/*),
+  // então devolve o index.html do React para que o React Router trate a rota do lado do cliente.
+  app.get("*", (req, res) => {
+    // Se a requisição já começar com "/api" ou "/uploads", deixa passar para as rotas anteriores
+    if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+      return res.status(404).json({ message: "Rota não encontrada" });
+    }
+    res.sendFile(path.join(clienteBuildPath, "index.html"));
+  });
+} else {
+  console.warn(`⚠️ Não encontrou pasta de build do React em ${clienteBuildPath}. Lembra-te de executar 'npm run build' dentro de front.`);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 // Iniciar servidor
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
@@ -320,7 +347,7 @@ server.listen(PORT, () => {
 📊 Dashboard: ${dashboardCarregado ? '✅ ATIVO' : '❌ INATIVO'}
 ===========================================
   `);
-  
+
   if (dashboardCarregado) {
     console.log(`
 🎯 TESTA O DASHBOARD:
