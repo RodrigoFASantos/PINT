@@ -10,173 +10,357 @@ const Gerir_Denuncias = () => {
     const [denuncias, setDenuncias] = useState([]);
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState(null);
-    const [filtroTipo, setFiltroTipo] = useState('todas'); // 'todas', 'forum_tema', 'forum_comentario', 'chat'
-    const [filtroStatus, setFiltroStatus] = useState('todas'); // 'todas', 'pendentes', 'resolvidas'
-    const [ordenacao, setOrdenacao] = useState('recentes'); // 'recentes', 'antigas'
+    const [filtroTipo, setFiltroTipo] = useState('todas');
+    const [filtroStatus, setFiltroStatus] = useState('todas');
+    const [ordenacao, setOrdenacao] = useState('recentes');
     const [pesquisa, setPesquisa] = useState('');
     const [denunciaSelecionada, setDenunciaSelecionada] = useState(null);
     const [modalVisivel, setModalVisivel] = useState(false);
     const [acaoTomada, setAcaoTomada] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [paginaAtual, setPaginaAtual] = useState(1);
+    const [processando, setProcessando] = useState(false);
     const itensPorPagina = 15;
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     // Função para log consistente
     const logInfo = (message, data) => {
-        console.log(`[GerirDenuncias] ${message}`, data || '');
+        console.log(`🔍 [GerirDenuncias] ${message}`, data || '');
+    };
+
+    // Função para mostrar notificações
+    const mostrarNotificacao = (tipo, mensagem) => {
+        // Implementar sistema de notificações se disponível
+        if (tipo === 'sucesso') {
+            console.log(`✅ ${mensagem}`);
+        } else if (tipo === 'erro') {
+            console.error(`❌ ${mensagem}`);
+        } else {
+            console.log(`ℹ️ ${mensagem}`);
+        }
+        
+        // Temporário: usar alert (substituir por toast/notification system)
+        alert(mensagem);
+    };
+
+    // Função auxiliar para fazer solicitações seguras
+    const fetchSafely = async (url, descricao) => {
+        try {
+            logInfo(`Carregando ${descricao}...`);
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                throw new Error('Token de autenticação não encontrado');
+            }
+
+            const response = await axios.get(url, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000 // 10 segundos timeout
+            });
+
+            if (response.data && response.data.success) {
+                logInfo(`✅ ${descricao} carregado com sucesso:`, response.data.data.length);
+                return response.data.data || [];
+            } else {
+                logInfo(`⚠️ ${descricao} retornou dados inválidos:`, response.data);
+                return [];
+            }
+        } catch (error) {
+            if (error.response?.status === 401) {
+                logInfo(`❌ Erro de autenticação ao carregar ${descricao}`);
+                // Redirecionar para login se token inválido
+                localStorage.removeItem('token');
+                navigate('/login');
+                return [];
+            } else if (error.response?.status === 403) {
+                logInfo(`❌ Sem permissão para carregar ${descricao}`);
+                setErro(`Sem permissão para aceder a ${descricao}`);
+                return [];
+            } else {
+                logInfo(`❌ Erro ao buscar ${descricao}:`, error.message);
+                console.error(`Erro completo ao carregar ${descricao}:`, error);
+                return []; // Retornar array vazio em caso de erro
+            }
+        }
     };
 
     // Carregar todas as denúncias
     useEffect(() => {
-
         const carregarDenuncias = async () => {
             setLoading(true);
+            setErro(null);
+            
             try {
-                logInfo('Carregando denúncias');
-                const token = localStorage.getItem('token');
-
+                logInfo('Iniciando carregamento de denúncias...');
+                
                 // Array para armazenar todas as denúncias
                 let todasDenuncias = [];
 
-                // Função auxiliar para fazer solicitações seguras
-                const fetchSafely = async (url) => {
-                    try {
-                        const response = await axios.get(url, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        return response.data.data || [];
-                    } catch (error) {
-                        console.error(`Erro ao buscar ${url}:`, error);
-                        return []; // Retornar array vazio em caso de erro
-                    }
-                };
-
                 // Buscar denúncias de tema
-                const denunciasTema = await fetchSafely(`${API_BASE}/denuncias/denuncias/forum-tema`);
-                const denunciasProcessadasTema = (denunciasTema || []).map(d => ({
+                const denunciasTema = await fetchSafely(
+                    `${API_BASE}/denuncias/denuncias/forum-tema`, 
+                    'denúncias de temas'
+                );
+                
+                const denunciasProcessadasTema = denunciasTema.map(d => ({
                     ...d,
                     tipo: 'forum_tema',
-                    titulo: d.tema?.titulo || 'Tema sem título',
-                    conteudo: d.tema?.texto || 'Sem conteúdo',
-                    data_criacao: d.tema?.data_criacao || d.data_denuncia
+                    titulo: d.tema?.titulo || 'Tema removido ou indisponível',
+                    conteudo: d.tema?.texto || 'Conteúdo não disponível',
+                    data_criacao: d.tema?.data_criacao || d.data_denuncia,
+                    // Garantir que denunciante existe
+                    denunciante: d.denunciante || { 
+                        nome: 'Utilizador removido', 
+                        email: 'N/A' 
+                    }
                 }));
                 todasDenuncias = [...todasDenuncias, ...denunciasProcessadasTema];
 
                 // Buscar denúncias de comentário
-                const denunciasComentario = await fetchSafely(`${API_BASE}/denuncias/denuncias/forum-comentario`);
-                const denunciasProcessadasComentario = (denunciasComentario || []).map(d => ({
+                const denunciasComentario = await fetchSafely(
+                    `${API_BASE}/denuncias/denuncias/forum-comentario`, 
+                    'denúncias de comentários'
+                );
+                
+                const denunciasProcessadasComentario = denunciasComentario.map(d => ({
                     ...d,
                     tipo: 'forum_comentario',
-                    titulo: `Comentário em: ${d.comentario?.tema?.titulo || 'Tema desconhecido'}`,
-                    conteudo: d.comentario?.texto || 'Sem conteúdo',
-                    data_criacao: d.comentario?.data_criacao || d.data_denuncia
+                    titulo: `Comentário em: ${d.comentario?.tema?.titulo || 'Tema removido'}`,
+                    conteudo: d.comentario?.texto || 'Conteúdo não disponível',
+                    data_criacao: d.comentario?.data_criacao || d.data_denuncia,
+                    // Garantir que denunciante existe
+                    denunciante: d.denunciante || { 
+                        nome: 'Utilizador removido', 
+                        email: 'N/A' 
+                    }
                 }));
                 todasDenuncias = [...todasDenuncias, ...denunciasProcessadasComentario];
 
                 // Buscar denúncias de chat
-                const denunciasChat = await fetchSafely(`${API_BASE}/denuncias/denuncias/chat`);
-                const denunciasProcessadasChat = (denunciasChat || []).map(d => ({
+                const denunciasChat = await fetchSafely(
+                    `${API_BASE}/denuncias/denuncias/chat`, 
+                    'denúncias de chat'
+                );
+                
+                const denunciasProcessadasChat = denunciasChat.map(d => ({
                     ...d,
                     tipo: 'chat',
-                    titulo: `Mensagem em: ${d.mensagem?.topico?.titulo || 'Tópico desconhecido'}`,
-                    conteudo: d.mensagem?.texto || 'Sem conteúdo',
-                    data_criacao: d.mensagem?.data_criacao || d.data_denuncia
+                    titulo: `Mensagem em: ${d.mensagem?.topico?.titulo || 'Tópico removido'}`,
+                    conteudo: d.mensagem?.texto || 'Conteúdo não disponível',
+                    data_criacao: d.mensagem?.data_criacao || d.data_denuncia,
+                    // Garantir que denunciante existe
+                    denunciante: d.denunciante || { 
+                        nome: 'Utilizador removido', 
+                        email: 'N/A' 
+                    }
                 }));
                 todasDenuncias = [...todasDenuncias, ...denunciasProcessadasChat];
 
-                // Ordenar por data
-                todasDenuncias.sort((a, b) => new Date(b.data_denuncia) - new Date(a.data_denuncia));
+                // Ordenar por data de denúncia (mais recentes primeiro)
+                todasDenuncias.sort((a, b) => {
+                    const dataA = new Date(a.data_denuncia);
+                    const dataB = new Date(b.data_denuncia);
+                    return dataB - dataA;
+                });
 
                 setDenuncias(todasDenuncias);
-                logInfo(`Carregadas ${todasDenuncias.length} denúncias`, {
+                
+                logInfo(`Carregamento concluído com sucesso!`, {
+                    total: todasDenuncias.length,
                     temas: denunciasProcessadasTema.length,
                     comentarios: denunciasProcessadasComentario.length,
                     chat: denunciasProcessadasChat.length
                 });
+
             } catch (error) {
-                logInfo('Erro ao carregar denúncias:', error.message);
+                logInfo('Erro crítico ao carregar denúncias:', error.message);
                 setErro(`Erro ao carregar denúncias: ${error.message}`);
+                mostrarNotificacao('erro', 'Erro ao carregar as denúncias. Tente recarregar a página.');
             } finally {
                 setLoading(false);
             }
         };
 
-
         carregarDenuncias();
-    }, []);
+    }, [navigate]); // Adicionar navigate como dependência
 
     // Resolver uma denúncia
-    const resolverDenuncia = async (acaoTomada) => {
-        if (!denunciaSelecionada) return;
+    const resolverDenuncia = async (acaoTomadaParam) => {
+        if (!denunciaSelecionada) {
+            mostrarNotificacao('erro', 'Nenhuma denúncia selecionada');
+            return;
+        }
 
+        const acaoFinal = acaoTomadaParam || acaoTomada;
+        
+        if (!acaoFinal || acaoFinal.trim() === '') {
+            mostrarNotificacao('erro', 'É necessário informar a ação tomada');
+            return;
+        }
+
+        setProcessando(true);
+        
         try {
-            logInfo(`Resolvendo denúncia ID: ${denunciaSelecionada.id_denuncia}, tipo: ${denunciaSelecionada.tipo}`);
+            logInfo(`Resolvendo denúncia:`, {
+                id: denunciaSelecionada.id_denuncia,
+                tipo: denunciaSelecionada.tipo,
+                acao: acaoFinal
+            });
+            
             const token = localStorage.getItem('token');
-
-            let endpoint;
-            if (denunciaSelecionada.tipo === 'forum_tema') {
-                endpoint = `${API_BASE}/denuncias/denuncias/forum-tema/${denunciaSelecionada.id_denuncia}/resolver`;
-            } else if (denunciaSelecionada.tipo === 'forum_comentario') {
-                endpoint = `${API_BASE}/denuncias/denuncias/forum-comentario/${denunciaSelecionada.id_denuncia}/resolver`;
-            } else if (denunciaSelecionada.tipo === 'chat') {
-                endpoint = `${API_BASE}/denuncias/denuncias/chat/${denunciaSelecionada.id_denuncia}/resolver`;
+            
+            if (!token) {
+                throw new Error('Token de autenticação não encontrado');
             }
 
-            await axios.post(endpoint, { acao_tomada: acaoTomada }, {
-                headers: { Authorization: `Bearer ${token}` }
+            // Determinar endpoint dinamicamente baseado no tipo
+            let endpoint;
+            switch (denunciaSelecionada.tipo) {
+                case 'forum_tema':
+                    endpoint = `${API_BASE}/denuncias/denuncias/forum-tema/${denunciaSelecionada.id_denuncia}/resolver`;
+                    break;
+                case 'forum_comentario':
+                    endpoint = `${API_BASE}/denuncias/denuncias/forum-comentario/${denunciaSelecionada.id_denuncia}/resolver`;
+                    break;
+                case 'chat':
+                    endpoint = `${API_BASE}/denuncias/denuncias/chat/${denunciaSelecionada.id_denuncia}/resolver`;
+                    break;
+                default:
+                    throw new Error(`Tipo de denúncia desconhecido: ${denunciaSelecionada.tipo}`);
+            }
+
+            const response = await axios.post(endpoint, { 
+                acao_tomada: acaoFinal.trim() 
+            }, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
             });
 
-            // Atualizar denúncia na lista local
-            setDenuncias(prev => prev.map(d => {
-                if (d.tipo === denunciaSelecionada.tipo && d.id_denuncia === denunciaSelecionada.id_denuncia) {
-                    return { ...d, resolvida: true, acao_tomada: acaoTomada };
-                }
-                return d;
-            }));
+            if (response.data && response.data.success) {
+                // Atualizar denúncia na lista local
+                setDenuncias(prev => prev.map(d => {
+                    if (d.tipo === denunciaSelecionada.tipo && 
+                        d.id_denuncia === denunciaSelecionada.id_denuncia) {
+                        return { 
+                            ...d, 
+                            resolvida: true, 
+                            acao_tomada: acaoFinal.trim(),
+                            data_resolucao: new Date().toISOString()
+                        };
+                    }
+                    return d;
+                }));
 
-            fecharModal();
-            alert('Denúncia resolvida com sucesso!');
+                fecharModal();
+                mostrarNotificacao('sucesso', 'Denúncia resolvida com sucesso!');
+                logInfo('✅ Denúncia resolvida com sucesso');
+            } else {
+                throw new Error(response.data?.message || 'Resposta inválida do servidor');
+            }
+
         } catch (error) {
-            logInfo('Erro ao resolver denúncia:', error.message);
-            alert(`Erro ao resolver denúncia: ${error.response?.data?.message || error.message}`);
+            logInfo('❌ Erro ao resolver denúncia:', error.message);
+            console.error('Erro completo:', error);
+            
+            const mensagemErro = error.response?.data?.message || error.message || 'Erro desconhecido';
+            mostrarNotificacao('erro', `Erro ao resolver denúncia: ${mensagemErro}`);
+        } finally {
+            setProcessando(false);
         }
     };
 
     // Ocultar conteúdo denunciado
     const ocultarConteudo = async () => {
-        if (!denunciaSelecionada) return;
+        if (!denunciaSelecionada) {
+            mostrarNotificacao('erro', 'Nenhuma denúncia selecionada');
+            return;
+        }
+
+        setProcessando(true);
 
         try {
-            logInfo(`Ocultando conteúdo denunciado ID: ${denunciaSelecionada.id_denuncia}, tipo: ${denunciaSelecionada.tipo}`);
+            logInfo(`Ocultando conteúdo:`, {
+                id: denunciaSelecionada.id_denuncia,
+                tipo: denunciaSelecionada.tipo
+            });
+            
             const token = localStorage.getItem('token');
-
-            let endpoint;
-            let idConteudo;
-
-            if (denunciaSelecionada.tipo === 'forum_tema') {
-                endpoint = `${API_BASE}/denuncias/forum-tema/ocultar`;
-                idConteudo = denunciaSelecionada.id_tema;
-            } else if (denunciaSelecionada.tipo === 'forum_comentario') {
-                endpoint = `${API_BASE}/denuncias/forum-comentario/ocultar`;
-                idConteudo = denunciaSelecionada.id_comentario;
-            } else if (denunciaSelecionada.tipo === 'chat') {
-                endpoint = `${API_BASE}/denuncias/chat-mensagem/ocultar`;
-                idConteudo = denunciaSelecionada.id_mensagem;
+            
+            if (!token) {
+                throw new Error('Token de autenticação não encontrado');
             }
 
-            await axios.post(endpoint, { id: idConteudo }, {
-                headers: { Authorization: `Bearer ${token}` }
+            // Determinar endpoint e ID do conteúdo dinamicamente
+            let endpoint, idConteudo;
+            
+            switch (denunciaSelecionada.tipo) {
+                case 'forum_tema':
+                    endpoint = `${API_BASE}/denuncias/forum-tema/ocultar`;
+                    idConteudo = denunciaSelecionada.id_tema;
+                    break;
+                case 'forum_comentario':
+                    endpoint = `${API_BASE}/denuncias/forum-comentario/ocultar`;
+                    idConteudo = denunciaSelecionada.id_comentario;
+                    break;
+                case 'chat':
+                    endpoint = `${API_BASE}/denuncias/chat-mensagem/ocultar`;
+                    idConteudo = denunciaSelecionada.id_mensagem;
+                    break;
+                default:
+                    throw new Error(`Tipo de denúncia desconhecido: ${denunciaSelecionada.tipo}`);
+            }
+
+            if (!idConteudo) {
+                throw new Error('ID do conteúdo não encontrado na denúncia');
+            }
+
+            const response = await axios.post(endpoint, { 
+                id: idConteudo 
+            }, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
             });
 
-            // Resolver a denúncia também
-            await resolverDenuncia('Conteúdo ocultado');
+            if (response.data && response.data.success) {
+                // Atualizar denúncia como resolvida automaticamente
+                setDenuncias(prev => prev.map(d => {
+                    if (d.tipo === denunciaSelecionada.tipo && 
+                        d.id_denuncia === denunciaSelecionada.id_denuncia) {
+                        return { 
+                            ...d, 
+                            resolvida: true, 
+                            acao_tomada: 'Conteúdo ocultado pelo administrador',
+                            data_resolucao: new Date().toISOString()
+                        };
+                    }
+                    return d;
+                }));
 
-            alert('Conteúdo ocultado com sucesso!');
+                fecharModal();
+                mostrarNotificacao('sucesso', 'Conteúdo ocultado com sucesso!');
+                logInfo('✅ Conteúdo ocultado com sucesso');
+            } else {
+                throw new Error(response.data?.message || 'Resposta inválida do servidor');
+            }
+
         } catch (error) {
-            logInfo('Erro ao ocultar conteúdo:', error.message);
-            alert(`Erro ao ocultar conteúdo: ${error.response?.data?.message || error.message}`);
+            logInfo('❌ Erro ao ocultar conteúdo:', error.message);
+            console.error('Erro completo:', error);
+            
+            const mensagemErro = error.response?.data?.message || error.message || 'Erro desconhecido';
+            mostrarNotificacao('erro', `Erro ao ocultar conteúdo: ${mensagemErro}`);
+        } finally {
+            setProcessando(false);
         }
     };
 
@@ -190,15 +374,17 @@ const Gerir_Denuncias = () => {
         if (filtroStatus === 'resolvidas' && !denuncia.resolvida) return false;
 
         // Filtro por pesquisa (motivo, conteúdo ou nome do denunciante)
-        if (pesquisa) {
-            const termoPesquisa = pesquisa.toLowerCase();
-            const motivo = denuncia.motivo?.toLowerCase() || '';
-            const conteudo = denuncia.conteudo?.toLowerCase() || '';
-            const denunciante = denuncia.denunciante?.nome?.toLowerCase() || '';
+        if (pesquisa && pesquisa.trim() !== '') {
+            const termoPesquisa = pesquisa.toLowerCase().trim();
+            const motivo = (denuncia.motivo || '').toLowerCase();
+            const conteudo = (denuncia.conteudo || '').toLowerCase();
+            const denunciante = (denuncia.denunciante?.nome || '').toLowerCase();
+            const titulo = (denuncia.titulo || '').toLowerCase();
 
             return motivo.includes(termoPesquisa) ||
-                conteudo.includes(termoPesquisa) ||
-                denunciante.includes(termoPesquisa);
+                   conteudo.includes(termoPesquisa) ||
+                   denunciante.includes(termoPesquisa) ||
+                   titulo.includes(termoPesquisa);
         }
 
         return true;
@@ -206,10 +392,13 @@ const Gerir_Denuncias = () => {
 
     // Ordenar denúncias
     const denunciasOrdenadas = [...denunciasFiltradas].sort((a, b) => {
+        const dataA = new Date(a.data_denuncia);
+        const dataB = new Date(b.data_denuncia);
+        
         if (ordenacao === 'recentes') {
-            return new Date(b.data_denuncia) - new Date(a.data_denuncia);
+            return dataB - dataA;
         } else if (ordenacao === 'antigas') {
-            return new Date(a.data_denuncia) - new Date(b.data_denuncia);
+            return dataA - dataB;
         }
         return 0;
     });
@@ -222,7 +411,9 @@ const Gerir_Denuncias = () => {
 
     // Navegação entre páginas
     const mudarPagina = (numeroPagina) => {
-        setPaginaAtual(numeroPagina);
+        if (numeroPagina >= 1 && numeroPagina <= totalPaginas) {
+            setPaginaAtual(numeroPagina);
+        }
     };
 
     // Funções modais
@@ -236,15 +427,20 @@ const Gerir_Denuncias = () => {
         setModalVisivel(false);
         setDenunciaSelecionada(null);
         setAcaoTomada('');
+        setProcessando(false);
     };
 
-    // Formatar data
+    // Formatar data de forma segura
     const formatarData = (dataString) => {
         if (!dataString) return 'Data indisponível';
 
         try {
             const data = new Date(dataString);
-            return data.toLocaleString('pt-BR', {
+            if (isNaN(data.getTime())) {
+                return 'Data inválida';
+            }
+            
+            return data.toLocaleString('pt-PT', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
@@ -257,14 +453,15 @@ const Gerir_Denuncias = () => {
         }
     };
 
-    // Obter tradução do tipo
+    // Obter tradução do tipo de forma dinâmica
     const traduzirTipo = (tipo) => {
-        switch (tipo) {
-            case 'forum_tema': return 'Tema do Fórum';
-            case 'forum_comentario': return 'Comentário do Fórum';
-            case 'chat': return 'Mensagem de Chat';
-            default: return tipo;
-        }
+        const traducoes = {
+            'forum_tema': 'Tema do Fórum',
+            'forum_comentario': 'Comentário do Fórum',
+            'chat': 'Mensagem de Chat'
+        };
+        
+        return traducoes[tipo] || tipo || 'Tipo desconhecido';
     };
 
     // Renderização do estado de erro
@@ -276,9 +473,20 @@ const Gerir_Denuncias = () => {
                     <div className="erro-container">
                         <h2>Ocorreu um erro</h2>
                         <p>{erro}</p>
-                        <button className="btn-padrao" onClick={() => navigate('/admin')}>
-                            <i className="fas fa-arrow-left"></i> Voltar ao Painel
-                        </button>
+                        <div className="erro-acoes">
+                            <button 
+                                className="btn-padrao" 
+                                onClick={() => window.location.reload()}
+                            >
+                                <i className="fas fa-redo"></i> Recarregar Página
+                            </button>
+                            <button 
+                                className="btn-padrao" 
+                                onClick={() => navigate('/admin/dashboard')}
+                            >
+                                <i className="fas fa-arrow-left"></i> Voltar ao Painel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -292,7 +500,11 @@ const Gerir_Denuncias = () => {
                 <div className="main-content">
                     <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
                     <div className="loading-container">
-                        <div className="loading">Carregando denúncias...</div>
+                        <div className="loading">
+                            <div className="loading-spinner"></div>
+                            <p>A carregar denúncias...</p>
+                            <p className="loading-subtitle">Isto pode demorar alguns segundos</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -305,8 +517,8 @@ const Gerir_Denuncias = () => {
 
             <div className="main-content">
                 <div className="pagina-header">
-                    <h1>Gerenciar Denúncias</h1>
-                    <button className="btn-voltar" onClick={() => navigate('/admin')}>
+                    <h1>Gerir Denúncias</h1>
+                    <button className="btn-voltar" onClick={() => navigate('/admin/dashboard')}>
                         <i className="fas fa-arrow-left"></i> Voltar
                     </button>
                 </div>
@@ -316,7 +528,10 @@ const Gerir_Denuncias = () => {
                         <label>Tipo:</label>
                         <select
                             value={filtroTipo}
-                            onChange={(e) => setFiltroTipo(e.target.value)}
+                            onChange={(e) => {
+                                setFiltroTipo(e.target.value);
+                                setPaginaAtual(1); // Reset pagination
+                            }}
                             className="filtro-select"
                         >
                             <option value="todas">Todas</option>
@@ -330,7 +545,10 @@ const Gerir_Denuncias = () => {
                         <label>Status:</label>
                         <select
                             value={filtroStatus}
-                            onChange={(e) => setFiltroStatus(e.target.value)}
+                            onChange={(e) => {
+                                setFiltroStatus(e.target.value);
+                                setPaginaAtual(1); // Reset pagination
+                            }}
                             className="filtro-select"
                         >
                             <option value="todas">Todas</option>
@@ -356,10 +574,13 @@ const Gerir_Denuncias = () => {
                             type="text"
                             placeholder="Pesquisar nas denúncias..."
                             value={pesquisa}
-                            onChange={(e) => setPesquisa(e.target.value)}
+                            onChange={(e) => {
+                                setPesquisa(e.target.value);
+                                setPaginaAtual(1); // Reset pagination
+                            }}
                             className="pesquisa-input"
                         />
-                        <button className="btn-pesquisa">
+                        <button className="btn-pesquisa" disabled>
                             <i className="fas fa-search"></i>
                         </button>
                     </div>
@@ -372,17 +593,29 @@ const Gerir_Denuncias = () => {
                     </div>
                     <div className="estatistica-item">
                         <span className="estatistica-titulo">Pendentes:</span>
-                        <span className="estatistica-valor">{denuncias.filter(d => !d.resolvida).length}</span>
+                        <span className="estatistica-valor">
+                            {denuncias.filter(d => !d.resolvida).length}
+                        </span>
                     </div>
                     <div className="estatistica-item">
                         <span className="estatistica-titulo">Resolvidas:</span>
-                        <span className="estatistica-valor">{denuncias.filter(d => d.resolvida).length}</span>
+                        <span className="estatistica-valor">
+                            {denuncias.filter(d => d.resolvida).length}
+                        </span>
+                    </div>
+                    <div className="estatistica-item">
+                        <span className="estatistica-titulo">Filtradas:</span>
+                        <span className="estatistica-valor">{denunciasFiltradas.length}</span>
                     </div>
                 </div>
 
                 {denunciasFiltradas.length === 0 ? (
                     <div className="sem-denuncias">
+                        <i className="fas fa-inbox" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}></i>
                         <p>Nenhuma denúncia encontrada para os filtros selecionados.</p>
+                        {denuncias.length === 0 && (
+                            <p className="sem-denuncias-subtitle">Não há denúncias no sistema.</p>
+                        )}
                     </div>
                 ) : (
                     <>
@@ -400,15 +633,21 @@ const Gerir_Denuncias = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {denunciasPaginadas.map((denuncia) => (
+                                    {denunciasPaginadas.map((denuncia, index) => (
                                         <tr
-                                            key={`${denuncia.tipo}-${denuncia.id_denuncia}`}
+                                            key={`${denuncia.tipo}-${denuncia.id_denuncia}-${index}`}
                                             className={denuncia.resolvida ? 'denuncia-resolvida' : 'denuncia-pendente'}
                                         >
-                                            <td>{denuncia.id_denuncia}</td>
+                                            <td>{denuncia.id_denuncia || 'N/A'}</td>
                                             <td>{traduzirTipo(denuncia.tipo)}</td>
-                                            <td>{denuncia.motivo}</td>
-                                            <td>{denuncia.denunciante?.nome || 'Usuário desconhecido'}</td>
+                                            <td>
+                                                <span title={denuncia.motivo || 'Motivo não especificado'}>
+                                                    {(denuncia.motivo || 'Motivo não especificado').length > 30 
+                                                        ? `${denuncia.motivo.substring(0, 30)}...` 
+                                                        : denuncia.motivo || 'Motivo não especificado'}
+                                                </span>
+                                            </td>
+                                            <td>{denuncia.denunciante?.nome || 'Utilizador removido'}</td>
                                             <td>{formatarData(denuncia.data_denuncia)}</td>
                                             <td>
                                                 <span className={`status-badge ${denuncia.resolvida ? 'resolvida' : 'pendente'}`}>
@@ -419,6 +658,7 @@ const Gerir_Denuncias = () => {
                                                 <button
                                                     className="btn-acao"
                                                     onClick={() => abrirModal(denuncia)}
+                                                    disabled={processando}
                                                 >
                                                     <i className="fas fa-eye"></i> Detalhes
                                                 </button>
@@ -436,14 +676,16 @@ const Gerir_Denuncias = () => {
                                     onClick={() => mudarPagina(1)}
                                     disabled={paginaAtual === 1}
                                     className="btn-pagina"
+                                    title="Primeira página"
                                 >
                                     <i className="fas fa-angle-double-left"></i>
                                 </button>
 
                                 <button
-                                    onClick={() => mudarPagina(Math.max(1, paginaAtual - 1))}
+                                    onClick={() => mudarPagina(paginaAtual - 1)}
                                     disabled={paginaAtual === 1}
                                     className="btn-pagina"
+                                    title="Página anterior"
                                 >
                                     <i className="fas fa-angle-left"></i>
                                 </button>
@@ -453,9 +695,10 @@ const Gerir_Denuncias = () => {
                                 </span>
 
                                 <button
-                                    onClick={() => mudarPagina(Math.min(totalPaginas, paginaAtual + 1))}
+                                    onClick={() => mudarPagina(paginaAtual + 1)}
                                     disabled={paginaAtual === totalPaginas}
                                     className="btn-pagina"
+                                    title="Próxima página"
                                 >
                                     <i className="fas fa-angle-right"></i>
                                 </button>
@@ -464,6 +707,7 @@ const Gerir_Denuncias = () => {
                                     onClick={() => mudarPagina(totalPaginas)}
                                     disabled={paginaAtual === totalPaginas}
                                     className="btn-pagina"
+                                    title="Última página"
                                 >
                                     <i className="fas fa-angle-double-right"></i>
                                 </button>
@@ -475,18 +719,22 @@ const Gerir_Denuncias = () => {
 
             {/* Modal de detalhes da denúncia */}
             {modalVisivel && denunciaSelecionada && (
-                <div className="modal-backdrop">
-                    <div className="modal-denuncia">
+                <div className="modal-backdrop" onClick={fecharModal}>
+                    <div className="modal-denuncia" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>Detalhes da Denúncia</h3>
-                            <button className="btn-fechar" onClick={fecharModal}>
+                            <button 
+                                className="btn-fechar" 
+                                onClick={fecharModal}
+                                disabled={processando}
+                            >
                                 <i className="fas fa-times"></i>
                             </button>
                         </div>
 
                         <div className="modal-conteudo">
                             <div className="denuncia-detalhes">
-                                <p><strong>ID:</strong> {denunciaSelecionada.id_denuncia}</p>
+                                <p><strong>ID:</strong> {denunciaSelecionada.id_denuncia || 'N/A'}</p>
                                 <p><strong>Tipo:</strong> {traduzirTipo(denunciaSelecionada.tipo)}</p>
                                 <p><strong>Data:</strong> {formatarData(denunciaSelecionada.data_denuncia)}</p>
                                 <p><strong>Status:</strong>
@@ -497,16 +745,21 @@ const Gerir_Denuncias = () => {
 
                                 {/* Destaque especial para a ação tomada quando resolvida */}
                                 {denunciaSelecionada.resolvida && (
-                                    <p className="acao-tomada">
-                                        <strong>Ação tomada:</strong>
-                                        <span>{denunciaSelecionada.acao_tomada || 'Não informada'}</span>
-                                    </p>
+                                    <div className="acao-tomada">
+                                        <p><strong>Ação tomada:</strong></p>
+                                        <p className="acao-tomada-texto">
+                                            {denunciaSelecionada.acao_tomada || 'Não informada'}
+                                        </p>
+                                        {denunciaSelecionada.data_resolucao && (
+                                            <p><strong>Data de resolução:</strong> {formatarData(denunciaSelecionada.data_resolucao)}</p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
                             <div className="denuncia-motivo">
                                 <h4>Motivo da Denúncia</h4>
-                                <p>{denunciaSelecionada.motivo}</p>
+                                <p>{denunciaSelecionada.motivo || 'Motivo não especificado'}</p>
                                 {denunciaSelecionada.descricao && (
                                     <>
                                         <h4>Descrição Adicional</h4>
@@ -518,16 +771,19 @@ const Gerir_Denuncias = () => {
                             <div className="denuncia-conteudo">
                                 <h4>Conteúdo Denunciado</h4>
                                 <div className="conteudo-preview">
-                                    <p><strong>Título:</strong> {denunciaSelecionada.titulo}</p>
-                                    <p><strong>Conteúdo:</strong> {denunciaSelecionada.conteudo}</p>
+                                    <p><strong>Título:</strong> {denunciaSelecionada.titulo || 'Título não disponível'}</p>
+                                    <p><strong>Conteúdo:</strong></p>
+                                    <div className="conteudo-texto">
+                                        {denunciaSelecionada.conteudo || 'Conteúdo não disponível'}
+                                    </div>
                                     <p><strong>Data de criação:</strong> {formatarData(denunciaSelecionada.data_criacao)}</p>
                                 </div>
                             </div>
 
                             <div className="denuncia-denunciante">
                                 <h4>Denunciante</h4>
-                                <p><strong>Nome:</strong> {denunciaSelecionada.denunciante?.nome || 'Usuário desconhecido'}</p>
-                                <p><strong>Email:</strong> {denunciaSelecionada.denunciante?.email || 'Email não disponível'}</p>
+                                <p><strong>Nome:</strong> {denunciaSelecionada.denunciante?.nome || 'Utilizador removido'}</p>
+                                <p><strong>Email:</strong> {denunciaSelecionada.denunciante?.email || 'N/A'}</p>
                             </div>
 
                             {!denunciaSelecionada.resolvida && (
@@ -540,29 +796,46 @@ const Gerir_Denuncias = () => {
                                                 value={acaoTomada}
                                                 onChange={(e) => setAcaoTomada(e.target.value)}
                                                 className="acao-input"
+                                                disabled={processando}
+                                                rows={3}
                                             />
                                         </div>
                                         <div className="acao-botoes">
                                             <button
                                                 className="btn-resolver"
                                                 onClick={() => resolverDenuncia(acaoTomada || 'Denúncia analisada e resolvida')}
+                                                disabled={processando}
                                             >
-                                                <i className="fas fa-check"></i> Resolver
+                                                {processando ? (
+                                                    <>
+                                                        <i className="fas fa-spinner fa-spin"></i> A resolver...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="fas fa-check"></i> Resolver
+                                                    </>
+                                                )}
                                             </button>
                                             <button
                                                 className="btn-ocultar"
                                                 onClick={ocultarConteudo}
+                                                disabled={processando}
                                             >
-                                                <i className="fas fa-eye-slash"></i> Ignorar Denúncia
+                                                {processando ? (
+                                                    <>
+                                                        <i className="fas fa-spinner fa-spin"></i> A ocultar...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="fas fa-eye-slash"></i> Ocultar Conteúdo
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
-
                         </div>
-
-
                     </div>
                 </div>
             )}

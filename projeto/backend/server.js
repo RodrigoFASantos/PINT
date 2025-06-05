@@ -82,7 +82,11 @@ io.on("connection", (socket) => {
 
 // Middlewares globais
 app.use(cors({
-  origin: true,
+  //origin: true,
+    origin: function (origin, callback) {
+    console.log('🌐 CORS Origin:', origin);
+    callback(null, true); // Permite todas as origens temporariamente
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -308,6 +312,22 @@ app.use((err, req, res, next) => {
   console.error("❗ Erro interno:", err.stack);
   res.status(500).json({ message: "Erro interno do servidor", error: err.message });
 });
+
+
+
+// APENAS PARA DEBUG - REMOVER DEPOIS
+app.get("/api/debug/env", (req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    JWT_SECRET_EXISTS: !!process.env.JWT_SECRET,
+    JWT_SECRET_LENGTH: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
+    DB_CONFIG_EXISTS: !!process.env.DB_HOST || !!process.env.DATABASE_URL,
+    CAMINHO_PASTA_UPLOADS: process.env.CAMINHO_PASTA_UPLOADS
+  });
+});
+
+
 
 /* ─────────────── BLOCO PARA SERVIR O REACT EM PRODUÇÃO ─────────────── */
 

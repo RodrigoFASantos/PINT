@@ -8,11 +8,45 @@ router.get("/", (req, res) => {
   res.status(200).json({ message: "API de autenticação está a funcionar!" });
 });
 
+
+
+
 // Rota para registo de novos utilizadores com upload de imagem
 router.post("/register", uploadUtils.uploadUser.single("imagem"), createUser);
 
+
+
+
 // Rota para iniciar sessão
-router.post("/login", loginUser);
+router.post("/login", (req, res) => {
+  // Log detalhado da tentativa de login
+  console.log('🔍 [AUTH ROUTE] ===============================');
+  console.log('🔍 [AUTH ROUTE] NOVA TENTATIVA DE LOGIN');
+  console.log('🔍 [AUTH ROUTE] ===============================');
+  console.log('🔍 [AUTH ROUTE] IP:', req.ip);
+  console.log('🔍 [AUTH ROUTE] Origin:', req.get('origin'));
+  console.log('🔍 [AUTH ROUTE] User-Agent:', req.get('user-agent'));
+  console.log('🔍 [AUTH ROUTE] Body:', { 
+    email: req.body.email, 
+    hasPassword: !!req.body.password,
+    bodyKeys: Object.keys(req.body)
+  });
+  console.log('🔍 [AUTH ROUTE] Headers:', {
+    'content-type': req.get('content-type'),
+    'authorization': req.get('authorization'),
+    'accept': req.get('accept')
+  });
+  console.log('🔍 [AUTH ROUTE] ===============================');
+  
+  // Chamar o controlador
+  loginUser(req, res);
+});
+
+
+
+
+
+
 
 // Rota para verificar token
 router.post("/verify-token", verifyToken);
