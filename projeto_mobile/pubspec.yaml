@@ -10,6 +10,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Navegação
+  go_router: ^12.1.3
+  
+  # FIREBASE COMENTADO TEMPORARIAMENTE:
+  # firebase_core: ^2.24.2
+  # firebase_messaging: ^14.7.10
+
+  # Notificações locais
+  flutter_local_notifications: ^17.0.0
+
+  # Validação
+  email_validator: ^2.1.17
   
   # UI e fontes
   google_fonts: ^6.1.0
@@ -25,9 +38,12 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   
+  # Conectividade
+  connectivity_plus: ^5.0.2
+  
   # Ficheiros e media
-  file_picker: ^6.1.1
-  image_picker: ^1.0.4
+  file_picker: ^8.1.6
+  image_picker: ^1.1.2
   
   # Utils
   intl: ^0.18.1
@@ -40,23 +56,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  # ✅ REMOVIDO - Assets que causam problemas
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
-  
-  # ✅ REMOVIDO - Fontes que não existem
-  # fonts:
-  #   - family: Roboto
-  #     fonts:
-  #       - asset: assets/fonts/Roboto-Regular.ttf
-  #       - asset: assets/fonts/Roboto-Medium.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/Roboto-Bold.ttf
-  #         weight: 700
-  #   - family: Arial
-  #     fonts:
-  #       - asset: assets/fonts/Arial-Regular.ttf
-  #       - asset: assets/fonts/Arial-Bold.ttf
-  #         weight: 700

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../utils/constants.dart';
+import '../../services/api_service.dart';
+import '../../main.dart'; // Para AppUtils e AuthManager
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
-
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _apiService = ApiService();
+
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -29,202 +29,241 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ✅ CORRIGIDO - Usar AuthService diretamente sem Provider
-      final authService = AuthService();
-      final success = await authService.login(
+      final result = await _apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (success) {
-        // ✅ CORRIGIDO - Navegar para home em vez de forum
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-          (route) => false,
+      if (result != null && result['success'] == true) {
+        // Guardar dados de autenticação
+        await AuthManager.saveAuthData(
+          token: result['token'],
+          email: _emailController.text.trim(),
+          name: result['user']?['nome'],
+          userType: result['user']?['tipo_utilizador'],
         );
+
+        AppUtils.showSuccess(context, 'Login realizado com sucesso!');
+        Navigator.pushReplacementNamed(context, '/home');
       } else {
-        _showError('Credenciais inválidas');
+        AppUtils.showError(context, result?['message'] ?? 'Erro no login');
       }
     } catch (e) {
-      _showError('Erro no login: $e');
+      AppUtils.showError(context, 'Erro de conexão: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      body: Center(
+      backgroundColor: const Color(0xFF1A1A1A), // Fundo escuro
+      body: SafeArea(
         child: SingleChildScrollView(
-          padding: ResponsiveUtils.getResponsivePadding(context),
-          child: Card(
-            elevation: 12,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(color: AppColors.cardBorder, width: 2),
-            ),
-            child: Container(
-              width: ResponsiveUtils.isMobile(context) ? double.infinity : 400,
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Logo
-                    const Icon(
-                      Icons
-                          .school, // ✅ CORRIGIDO - Usar ícone de escola em vez de forum
-                      size: 64,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 60),
 
-                    // Título
-                    Text(
-                      'Sistema de Formação', // ✅ CORRIGIDO - Título mais apropriado
-                      style: AppTextStyles.headline2.copyWith(
-                        color: AppColors.primary,
+                // Logo
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF8000),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF8000).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Faça login para continuar',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.school,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                ),
 
-                    // Campo email
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'O email é obrigatório';
-                        }
-                        if (!RegExp(AppConstants.emailPattern)
-                            .hasMatch(value)) {
-                          return 'Email inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: 32),
 
-                    // Campo senha
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Palavra-passe',
-                        prefixIcon: const Icon(Icons.lock),
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                        ),
-                        border: const OutlineInputBorder(),
-                      ),
-                      obscureText: _obscurePassword,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'A palavra-passe é obrigatória';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                const Text(
+                  'SoftSkills',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
 
-                    // Botão login
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                'Entrar',
-                                style: AppTextStyles.button,
-                              ),
-                      ),
-                    ),
+                const SizedBox(height: 8),
 
-                    const SizedBox(height: AppSpacing.lg),
+                const Text(
+                  'Formação e partilha de conhecimento',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
 
-                    // Links adicionais
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                const SizedBox(height: 48),
+
+                // Card de login
+                Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    side: const BorderSide(color: Color(0xFFFF8000), width: 2),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
                       children: [
+                        const Text(
+                          'Entrar',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Campo Email
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5)),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira o email';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Email inválido';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Campo Password
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off),
+                              onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                            ),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5)),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira a password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password deve ter pelo menos 6 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Botão Login
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF8000),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Entrar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Link para registo
                         TextButton(
                           onPressed: () {
-                            // Implementar recuperação de password
+                            AppUtils.showInfo(
+                                context, 'Funcionalidade em desenvolvimento');
                           },
-                          child: Text(
-                            'Esqueceu a password?',
-                            style: TextStyle(color: AppColors.primary),
+                          child: const Text(
+                            'Não tem conta? Contacte o administrador',
+                            style: TextStyle(color: Color(0xFFFF8000)),
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Botão Debug (apenas para desenvolvimento)
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.pushNamed(context, '/debug'),
-                      icon: const Icon(Icons.bug_report),
-                      label: const Text('Modo Debug'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 32),
+
+                // Info de conexão
+                Center(
+                  child: Text(
+                    'Conectando a: ${_apiService.apiBase}',
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

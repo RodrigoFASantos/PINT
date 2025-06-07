@@ -1,15 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'services/auth_service.dart';
-import 'services/storage_service.dart';
-import 'utils/constants.dart';
-import 'screens/rotas/app_router.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Importar os serviços e telas
+import 'services/api_service.dart';
+import 'screens/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/cursos/cursos_screen.dart';
+import 'screens/users/perfil_screen.dart';
 
 void main() async {
+  // Garantir que o Flutter está inicializado
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar serviços
-  await StorageService().init();
+  // Configurar orientação da tela
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Configurar barra de status
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  debugPrint('🚀 [MAIN] Iniciando aplicação...');
 
   runApp(MyApp());
 }
@@ -17,103 +36,282 @@ void main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        // ✅ CORRIGIDO - AuthService agora estende ChangeNotifier
-        ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-      ],
-      child: MaterialApp(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
+    return MaterialApp(
+      title: 'SoftSkills',
+      debugShowCheckedModeBanner: false,
 
-        // Temas
-        theme: AppTheme.lightTheme,
+      // Tema claro
+      theme: ThemeData(
+        primarySwatch: Colors.orange,
+        primaryColor: const Color(0xFFFF8000), // Laranja da tua marca
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
 
-        // Rotas
-        routes: AppRouter.routes,
-        onGenerateRoute:
-            AppRouter.onGenerateRoute, // ✅ ADICIONADO - Para rotas dinâmicas
-        initialRoute: '/',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFFF8000),
+          foregroundColor: Colors.white,
+          elevation: 2,
+          centerTitle: true,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+        ),
 
-        // ✅ REMOVIDO - home: AuthWrapper() para evitar conflito com rota '/'
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFF8000),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            elevation: 2,
+          ),
+        ),
+
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFFF8000), width: 2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          fillColor: Colors.grey.shade50,
+          filled: true,
+        ),
+
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: Colors.grey.shade800,
+          contentTextStyle: const TextStyle(color: Colors.white),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
       ),
+
+      // Modo de tema
+      themeMode: ThemeMode.system,
+
+      // Tela inicial: SplashScreen
+      home: SplashScreen(),
+
+      // Rotas da aplicação
+      routes: {
+        '/splash': (context) => SplashScreen(),
+        '/login': (context) => LoginScreen(),
+        '/home': (context) => HomeScreen(),
+        '/cursos': (context) => CursosScreen(),
+        '/perfil': (context) => PerfilScreen(),
+      },
+
+      // Rota para páginas não encontradas
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: const Text('Página não encontrada'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/home'),
+              ),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Página não encontrada',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'A rota "${settings.name}" não existe.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/home'),
+                    icon: const Icon(Icons.home),
+                    label: const Text('Voltar ao Início'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-// ✅ AuthWrapper simplificado para verificação inicial de autenticação
-class AuthWrapper extends StatefulWidget {
-  @override
-  _AuthWrapperState createState() => _AuthWrapperState();
+// ===========================================
+// CLASSES AUXILIARES (mantidas iguais)
+// ===========================================
+
+/// Configurações globais da aplicação
+class AppConfig {
+  static const String appName = 'SoftSkills';
+  static const String appVersion = '1.0.0';
+  static const String appDescription =
+      'Formação e partilha de conhecimento interno';
+
+  // Cores
+  static const Color primaryColor = Color(0xFFFF8000);
+  static const Color secondaryColor = Color(0xFFE67300);
+  static const Color errorColor = Color(0xFFB00020);
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color warningColor = Color(0xFFFF8000);
+
+  // Configurações
+  static const Duration splashMinDuration = Duration(seconds: 2);
+  static const Duration apiTimeout = Duration(seconds: 30);
+  static const int maxRetryAttempts = 3;
+
+  // URLs (podem ser configuradas por ambiente)
+  static const String defaultApiUrl = 'http://10.0.2.2:4000/api';
+  static const String productionApiUrl = 'https://teu-dominio.com:4000/api';
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    _checkAuthAndRedirect();
+/// Gestor de autenticação
+class AuthManager {
+  static const String _tokenKey = 'auth_token';
+  static const String _userEmailKey = 'user_email';
+  static const String _userNameKey = 'user_name';
+  static const String _userTypeKey = 'user_type';
+
+  /// Guardar dados de autenticação
+  static Future<void> saveAuthData({
+    required String token,
+    required String email,
+    String? name,
+    String? userType,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+    await prefs.setString(_userEmailKey, email);
+    if (name != null) await prefs.setString(_userNameKey, name);
+    if (userType != null) await prefs.setString(_userTypeKey, userType);
+
+    // Configurar no ApiService
+    ApiService().setAuthToken(token);
+
+    debugPrint('✅ [AUTH] Dados de autenticação guardados para: $email');
   }
 
-  Future<void> _checkAuthAndRedirect() async {
-    try {
-      // ✅ Usar Provider.of para acessar AuthService
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final isLoggedIn = await authService.isLoggedIn();
-
-      // ✅ Aguardar um frame para garantir que o contexto está disponível
-      await Future.delayed(Duration.zero);
-
-      if (mounted) {
-        if (isLoggedIn) {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      }
-    } catch (e) {
-      print('Erro ao verificar autenticação: $e');
-      // ✅ Em caso de erro, redirecionar para login
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
+  /// Obter token guardado
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // ✅ Tela de loading durante verificação
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  /// Obter dados do utilizador guardados
+  static Future<Map<String, String?>> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'email': prefs.getString(_userEmailKey),
+      'name': prefs.getString(_userNameKey),
+      'userType': prefs.getString(_userTypeKey),
+    };
+  }
+
+  /// Verificar se está autenticado
+  static Future<bool> isAuthenticated() async {
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
+  }
+
+  /// Limpar todos os dados de autenticação
+  static Future<void> clearAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_userEmailKey);
+    await prefs.remove(_userNameKey);
+    await prefs.remove(_userTypeKey);
+
+    // Limpar do ApiService
+    ApiService().clearAuthToken();
+
+    debugPrint('🗑️ [AUTH] Dados de autenticação limpos');
+  }
+}
+
+/// Utilitários globais
+class AppUtils {
+  /// Mostrar snackbar de sucesso
+  static void showSuccess(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
           children: [
-            Icon(
-              Icons.school,
-              size: 80,
-              color: Colors.white,
-            ),
-            SizedBox(height: AppSpacing.lg),
-            Text(
-              AppConstants.appName,
-              style: AppTextStyles.headline1.copyWith(
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: AppSpacing.xl),
-            CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 3,
-            ),
-            SizedBox(height: AppSpacing.md),
-            Text(
-              'A inicializar...',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: Colors.white.withOpacity(0.8),
-              ),
-            ),
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
           ],
         ),
+        backgroundColor: AppConfig.successColor,
+      ),
+    );
+  }
+
+  /// Mostrar snackbar de erro
+  static void showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppConfig.errorColor,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  /// Mostrar snackbar de informação
+  static void showInfo(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppConfig.primaryColor,
       ),
     );
   }

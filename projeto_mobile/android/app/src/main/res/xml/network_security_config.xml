@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Configuração para desenvolvimento - permite HTTP local -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Localhost e emulador -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        
+        <!-- IPs locais da rede (ajustar conforme necessário) -->
+        <domain includeSubdomains="true">192.168.1.0/24</domain>
+        <domain includeSubdomains="true">192.168.0.0/24</domain>
+        <domain includeSubdomains="true">10.0.0.0/8</domain>
+        
+        <!-- Se tiveres um domínio específico de desenvolvimento -->
+        <!-- <domain includeSubdomains="true">dev.teudominio.com</domain> -->
+    </domain-config>
+    
+    <!-- Para produção, manter HTTPS obrigatório -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>
