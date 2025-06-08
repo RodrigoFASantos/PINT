@@ -9,6 +9,9 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/cursos/cursos_screen.dart';
 import 'screens/users/perfil_screen.dart';
+import 'screens/users/percurso_formativo_screen.dart';
+import 'screens/users/formadores_screen.dart';
+import 'screens/forum/forum_screen.dart';
 
 void main() async {
   // Garantir que o Flutter está inicializado
@@ -110,8 +113,8 @@ class MyApp extends StatelessWidget {
       // Modo de tema
       themeMode: ThemeMode.system,
 
-      // Tela inicial: SplashScreen
-      home: SplashScreen(),
+      // Rota inicial
+      initialRoute: '/splash',
 
       // Rotas da aplicação
       routes: {
@@ -120,6 +123,32 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomeScreen(),
         '/cursos': (context) => CursosScreen(),
         '/perfil': (context) => PerfilScreen(),
+        '/percurso-formativo': (context) => PercursoFormativoScreen(),
+        '/formadores': (context) => FormadoresScreen(),
+        '/forum': (context) => ForumScreen(),
+        // Rotas não implementadas ainda retornam uma página de "em desenvolvimento"
+        '/area-formador': (context) =>
+            _buildNotImplementedPage(context, 'Área do Formador'),
+        '/admin/dashboard': (context) =>
+            _buildNotImplementedPage(context, 'Dashboard Admin'),
+        '/admin/cursos': (context) =>
+            _buildNotImplementedPage(context, 'Gerir Cursos'),
+        '/admin/usuarios': (context) =>
+            _buildNotImplementedPage(context, 'Gerir Utilizadores'),
+        '/admin/denuncias': (context) =>
+            _buildNotImplementedPage(context, 'Gerenciar Denúncias'),
+        '/admin/percurso-formandos': (context) =>
+            _buildNotImplementedPage(context, 'Percurso Formandos'),
+        '/admin/categorias': (context) =>
+            _buildNotImplementedPage(context, 'Gerir Categorias'),
+        '/admin/areas': (context) =>
+            _buildNotImplementedPage(context, 'Gerir Áreas'),
+        '/admin/topicos': (context) =>
+            _buildNotImplementedPage(context, 'Gerir Tópicos'),
+        '/admin/criar-curso': (context) =>
+            _buildNotImplementedPage(context, 'Criar Curso'),
+        '/admin/criar-usuario': (context) =>
+            _buildNotImplementedPage(context, 'Criar Utilizador'),
       },
 
       // Rota para páginas não encontradas
@@ -170,6 +199,56 @@ class MyApp extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  // Widget para páginas não implementadas
+  static Widget _buildNotImplementedPage(
+      BuildContext context, String pageName) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(pageName),
+        backgroundColor: const Color(0xFFFF8000),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 64,
+              color: Colors.orange.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Em Desenvolvimento',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'A página "$pageName" ainda está em desenvolvimento.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+              icon: const Icon(Icons.home),
+              label: const Text('Voltar ao Início'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF8000),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

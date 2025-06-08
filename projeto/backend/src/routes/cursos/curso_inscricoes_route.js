@@ -14,11 +14,11 @@ const {
 
 // Rotas das inscrições
 router.get("/", verificarToken, autorizar([1]), getAllInscricoes);
+router.post("/", verificarToken, createInscricao);
 router.get("/usuario", verificarToken, getInscricoesUtilizador);
 router.get("/minhas-inscricoes", verificarToken, getMinhasInscricoes);
 router.get("/curso/:id_curso", verificarToken, getInscricoesPorCurso);
 router.get("/verificar/:id_curso", verificarToken, verificarInscricao);
-router.post("/", verificarToken, createInscricao);
 
 // ROTA CORRIGIDA - Cancelar inscrição (apenas formadores e admins)
 router.patch("/cancelar-inscricao/:id", verificarToken, cancelarInscricao);

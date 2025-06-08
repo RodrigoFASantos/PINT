@@ -356,7 +356,8 @@ if (fs.existsSync(clienteBuildPath)) {
 
 // Iniciar servidor
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
+const HOST = '0.0.0.0'; // <-- IMPORTANTE: Aceitar conexões de qualquer IP
+server.listen(PORT, HOST, () => {
   console.log(`
 ===========================================
 🚀 Servidor iniciado com sucesso!
@@ -367,6 +368,23 @@ server.listen(PORT, () => {
 📊 Dashboard: ${dashboardCarregado ? '✅ ATIVO' : '❌ INATIVO'}
 ===========================================
   `);
+
+  // Mostrar IPs disponíveis
+  const os = require('os');
+  const networkInterfaces = os.networkInterfaces();
+  
+  console.log('\n🌐 IPs DISPONÍVEIS PARA ACESSO:');
+  console.log('💻 Local: http://localhost:' + PORT + '/api');
+  
+  Object.keys(networkInterfaces).forEach((interfaceName) => {
+    const addresses = networkInterfaces[interfaceName];
+    addresses.forEach((address) => {
+      if (address.family === 'IPv4' && !address.internal) {
+        console.log(`📱 Rede (${interfaceName}): http://${address.address}:${PORT}/api`);
+      }
+    });
+  });
+  console.log('===========================================\n');
 
   if (dashboardCarregado) {
     console.log(`

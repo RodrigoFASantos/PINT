@@ -16,7 +16,8 @@ VALUES
   ('Design'),
   ('Marketing Digital'),
   ('Gestão de Projetos'),
-  ('Desenvolvimento Pessoal');
+  ('Desenvolvimento Pessoal'),
+  ('Agricultura');
 
 -- =============================================
 -- 3. TIPOS DE CONTEÚDO
@@ -43,7 +44,8 @@ VALUES
   ('Social Media', 3),
   ('Gestão Ágil', 4),
   ('Liderança', 5),
-  ('Comunicação Eficaz', 5);
+  ('Comunicação Eficaz', 5),
+  ('Técnicas Agrícolas', 6);
 
 -- =============================================
 -- 5. UTILIZADORES
@@ -106,7 +108,8 @@ VALUES
   (4, 2, NOW()), -- Formador com Dev Mobile
   (5, 4, NOW()), -- Carla com UX/UI
   (6, 6, NOW()), -- Miguel com SEO
-  (7, 8, NOW()); -- Sara com Gestão Ágil
+  (7, 8, NOW()), -- Sara com Gestão Ágil
+  (4, 11, NOW()); -- ← Formador também com Técnicas Agrícolas
 
 -- =============================================
 -- 10. PUSH_SUBSCRIPTIONS
@@ -125,7 +128,9 @@ VALUES
   (1, 2, 'Desenvolvimento React Native', 'Tópicos sobre desenvolvimento mobile com React Native', 4, NOW(), TRUE),
   (2, 4, 'Princípios de UX/UI', 'Discussões sobre experiência do usuário e interface', 5, NOW(), TRUE),
   (3, 6, 'Estratégias SEO 2025', 'Técnicas de otimização para mecanismos de busca', 6, NOW(), TRUE),
-  (4, 8, 'Metodologias Ágeis', 'Discussões sobre Scrum, Kanban e outras metodologias ágeis', 7, NOW(), TRUE);
+  (4, 8, 'Metodologias Ágeis', 'Discussões sobre Scrum, Kanban e outras metodologias ágeis', 7, NOW(), TRUE),
+  (6, 11, 'Práticas Agrícolas Sustentáveis', 'Discussões sobre agricultura moderna e sustentável', 1, NOW(), TRUE);
+
 
 -- =============================================
 -- 12. NOTIFICACOES
@@ -145,7 +150,9 @@ VALUES
   ('React Native do Zero', 'Aprenda a desenvolver apps mobile', 'sincrono', 15, 60, '2025-07-15', '2025-09-30', 'planeado', TRUE, 4, 1, 2, 2, 'uploads/cursos/react_native.jpg', 'uploads/cursos/react_native/'),
   ('Design UX/UI Profissional', 'Princípios e técnicas de design de interface', 'assincrono', 25, 30, '2025-06-15', '2025-08-15', 'planeado', TRUE, 5, 2, 4, 3, 'uploads/cursos/ux_ui.jpg', 'uploads/cursos/ux_ui/'),
   ('SEO Avançado', 'Estratégias de otimização para mecanismos de busca', 'sincrono', 18, 25, '2025-08-01', '2025-10-15', 'planeado', TRUE, 6, 3, 6, 4, 'uploads/cursos/seo.jpg', 'uploads/cursos/seo/'),
-  ('Gestão Ágil de Projetos', 'Metodologias ágeis para gerenciamento de projetos', 'sincrono', 20, 45, '2025-07-01', '2025-09-15', 'planeado', TRUE, 7, 4, 8, 5, 'uploads/cursos/agile.jpg', 'uploads/cursos/agile/');
+  ('Gestão Ágil de Projetos', 'Metodologias ágeis para gerenciamento de projetos', 'sincrono', 20, 45, '2025-07-01', '2025-09-15', 'planeado', TRUE, 7, 4, 8, 5, 'uploads/cursos/agile.jpg', 'uploads/cursos/agile/'),
+  ('Curso de agricultura', 'Curso completo sobre técnicas modernas de agricultura', 'sincrono', 50, 100, '2025-01-01', '2025-05-01', 'terminado', TRUE, 4, 6, 11, 6, 'uploads/cursos/agricultura.jpg', 'uploads/cursos/agricultura/');
+
 
 -- =============================================
 -- 14. NOTIFICACOES_UTILIZADORES
@@ -206,7 +213,24 @@ VALUES
   (10, 2, NOW(), 'inscrito', 'Interesse em desenvolvimento mobile', 'Aprender a criar aplicativos completos'),
   (11, 3, NOW(), 'inscrito', 'Melhorar habilidades de design', 'Criar interfaces mais amigáveis'),
   (12, 4, NOW(), 'inscrito', 'Necessidade profissional', 'Melhorar o posicionamento nos motores de busca'),
-  (13, 5, NOW(), 'inscrito', 'Interesse em gestão de projetos', 'Implementar metodologias ágeis na minha equipe');
+  (13, 5, NOW(), 'inscrito', 'Interesse em gestão de projetos', 'Implementar metodologias ágeis na minha equipe'),
+
+    -- INSCRIÇÕES NO CURSO DE AGRICULTURA
+  (1, 6, '2024-12-15', 'inscrito', 'Supervisão administrativa do curso', 'Avaliar metodologia aplicada'),
+  (2, 6, '2024-12-15', 'inscrito', 'Acompanhamento pedagógico', 'Verificar qualidade do ensino'),
+  (3, 6, '2024-12-15', 'inscrito', 'Avaliação do curso como administrador', 'Monitorizar progresso'),
+  (4, 6, '2024-12-15', 'inscrito', 'Formador responsável', 'Ministrar conhecimentos agrícolas'),
+  (5, 6, '2024-12-15', 'inscrito', 'Interesse em agricultura sustentável', 'Aprender técnicas modernas'),
+  (6, 6, '2024-12-15', 'inscrito', 'Aplicação em contexto rural', 'Implementar na propriedade familiar'),
+  (7, 6, '2024-12-15', 'inscrito', 'Diversificação profissional', 'Explorar setor agrícola'),
+  (8, 6, '2024-12-15', 'inscrito', 'Interesse pessoal', 'Conhecimento sobre agricultura'),
+  (9, 6, '2024-12-15', 'inscrito', 'Desenvolvimento rural', 'Melhorar técnicas locais'),
+  (10, 6, '2024-12-15', 'inscrito', 'Sustentabilidade ambiental', 'Práticas eco-friendly'),
+  (11, 6, '2024-12-15', 'inscrito', 'Projeto de horta comunitária', 'Aplicar na comunidade'),
+  (12, 6, '2024-12-15', 'inscrito', 'Transição de carreira', 'Mudar para setor agrícola'),
+  (13, 6, '2024-12-15', 'inscrito', 'Complemento formativo', 'Expandir conhecimentos'),
+  (14, 6, '2024-12-15', 'inscrito', 'Inovação agrícola', 'Técnicas tecnológicas'),
+  (15, 6, '2024-12-15', 'inscrito', 'Produção orgânica', 'Agricultura biológica');
 
 -- =============================================
 -- 20. CURSO_TOPICO_PASTA
@@ -267,7 +291,23 @@ VALUES
 INSERT INTO avaliacoes (id_inscricao, nota, certificado, horas_totais, horas_presenca, data_avaliacao, url_certificado)
 VALUES
   (1, 8.5, TRUE, 40, 35, NOW() - INTERVAL '1 day', 'uploads/certificados/certificado_aluno1_javascript.pdf'),
-  (2, 7.0, TRUE, 40, 30, NOW() - INTERVAL '1 day', 'uploads/certificados/certificado_aluno2_javascript.pdf');
+  (2, 7.0, TRUE, 40, 30, NOW() - INTERVAL '1 day', 'uploads/certificados/certificado_aluno2_javascript.pdf'),
+   -- AVALIAÇÕES DO CURSO DE AGRICULTURA (100% presença = 100h, outros com menos)
+  (9, 9.2, TRUE, 100, 100, '2025-05-02', 'uploads/certificados/certificado_rodrigo_agricultura.pdf'),    -- Rodrigo (100%)
+  (10, 8.8, TRUE, 100, 100, '2025-05-02', 'uploads/certificados/certificado_rareura_agricultura.pdf'),   -- Rareura (100%)
+  (11, 8.5, TRUE, 100, 95, '2025-05-02', 'uploads/certificados/certificado_admin_agricultura.pdf'),      -- Admin (95%)
+  (12, 9.0, TRUE, 100, 100, '2025-05-02', 'uploads/certificados/certificado_formador_agricultura.pdf'),  -- Formador (100%)
+  (13, 8.3, TRUE, 100, 88, '2025-05-02', 'uploads/certificados/certificado_carla_agricultura.pdf'),      -- Carla (88%)
+  (14, 7.9, TRUE, 100, 82, '2025-05-02', 'uploads/certificados/certificado_miguel_agricultura.pdf'),     -- Miguel (82%)
+  (15, 8.7, TRUE, 100, 92, '2025-05-02', 'uploads/certificados/certificado_sara_agricultura.pdf'),       -- Sara (92%)
+  (16, 8.1, TRUE, 100, 85, '2025-05-02', 'uploads/certificados/certificado_formando_agricultura.pdf'),   -- Formando (85%)
+  (17, 9.1, TRUE, 100, 98, '2025-05-02', 'uploads/certificados/certificado_joao_agricultura.pdf'),       -- João (98%)
+  (18, 8.6, TRUE, 100, 90, '2025-05-02', 'uploads/certificados/certificado_ana_agricultura.pdf'),        -- Ana (90%)
+  (19, 7.8, TRUE, 100, 78, '2025-05-02', 'uploads/certificados/certificado_pedro_agricultura.pdf'),      -- Pedro (78%)
+  (20, 8.4, TRUE, 100, 87, '2025-05-02', 'uploads/certificados/certificado_sofia_agricultura.pdf'),      -- Sofia (87%)
+  (21, 8.0, TRUE, 100, 80, '2025-05-02', 'uploads/certificados/certificado_ricardo_agricultura.pdf'),    -- Ricardo (80%)
+  (22, 8.9, TRUE, 100, 94, '2025-05-02', 'uploads/certificados/certificado_mariana_agricultura.pdf'),    -- Mariana (94%)
+  (23, 7.7, TRUE, 100, 76, '2025-05-02', 'uploads/certificados/certificado_luis_agricultura.pdf');       -- Luís (76%)
 
 -- =============================================
 -- 26. CURSO_TOPICO_PASTA_CONTEUDO

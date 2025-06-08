@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     console.log('🔒 [AUTH DEBUG] ===============================');
     console.log('🔒 [AUTH DEBUG] Email:', email);
     console.log('🔒 [AUTH DEBUG] API_BASE atual:', API_BASE);
-    console.log('🔒 [AUTH DEBUG] URL completa de login:', `${API_BASE}/users/login`);
+    console.log('🔒 [AUTH DEBUG] URL completa de login:', `${API_BASE}/auth/login`);
     console.log('🔒 [AUTH DEBUG] window.location.href:', window.location.href);
     console.log('🔒 [AUTH DEBUG] window.location.hostname:', window.location.hostname);
     console.log('🔒 [AUTH DEBUG] window.location.protocol:', window.location.protocol);
@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
       console.log('🔒 [AUTH DEBUG] Fazendo requisição POST para login...');
       console.log('🔒 [AUTH DEBUG] Dados enviados:', { email, password: '***' });
       
-      const response = await axios.post(`${API_BASE}/users/login`, { email, password });
+      const response = await axios.post(`${API_BASE}/auth/login`, { email, password });
       
       console.log('🔒 [AUTH DEBUG] ✅ Resposta do login recebida:', response.data);
       console.log('🔒 [AUTH DEBUG] Status da resposta:', response.status);

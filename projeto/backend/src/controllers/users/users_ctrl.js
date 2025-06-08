@@ -901,47 +901,320 @@ const confirmAccount = async (req, res) => {
   }
 };
 
+
+
+/* 
 const loginUser = async (req, res) => {
+  console.log('🔍 [LOGIN] === INICIANDO PROCESSO DE LOGIN ===');
+  
   try {
     const { email, password } = req.body;
+    
+    console.log('🔍 [LOGIN] Email recebido:', email);
+    console.log('🔍 [LOGIN] Password recebida:', password ? 'SIM' : 'NÃO');
+    console.log('🔍 [LOGIN] JWT_SECRET está definido:', !!process.env.JWT_SECRET);
 
-    const user = await User.findOne({
-      where: { email },
-      include: [{ model: Cargo, as: "cargo" }]
-    });
+    // Validação básica
+    if (!email || !password) {
+      console.log('❌ [LOGIN] Email ou password não fornecidos');
+      return res.status(400).json({ 
+        success: false,
+        message: "Email e password são obrigatórios" 
+      });
+    }
 
-    if (!user) return res.status(404).json({ message: "Utilizador não encontrado!" });
+    console.log('🔍 [LOGIN] A procurar utilizador na base de dados...');
+    
+    // Procurar utilizador (sem include do cargo primeiro para testar)
+    let user;
+    try {
+      user = await User.findOne({
+        where: { email }
+      });
+      console.log('🔍 [LOGIN] Utilizador encontrado:', user ? 'SIM' : 'NÃO');
+    } catch (dbError) {
+      console.error('❌ [LOGIN] Erro na consulta à base de dados:', dbError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro na consulta à base de dados",
+        error: dbError.message 
+      });
+    }
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ message: "Credenciais inválidas!" });
+    if (!user) {
+      console.log('❌ [LOGIN] Utilizador não encontrado para email:', email);
+      return res.status(404).json({ 
+        success: false,
+        message: "Utilizador não encontrado!" 
+      });
+    }
 
-    // MODIFICAÇÃO: Incluir o email do utilizador no token
-    const token = jwt.sign(
-      {
+    console.log('🔍 [LOGIN] Dados do utilizador:');
+    console.log('🔍 [LOGIN] - ID:', user.id_utilizador);
+    console.log('🔍 [LOGIN] - Nome:', user.nome);
+    console.log('🔍 [LOGIN] - Email:', user.email);
+    console.log('🔍 [LOGIN] - ID Cargo:', user.id_cargo);
+
+    console.log('🔍 [LOGIN] A verificar password...');
+    let validPassword;
+    try {
+      validPassword = await bcrypt.compare(password, user.password);
+      console.log('🔍 [LOGIN] Password válida:', validPassword);
+    } catch (bcryptError) {
+      console.error('❌ [LOGIN] Erro ao verificar password:', bcryptError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao verificar credenciais"
+      });
+    }
+
+    if (!validPassword) {
+      console.log('❌ [LOGIN] Password inválida para:', email);
+      return res.status(401).json({ 
+        success: false,
+        message: "Credenciais inválidas!" 
+      });
+    }
+
+    console.log('🔍 [LOGIN] A procurar informações do cargo...');
+    let cargoInfo = null;
+    try {
+      const cargo = await Cargo.findByPk(user.id_cargo);
+      if (cargo) {
+        cargoInfo = {
+          id_cargo: cargo.id_cargo,
+          descricao: cargo.descricao
+        };
+        console.log('🔍 [LOGIN] Cargo encontrado:', cargoInfo);
+      }
+    } catch (cargoError) {
+      console.error('⚠️ [LOGIN] Erro ao procurar cargo:', cargoError);
+    }
+
+    console.log('🔍 [LOGIN] A gerar token JWT...');
+    let token;
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'desenvolvimento-secreto';
+      
+      token = jwt.sign(
+        {
+          id_utilizador: user.id_utilizador,
+          nome: user.nome,
+          email: user.email,
+          id_cargo: user.id_cargo,
+          cargo: cargoInfo?.descricao || null
+        },
+        jwtSecret,
+        { expiresIn: "24h" }
+      );
+      console.log('🔍 [LOGIN] Token gerado com sucesso');
+    } catch (jwtError) {
+      console.error('❌ [LOGIN] Erro ao gerar token:', jwtError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao gerar token de autenticação"
+      });
+    }
+
+    console.log('🔍 [LOGIN] A preparar resposta...');
+    const response = {
+      success: true,
+      message: "Login realizado com sucesso",
+      token,
+      user: {
         id_utilizador: user.id_utilizador,
         nome: user.nome,
-        email: user.email, // ADICIONADO: incluir email no token
-        id_cargo: user.cargo?.id_cargo,
-        cargo: user.cargo?.descricao || null
-      },
-      process.env.JWT_SECRET || 'segredo', // Usa o segredo padrão se não estiver definido
-      { expiresIn: "1h" }
-    );
+        email: user.email,
+        id_cargo: user.id_cargo,
+        cargo: cargoInfo?.descricao || null,
+        primeiro_login: user.primeiro_login
+      }
+    };
 
-    res.json({
-      token,
-      id_utilizador: user.id_utilizador,
-      nome: user.nome,
-      email: user.email, // ADICIONADO: incluir email na resposta
-      id_cargo: user.cargo?.id_cargo,
-      cargo: user.cargo?.descricao || null,
-      primeiro_login: user.primeiro_login
-    });
+    console.log('✅ [LOGIN] A enviar resposta de sucesso...');
+    res.status(200).json(response);
+    console.log('✅ [LOGIN] === LOGIN CONCLUÍDO COM SUCESSO ===');
+
   } catch (error) {
-    console.error("Erro ao fazer login:", error);
-    res.status(500).json({ message: "Erro no servidor ao fazer login." });
+    console.error('❌ [LOGIN] === ERRO FATAL NO LOGIN ===');
+    console.error('❌ [LOGIN] Mensagem:', error.message);
+    console.error('❌ [LOGIN] Stack:', error.stack);
+    
+    res.status(500).json({ 
+      success: false,
+      message: "Erro interno no servidor",
+      error: error.message
+    });
   }
 };
+ */
+
+const loginUser = async (req, res) => {
+  console.log('🔍 [LOGIN] === INICIANDO PROCESSO DE LOGIN ===');
+  
+  try {
+    const { email, password } = req.body;
+    
+    console.log('🔍 [LOGIN] Email recebido:', email);
+    console.log('🔍 [LOGIN] Password recebida:', password ? 'SIM' : 'NÃO');
+    console.log('🔍 [LOGIN] JWT_SECRET está definido:', !!process.env.JWT_SECRET);
+
+    // Validação básica
+    if (!email || !password) {
+      console.log('❌ [LOGIN] Email ou password não fornecidos');
+      return res.status(400).json({ 
+        success: false,
+        message: "Email e password são obrigatórios" 
+      });
+    }
+
+    console.log('🔍 [LOGIN] A procurar utilizador na base de dados...');
+    
+    // Procurar utilizador
+    let user;
+    try {
+      user = await User.findOne({
+        where: { email }
+      });
+      console.log('🔍 [LOGIN] Utilizador encontrado:', user ? 'SIM' : 'NÃO');
+    } catch (dbError) {
+      console.error('❌ [LOGIN] Erro na consulta à base de dados:', dbError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro na consulta à base de dados",
+        error: dbError.message 
+      });
+    }
+
+    if (!user) {
+      console.log('❌ [LOGIN] Utilizador não encontrado para email:', email);
+      return res.status(404).json({ 
+        success: false,
+        message: "Utilizador não encontrado!" 
+      });
+    }
+
+    console.log('🔍 [LOGIN] Dados do utilizador:');
+    console.log('🔍 [LOGIN] - ID:', user.id_utilizador);
+    console.log('🔍 [LOGIN] - Nome:', user.nome);
+    console.log('🔍 [LOGIN] - Email:', user.email);
+    console.log('🔍 [LOGIN] - ID Cargo:', user.id_cargo);
+
+    console.log('🔍 [LOGIN] A verificar password...');
+    let validPassword;
+    try {
+      validPassword = await bcrypt.compare(password, user.password);
+      console.log('🔍 [LOGIN] Password válida:', validPassword);
+    } catch (bcryptError) {
+      console.error('❌ [LOGIN] Erro ao verificar password:', bcryptError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao verificar credenciais"
+      });
+    }
+
+    if (!validPassword) {
+      console.log('❌ [LOGIN] Password inválida para:', email);
+      return res.status(401).json({ 
+        success: false,
+        message: "Credenciais inválidas!" 
+      });
+    }
+
+    console.log('🔍 [LOGIN] A procurar informações do cargo...');
+    let cargoInfo = null;
+    try {
+      const cargo = await Cargo.findByPk(user.id_cargo);
+      if (cargo) {
+        cargoInfo = {
+          id_cargo: cargo.id_cargo,
+          descricao: cargo.descricao
+        };
+        console.log('🔍 [LOGIN] Cargo encontrado:', cargoInfo);
+      }
+    } catch (cargoError) {
+      console.error('⚠️ [LOGIN] Erro ao procurar cargo:', cargoError);
+    }
+
+    console.log('🔍 [LOGIN] A gerar token JWT...');
+    let token;
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'desenvolvimento-secreto';
+      
+      token = jwt.sign(
+        {
+          id_utilizador: user.id_utilizador,
+          nome: user.nome,
+          email: user.email,
+          id_cargo: user.id_cargo,
+          cargo: cargoInfo?.descricao || null
+        },
+        jwtSecret,
+        { expiresIn: "24h" }
+      );
+      console.log('🔍 [LOGIN] Token gerado com sucesso');
+    } catch (jwtError) {
+      console.error('❌ [LOGIN] Erro ao gerar token:', jwtError);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao gerar token de autenticação"
+      });
+    }
+
+    console.log('🔍 [LOGIN] A preparar resposta...');
+    
+    // CORRIGIDO: Enviar dados diretamente no nível raiz para compatibilidade com AuthContext
+    const response = {
+      success: true,
+      message: "Login realizado com sucesso",
+      token,
+      // Dados do utilizador diretamente no nível raiz
+      id_utilizador: user.id_utilizador,
+      nome: user.nome,
+      email: user.email,
+      id_cargo: user.id_cargo,
+      cargo: cargoInfo?.descricao || null,
+      primeiro_login: user.primeiro_login,
+      foto_perfil: user.foto_perfil,
+      foto_capa: user.foto_capa,
+      // Manter também a estrutura com 'user' para compatibilidade com outras partes
+      user: {
+        id_utilizador: user.id_utilizador,
+        nome: user.nome,
+        email: user.email,
+        id_cargo: user.id_cargo,
+        cargo: cargoInfo?.descricao || null,
+        primeiro_login: user.primeiro_login,
+        foto_perfil: user.foto_perfil,
+        foto_capa: user.foto_capa
+      }
+    };
+
+    console.log('🔍 [LOGIN] Estrutura da resposta:');
+    console.log('🔍 [LOGIN] - success:', response.success);
+    console.log('🔍 [LOGIN] - token length:', response.token?.length);
+    console.log('🔍 [LOGIN] - nome direto:', response.nome);
+    console.log('🔍 [LOGIN] - user.nome:', response.user?.nome);
+
+    console.log('✅ [LOGIN] A enviar resposta de sucesso...');
+    res.status(200).json(response);
+    console.log('✅ [LOGIN] === LOGIN CONCLUÍDO COM SUCESSO ===');
+
+  } catch (error) {
+    console.error('❌ [LOGIN] === ERRO FATAL NO LOGIN ===');
+    console.error('❌ [LOGIN] Mensagem:', error.message);
+    console.error('❌ [LOGIN] Stack:', error.stack);
+    
+    res.status(500).json({ 
+      success: false,
+      message: "Erro interno no servidor",
+      error: error.message
+    });
+  }
+};
+
+
+
 
 
 const verifyToken = (req, res) => {

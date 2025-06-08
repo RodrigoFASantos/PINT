@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../main.dart'; // Para AppUtils e AuthManager
+import '../../main.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -29,29 +29,53 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      debugPrint('🔐 [LOGIN] Iniciando login...');
+
       final result = await _apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (result != null && result['success'] == true) {
-        // Guardar dados de autenticação
-        await AuthManager.saveAuthData(
-          token: result['token'],
-          email: _emailController.text.trim(),
-          name: result['user']?['nome'],
-          userType: result['user']?['tipo_utilizador'],
-        );
+      debugPrint('🔐 [LOGIN] Resultado recebido: $result');
 
-        AppUtils.showSuccess(context, 'Login realizado com sucesso!');
-        Navigator.pushReplacementNamed(context, '/home');
+      if (result != null) {
+        // Verificar se tem a estrutura esperada
+        if (result['success'] == true) {
+          debugPrint('🔐 [LOGIN] Login bem-sucedido!');
+
+          // Extrair dados do utilizador
+          final userData = result['user'] as Map<String, dynamic>?;
+          final token = result['token'] as String?;
+
+          if (token != null && userData != null) {
+            // Guardar dados de autenticação
+            await AuthManager.saveAuthData(
+              token: token,
+              email: userData['email'] ?? _emailController.text.trim(),
+              name: userData['nome'],
+              userType: userData['cargo'],
+            );
+
+            AppUtils.showSuccess(context, 'Login realizado com sucesso!');
+            Navigator.pushReplacementNamed(context, '/home');
+          } else {
+            AppUtils.showError(context, 'Dados de resposta incompletos');
+          }
+        } else {
+          // Login falhou
+          final message = result['message'] ?? 'Erro no login';
+          AppUtils.showError(context, message);
+        }
       } else {
-        AppUtils.showError(context, result?['message'] ?? 'Erro no login');
+        AppUtils.showError(context, 'Erro de comunicação com o servidor');
       }
     } catch (e) {
+      debugPrint('❌ [LOGIN] Erro de exceção: $e');
       AppUtils.showError(context, 'Erro de conexão: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

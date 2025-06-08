@@ -1,21 +1,46 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../main.dart'; // Para AppUtils e AuthManager
+import '../../components/sidebar_screen.dart';
 
 class PerfilScreen extends StatefulWidget {
   @override
   _PerfilScreenState createState() => _PerfilScreenState();
 }
 
-class _PerfilScreenState extends State<PerfilScreen> {
+class _PerfilScreenState extends State<PerfilScreen>
+    with TickerProviderStateMixin {
   final _apiService = ApiService();
   Map<String, dynamic>? _userData;
+  Map<String, dynamic>? _formadorData;
   bool _isLoading = true;
+  bool _isFormador = false;
+  bool _isAdmin = false;
+  bool _isEditing = false;
+  String _activeTab = 'ministrados'; // 'ministrados' ou 'inscritos'
+  late TabController _tabController;
+
+  // Controladores para edição
+  final _nomeController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _telefoneController = TextEditingController();
+  final _idadeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _telefoneController.dispose();
+    _idadeController.dispose();
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -23,298 +48,296 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
     try {
       final userData = await _apiService.getCurrentUser();
-      setState(() {
-        _userData = userData;
-        _isLoading = false;
-      });
+
+      if (userData != null) {
+        setState(() {
+          _userData = userData;
+          _isFormador = userData['id_cargo'] == 2;
+          _isAdmin = userData['id_cargo'] == 1;
+
+          // Preencher controladores
+          _nomeController.text = userData['nome'] ?? '';
+          _emailController.text = userData['email'] ?? '';
+          _telefoneController.text = userData['telefone'] ?? '';
+          _idadeController.text = userData['idade']?.toString() ?? '';
+        });
+
+        // Se for formador, buscar dados específicos
+        if (_isFormador) {
+          await _loadFormadorData();
+        }
+      }
+
+      setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
       AppUtils.showError(context, 'Erro ao carregar dados do perfil: $e');
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
-        backgroundColor: const Color(0xFFFF8000),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => AppUtils.showInfo(
-                context, 'Edição de perfil em desenvolvimento'),
+  Future<void> _loadFormadorData() async {
+    try {
+      // Aqui você pode implementar uma chamada específica para dados de formador
+      // Por enquanto, vamos simular com dados fictícios
+      setState(() {
+        _formadorData = {
+          'categorias': [
+            {
+              'id': 1,
+              'nome': 'Tecnologia',
+              'areas': [
+                {'nome': 'Programação'},
+                {'nome': 'Bases de Dados'}
+              ]
+            }
+          ],
+          'cursosMinistrados': [],
+          'cursosInscritos': []
+        };
+      });
+    } catch (e) {
+      print('Erro ao carregar dados do formador: $e');
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    try {
+      final updateData = {
+        'nome': _nomeController.text,
+        'email': _emailController.text,
+        'telefone': _telefoneController.text,
+        'idade': int.tryParse(_idadeController.text) ?? 0,
+      };
+
+      // Aqui você implementaria a chamada à API para atualizar o perfil
+      // await _apiService.updateProfile(updateData);
+
+      AppUtils.showSuccess(context, 'Perfil atualizado com sucesso!');
+      setState(() => _isEditing = false);
+      await _loadUserData();
+    } catch (e) {
+      AppUtils.showError(context, 'Erro ao atualizar perfil: $e');
+    }
+  }
+
+  Widget _buildProfileHeader() {
+    return Container(
+      height: 200,
+      child: Stack(
+        children: [
+          // Imagem de capa
+          Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFF8000), Color(0xFFFF6600)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+
+          // Botão de editar
+          Positioned(
+            top: 16,
+            right: 16,
+            child: IconButton(
+              onPressed: () => setState(() => _isEditing = !_isEditing),
+              icon: Icon(
+                _isEditing ? Icons.close : Icons.edit,
+                color: Colors.white,
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withOpacity(0.3),
+              ),
+            ),
+          ),
+
+          // Avatar
+          Positioned(
+            bottom: 0,
+            left: 20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Container(
+                  color: Color(0xFFFF8000),
+                  child: Icon(
+                    Icons.person,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _userData == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.grey.shade400,
+    );
+  }
+
+  Widget _buildProfileInfo() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _userData!['nome'] ?? 'Nome não disponível',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 16),
-                      const Text('Erro ao carregar dados do perfil'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadUserData,
-                        child: const Text('Tentar novamente'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadUserData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        // Avatar e info principal
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              children: [
-                                // Avatar
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF8000),
-                                    borderRadius: BorderRadius.circular(50),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFFF8000)
-                                            .withOpacity(0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Colors.white,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                // Nome do utilizador
-                                Text(
-                                  _userData!['nome'] ?? 'Nome não disponível',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                // Email
-                                Text(
-                                  _userData!['email'] ?? 'Email não disponível',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Colors.grey.shade600,
-                                      ),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                // Tipo de utilizador
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF8000)
-                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _userData!['tipo_utilizador'] ??
-                                        'Utilizador',
-                                    style: const TextStyle(
-                                      color: Color(0xFFFF8000),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Informações detalhadas
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Informações da Conta',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInfoRow(
-                                    'Nome', _userData!['nome'] ?? 'N/A'),
-                                _buildInfoRow(
-                                    'Email', _userData!['email'] ?? 'N/A'),
-                                _buildInfoRow('Tipo',
-                                    _userData!['tipo_utilizador'] ?? 'N/A'),
-                                _buildInfoRow(
-                                    'Estado',
-                                    _userData!['ativo'] == true
-                                        ? 'Ativo'
-                                        : 'Inativo'),
-                                _buildInfoRow('Data de Registo',
-                                    _userData!['data_registo'] ?? 'N/A'),
-                                _buildInfoRow('Última Atualização',
-                                    _userData!['updated_at'] ?? 'N/A'),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Estatísticas (se disponível)
-                        if (_userData!['estatisticas'] != null)
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Estatísticas',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildStatCard(
-                                          'Cursos',
-                                          _userData!['total_cursos']
-                                                  ?.toString() ??
-                                              '0',
-                                          Icons.school,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: _buildStatCard(
-                                          'Certificados',
-                                          _userData!['total_certificados']
-                                                  ?.toString() ??
-                                              '0',
-                                          Icons.verified,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                        const SizedBox(height: 16),
-
-                        // Ações
-                        Card(
-                          child: Column(
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.edit,
-                                    color: Color(0xFFFF8000)),
-                                title: const Text('Editar Perfil'),
-                                trailing: const Icon(Icons.arrow_forward_ios,
-                                    size: 16),
-                                onTap: () => AppUtils.showInfo(context,
-                                    'Edição de perfil em desenvolvimento'),
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.notifications,
-                                    color: Color(0xFFFF8000)),
-                                title: const Text('Notificações'),
-                                trailing: const Icon(Icons.arrow_forward_ios,
-                                    size: 16),
-                                onTap: () => AppUtils.showInfo(context,
-                                    'Configurações de notificações em desenvolvimento'),
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.help,
-                                    color: Color(0xFFFF8000)),
-                                title: const Text('Ajuda'),
-                                trailing: const Icon(Icons.arrow_forward_ios,
-                                    size: 16),
-                                onTap: () => AppUtils.showInfo(context,
-                                    'Central de ajuda em desenvolvimento'),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Botão de logout
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _logout,
-                            icon: const Icon(Icons.logout),
-                            label: const Text('Terminar Sessão'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-                      ],
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFF8000).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _userData!['cargo']?['descricao'] ?? 'Utilizador',
+                        style: TextStyle(
+                          color: Color(0xFFFF8000),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Dados do perfil
+          if (_isEditing) ...[
+            _buildEditForm(),
+          ] else ...[
+            _buildProfileData(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditForm() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _nomeController,
+                decoration: InputDecoration(
+                  labelText: 'Nome',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _telefoneController,
+                decoration: InputDecoration(
+                  labelText: 'Telefone',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                controller: _idadeController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Idade',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: _updateProfile,
+              icon: Icon(Icons.check),
+              label: Text('Guardar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () => setState(() => _isEditing = false),
+              icon: Icon(Icons.close),
+              label: Text('Cancelar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileData() {
+    return Column(
+      children: [
+        _buildInfoRow('Nome:', _userData!['nome'] ?? 'N/A'),
+        _buildInfoRow('Email:', _userData!['email'] ?? 'N/A'),
+        _buildInfoRow('Telefone:', _userData!['telefone'] ?? 'N/A'),
+        _buildInfoRow('Idade:', _userData!['idade']?.toString() ?? 'N/A'),
+      ],
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -322,16 +345,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey,
+                color: Colors.grey.shade600,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -339,35 +362,155 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF8000).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 24, color: const Color(0xFFFF8000)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFFF8000),
+  Widget _buildFormadorSection() {
+    if (!_isFormador || _formadorData == null) return SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Especializações
+        Card(
+          margin: EdgeInsets.all(16),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Especializações',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12),
+                if (_formadorData!['categorias']?.isNotEmpty == true)
+                  ...(_formadorData!['categorias'] as List)
+                      .map(
+                        (categoria) => Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            '${categoria['nome']}: ${categoria['areas']?.map((area) => area['nome']).join(', ') ?? 'Nenhuma área específica'}',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      )
+                      .toList()
+                else
+                  Text(
+                    'Nenhuma categoria ou área associada.',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
             ),
           ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+        ),
+
+        // Cursos do formador
+        Card(
+          margin: EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tabController,
+                labelColor: Color(0xFFFF8000),
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Color(0xFFFF8000),
+                tabs: [
+                  Tab(text: 'Cursos Administrados'),
+                  Tab(text: 'Cursos Inscritos'),
+                ],
+              ),
+              Container(
+                height: 300,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildCursosMinistrados(),
+                    _buildCursosInscritos(),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  Widget _buildCursosMinistrados() {
+    final cursos = _formadorData!['cursosMinistrados'] as List? ?? [];
+
+    if (cursos.isEmpty) {
+      return Center(
+        child: Text(
+          'Você não está a ministrar nenhum curso atualmente.',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: cursos.length,
+      itemBuilder: (context, index) {
+        final curso = cursos[index];
+        return Card(
+          child: ListTile(
+            title: Text(curso['nome'] ?? 'Curso'),
+            subtitle: Text('${curso['categoria']} • ${curso['area']}'),
+            trailing: Text(curso['tipo'] ?? ''),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCursosInscritos() {
+    final cursos = _formadorData!['cursosInscritos'] as List? ?? [];
+
+    if (cursos.isEmpty) {
+      return Center(
+        child: Text(
+          'Você não está inscrito em nenhum curso atualmente.',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: cursos.length,
+      itemBuilder: (context, index) {
+        final curso = cursos[index];
+        return Card(
+          child: ListTile(
+            title: Text(curso['nome'] ?? 'Curso'),
+            subtitle: Text('${curso['categoria']} • ${curso['area']}'),
+            trailing: Text(_formatDate(curso['dataInscricao'])),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return '';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
   }
 
   Future<void> _logout() async {
@@ -399,5 +542,88 @@ class _PerfilScreenState extends State<PerfilScreen> {
         AppUtils.showError(context, 'Erro ao terminar sessão: $e');
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8000)),
+              ),
+              SizedBox(height: 16),
+              Text('A carregar perfil...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_userData == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red.shade300,
+              ),
+              const SizedBox(height: 16),
+              const Text('Erro ao carregar dados do perfil'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadUserData,
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      drawer: SidebarScreen(
+        currentUser: _userData,
+        currentRoute: '/perfil',
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadUserData,
+        color: Color(0xFFFF8000),
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildProfileHeader(),
+              _buildProfileInfo(),
+              if (_isFormador) _buildFormadorSection(),
+
+              // Botão de logout
+              Padding(
+                padding: EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _logout,
+                    icon: Icon(Icons.logout),
+                    label: Text('Terminar Sessão'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -11,6 +11,11 @@ class ApiService {
   late String _apiBase;
   String? _authToken;
 
+  // URLs possíveis do teu servidor
+  static const String _localIp = '192.168.8.29:4000'; // IP na rede local
+  static const String _publicIp = '188.82.118.49:4000'; // IP público
+  static const String _localhost = 'localhost:4000'; // Para emulador
+
   // Headers padrão para todas as requisições
   Map<String, String> get _defaultHeaders => {
         'Content-Type': 'application/json',
@@ -25,102 +30,171 @@ class ApiService {
       return;
     }
 
-    _apiBase = await _detectApiBase();
+    _apiBase = await _detectBestApiBase();
     debugPrint('🌐 [API] =================================');
     debugPrint('🌐 [API] URL Base FINAL detectada: $_apiBase');
     debugPrint('🌐 [API] =================================');
   }
 
-  /// Detecção automática da URL da API baseada no ambiente
-  Future<String> _detectApiBase() async {
-    debugPrint('🔍 [API DEBUG] Iniciando detecção da URL base...');
+  /// Detecção inteligente da melhor URL da API
+  Future<String> _detectBestApiBase() async {
+    debugPrint('🔍 [API] Iniciando detecção inteligente da URL...');
 
-    // 1. Verificar variável de ambiente (se definida no build)
+    // 1. Verificar variável de ambiente primeiro
     const envApiUrl = String.fromEnvironment('API_URL');
     if (envApiUrl.isNotEmpty) {
-      debugPrint('✅ [API DEBUG] Usando variável de ambiente: $envApiUrl');
+      debugPrint('✅ [API] Usando variável de ambiente: $envApiUrl');
       return envApiUrl;
     }
 
-    // 2. URLs de teste baseadas no ambiente
-    final List<String> possibleUrls = [];
+    // 2. URLs de teste baseadas no ambiente e conectividade
+    final List<String> possibleUrls = await _buildPossibleUrls();
 
-    if (kDebugMode) {
-      // Em desenvolvimento, testar várias possibilidades
-      debugPrint(
-          '🔍 [API DEBUG] Modo debug detectado, testando URLs locais...');
+    // 3. Testar cada URL para ver qual responde mais rápido
+    final workingUrl = await _findWorkingUrl(possibleUrls);
 
-      // Para emulador Android (10.0.2.2 mapeia para localhost do host)
-      possibleUrls.add('http://10.0.2.2:4000/api');
-
-      // Para emulador iOS e dispositivos físicos na mesma rede
-      possibleUrls.add('http://localhost:4000/api');
-      possibleUrls.add('http://127.0.0.1:4000/api');
-
-      // Tentar detectar IP local da máquina (para dispositivos físicos)
-      final localIp = await _getLocalIpAddress();
-      if (localIp != null) {
-        possibleUrls.add('http://$localIp:4000/api');
-      }
-    } else {
-      // Em produção, usar o domínio/IP de produção
-      debugPrint('🔍 [API DEBUG] Modo produção, usando URL de produção...');
-      // Substitui pelo teu domínio/IP de produção
-      possibleUrls.add('https://teu-dominio.com:4000/api');
-      possibleUrls.add('http://teu-servidor-ip:4000/api');
+    if (workingUrl != null) {
+      return workingUrl;
     }
 
-    // Testar cada URL para ver qual responde
-    for (final url in possibleUrls) {
-      debugPrint('🔍 [API DEBUG] Testando URL: $url');
-      if (await _testConnection(url)) {
-        debugPrint('✅ [API DEBUG] URL funcionando: $url');
-        return url;
-      }
-    }
-
-    // Fallback padrão
-    final fallbackUrl = kDebugMode
-        ? 'http://10.0.2.2:4000/api'
-        : 'https://teu-dominio.com:4000/api';
-
-    debugPrint(
-        '⚠️ [API DEBUG] Nenhuma URL respondeu, usando fallback: $fallbackUrl');
+    // 4. Fallback baseado no ambiente
+    final fallbackUrl = _getFallbackUrl();
+    debugPrint('⚠️ [API] Nenhuma URL respondeu, usando fallback: $fallbackUrl');
     return fallbackUrl;
   }
 
-  /// Tenta obter o IP local da máquina
-  Future<String?> _getLocalIpAddress() async {
+  /// Constrói lista de URLs possíveis baseada no ambiente
+  Future<List<String>> _buildPossibleUrls() async {
+    final List<String> urls = [];
+
+    if (kDebugMode) {
+      debugPrint('🔍 [API] Modo debug - testando URLs de desenvolvimento...');
+
+      // Para emulador Android
+      urls.add('http://10.0.2.2:4000/api');
+
+      // Para emulador iOS
+      urls.add('http://127.0.0.1:4000/api');
+      urls.add('http://$_localhost/api');
+
+      // IP local (mesma rede Wi-Fi)
+      urls.add('http://$_localIp/api');
+
+      // IP público (rede externa)
+      urls.add('http://$_publicIp/api');
+
+      // Tentar detectar IP local dinâmico
+      final detectedIp = await _getLocalNetworkIp();
+      if (detectedIp != null) {
+        urls.add('http://$detectedIp:4000/api');
+      }
+    } else {
+      debugPrint('🔍 [API] Modo produção - usando URLs de produção...');
+      // Em produção, priorizar IP público e HTTPS
+      urls.add('https://$_publicIp/api');
+      urls.add('http://$_publicIp/api');
+      // Aqui poderias adicionar o teu domínio se tiveres um
+      // urls.add('https://meudominio.com/api');
+    }
+
+    debugPrint('🔍 [API] URLs a testar: ${urls.length}');
+    return urls;
+  }
+
+  /// Encontra a primeira URL que responde
+  Future<String?> _findWorkingUrl(List<String> urls) async {
+    debugPrint('🔍 [API] Testando conectividade...');
+
+    // Testar URLs em paralelo para ser mais rápido
+    final futures = urls.map((url) => _testUrlWithTimeout(url));
+    final results = await Future.wait(futures);
+
+    // Encontrar a primeira que funcionou
+    for (int i = 0; i < urls.length; i++) {
+      if (results[i]) {
+        debugPrint('✅ [API] URL funcionando encontrada: ${urls[i]}');
+        return urls[i];
+      }
+    }
+
+    return null;
+  }
+
+  /// Testa uma URL com timeout e retry
+  Future<bool> _testUrlWithTimeout(String url) async {
     try {
-      for (var interface in await NetworkInterface.list()) {
+      debugPrint('🔍 [API] Testando: $url');
+
+      final response = await http.get(
+        Uri.parse(url.replaceAll('/api', '/api')), // Testar endpoint da API
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 2)); // Timeout curto para ser rápido
+
+      final isWorking = response.statusCode == 200;
+      debugPrint(
+          '${isWorking ? '✅' : '❌'} [API] $url - Status: ${response.statusCode}');
+      return isWorking;
+    } catch (e) {
+      debugPrint(
+          '❌ [API] Falha ao testar $url: ${e.toString().split('\n').first}');
+      return false;
+    }
+  }
+
+  /// Tenta detectar o IP da rede local atual
+  Future<String?> _getLocalNetworkIp() async {
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (var interface in interfaces) {
         for (var addr in interface.addresses) {
-          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-            if (addr.address.startsWith('192.168.') ||
-                addr.address.startsWith('10.') ||
-                addr.address.startsWith('172.')) {
-              debugPrint('🔍 [API DEBUG] IP local detectado: ${addr.address}');
-              return addr.address;
-            }
+          if (addr.type == InternetAddressType.IPv4 &&
+              !addr.isLoopback &&
+              _isPrivateIp(addr.address)) {
+            debugPrint('🔍 [API] IP local detectado: ${addr.address}');
+            return addr.address;
           }
         }
       }
     } catch (e) {
-      debugPrint('⚠️ [API DEBUG] Erro ao detectar IP local: $e');
+      debugPrint('⚠️ [API] Erro ao detectar IP local: $e');
     }
     return null;
   }
 
-  /// Testa se uma URL está respondendo
-  Future<bool> _testConnection(String url) async {
+  /// Verifica se um IP é privado (rede local)
+  bool _isPrivateIp(String ip) {
+    return ip.startsWith('192.168.') ||
+        ip.startsWith('10.') ||
+        ip.startsWith('172.');
+  }
+
+  /// URL de fallback baseada no ambiente
+  String _getFallbackUrl() {
+    if (kDebugMode) {
+      return 'http://$_localIp/api'; // Tentar IP local primeiro
+    } else {
+      return 'http://$_publicIp/api'; // Em produção usar IP público
+    }
+  }
+
+  /// Força reconexão (útil quando mudas de rede)
+  Future<void> reconnect() async {
+    debugPrint('🔄 [API] Forçando reconexão...');
+    _apiBase = await _detectBestApiBase();
+  }
+
+  /// Verifica se a conexão atual ainda funciona
+  Future<bool> isConnectionAlive() async {
     try {
-      final response = await http.get(
-        Uri.parse(url.replaceAll('/api', '/api')), // Testa a rota raiz da API
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 3));
+      final response = await http
+          .get(
+            Uri.parse('$_apiBase'),
+            headers: _defaultHeaders,
+          )
+          .timeout(const Duration(seconds: 3));
 
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('❌ [API DEBUG] Falha ao testar $url: $e');
       return false;
     }
   }
@@ -141,81 +215,92 @@ class ApiService {
   String get apiBase => _apiBase;
 
   // ===========================================
-  // MÉTODOS HTTP GENÉRICOS
+  // MÉTODOS HTTP COM RETRY AUTOMÁTICO
   // ===========================================
 
-  /// Requisição GET
+  /// Requisição GET com retry em caso de falha de rede
   Future<http.Response> get(String endpoint,
-      {Map<String, String>? headers}) async {
-    final url = Uri.parse('$_apiBase$endpoint');
-    debugPrint('📡 [GET] $url');
+      {Map<String, String>? headers, bool autoRetry = true}) async {
+    return _executeWithRetry(() async {
+      final url = Uri.parse('$_apiBase$endpoint');
+      debugPrint('📡 [GET] $url');
 
-    final response =
-        await http.get(url, headers: {..._defaultHeaders, ...?headers});
-    _logResponse('GET', endpoint, response);
-    return response;
+      final response =
+          await http.get(url, headers: {..._defaultHeaders, ...?headers});
+      _logResponse('GET', endpoint, response);
+      return response;
+    }, autoRetry);
   }
 
-  /// Requisição POST
-  Future<http.Response> post(
-    String endpoint, {
-    Object? body,
-    Map<String, String>? headers,
-  }) async {
-    final url = Uri.parse('$_apiBase$endpoint');
-    debugPrint('📡 [POST] $url');
+  /// Requisição POST com retry
+  Future<http.Response> post(String endpoint,
+      {Object? body,
+      Map<String, String>? headers,
+      bool autoRetry = true}) async {
+    return _executeWithRetry(() async {
+      final url = Uri.parse('$_apiBase$endpoint');
+      debugPrint('📡 [POST] $url');
 
-    final response = await http.post(
-      url,
-      headers: {..._defaultHeaders, ...?headers},
-      body: body != null ? jsonEncode(body) : null,
-    );
-    _logResponse('POST', endpoint, response);
-    return response;
+      final response = await http.post(
+        url,
+        headers: {..._defaultHeaders, ...?headers},
+        body: body != null ? jsonEncode(body) : null,
+      );
+      _logResponse('POST', endpoint, response);
+      return response;
+    }, autoRetry);
   }
 
-  /// Requisição PUT
-  Future<http.Response> put(
-    String endpoint, {
-    Object? body,
-    Map<String, String>? headers,
-  }) async {
+  /// Executa uma requisição com retry automático em caso de falha de rede
+  Future<http.Response> _executeWithRetry(
+      Future<http.Response> Function() request, bool autoRetry) async {
+    try {
+      return await request();
+    } catch (e) {
+      if (autoRetry && _isNetworkError(e)) {
+        debugPrint('🔄 [API] Erro de rede detectado, tentando reconectar...');
+        await reconnect();
+        return await request(); // Retry uma vez
+      }
+      rethrow;
+    }
+  }
+
+  /// Verifica se é um erro de rede
+  bool _isNetworkError(dynamic error) {
+    return error is SocketException ||
+        error is HttpException ||
+        error.toString().contains('Connection refused') ||
+        error.toString().contains('Network unreachable');
+  }
+
+  /// PUT, PATCH, DELETE methods...
+  Future<http.Response> put(String endpoint,
+      {Object? body, Map<String, String>? headers}) async {
     final url = Uri.parse('$_apiBase$endpoint');
     debugPrint('📡 [PUT] $url');
-
-    final response = await http.put(
-      url,
-      headers: {..._defaultHeaders, ...?headers},
-      body: body != null ? jsonEncode(body) : null,
-    );
+    final response = await http.put(url,
+        headers: {..._defaultHeaders, ...?headers},
+        body: body != null ? jsonEncode(body) : null);
     _logResponse('PUT', endpoint, response);
     return response;
   }
 
-  /// Requisição PATCH
-  Future<http.Response> patch(
-    String endpoint, {
-    Object? body,
-    Map<String, String>? headers,
-  }) async {
+  Future<http.Response> patch(String endpoint,
+      {Object? body, Map<String, String>? headers}) async {
     final url = Uri.parse('$_apiBase$endpoint');
     debugPrint('📡 [PATCH] $url');
-
-    final response = await http.patch(
-      url,
-      headers: {..._defaultHeaders, ...?headers},
-      body: body != null ? jsonEncode(body) : null,
-    );
+    final response = await http.patch(url,
+        headers: {..._defaultHeaders, ...?headers},
+        body: body != null ? jsonEncode(body) : null);
     _logResponse('PATCH', endpoint, response);
     return response;
   }
 
-  /// Requisição DELETE
   Future<http.Response> delete(String endpoint,
       {Map<String, String>? headers}) async {
     final url = Uri.parse('$_apiBase$endpoint');
     debugPrint('📡 [DELETE] $url');
-
     final response =
         await http.delete(url, headers: {..._defaultHeaders, ...?headers});
     _logResponse('DELETE', endpoint, response);
@@ -234,10 +319,9 @@ class ApiService {
   }
 
   // ===========================================
-  // MÉTODOS AUXILIARES PARA PARSING
+  // MÉTODOS AUXILIARES
   // ===========================================
 
-  /// Parse response para Map
   Map<String, dynamic>? parseResponseToMap(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       try {
@@ -250,7 +334,6 @@ class ApiService {
     return null;
   }
 
-  /// Parse response para List
   List<dynamic>? parseResponseToList(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       try {
@@ -263,49 +346,41 @@ class ApiService {
     return null;
   }
 
-  // ===========================================
-  // CONFIGURAÇÕES DE IMAGENS (similar ao api.js)
-  // ===========================================
-
-  /// Formatar email para URL (mesmo método do api.js)
+  // Métodos para imagens e outros métodos específicos...
   String _formatEmailForUrl(String email) {
     if (email.isEmpty) return '';
     return email.replaceAll('@', '_at_').replaceAll('.', '_');
   }
 
-  /// URLs para imagens padrão
   String get defaultAvatarUrl =>
       '${_apiBase.replaceAll('/api', '')}/uploads/AVATAR.png';
   String get defaultCapaUrl =>
       '${_apiBase.replaceAll('/api', '')}/uploads/CAPA.png';
 
-  /// URL para avatar do utilizador
   String getUserAvatarUrl(String email) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final formattedEmail = _formatEmailForUrl(email);
     return '${_apiBase.replaceAll('/api', '')}/uploads/users/$formattedEmail/${email}_AVATAR.png?t=$timestamp';
   }
 
-  /// URL para capa do utilizador
   String getUserCapaUrl(String email) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final formattedEmail = _formatEmailForUrl(email);
     return '${_apiBase.replaceAll('/api', '')}/uploads/users/$formattedEmail/${email}_CAPA.png?t=$timestamp';
   }
 
-  /// URL para capa do curso
   String getCursoCapaUrl(String nomeCurso) {
     return '${_apiBase.replaceAll('/api', '')}/uploads/cursos/$nomeCurso/capa.png';
   }
 
   // ===========================================
-  // MÉTODOS ESPECÍFICOS DA API (exemplos)
+  // MÉTODOS ESPECÍFICOS DA API
   // ===========================================
 
-  /// Teste de conexão com a API
+  /// Teste de conectividade com a API
   Future<bool> testConnection() async {
     try {
-      final response = await get('');
+      final response = await get('/');
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('❌ [API] Erro no teste de conexão: $e');
@@ -313,31 +388,37 @@ class ApiService {
     }
   }
 
-  /// Login do utilizador
+  /// Método de login
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
-      final response = await post('/auth/login', body: {
-        'email': email,
-        'password': password,
-      });
+      debugPrint('🔐 [LOGIN] Iniciando login para: $email');
+      final response = await post('/auth/login',
+          body: {'email': email, 'password': password});
 
-      final data = parseResponseToMap(response);
-      if (data != null && data['token'] != null) {
-        setAuthToken(data['token']);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['success'] == true && data['token'] != null) {
+          setAuthToken(data['token']);
+          return data;
+        }
       }
-      return data;
+      return {'success': false, 'message': 'Erro no login'};
     } catch (e) {
       debugPrint('❌ [API] Erro no login: $e');
-      return null;
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
     }
   }
 
-  /// Logout do utilizador
+  /// Logout
   Future<void> logout() async {
     clearAuthToken();
   }
 
-  /// Obter dados do utilizador atual
+  /// Obter utilizador atual
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
       final response = await get('/users/me');
@@ -348,96 +429,144 @@ class ApiService {
     }
   }
 
-  /// Obter estatísticas do dashboard
-  Future<Map<String, dynamic>?> getDashboardStats() async {
-    try {
-      final response = await get('/dashboard/estatisticas');
-      return parseResponseToMap(response);
-    } catch (e) {
-      debugPrint('❌ [API] Erro ao obter estatísticas: $e');
-      return null;
-    }
-  }
-
   /// Obter lista de cursos
   Future<List<dynamic>?> getCursos() async {
     try {
+      debugPrint('📚 [API] A obter lista de cursos...');
       final response = await get('/cursos');
-      return parseResponseToList(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response); // Usar parseResponseToMap
+        if (data != null && data['cursos'] != null) {
+          debugPrint('✅ [API] ${data['cursos'].length ?? 0} cursos obtidos');
+          return data['cursos'] as List<dynamic>; // Extrair a lista de cursos
+        }
+        debugPrint('❌ [API] Resposta não contém campo "cursos"');
+        return [];
+      } else {
+        debugPrint('❌ [API] Erro ao obter cursos: ${response.statusCode}');
+        return null;
+      }
     } catch (e) {
-      debugPrint('❌ [API] Erro ao obter cursos: $e');
+      debugPrint('❌ [API] Exceção ao obter cursos: $e');
       return null;
     }
   }
 
-  /// Upload de ficheiro (exemplo básico)
-  Future<http.Response> uploadFile(
-      String endpoint, String filePath, String fieldName) async {
-    final request =
-        http.MultipartRequest('POST', Uri.parse('$_apiBase$endpoint'));
+  /// Obter inscrições do utilizador atual (formato completo)
+  Future<List<dynamic>?> getMinhasInscricoes() async {
+    try {
+      debugPrint('📚 [API] A obter minhas inscrições...');
+      final response =
+          await get('/inscricoes/minhas-inscricoes'); // URL CORRETA
 
-    // Adicionar headers de autenticação
-    if (_authToken != null) {
-      request.headers['Authorization'] = 'Bearer $_authToken';
-    }
-
-    // Adicionar ficheiro
-    request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
-
-    debugPrint('📡 [UPLOAD] $_apiBase$endpoint');
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    _logResponse('UPLOAD', endpoint, response);
-    return response;
-  }
-}
-
-// ===========================================
-// CLASSE AUXILIAR PARA EXCEÇÕES DA API
-// ===========================================
-
-class ApiException implements Exception {
-  final String message;
-  final int? statusCode;
-  final dynamic response;
-
-  ApiException(this.message, {this.statusCode, this.response});
-
-  @override
-  String toString() => 'ApiException: $message (Status: $statusCode)';
-}
-
-// ===========================================
-// EXTENSÕES ÚTEIS
-// ===========================================
-
-extension ApiResponseExtension on http.Response {
-  /// Verifica se a resposta foi bem-sucedida
-  bool get isSuccess => statusCode >= 200 && statusCode < 300;
-
-  /// Obtém os dados da resposta como Map
-  Map<String, dynamic>? get dataAsMap {
-    if (isSuccess) {
-      try {
-        return jsonDecode(body) as Map<String, dynamic>;
-      } catch (e) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data =
+            parseResponseToList(response); // Backend retorna lista direta
+        debugPrint('✅ [API] ${data?.length ?? 0} inscrições obtidas');
+        return data;
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter minhas inscrições: ${response.statusCode}');
+        debugPrint('📄 Response body: ${response.body}');
         return null;
       }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter minhas inscrições: $e');
+      return null;
     }
-    return null;
   }
 
-  /// Obtém os dados da resposta como List
-  List<dynamic>? get dataAsList {
-    if (isSuccess) {
-      try {
-        return jsonDecode(body) as List<dynamic>;
-      } catch (e) {
+  /// Obter cursos em que o utilizador está inscrito
+  Future<List<dynamic>?> getMeusCursos() async {
+    try {
+      debugPrint('📚 [API] A obter meus cursos...');
+      final response = await get('/inscricoes/minhas');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('✅ [API] ${data?.length ?? 0} inscrições obtidas');
+        return data;
+      } else {
+        debugPrint('❌ [API] Erro ao obter meus cursos: ${response.statusCode}');
         return null;
       }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter meus cursos: $e');
+      return null;
     }
-    return null;
+  }
+
+  /// Obter detalhes completos dos cursos inscritos
+  Future<List<dynamic>?> getMeusCursosCompletos() async {
+    try {
+      debugPrint('📚 [API] A obter meus cursos completos...');
+      final response = await get('/inscricoes/meus-cursos-completos');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('✅ [API] ${data?.length ?? 0} cursos completos obtidos');
+        return data;
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter cursos completos: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter cursos completos: $e');
+      return null;
+    }
+  }
+
+  /// Obter detalhes de um curso específico
+  Future<Map<String, dynamic>?> getCurso(int cursoId) async {
+    try {
+      debugPrint('📚 [API] A obter curso ID: $cursoId');
+      final response = await get('/cursos/$cursoId');
+      return parseResponseToMap(response);
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao obter curso $cursoId: $e');
+      return null;
+    }
+  }
+
+  /// Obter categorias de cursos
+  Future<List<dynamic>?> getCategorias() async {
+    try {
+      debugPrint('📂 [API] A obter categorias...');
+      final response = await get('/categorias');
+      return parseResponseToList(response);
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao obter categorias: $e');
+      return null;
+    }
+  }
+
+  /// Inscrever-se num curso
+  Future<Map<String, dynamic>?> inscreverNoCurso(int cursoId) async {
+    try {
+      debugPrint('📝 [API] A inscrever no curso ID: $cursoId');
+      final response = await post('/inscricoes', body: {
+        'id_curso': cursoId,
+      });
+      return parseResponseToMap(response);
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao inscrever no curso $cursoId: $e');
+      return null;
+    }
+  }
+
+  /// Endpoint de health check para testar conectividade
+  Future<Map<String, dynamic>?> healthCheck() async {
+    try {
+      final response = await get('/');
+      if (response.statusCode == 200) {
+        return {'status': 'ok', 'timestamp': DateTime.now().toIso8601String()};
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ [API] Health check falhou: $e');
+      return null;
+    }
   }
 }
