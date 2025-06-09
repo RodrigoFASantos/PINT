@@ -152,7 +152,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () => _showCursoDetails(curso),
+        onTap: () =>
+            _navigateToCurso(curso), // ← MUDANÇA: navegar para página do curso
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -249,7 +250,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () => _showCursoSugeridoDetails(curso),
+        onTap: () =>
+            _navigateToCurso(curso), // ← MUDANÇA: navegar para página do curso
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -306,6 +308,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ← NOVO MÉTODO: Navegar para página individual do curso
+  void _navigateToCurso(Map<String, dynamic> curso) {
+    // Tentar obter o ID do curso de diferentes campos possíveis
+    final cursoId = curso['id_curso']?.toString() ??
+        curso['id']?.toString() ??
+        curso['cursoId']?.toString();
+
+    if (cursoId != null && cursoId.isNotEmpty) {
+      Navigator.pushNamed(
+        context,
+        '/curso',
+        arguments: cursoId,
+      );
+    } else {
+      AppUtils.showError(context, 'ID do curso não encontrado');
+    }
+  }
+
   void _showCursoDetails(Map<String, dynamic> curso) {
     showDialog(
       context: context,
@@ -338,7 +358,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              AppUtils.showInfo(context, 'Acesso ao curso em desenvolvimento');
+              _navigateToCurso(
+                  curso); // ← MUDANÇA: navegar em vez de mostrar mensagem
             },
             child: const Text('Ver Curso'),
           ),
@@ -377,9 +398,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              AppUtils.showInfo(context, 'Inscrição em desenvolvimento');
+              _navigateToCurso(
+                  curso); // ← MUDANÇA: navegar para página do curso
             },
-            child: const Text('Inscrever-me'),
+            child: const Text('Ver Curso'),
           ),
         ],
       ),
@@ -403,6 +425,14 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Início'),
         backgroundColor: const Color(0xFFFF8000),
         elevation: 0,
+        actions: [
+          // ← ADICIONADO: Botão para ir para lista completa de cursos
+          IconButton(
+            icon: const Icon(Icons.library_books),
+            onPressed: () => Navigator.pushNamed(context, '/cursos'),
+            tooltip: 'Ver todos os cursos',
+          ),
+        ],
       ),
       drawer: SidebarScreen(
         currentUser: _currentUser,
@@ -452,13 +482,26 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Cursos Inscritos',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade800,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Cursos Inscritos',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  if (_inscricoes != null &&
+                                      _inscricoes!.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () => Navigator.pushNamed(
+                                          context, '/cursos'),
+                                      child: const Text('Ver todos'),
+                                    ),
+                                ],
                               ),
                               const SizedBox(height: 16),
 
@@ -485,6 +528,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pushNamed(
+                                            context, '/cursos'),
+                                        child: const Text('Explorar Cursos'),
+                                      ),
                                     ],
                                   ),
                                 )
@@ -497,13 +546,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 32),
 
                               // Seção de Cursos Sugeridos
-                              Text(
-                                'Cursos Sugeridos para Você',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade800,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Cursos Sugeridos para Você',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  if (_cursosSugeridos != null &&
+                                      _cursosSugeridos!.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () => Navigator.pushNamed(
+                                          context, '/cursos'),
+                                      child: const Text('Ver todos'),
+                                    ),
+                                ],
                               ),
                               const SizedBox(height: 16),
 

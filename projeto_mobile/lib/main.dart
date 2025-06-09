@@ -7,11 +7,15 @@ import 'services/api_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/cursos/cursos_screen.dart';
+import 'screens/cursos/lista_cursos_screen.dart';
+import 'screens/cursos/pagina_curso_screen.dart';
 import 'screens/users/perfil_screen.dart';
 import 'screens/users/percurso_formativo_screen.dart';
 import 'screens/users/formadores_screen.dart';
 import 'screens/forum/forum_screen.dart';
+
+// Importar sistema de rotas do fórum
+import 'components/forum_route.dart';
 
 void main() async {
   // Garantir que o Flutter está inicializado
@@ -116,89 +120,243 @@ class MyApp extends StatelessWidget {
       // Rota inicial
       initialRoute: '/splash',
 
-      // Rotas da aplicação
-      routes: {
-        '/splash': (context) => SplashScreen(),
-        '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
-        '/cursos': (context) => CursosScreen(),
-        '/perfil': (context) => PerfilScreen(),
-        '/percurso-formativo': (context) => PercursoFormativoScreen(),
-        '/formadores': (context) => FormadoresScreen(),
-        '/forum': (context) => ForumScreen(),
-        // Rotas não implementadas ainda retornam uma página de "em desenvolvimento"
-        '/area-formador': (context) =>
-            _buildNotImplementedPage(context, 'Área do Formador'),
-        '/admin/dashboard': (context) =>
-            _buildNotImplementedPage(context, 'Dashboard Admin'),
-        '/admin/cursos': (context) =>
-            _buildNotImplementedPage(context, 'Gerir Cursos'),
-        '/admin/usuarios': (context) =>
-            _buildNotImplementedPage(context, 'Gerir Utilizadores'),
-        '/admin/denuncias': (context) =>
-            _buildNotImplementedPage(context, 'Gerenciar Denúncias'),
-        '/admin/percurso-formandos': (context) =>
-            _buildNotImplementedPage(context, 'Percurso Formandos'),
-        '/admin/categorias': (context) =>
-            _buildNotImplementedPage(context, 'Gerir Categorias'),
-        '/admin/areas': (context) =>
-            _buildNotImplementedPage(context, 'Gerir Áreas'),
-        '/admin/topicos': (context) =>
-            _buildNotImplementedPage(context, 'Gerir Tópicos'),
-        '/admin/criar-curso': (context) =>
-            _buildNotImplementedPage(context, 'Criar Curso'),
-        '/admin/criar-usuario': (context) =>
-            _buildNotImplementedPage(context, 'Criar Utilizador'),
+      // Sistema de geração de rotas dinâmicas
+      onGenerateRoute: (settings) {
+        debugPrint('🔧 [MAIN] Gerando rota para: ${settings.name}');
+
+        // 1. Primeiro, tentar as rotas do fórum
+        if (ForumRoutes.isForumRoute(settings.name)) {
+          final forumRoute = ForumRoutes.generateRoute(settings);
+          if (forumRoute != null) {
+            debugPrint('✅ [MAIN] Rota do fórum encontrada: ${settings.name}');
+            return forumRoute;
+          }
+        }
+
+        // 2. Se não for rota do fórum, usar rotas principais da aplicação
+        switch (settings.name) {
+          case '/splash':
+            return MaterialPageRoute(
+              builder: (context) => SplashScreen(),
+              settings: settings,
+            );
+
+          case '/login':
+            return MaterialPageRoute(
+              builder: (context) => LoginScreen(),
+              settings: settings,
+            );
+
+          case '/':
+          case '/home':
+            return MaterialPageRoute(
+              builder: (context) => HomeScreen(),
+              settings: settings,
+            );
+
+          case '/cursos':
+            return MaterialPageRoute(
+              builder: (context) => ListaCursosPage(),
+              settings: settings,
+            );
+
+          // Rota para página individual do curso
+          case '/curso':
+            final cursoId = settings.arguments as String?;
+            if (cursoId != null) {
+              return MaterialPageRoute(
+                builder: (context) => PaginaCursoPage(cursoId: cursoId),
+                settings: settings,
+              );
+            } else {
+              // Se não tiver cursoId, voltar para lista de cursos
+              return MaterialPageRoute(
+                builder: (context) => ListaCursosPage(),
+                settings: settings,
+              );
+            }
+
+          case '/perfil':
+            return MaterialPageRoute(
+              builder: (context) => PerfilScreen(),
+              settings: settings,
+            );
+
+          case '/percurso-formativo':
+            return MaterialPageRoute(
+              builder: (context) => PercursoFormativoScreen(),
+              settings: settings,
+            );
+
+          case '/formadores':
+            return MaterialPageRoute(
+              builder: (context) => FormadoresScreen(),
+              settings: settings,
+            );
+
+          case '/forum':
+            return MaterialPageRoute(
+              builder: (context) => ForumScreen(),
+              settings: settings,
+            );
+
+          // Rotas de desenvolvimento/admin
+          case '/area-formador':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Área do Formador'),
+              settings: settings,
+            );
+
+          case '/admin/dashboard':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Dashboard Admin'),
+              settings: settings,
+            );
+
+          case '/admin/cursos':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerir Cursos'),
+              settings: settings,
+            );
+
+          case '/admin/usuarios':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerir Utilizadores'),
+              settings: settings,
+            );
+
+          case '/admin/denuncias':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerenciar Denúncias'),
+              settings: settings,
+            );
+
+          case '/admin/percurso-formandos':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Percurso Formandos'),
+              settings: settings,
+            );
+
+          case '/admin/categorias':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerir Categorias'),
+              settings: settings,
+            );
+
+          case '/admin/areas':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerir Áreas'),
+              settings: settings,
+            );
+
+          case '/admin/topicos':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Gerir Tópicos'),
+              settings: settings,
+            );
+
+          case '/admin/criar-curso':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Criar Curso'),
+              settings: settings,
+            );
+
+          case '/admin/criar-usuario':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  _buildNotImplementedPage(context, 'Criar Utilizador'),
+              settings: settings,
+            );
+
+          // 3. Rota não encontrada
+          default:
+            debugPrint('❌ [MAIN] Rota não encontrada: ${settings.name}');
+            return MaterialPageRoute(
+              builder: (context) => _buildNotFoundPage(context, settings.name),
+              settings: settings,
+            );
+        }
       },
 
-      // Rota para páginas não encontradas
+      // Rota para páginas não encontradas (fallback)
       onUnknownRoute: (settings) {
+        debugPrint('⚠️ [MAIN] Rota desconhecida: ${settings.name}');
         return MaterialPageRoute(
-          builder: (context) => Scaffold(
-            appBar: AppBar(
-              title: const Text('Página não encontrada'),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () =>
-                    Navigator.pushReplacementNamed(context, '/home'),
-              ),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Página não encontrada',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'A rota "${settings.name}" não existe.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        Navigator.pushReplacementNamed(context, '/home'),
-                    icon: const Icon(Icons.home),
-                    label: const Text('Voltar ao Início'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          builder: (context) => _buildNotFoundPage(context, settings.name),
         );
       },
+    );
+  }
+
+  // Widget para páginas não encontradas
+  static Widget _buildNotFoundPage(BuildContext context, String? routeName) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Página não encontrada'),
+        backgroundColor: const Color(0xFFFF8000),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Página não encontrada',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                'A rota "${routeName ?? 'desconhecida'}" não existe.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+              icon: const Icon(Icons.home),
+              label: const Text('Voltar ao Início'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF8000),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (ForumRoutes.isForumRoute(routeName)) ...[
+              TextButton.icon(
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/forum'),
+                icon: const Icon(Icons.forum),
+                label: const Text('Voltar ao Fórum'),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -254,7 +412,7 @@ class MyApp extends StatelessWidget {
 }
 
 // ===========================================
-// CLASSES AUXILIARES (mantidas iguais)
+// CLASSES AUXILIARES
 // ===========================================
 
 /// Configurações globais da aplicação
