@@ -421,12 +421,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                 <div className="campo-valor">{curso.area?.nome || "Não atribuída"}</div>
               </div>
               <div className="campo campo-topico-area">
-                <label>Tópico de Área</label>
+                <label>Tópico</label>
                 <div className="campo-valor">
                   {loadingTopicoArea ? (
                     <p>A carregar...</p>
                   ) : curso.topico_area?.titulo || topicoArea?.titulo ? (
-                    <span className="topico-item">{curso.topico_area?.titulo || topicoArea?.titulo}</span>
+                    <span>{curso.topico_area?.titulo || topicoArea?.titulo}</span>
                   ) : (
                     "Não disponível"
                   )}

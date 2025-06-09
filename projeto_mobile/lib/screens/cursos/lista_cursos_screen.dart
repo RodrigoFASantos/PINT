@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart'; // ← MUDANÇA: usar ApiService
 import '../../main.dart'; // Para AppUtils
+import '../../widgets/network_image_widget.dart';
 
 class ListaCursosPage extends StatefulWidget {
   @override
@@ -237,12 +238,25 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // MUDANÇA: Usar método do ApiService para URL das imagens
   String _getImageUrl(Map<String, dynamic> curso) {
-    if (curso['imagem_path'] != null && curso['imagem_path'].isNotEmpty) {
-      // ← MUDANÇA: usar ApiService para obter URL base
-      return '${_apiService.apiBase.replaceAll('/api', '')}/${curso['imagem_path']}';
+    final imagePath = curso['imagem_path'] as String?;
+    if (imagePath != null && imagePath.isNotEmpty) {
+      return _apiService.getCursoImageUrl(imagePath);
     }
-    return 'assets/images/default_course.png'; // Imagem padrão local
+
+    // Tentar usar nome do curso como fallback
+    final nomeCurso = curso['nome'] as String?;
+    if (nomeCurso != null && nomeCurso.isNotEmpty) {
+      final nomeCursoSlug = nomeCurso
+          .toLowerCase()
+          .replaceAll(' ', '-')
+          .replaceAll(RegExp(r'[^\w-]+'), '');
+      return _apiService.getCursoCapaUrl(nomeCursoSlug);
+    }
+
+    // Fallback para imagem padrão
+    return _apiService.getCursoImageUrl(null);
   }
 
   Widget _buildSearchBar() {
@@ -443,61 +457,68 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
         onTap: () => _navigateToCurso(curso),
         child: Container(
           height: 200,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage(_getImageUrl(curso)),
-              fit: BoxFit.cover,
-              onError: (exception, stackTrace) {
-                // Fallback para imagem padrão se houver erro
-              },
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.7),
-                ],
+          child: Stack(
+            children: [
+              // Imagem usando CursoImage
+              Positioned.fill(
+                child: CursoImage(
+                  imageUrl: _getImageUrl(curso),
+                  fallbackUrl: _apiService.getCursoImageUrl(null),
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Spacer(),
-                Text(
-                  curso['nome'] ?? '',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  '${_formatDate(curso['data_inicio'])} - ${_formatDate(curso['data_fim'])}',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+              // Overlay com informações
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  curso['tipo'] == 'sincrono'
-                      ? '${curso['vagas'] ?? 0} vagas'
-                      : 'Auto-estudo',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Spacer(),
+                    Text(
+                      curso['nome'] ?? '',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '${_formatDate(curso['data_inicio'])} - ${_formatDate(curso['data_fim'])}',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      curso['tipo'] == 'sincrono'
+                          ? '${curso['vagas'] ?? 0} vagas'
+                          : 'Auto-estudo',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

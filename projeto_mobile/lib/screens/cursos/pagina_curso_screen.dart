@@ -25,14 +25,17 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
   bool acessoNegado = false;
   int? userRole;
 
+  // Estado para controlar a exibição dos detalhes
+  bool _mostrarDetalhes = true;
+
   late TabController _tabController;
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    // Inicializar com 4 tabs agora (Detalhes, Presenças, Conteúdos, Avaliação)
-    _tabController = TabController(length: 4, vsync: this);
+    // Agora com 3 tabs (Presenças, Conteúdos, Avaliação)
+    _tabController = TabController(length: 3, vsync: this);
     _fetchCursoDetails();
   }
 
@@ -47,6 +50,17 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
       setState(() {
         loading = true;
       });
+
+      // Obter dados do utilizador atual primeiro
+      try {
+        final userResponse = await _apiService.get('/users/me');
+        if (userResponse.statusCode == 200) {
+          final userData = json.decode(userResponse.body);
+          userRole = userData['id_cargo'];
+        }
+      } catch (e) {
+        print('Erro ao obter dados do utilizador: $e');
+      }
 
       // Obter dados do curso usando ApiService
       final cursoResponse = await _apiService.get('/cursos/${widget.cursoId}');
@@ -90,14 +104,16 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
           loading = false;
           error = null;
 
-          // Definir tab inicial baseado no status de inscrição
-          // Se não inscrito: tab 0 (Detalhes)
-          // Se inscrito: tab 2 (Conteúdos)
+          // Definir estado inicial de mostrar detalhes e tab inicial baseado no status de inscrição
+          // Se não inscrito: mostrar detalhes e tab 0 (Presenças)
+          // Se inscrito: ocultar detalhes e tab 1 (Conteúdos)
+          _mostrarDetalhes = !inscrito;
+
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (inscrito) {
-              _tabController.animateTo(2); // Conteúdos
+              _tabController.animateTo(1); // Conteúdos (agora índice 1)
             } else {
-              _tabController.animateTo(0); // Detalhes
+              _tabController.animateTo(0); // Presenças (agora índice 0)
             }
           });
         });
@@ -253,44 +269,80 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Spacer(),
-            Text(
-              curso?['nome'] ?? '',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today, color: Colors.white70, size: 16),
-                SizedBox(width: 8),
-                Text(
-                  '${_formatDate(curso?['data_inicio'])} - ${_formatDate(curso?['data_fim'])}',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        curso?['nome'] ?? '',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today,
+                              color: Colors.white70, size: 16),
+                          SizedBox(width: 8),
+                          Text(
+                            '${_formatDate(curso?['data_inicio'])} - ${_formatDate(curso?['data_fim'])}',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            curso?['tipo'] == 'sincrono'
+                                ? Icons.people
+                                : Icons.book,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            curso?['tipo'] == 'sincrono'
+                                ? '${curso?['vagas'] ?? 0} vagas'
+                                : 'Auto-estudo',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  curso?['tipo'] == 'sincrono' ? Icons.people : Icons.book,
-                  color: Colors.white70,
-                  size: 16,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  curso?['tipo'] == 'sincrono'
-                      ? '${curso?['vagas'] ?? 0} vagas'
-                      : 'Auto-estudo',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+                // BOTÃO DE DETALHES
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _mostrarDetalhes = !_mostrarDetalhes;
+                      });
+                    },
+                    icon: Icon(
+                      _mostrarDetalhes ? Icons.expand_less : Icons.info_outline,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    tooltip: _mostrarDetalhes
+                        ? 'Ocultar detalhes'
+                        : 'Mostrar detalhes',
                   ),
                 ),
               ],
@@ -299,6 +351,22 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         ),
       ),
     );
+  }
+
+  void _onInscricaoChanged(bool novoEstado) {
+    setState(() {
+      inscrito = novoEstado;
+
+      // Se acabou de se inscrever, ocultar detalhes e mudar para conteúdos
+      if (novoEstado) {
+        _mostrarDetalhes = false;
+        _tabController.animateTo(1); // Conteúdos (agora índice 1)
+      } else {
+        // Se cancelou inscrição, mostrar detalhes
+        _mostrarDetalhes = true;
+        _tabController.animateTo(0); // Presenças (agora índice 0)
+      }
+    });
   }
 
   @override
@@ -329,6 +397,20 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         },
         body: Column(
           children: [
+            // Mostrar detalhes quando solicitado
+            if (_mostrarDetalhes)
+              Container(
+                color: Colors.white,
+                child: DetalhesCurso(
+                  cursoId: widget.cursoId,
+                  curso: curso!,
+                  inscrito: inscrito,
+                  userRole: userRole,
+                  mostrarDetalhes: _mostrarDetalhes,
+                  onInscricaoChanged: _onInscricaoChanged,
+                ),
+              ),
+
             Container(
               color: Colors.white,
               child: TabBar(
@@ -338,10 +420,6 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
                 indicatorColor: Colors.blue,
                 isScrollable: true,
                 tabs: [
-                  Tab(
-                    icon: Icon(Icons.info_outline),
-                    text: 'Detalhes',
-                  ),
                   Tab(
                     icon: Icon(Icons.check_circle_outline),
                     text: 'Presenças',
@@ -361,22 +439,6 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  DetalhesCurso(
-                    cursoId: widget.cursoId,
-                    curso: curso!,
-                    inscrito: inscrito,
-                    userRole: userRole,
-                    onInscricaoChanged: (novoEstado) {
-                      setState(() {
-                        inscrito = novoEstado;
-                      });
-
-                      // Se acabou de se inscrever, mudar para a tab de conteúdos
-                      if (novoEstado) {
-                        _tabController.animateTo(2);
-                      }
-                    },
-                  ),
                   PresencasCurso(
                     cursoId: widget.cursoId,
                     userRole: userRole,

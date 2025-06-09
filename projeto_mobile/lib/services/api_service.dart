@@ -22,6 +22,9 @@ class ApiService {
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
+  /// Getter público para o token (necessário para usar nas requisições customizadas)
+  String? get authToken => _authToken;
+
   /// Inicializa o serviço API com detecção automática da URL base
   Future<void> initialize({String? customApiUrl}) async {
     if (customApiUrl != null) {
@@ -346,31 +349,46 @@ class ApiService {
     return null;
   }
 
-  // Métodos para imagens e outros métodos específicos...
+  // ===========================================
+  // MÉTODOS PARA IMAGENS - CORRIGIDOS
+  // ===========================================
+
   String _formatEmailForUrl(String email) {
     if (email.isEmpty) return '';
     return email.replaceAll('@', '_at_').replaceAll('.', '_');
   }
 
-  String get defaultAvatarUrl =>
-      '${_apiBase.replaceAll('/api', '')}/uploads/AVATAR.png';
-  String get defaultCapaUrl =>
-      '${_apiBase.replaceAll('/api', '')}/uploads/CAPA.png';
+  // MUDANÇA: Usar mesmo padrão da web - através da API
+  String get defaultAvatarUrl => '$_apiBase/uploads/AVATAR.png';
+  String get defaultCapaUrl => '$_apiBase/uploads/CAPA.png';
 
   String getUserAvatarUrl(String email) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final formattedEmail = _formatEmailForUrl(email);
-    return '${_apiBase.replaceAll('/api', '')}/uploads/users/$formattedEmail/${email}_AVATAR.png?t=$timestamp';
+    return '$_apiBase/uploads/users/$formattedEmail/${email}_AVATAR.png?t=$timestamp';
   }
 
   String getUserCapaUrl(String email) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final formattedEmail = _formatEmailForUrl(email);
-    return '${_apiBase.replaceAll('/api', '')}/uploads/users/$formattedEmail/${email}_CAPA.png?t=$timestamp';
+    return '$_apiBase/uploads/users/$formattedEmail/${email}_CAPA.png?t=$timestamp';
   }
 
   String getCursoCapaUrl(String nomeCurso) {
-    return '${_apiBase.replaceAll('/api', '')}/uploads/cursos/$nomeCurso/capa.png';
+    return '$_apiBase/uploads/cursos/$nomeCurso/capa.png';
+  }
+
+  // Método genérico para imagem de curso com path
+  String getCursoImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return '$_apiBase/uploads/default_course.png';
+    }
+    // Se o path já começa com 'uploads/', usar diretamente
+    if (imagePath.startsWith('uploads/')) {
+      return '$_apiBase/$imagePath';
+    }
+    // Caso contrário, assumir que é um path relativo
+    return '$_apiBase/uploads/$imagePath';
   }
 
   // ===========================================
@@ -421,7 +439,7 @@ class ApiService {
   /// Obter utilizador atual
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      final response = await get('/users/me');
+      final response = await get('/users/perfil');
       return parseResponseToMap(response);
     } catch (e) {
       debugPrint('❌ [API] Erro ao obter utilizador atual: $e');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../services/api_service.dart';
+import './quiz_screen.dart';
 
 class AvaliacaoCurso extends StatefulWidget {
   final String cursoId;
@@ -22,235 +23,332 @@ class AvaliacaoCurso extends StatefulWidget {
 }
 
 class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
-  List<Map<String, dynamic>> avaliacoes = [];
-  Map<String, dynamic>? minhaAvaliacao;
-  bool loading = true;
-  String? error;
-  bool _isSubmitting = false;
-
-  // Dados para criar/editar avaliação
-  int _rating = 0;
-  final TextEditingController _comentarioController = TextEditingController();
-
   // Para quizzes (cursos assíncronos)
   List<Map<String, dynamic>> quizzes = [];
   bool loadingQuizzes = true;
 
+  // Para submissões (cursos síncronos)
+  Map<String, dynamic>? topicoAvaliacao;
+  List<int> expandedPastas = [];
+  Map<int, List<Map<String, dynamic>>> submissoes = {};
+  bool loadingTopicos = true;
+  String? error;
+
   final ApiService _apiService = ApiService();
 
   bool get isCursoAssincrono => widget.tipoCurso == 'assincrono';
-  bool get isFormador => widget.userRole == 1 || widget.userRole == 2;
+  // Corrigir: Se userRole for null, assumir que é formando (papel 3)
+  bool get isFormador =>
+      (widget.userRole ?? 3) == 1 || (widget.userRole ?? 3) == 2;
+  bool get isFormando => (widget.userRole ?? 3) == 3;
 
   @override
   void initState() {
     super.initState();
-    _fetchAvaliacoes();
+    print('🎯 Inicializando avaliações para curso ${widget.cursoId}');
+    print('📚 Tipo de curso: ${widget.tipoCurso}');
+    print(
+        '👤 Papel do utilizador: ${widget.userRole} (assumindo ${isFormando ? "Formando" : "Formador"})');
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
     if (isCursoAssincrono) {
-      _fetchQuizzes();
+      print('📋 Carregando quizzes para curso assíncrono');
+      await _fetchQuizzes();
+    } else {
+      print('📋 Carregando tópicos para curso síncrono');
+      await _fetchTopicos();
     }
   }
 
-  @override
-  void dispose() {
-    _comentarioController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _fetchAvaliacoes() async {
-    try {
-      setState(() {
-        loading = true;
-        error = null;
-      });
-
-      // Buscar todas as avaliações do curso
-      final response =
-          await _apiService.get('/avaliacoes/curso/${widget.cursoId}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        List<Map<String, dynamic>> todasAvaliacoes = [];
-        Map<String, dynamic>? avaliacaoUsuario;
-
-        if (data is List) {
-          todasAvaliacoes = data.cast<Map<String, dynamic>>();
-        } else if (data is Map) {
-          if (data.containsKey('avaliacoes')) {
-            todasAvaliacoes =
-                (data['avaliacoes'] as List).cast<Map<String, dynamic>>();
-          }
-          if (data.containsKey('minhaAvaliacao')) {
-            avaliacaoUsuario = data['minhaAvaliacao'];
-          }
-        }
-
-        // Separar minha avaliação das outras
-        if (avaliacaoUsuario == null) {
-          // Procurar minha avaliação na lista
-          for (var avaliacao in todasAvaliacoes) {
-            if (avaliacao['minha_avaliacao'] == true) {
-              avaliacaoUsuario = avaliacao;
-              todasAvaliacoes.remove(avaliacao);
-              break;
-            }
-          }
-        }
-
-        setState(() {
-          avaliacoes = todasAvaliacoes;
-          minhaAvaliacao = avaliacaoUsuario;
-
-          // Se tenho uma avaliação, preencher os campos
-          if (minhaAvaliacao != null) {
-            _rating = minhaAvaliacao!['rating'] ?? 0;
-            _comentarioController.text = minhaAvaliacao!['comentario'] ?? '';
-          }
-
-          loading = false;
-        });
-      } else {
-        setState(() {
-          error = 'Erro ao carregar avaliações';
-          loading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        error =
-            'Não foi possível carregar as avaliações. Tente novamente mais tarde.';
-        loading = false;
-      });
-    }
-  }
-
+  // ========== QUIZZES (CURSOS ASSÍNCRONOS) ==========
   Future<void> _fetchQuizzes() async {
+    if (!isCursoAssincrono) {
+      print('⚠️ Tentativa de carregar quizzes para curso não assíncrono');
+      return;
+    }
+
     try {
       setState(() {
         loadingQuizzes = true;
+        error = null;
       });
 
+      print('🎯 Buscando quizzes para curso: ${widget.cursoId}');
+
       final response =
-          await _apiService.get('/quizzes/curso/${widget.cursoId}');
+          await _apiService.get('/quiz?id_curso=${widget.cursoId}');
+
+      print('📡 Status da resposta quizzes: ${response.statusCode}');
+      print('📄 Corpo da resposta quizzes: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        if (data is List) {
+        if (data != null && data['success'] == true && data['data'] != null) {
+          final quizzesData = data['data'] as List;
+          setState(() {
+            quizzes = quizzesData.cast<Map<String, dynamic>>();
+            loadingQuizzes = false;
+          });
+          print('✅ ${quizzes.length} quizzes carregados com sucesso');
+
+          // Debug: Verificar estado dos quizzes
+          for (var quiz in quizzes) {
+            print(
+                '🔍 Quiz: ${quiz['titulo']}, Estado: ${quiz['estado']}, Expirou: ${quiz['expirou']}, Ativo: ${quiz['ativo']}');
+          }
+        } else if (data is List) {
           setState(() {
             quizzes = data.cast<Map<String, dynamic>>();
             loadingQuizzes = false;
           });
+          print('✅ ${quizzes.length} quizzes carregados (formato alternativo)');
         } else {
           setState(() {
             quizzes = [];
             loadingQuizzes = false;
           });
+          print('⚠️ Nenhum quiz encontrado para o curso');
         }
       } else {
         setState(() {
+          error = 'Erro ao carregar quizzes (${response.statusCode})';
           quizzes = [];
           loadingQuizzes = false;
         });
+        print('❌ Erro HTTP: ${response.statusCode}');
       }
     } catch (e) {
+      print('❌ Erro ao carregar quizzes: $e');
       setState(() {
+        error = 'Não foi possível carregar os quizzes. Verifique a conexão.';
         quizzes = [];
         loadingQuizzes = false;
       });
     }
   }
 
-  Future<void> _submitAvaliacao() async {
-    if (_rating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Por favor, selecione uma classificação'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+  // ========== TÓPICOS E SUBMISSÕES (CURSOS SÍNCRONOS) ==========
+  Future<void> _fetchTopicos() async {
+    if (isCursoAssincrono) {
+      print('⚠️ Tentativa de carregar tópicos para curso assíncrono');
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
     try {
-      final body = {
-        'rating': _rating,
-        'comentario': _comentarioController.text.trim(),
-      };
+      setState(() {
+        loadingTopicos = true;
+        error = null;
+      });
 
-      final response = minhaAvaliacao == null
-          ? await _apiService.post('/avaliacoes/curso/${widget.cursoId}',
-              body: body)
-          : await _apiService.put(
-              '/avaliacoes/${minhaAvaliacao!['id_avaliacao']}',
-              body: body);
+      print('🎯 Buscando tópicos para curso síncrono: ${widget.cursoId}');
+      final response =
+          await _apiService.get('/topicos-curso/curso/${widget.cursoId}');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              minhaAvaliacao == null
-                  ? 'Avaliação enviada com sucesso!'
-                  : 'Avaliação atualizada com sucesso!',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
+      print('📡 Status da resposta tópicos: ${response.statusCode}');
+      print('📄 Corpo da resposta tópicos: ${response.body}');
 
-        // Recarregar avaliações
-        await _fetchAvaliacoes();
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
+          final topicos = data.cast<Map<String, dynamic>>();
+          final topicoAvaliacao = topicos.firstWhere(
+            (topico) => topico['nome']?.toString().toLowerCase() == 'avaliação',
+            orElse: () => {},
+          );
+
+          if (topicoAvaliacao.isNotEmpty) {
+            setState(() {
+              this.topicoAvaliacao = topicoAvaliacao;
+              loadingTopicos = false;
+            });
+            print(
+                '✅ Tópico de avaliação encontrado: ${topicoAvaliacao['nome']}');
+          } else {
+            setState(() {
+              this.topicoAvaliacao = null;
+              loadingTopicos = false;
+            });
+            print('⚠️ Nenhum tópico de avaliação encontrado');
+          }
+        } else {
+          setState(() {
+            topicoAvaliacao = null;
+            loadingTopicos = false;
+          });
+          print('⚠️ Resposta não é uma lista de tópicos');
+        }
       } else {
-        throw Exception('Erro na resposta do servidor');
+        setState(() {
+          error = 'Erro ao carregar tópicos (${response.statusCode})';
+          loadingTopicos = false;
+        });
+        print('❌ Erro HTTP: ${response.statusCode}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao enviar avaliação. Tente novamente.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
+      print('❌ Erro ao carregar tópicos: $e');
       setState(() {
-        _isSubmitting = false;
+        error = 'Não foi possível carregar os tópicos. Verifique a conexão.';
+        loadingTopicos = false;
       });
     }
   }
 
-  Widget _buildRatingStars({
-    required int currentRating,
-    required Function(int) onRatingChanged,
-    bool interactive = true,
-    double size = 32,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        final starIndex = index + 1;
-        return GestureDetector(
-          onTap: interactive ? () => onRatingChanged(starIndex) : null,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 2),
-            child: Icon(
-              starIndex <= currentRating ? Icons.star : Icons.star_border,
-              color: starIndex <= currentRating ? Colors.amber : Colors.grey,
-              size: size,
-            ),
-          ),
-        );
-      }),
-    );
+  Future<void> _fetchSubmissoesDaPasta(int pastaId) async {
+    try {
+      print('🎯 Buscando submissões para pasta: $pastaId');
+
+      final params = {
+        'id_curso': widget.cursoId,
+        'id_pasta': pastaId.toString(),
+      };
+
+      if (!isFormador) {
+        print('👤 Utilizador é formando - buscando apenas suas submissões');
+      } else {
+        print('👨‍🏫 Utilizador é formador - buscando todas as submissões');
+      }
+
+      final uri = Uri.parse('${_apiService.apiBase}/avaliacoes/submissoes')
+          .replace(queryParameters: params);
+
+      print('🌐 URI completa: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (_apiService.authToken != null)
+            'Authorization': 'Bearer ${_apiService.authToken}',
+        },
+      );
+
+      print('📡 Status submissões: ${response.statusCode}');
+      print('📄 Corpo submissões: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        setState(() {
+          submissoes[pastaId] =
+              data is List ? data.cast<Map<String, dynamic>>() : [];
+        });
+
+        print(
+            '✅ ${submissoes[pastaId]?.length ?? 0} submissões carregadas para pasta $pastaId');
+      } else {
+        setState(() {
+          submissoes[pastaId] = [];
+        });
+        print('❌ Erro ao carregar submissões: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar submissões da pasta $pastaId: $e');
+      setState(() {
+        submissoes[pastaId] = [];
+      });
+    }
   }
 
-  Widget _buildQuizzesSection() {
-    if (!isCursoAssincrono) return SizedBox.shrink();
+  // ========== UI HELPERS ==========
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'Sem data';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} às ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateString;
+    }
+  }
 
+  bool _isDataLimiteExpirada(String? dataLimite) {
+    if (dataLimite == null) return false;
+    try {
+      final limite = DateTime.parse(dataLimite);
+      return DateTime.now().isAfter(limite);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool _isSubmissaoAtrasada(
+      Map<String, dynamic> submissao, Map<String, dynamic> pasta) {
+    final dataLimite = pasta['data_limite'];
+    final dataSubmissao =
+        submissao['data_entrega'] ?? submissao['data_submissao'];
+
+    if (dataLimite == null || dataSubmissao == null) return false;
+
+    try {
+      final limite = DateTime.parse(dataLimite);
+      final entrega = DateTime.parse(dataSubmissao);
+      return entrega.isAfter(limite);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Color _getQuizStatusColor(Map<String, dynamic> quiz) {
+    final estado = quiz['estado'] ?? '';
+    switch (estado) {
+      case 'concluido':
+        return Colors.green;
+      case 'expirado':
+        return Colors.red;
+      case 'disponivel':
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _getQuizStatusText(Map<String, dynamic> quiz) {
+    final estado = quiz['estado'] ?? '';
+    final resposta = quiz['resposta_utilizador'];
+
+    if (resposta != null && resposta['completo'] == true) {
+      final nota = resposta['nota'];
+      return 'Concluído${nota != null ? ' - ${nota}/10' : ''}';
+    }
+
+    switch (estado) {
+      case 'expirado':
+        return 'Expirado';
+      case 'disponivel':
+        return 'Disponível';
+      default:
+        return 'Não disponível';
+    }
+  }
+
+  bool _canStartQuiz(Map<String, dynamic> quiz) {
+    final estado = quiz['estado'] ?? '';
+    final resposta = quiz['resposta_utilizador'];
+    final ativo = quiz['ativo'] ?? false;
+    final expirou = quiz['expirou'] ?? false;
+
+    print('🔍 Verificando se pode iniciar quiz:');
+    print('  - Estado: $estado');
+    print('  - Ativo: $ativo');
+    print('  - Expirou: $expirou');
+    print(
+        '  - Resposta completa: ${resposta != null && resposta['completo'] == true}');
+
+    bool canStart = ativo &&
+        !expirou &&
+        estado == 'disponivel' &&
+        (resposta == null || resposta['completo'] != true);
+
+    print('  - Pode iniciar: $canStart');
+    return canStart;
+  }
+
+  // ========== UI WIDGETS ==========
+  Widget _buildQuizzesSection() {
     return Container(
       margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -266,25 +364,60 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.quiz, color: Colors.blue),
-              SizedBox(width: 8),
-              Text(
-                'Quizzes de Avaliação',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          // Header da seção
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.quiz, color: Colors.blue[700], size: 24),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Quizzes de Avaliação',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ),
+                if (loadingQuizzes)
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+          ),
+
+          // Conteúdo
+          if (loadingQuizzes)
+            Container(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'A carregar quizzes...',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 16),
-          if (loadingQuizzes)
-            Center(child: CircularProgressIndicator())
+            )
           else if (quizzes.isEmpty)
             Container(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(32),
               child: Column(
                 children: [
                   Icon(
@@ -298,8 +431,10 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                  SizedBox(height: 8),
                   Text(
                     'Os quizzes aparecerão aqui quando forem criados pelo formador.',
                     textAlign: TextAlign.center,
@@ -312,8 +447,11 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
               ),
             )
           else
-            Column(
-              children: quizzes.map((quiz) => _buildQuizItem(quiz)).toList(),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: quizzes.map((quiz) => _buildQuizItem(quiz)).toList(),
+              ),
             ),
         ],
       ),
@@ -321,343 +459,1021 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
   }
 
   Widget _buildQuizItem(Map<String, dynamic> quiz) {
-    final disponivel = quiz['disponivel'] ?? true;
-    final concluido = quiz['concluido'] ?? false;
-    final pontuacao = quiz['pontuacao'];
+    final statusColor = _getQuizStatusColor(quiz);
+    final statusText = _getQuizStatusText(quiz);
+    final canStart = _canStartQuiz(quiz);
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: concluido
-                ? Colors.green
-                : (disponivel ? Colors.blue : Colors.grey),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            concluido ? Icons.check : Icons.quiz,
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          quiz['titulo'] ?? 'Quiz sem título',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (quiz['descricao'] != null && quiz['descricao'].isNotEmpty)
-              Text(quiz['descricao']),
-            SizedBox(height: 4),
-            Text(
-              concluido
-                  ? 'Concluído${pontuacao != null ? ' - Pontuação: $pontuacao' : ''}'
-                  : disponivel
-                      ? 'Disponível'
-                      : 'Não disponível',
-              style: TextStyle(
-                color: concluido
-                    ? Colors.green[700]
-                    : (disponivel ? Colors.blue[700] : Colors.grey[600]),
-                fontWeight: FontWeight.w500,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        trailing: disponivel && !concluido
-            ? Icon(Icons.play_arrow, color: Colors.blue)
-            : concluido
-                ? Icon(Icons.check_circle, color: Colors.green)
-                : Icon(Icons.lock, color: Colors.grey),
-        onTap: disponivel && !concluido
-            ? () {
-                // TODO: Navegar para o quiz
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Abrir quiz - Em desenvolvimento')),
-                );
-              }
-            : null,
-      ),
-    );
-  }
+    final titulo = quiz['titulo'] ?? 'Quiz sem título';
+    final descricao = quiz['descricao'];
+    final perguntas = quiz['perguntas']?.length ?? 0;
+    final tempoLimite = quiz['tempo_limite'];
+    final ativo = quiz['ativo'] ?? true;
 
-  Widget _buildMinhaAvaliacaoCard() {
+    print('🎨 Renderizando quiz: $titulo');
+    print('   - Pode iniciar: $canStart');
+    print('   - Status: $statusText');
+
     return Container(
-      margin: EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                minhaAvaliacao == null ? 'Avaliar Curso' : 'Minha Avaliação',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Rating
-              Text(
-                'Classificação',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-              SizedBox(height: 8),
-              _buildRatingStars(
-                currentRating: _rating,
-                onRatingChanged: (rating) {
-                  setState(() {
-                    _rating = rating;
-                  });
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Comentário
-              TextField(
-                controller: _comentarioController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Comentário (opcional)',
-                  hintText: 'Partilhe a sua opinião sobre o curso...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Botão submeter
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitAvaliacao,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isSubmitting
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.send, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              minhaAvaliacao == null
-                                  ? 'Enviar Avaliação'
-                                  : 'Atualizar Avaliação',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ],
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: Offset(0, 1),
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildAvaliacaoItem(Map<String, dynamic> avaliacao) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header do quiz
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.blue[100],
-                  child: Text(
-                    (avaliacao['nome_usuario'] ?? 'U')[0].toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        avaliacao['nome_usuario'] ?? 'Usuário',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      SizedBox(height: 4),
-                      _buildRatingStars(
-                        currentRating: avaliacao['rating'] ?? 0,
-                        onRatingChanged: (_) {},
-                        interactive: false,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-                if (avaliacao['data_avaliacao'] != null)
-                  Text(
-                    _formatDate(avaliacao['data_avaliacao']),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-              ],
-            ),
-            if (avaliacao['comentario'] != null &&
-                avaliacao['comentario'].isNotEmpty) ...[
-              SizedBox(height: 12),
-              Text(
-                avaliacao['comentario'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(String? dateString) {
-    if (dateString == null) return '';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateString;
-    }
-  }
-
-  double _getMediaAvaliacoes() {
-    if (avaliacoes.isEmpty) return 0;
-
-    final soma = avaliacoes.fold<double>(
-        0, (sum, avaliacao) => sum + (avaliacao['rating'] ?? 0));
-    return soma / avaliacoes.length;
-  }
-
-  Widget _buildResumoAvaliacoes() {
-    if (avaliacoes.isEmpty) return SizedBox.shrink();
-
-    final media = _getMediaAvaliacoes();
-    final totalAvaliacoes = avaliacoes.length;
-
-    return Container(
-      margin: EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(
-                'Resumo das Avaliações',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        media.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber[700],
-                        ),
-                      ),
-                      _buildRatingStars(
-                        currentRating: media.round(),
-                        onRatingChanged: (_) {},
-                        interactive: false,
+                      child: Icon(
+                        statusText.contains('Concluído')
+                            ? Icons.check
+                            : Icons.quiz,
+                        color: Colors.white,
                         size: 20,
                       ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Text(
-                        totalAvaliacoes.toString(),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
-                        ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titulo,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          if (descricao != null && descricao.isNotEmpty) ...[
+                            SizedBox(height: 4),
+                            Text(
+                              descricao,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
                       ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 12),
+
+                // Informações do quiz
+                Row(
+                  children: [
+                    if (perguntas > 0) ...[
+                      Icon(Icons.help_outline,
+                          size: 16, color: Colors.grey[600]),
+                      SizedBox(width: 4),
                       Text(
-                        totalAvaliacoes == 1 ? 'Avaliação' : 'Avaliações',
+                        '$perguntas pergunta${perguntas != 1 ? 's' : ''}',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           color: Colors.grey[600],
                         ),
                       ),
                     ],
-                  ),
-                ],
-              ),
-            ],
+                    if (perguntas > 0 &&
+                        tempoLimite != null &&
+                        tempoLimite > 0) ...[
+                      SizedBox(width: 16),
+                      Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                      SizedBox(width: 4),
+                      Text(
+                        '${tempoLimite}min',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+
+                SizedBox(height: 12),
+
+                // Status do quiz
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            statusText.contains('Concluído')
+                                ? Icons.check_circle
+                                : statusText.contains('Expirado')
+                                    ? Icons.lock
+                                    : Icons.play_arrow,
+                            size: 14,
+                            color: statusColor,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            statusText,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+
+          // Botão de ação - CORRIGIDO: Mostrar para formandos sempre que puderem iniciar
+          if (canStart && isFormando)
+            Container(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    print(
+                        '🎯 Botão de iniciar quiz pressionado: ${quiz['titulo']}');
+                    _showQuizDialog(quiz);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.play_arrow, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Iniciar Quiz',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // Debug widget para mostrar informações do quiz
+          if (canStart && !isFormando)
+            Container(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Text(
+                  'Apenas formandos podem fazer quizzes',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildLoadingWidget() {
-    return Center(
+  void _iniciarQuiz(Map<String, dynamic> quiz) {
+    final quizId = quiz['id_quiz']?.toString();
+
+    if (quizId == null) {
+      print('❌ ID do quiz não encontrado');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro: ID do quiz não encontrado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print('🎯 Navegando para quiz: $quizId');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizScreen(
+          quizId: quizId,
+          cursoId: widget.cursoId,
+        ),
+      ),
+    ).then((result) {
+      print('🔄 Voltou da tela do quiz, recarregando dados...');
+      _fetchQuizzes();
+    });
+  }
+
+  void _showQuizDialog(Map<String, dynamic> quiz) {
+    print('📋 Mostrando diálogo do quiz: ${quiz['titulo']}');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.quiz, color: Colors.blue),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Iniciar Quiz',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                quiz['titulo'] ?? 'Quiz',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              if (quiz['descricao'] != null &&
+                  quiz['descricao'].isNotEmpty) ...[
+                SizedBox(height: 8),
+                Text(
+                  quiz['descricao'],
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+              SizedBox(height: 16),
+              if (quiz['perguntas']?.length != null &&
+                  quiz['perguntas'].length > 0)
+                Row(
+                  children: [
+                    Icon(Icons.help_outline, size: 16, color: Colors.grey[600]),
+                    SizedBox(width: 4),
+                    Text('${quiz['perguntas'].length} perguntas'),
+                  ],
+                ),
+              if (quiz['tempo_limite'] != null && quiz['tempo_limite'] > 0) ...[
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                    SizedBox(width: 4),
+                    Text('Tempo limite: ${quiz['tempo_limite']} minutos'),
+                  ],
+                ),
+              ],
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ao iniciar, você será direcionado para a tela do quiz.',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                print('❌ Cancelando diálogo do quiz');
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                print('✅ Confirmando iniciar quiz');
+                Navigator.of(context).pop();
+                _iniciarQuiz(quiz);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Iniciar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSubmissoesSection() {
+    if (loadingTopicos) {
+      return Container(
+        padding: EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'A carregar avaliações...',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (topicoAvaliacao == null) {
+      return Container(
+        margin: EdgeInsets.all(16),
+        padding: EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.folder_outlined,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Nenhum tópico de avaliação criado',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'O formador ainda não criou nenhum tópico de avaliação para este curso.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final pastas = topicoAvaliacao!['pastas'] as List? ?? [];
+
+    if (pastas.isEmpty) {
+      return Container(
+        margin: EdgeInsets.all(16),
+        padding: EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.assignment_outlined,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Sem avaliações disponíveis',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Não há pastas de avaliação no tópico.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Header da seção
+        Container(
+          margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.assignment, color: Colors.orange[700], size: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Avaliações do Curso',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Lista de pastas
+        ...pastas.map<Widget>((pasta) => _buildPastaItem(pasta)).toList(),
+
+        SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildPastaItem(Map<String, dynamic> pasta) {
+    final pastaId = pasta['id_pasta'] as int;
+    final isExpanded = expandedPastas.contains(pastaId);
+    final dataLimite = pasta['data_limite'];
+    final isExpirada = _isDataLimiteExpirada(dataLimite);
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: isExpirada ? Colors.red[200]! : Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
+          // Header da pasta
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  expandedPastas.remove(pastaId);
+                } else {
+                  expandedPastas.add(pastaId);
+                  _fetchSubmissoesDaPasta(pastaId);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_right,
+                        color: Colors.grey[600],
+                        size: 24,
+                      ),
+                      SizedBox(width: 8),
+                      Icon(
+                        Icons.folder,
+                        color: isExpirada ? Colors.red : Colors.orange,
+                        size: 24,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          pasta['nome'] ?? 'Pasta sem nome',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (dataLimite != null) ...[
+                    SizedBox(height: 12),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isExpirada ? Colors.red[50] : Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isExpirada
+                              ? Colors.red[200]!
+                              : Colors.orange[200]!,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isExpirada ? Icons.warning : Icons.schedule,
+                            size: 16,
+                            color: isExpirada
+                                ? Colors.red[700]
+                                : Colors.orange[700],
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isExpirada
+                                  ? 'Prazo expirado em ${_formatDate(dataLimite)}'
+                                  : 'Prazo: ${_formatDate(dataLimite)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isExpirada
+                                    ? Colors.red[700]
+                                    : Colors.orange[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // Conteúdo expandido
+          if (isExpanded) ...[
+            Divider(height: 1, color: Colors.grey[200]),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Conteúdos da pasta
+                  _buildConteudosSection(pasta),
+
+                  SizedBox(height: 16),
+
+                  // Submissões baseadas no tipo de utilizador
+                  if (!isFormador)
+                    _buildMinhasSubmissoesSection(pastaId)
+                  else
+                    _buildSubmissoesFormandosSection(pastaId),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConteudosSection(Map<String, dynamic> pasta) {
+    final conteudos = pasta['conteudos'] as List? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.description, size: 16, color: Colors.blue[700]),
+            SizedBox(width: 8),
+            Text(
+              'Materiais de Apoio',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Colors.blue[700],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        if (conteudos.isEmpty)
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey[400], size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Sem materiais disponíveis',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else
+          ...conteudos
+              .map<Widget>((conteudo) => Container(
+                    margin: EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[100]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          conteudo['tipo'] == 'video'
+                              ? Icons.video_file
+                              : Icons.description,
+                          size: 20,
+                          color: Colors.blue[700],
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            conteudo['titulo'] ??
+                                conteudo['arquivo_path']?.split('/').last ??
+                                'Ficheiro sem nome',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Visualização de conteúdo em desenvolvimento'),
+                                backgroundColor: Colors.blue,
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.open_in_new,
+                              size: 16, color: Colors.blue[700]),
+                        ),
+                      ],
+                    ),
+                  ))
+              .toList(),
+      ],
+    );
+  }
+
+  Widget _buildMinhasSubmissoesSection(int pastaId) {
+    final minhasSubmissoes = submissoes[pastaId] ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.upload_file, size: 16, color: Colors.green[700]),
+            SizedBox(width: 8),
+            Text(
+              'Minhas Submissões',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Colors.green[700],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        if (minhasSubmissoes.isEmpty)
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber[200]!),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.upload_file, color: Colors.amber[700], size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Nenhuma submissão enviada',
+                      style: TextStyle(
+                        color: Colors.amber[700],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Envie seus trabalhos através da plataforma web.',
+                  style: TextStyle(
+                    color: Colors.amber[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...minhasSubmissoes
+              .map<Widget>(
+                  (submissao) => _buildSubmissaoItem(submissao, pastaId))
+              .toList(),
+      ],
+    );
+  }
+
+  Widget _buildSubmissoesFormandosSection(int pastaId) {
+    final submissoesFormandos = submissoes[pastaId] ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.group, size: 16, color: Colors.purple[700]),
+            SizedBox(width: 8),
+            Text(
+              'Submissões dos Formandos',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Colors.purple[700],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        if (submissoesFormandos.isEmpty)
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey[400], size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Nenhuma submissão recebida',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else
+          ...submissoesFormandos
+              .map<Widget>((submissao) =>
+                  _buildSubmissaoFormandoItem(submissao, pastaId))
+              .toList(),
+      ],
+    );
+  }
+
+  Widget _buildSubmissaoItem(Map<String, dynamic> submissao, int pastaId) {
+    final pasta = topicoAvaliacao?['pastas']?.firstWhere(
+          (p) => p['id_pasta'] == pastaId,
+          orElse: () => {},
+        ) ??
+        {};
+
+    final atrasada = _isSubmissaoAtrasada(submissao, pasta);
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: atrasada ? Colors.red[50] : Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: atrasada ? Colors.red[200]! : Colors.green[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: atrasada ? Colors.red[700] : Colors.green[700],
+                size: 20,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  submissao['nome_ficheiro'] ??
+                      submissao['ficheiro_path']?.split('/').last ??
+                      'Ficheiro',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+              if (atrasada)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Atrasada',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8),
           Text(
-            'A carregar avaliações...',
+            'Enviado em ${_formatDate(submissao['data_submissao'] ?? submissao['data_entrega'])}',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               color: Colors.grey[600],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmissaoFormandoItem(
+      Map<String, dynamic> submissao, int pastaId) {
+    final pasta = topicoAvaliacao?['pastas']?.firstWhere(
+          (p) => p['id_pasta'] == pastaId,
+          orElse: () => {},
+        ) ??
+        {};
+
+    final atrasada = _isSubmissaoAtrasada(submissao, pasta);
+    final nomeFormando = submissao['utilizador']?['nome'] ??
+        submissao['nome_formando'] ??
+        'Formando';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border:
+            Border.all(color: atrasada ? Colors.red[200]! : Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.blue[100],
+                child: Text(
+                  nomeFormando.substring(0, 1).toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.blue[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nomeFormando,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      _formatDate(submissao['data_submissao'] ??
+                          submissao['data_entrega']),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (atrasada)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Atrasada',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                          Text('Visualização de submissão em desenvolvimento'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                },
+                icon: Icon(Icons.visibility, size: 20, color: Colors.blue),
+              ),
+            ],
           ),
         ],
       ),
@@ -671,7 +1487,7 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
         margin: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.red[50],
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.red[200]!),
         ),
         child: Column(
@@ -679,25 +1495,35 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
           children: [
             Icon(
               Icons.error_outline,
-              color: Colors.red,
+              color: Colors.red[700],
               size: 48,
             ),
             SizedBox(height: 16),
             Text(
+              'Erro ao Carregar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
               error!,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.red[700],
+                fontSize: 14,
+                color: Colors.red[600],
               ),
             ),
             SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _fetchAvaliacoes,
-              child: Text('Tentar Novamente'),
+              onPressed: _initializeData,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
               ),
+              child: Text('Tentar Novamente'),
             ),
           ],
         ),
@@ -707,109 +1533,18 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return _buildLoadingWidget();
-    }
-
     if (error != null) {
       return _buildErrorWidget();
     }
 
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.star_outline, color: Colors.blue),
-                SizedBox(width: 8),
-                Text(
-                  'Avaliação',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Seção de Quizzes (apenas para cursos assíncronos)
-          if (isCursoAssincrono) _buildQuizzesSection(),
-
-          // Separador visual (se houver quizzes)
+          // Conteúdo baseado no tipo de curso
           if (isCursoAssincrono)
-            Container(
-              height: 2,
-              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Colors.grey[300]!, Colors.transparent],
-                ),
-              ),
-            ),
-
-          // Resumo das avaliações
-          _buildResumoAvaliacoes(),
-
-          // Minha avaliação
-          _buildMinhaAvaliacaoCard(),
-
-          // Lista de avaliações
-          if (avaliacoes.isNotEmpty) ...[
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Todas as Avaliações',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ...avaliacoes.map((avaliacao) => _buildAvaliacaoItem(avaliacao)),
-            SizedBox(height: 16),
-          ] else if (minhaAvaliacao == null) ...[
-            Center(
-              child: Container(
-                padding: EdgeInsets.all(24),
-                margin: EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.star_border,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Seja o primeiro a avaliar este curso!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+            _buildQuizzesSection()
+          else
+            _buildSubmissoesSection(),
         ],
       ),
     );

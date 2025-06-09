@@ -161,7 +161,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           {/* Configurações */}
 
           <div className="sidebar-section">
-            <h3>Configurações</h3>
+            <h3>Pessoal</h3>
             <ul>
               
                 <li className={isActive('/percurso-formativo') ? 'active' : ''}>
@@ -173,19 +173,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <Link to="/perfil" onClick={toggleSidebar}>
                   <i className="fas fa-user"></i> Perfil
                 </Link>
-              </li>
-              <li className={isActive('/definicoes') ? 'active' : ''}>
-                <Link to="/definicoes" onClick={toggleSidebar}>
-                  <i className="fas fa-cog"></i> Definições
-                </Link>
-              </li>
-              <li>
-                <a href="#" onClick={(e) => {
-                  e.preventDefault();
-                  toggleSidebar();
-                }}>
-                  <i className="fas fa-question-circle"></i> Ajuda
-                </a>
               </li>
             </ul>
           </div>

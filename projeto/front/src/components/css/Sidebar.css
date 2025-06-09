@@ -64,7 +64,7 @@
 
 .sidebar-content ul li a:hover {
   background-color: rgba(204, 109, 0, 0.15);
-  color: var(--primary-color);
+  color: #ff8000;
 }
 
 .sidebar-content ul li.active a {
@@ -78,13 +78,15 @@
   border: none;
   font-size: 1.8rem;
   cursor: pointer;
-  color: #888;
+  color: #000 !important;
   align-self: flex-end;
   margin-bottom: 0.5rem;
   transition: color 0.3s;
+  z-index: 101;
 }
 
 .close-btn:hover {
+  font-size: 2rem;
   color: #000;
 }
 

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../services/api_service.dart';
+import '../../widgets/network_image_widget.dart';
 
 class DetalhesCurso extends StatefulWidget {
   final String cursoId;
   final Map<String, dynamic> curso;
   final bool inscrito;
   final int? userRole;
+  final bool mostrarDetalhes; // Novo parâmetro
   final Function(bool)? onInscricaoChanged;
 
   const DetalhesCurso({
@@ -16,6 +18,7 @@ class DetalhesCurso extends StatefulWidget {
     required this.curso,
     required this.inscrito,
     this.userRole,
+    required this.mostrarDetalhes, // Novo parâmetro obrigatório
     this.onInscricaoChanged,
   }) : super(key: key);
 
@@ -25,7 +28,6 @@ class DetalhesCurso extends StatefulWidget {
 
 class _DetalhesCursoState extends State<DetalhesCurso> {
   bool _isLoading = false;
-  bool _mostrarDetalhes = true;
   Map<String, dynamic>? formadorData;
   Map<String, dynamic>? categoriaData;
   Map<String, dynamic>? areaData;
@@ -37,9 +39,6 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
   @override
   void initState() {
     super.initState();
-    // Se não estiver inscrito, mostrar detalhes por padrão
-    // Se estiver inscrito, não mostrar detalhes por padrão
-    _mostrarDetalhes = !widget.inscrito;
     _loadAdditionalData();
   }
 
@@ -145,13 +144,6 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
             backgroundColor: newState ? Colors.green : Colors.orange,
           ),
         );
-
-        // Se acabou de se inscrever, esconder detalhes
-        if (newState) {
-          setState(() {
-            _mostrarDetalhes = false;
-          });
-        }
       } else {
         throw Exception('Erro na resposta do servidor');
       }
@@ -228,6 +220,33 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     return true;
   }
 
+  // MUDANÇA: Usar método do ApiService para URL da imagem
+  String _getImageUrl() {
+    final imagePath = widget.curso['imagem_path'] as String?;
+    if (imagePath != null && imagePath.isNotEmpty) {
+      return _apiService.getCursoImageUrl(imagePath);
+    }
+
+    // Tentar usar nome do curso como fallback
+    final nomeCurso = widget.curso['nome'] as String?;
+    if (nomeCurso != null && nomeCurso.isNotEmpty) {
+      final nomeCursoSlug = nomeCurso
+          .toLowerCase()
+          .replaceAll(' ', '-')
+          .replaceAll(RegExp(r'[^\w-]+'), '');
+      return _apiService.getCursoCapaUrl(nomeCursoSlug);
+    }
+
+    // Usar dir_path se disponível
+    final dirPath = widget.curso['dir_path'] as String?;
+    if (dirPath != null && dirPath.isNotEmpty) {
+      return _apiService.getCursoImageUrl('$dirPath/capa.png');
+    }
+
+    // Fallback para imagem padrão
+    return _apiService.getCursoImageUrl(null);
+  }
+
   Widget _buildCursoHeader() {
     final status = _formatEstadoParaExibicao(widget.curso['estado']);
     final statusColor = _getEstadoColor(widget.curso['estado']);
@@ -248,96 +267,97 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       ),
       child: Column(
         children: [
-          // Header com título e status
+          // Header com título e status usando CursoImage
           Container(
-            padding: EdgeInsets.all(20),
+            height: 200,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Colors.blue.withOpacity(0.8),
-                  Colors.blue.withOpacity(0.6),
-                ],
-              ),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.curso['nome'] ?? '',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                // Imagem de fundo usando CursoImage
+                Positioned.fill(
+                  child: CursoImage(
+                    imageUrl: _getImageUrl(),
+                    fallbackUrl: _apiService.getCursoImageUrl(null),
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
                     ),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.blue.withOpacity(0.8),
+                        Colors.blue.withOpacity(0.6),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.curso['descricao'] ??
-                            'Sem descrição disponível.',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                // Conteúdo sobre a imagem
+                Positioned.fill(
+                  child: Container(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.curso['nome'] ?? '',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        SizedBox(height: 10),
+                        Text(
+                          widget.curso['descricao'] ??
+                              'Sem descrição disponível.',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _mostrarDetalhes = !_mostrarDetalhes;
-                        });
-                      },
-                      icon: Icon(
-                        _mostrarDetalhes
-                            ? Icons.expand_less
-                            : Icons.info_outline,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      tooltip: _mostrarDetalhes
-                          ? 'Ocultar detalhes'
-                          : 'Mostrar detalhes',
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Detalhes expandidos
-          if (_mostrarDetalhes) _buildDetalhesExpandidos(),
+          // Detalhes expandidos (controlados pelo parâmetro mostrarDetalhes)
+          if (widget.mostrarDetalhes) _buildDetalhesExpandidos(),
         ],
       ),
     );

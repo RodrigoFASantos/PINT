@@ -58,7 +58,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
 
   Widget _buildHeader() {
     return Container(
-      height: 200,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -69,77 +68,85 @@ class _SidebarScreenState extends State<SidebarScreen> {
           ],
         ),
       ),
-      child: Column(
-        children: [
-          const SizedBox(height: 40), // Status bar padding
+      child: SafeArea(
+        child: Container(
+          height: 180, // Altura reduzida
+          child: Column(
+            children: [
+              // Botão de fechar
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
 
-          // Botão de fechar
-          Align(
-            alignment: Alignment.topRight,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
+              const Spacer(),
 
-          const Spacer(),
-
-          // Avatar e informações do utilizador
-          if (widget.currentUser != null) ...[
-            CircleAvatar(
-              radius: 35,
-              backgroundColor: Colors.white,
-              child: CircleAvatar(
-                radius: 32,
-                backgroundColor: const Color(0xFFFF8000),
-                child: Text(
-                  _getUserInitials(),
-                  style: const TextStyle(
+              // Avatar e informações do utilizador
+              if (widget.currentUser != null) ...[
+                CircleAvatar(
+                  radius: 30, // Reduzido de 35 para 30
+                  backgroundColor: Colors.white,
+                  child: CircleAvatar(
+                    radius: 27, // Reduzido proporcionalmente
+                    backgroundColor: const Color(0xFFFF8000),
+                    child: Text(
+                      _getUserInitials(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20, // Reduzido de 24 para 20
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8), // Reduzido de 12 para 8
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    widget.currentUser!['nome'] ?? 'Utilizador',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16, // Reduzido de 18 para 16
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 2), // Reduzido de 4 para 2
+                Text(
+                  _getUserRole(),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 13, // Reduzido de 14 para 13
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ] else ...[
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 35, color: Color(0xFFFF8000)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Utilizador',
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              widget.currentUser!['nome'] ?? 'Utilizador',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _getUserRole(),
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ] else ...[
-            const CircleAvatar(
-              radius: 35,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 40, color: Color(0xFFFF8000)),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Utilizador',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+              ],
 
-          const SizedBox(height: 20),
-        ],
+              const SizedBox(height: 16), // Reduzido de 20 para 16
+            ],
+          ),
+        ),
       ),
     );
   }

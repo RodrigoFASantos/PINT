@@ -428,7 +428,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                 <div className="presencas-actions">
                     {/* Botão de atualização manual adicionado */}
                     <button
-                        className="btn-refresh"
+                        className="btn-refresh-presencas"
                         onClick={(e) => {
                             e.stopPropagation();
                             refreshData();
@@ -484,7 +484,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                     ) : presencas.length === 0 ? (
                         <div className="empty-message">Nenhuma presença registrada para este curso.</div>
                     ) : (
-                        <div className="table-container">
+                        <div className="table-presencas-container">
                             <table className="presencas-table">
                                 <thead>
                                     <tr>

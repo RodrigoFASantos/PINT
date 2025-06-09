@@ -36,6 +36,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
   // Para marcar presença (formando)
   bool showMarcarModal = false;
   String codigoMarcar = '';
+  Map<String, dynamic>? presencaParaMarcar;
 
   // Para ver lista de formandos
   bool showListaFormandosModal = false;
@@ -160,6 +161,27 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
+  // Verificar se uma presença específica ainda está ativa (pode ser marcada)
+  bool _presencaEstaAtiva(Map<String, dynamic> presenca) {
+    try {
+      final agora = DateTime.now();
+      final dataHoraFim =
+          DateTime.parse('${presenca['data_fim']}T${presenca['hora_fim']}');
+      return dataHoraFim.isAfter(agora);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Abrir modal para marcar presença específica
+  void _abrirModalMarcarPresenca(Map<String, dynamic> presenca) {
+    setState(() {
+      presencaParaMarcar = presenca;
+      showMarcarModal = true;
+      codigoMarcar = '';
+    });
+  }
+
   Future<void> _criarPresenca() async {
     if (codigo.isEmpty ||
         dataInicio == null ||
@@ -259,12 +281,15 @@ class _PresencasCursoState extends State<PresencasCurso> {
         setState(() {
           showMarcarModal = false;
           codigoMarcar = '';
+          presencaParaMarcar = null;
         });
 
         _showSuccess('Presença marcada com sucesso!');
         await _refreshData();
       } else {
-        _showError('Código de presença inválido ou expirado');
+        final errorData = json.decode(response.body);
+        _showError(
+            errorData['message'] ?? 'Código de presença inválido ou expirado');
       }
     } catch (e) {
       _showError('Erro ao marcar presença: $e');
@@ -509,20 +534,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                             temPresencaAtiva ? Colors.grey : Colors.green,
                       ),
                     ),
-                  if (isFormando)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          showMarcarModal = true;
-                          codigoMarcar = '';
-                        });
-                      },
-                      icon: Icon(Icons.check),
-                      label: Text('Marcar Presença'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
-                    ),
                   SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
@@ -548,6 +559,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                               presenca['id_curso_presenca'].toString();
                           final jaPresente =
                               minhasPresencas[presencaId] ?? false;
+                          final presencaAtiva = _presencaEstaAtiva(presenca);
 
                           return Card(
                             margin: EdgeInsets.only(bottom: 8),
@@ -597,10 +609,37 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  // Mostrar status para formandos
+                                  if (isFormando &&
+                                      presencaAtiva &&
+                                      !jaPresente)
+                                    Text(
+                                      'Presença ativa - Clique para marcar',
+                                      style: TextStyle(
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                 ],
                               ),
-                              trailing: isFormador
-                                  ? IconButton(
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Botão para formandos marcarem presença
+                                  if (isFormando &&
+                                      presencaAtiva &&
+                                      !jaPresente)
+                                    IconButton(
+                                      onPressed: () =>
+                                          _abrirModalMarcarPresenca(presenca),
+                                      icon:
+                                          Icon(Icons.check, color: Colors.blue),
+                                      tooltip: 'Marcar presença',
+                                    ),
+                                  // Botão para formadores verem lista
+                                  if (isFormador)
+                                    IconButton(
                                       onPressed: () {
                                         setState(() {
                                           presencaSelecionada = presenca;
@@ -610,7 +649,12 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                       },
                                       icon: Icon(Icons.people_outline),
                                       tooltip: 'Ver formandos',
-                                    )
+                                    ),
+                                ],
+                              ),
+                              // Permitir tap na presença ativa para formandos
+                              onTap: isFormando && presencaAtiva && !jaPresente
+                                  ? () => _abrirModalMarcarPresenca(presenca)
                                   : null,
                             ),
                           );
@@ -633,6 +677,9 @@ class _PresencasCursoState extends State<PresencasCurso> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
+                ),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
                 ),
                 child: SingleChildScrollView(
                   child: Column(
@@ -867,25 +914,58 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           onPressed: () {
                             setState(() {
                               showMarcarModal = false;
+                              presencaParaMarcar = null;
                             });
                           },
                           icon: Icon(Icons.close),
                         ),
                       ],
                     ),
+                    SizedBox(height: 8),
+                    // Mostrar informação da presença selecionada
+                    if (presencaParaMarcar != null)
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Presença selecionada:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue[800],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '${_formatDate(presencaParaMarcar!['data_inicio'])} ${presencaParaMarcar!['hora_inicio']} - ${_formatDate(presencaParaMarcar!['data_fim'])} ${presencaParaMarcar!['hora_fim']}',
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     SizedBox(height: 16),
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Código de Presença',
                         border: OutlineInputBorder(),
+                        hintText: 'Insira o código fornecido pelo formador',
                       ),
                       controller: TextEditingController(text: codigoMarcar),
                       onChanged: (value) {
                         setState(() {
-                          codigoMarcar = value;
+                          codigoMarcar = value.toUpperCase();
                         });
                       },
                       textCapitalization: TextCapitalization.characters,
+                      autofocus: true,
                     ),
                     SizedBox(height: 24),
                     Row(
@@ -895,6 +975,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                             onPressed: () {
                               setState(() {
                                 showMarcarModal = false;
+                                presencaParaMarcar = null;
                               });
                             },
                             child: Text('Cancelar'),

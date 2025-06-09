@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../main.dart'; // Para AppUtils e AuthManager
 import '../../components/sidebar_screen.dart';
+import '../../widgets/network_image_widget.dart';
 
 class PerfilScreen extends StatefulWidget {
   @override
@@ -120,20 +121,73 @@ class _PerfilScreenState extends State<PerfilScreen>
     }
   }
 
+  // MUDANÇA: Métodos para obter URLs das imagens usando o ApiService
+  String _getAvatarUrl() {
+    if (_userData == null) return _apiService.defaultAvatarUrl;
+
+    final email = _userData!['email'] as String?;
+    final fotoPerfilPath = _userData!['foto_perfil'] as String?;
+
+    if (email == null || email.isEmpty) return _apiService.defaultAvatarUrl;
+
+    // Se a foto_perfil é o padrão ou está vazia, usar imagem padrão
+    if (fotoPerfilPath == null ||
+        fotoPerfilPath.isEmpty ||
+        fotoPerfilPath == 'AVATAR.png') {
+      return _apiService.defaultAvatarUrl;
+    }
+
+    return _apiService.getUserAvatarUrl(email);
+  }
+
+  String _getCapaUrl() {
+    if (_userData == null) return _apiService.defaultCapaUrl;
+
+    final email = _userData!['email'] as String?;
+    final fotoCapaPath = _userData!['foto_capa'] as String?;
+
+    if (email == null || email.isEmpty) return _apiService.defaultCapaUrl;
+
+    // Se a foto_capa é o padrão ou está vazia, usar imagem padrão
+    if (fotoCapaPath == null ||
+        fotoCapaPath.isEmpty ||
+        fotoCapaPath == 'CAPA.png') {
+      return _apiService.defaultCapaUrl;
+    }
+
+    return _apiService.getUserCapaUrl(email);
+  }
+
   Widget _buildProfileHeader() {
     return Container(
       height: 200,
       child: Stack(
         children: [
-          // Imagem de capa
+          // Imagem de capa usando CustomNetworkImage
           Container(
             height: 150,
             width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF8000), Color(0xFFFF6600)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            child: CustomNetworkImage(
+              imageUrl: _getCapaUrl(),
+              fallbackUrl: _apiService.defaultCapaUrl,
+              width: double.infinity,
+              height: 150,
+              fit: BoxFit.cover,
+              errorWidget: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFF8000), Color(0xFFFF6600)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.landscape,
+                    size: 48,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                ),
               ),
             ),
           ),
@@ -154,15 +208,12 @@ class _PerfilScreenState extends State<PerfilScreen>
             ),
           ),
 
-          // Avatar
+          // Avatar usando AvatarImage
           Positioned(
             bottom: 0,
             left: 20,
             child: Container(
-              width: 100,
-              height: 100,
               decoration: BoxDecoration(
-                color: Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 4),
                 boxShadow: [
@@ -173,15 +224,11 @@ class _PerfilScreenState extends State<PerfilScreen>
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: Container(
-                  color: Color(0xFFFF8000),
-                  child: Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.white,
-                  ),
-                ),
+              child: AvatarImage(
+                imageUrl: _getAvatarUrl(),
+                fallbackUrl: _apiService.defaultAvatarUrl,
+                radius: 46, // 50 - 4 (border width)
+                backgroundColor: Color(0xFFFF8000),
               ),
             ),
           ),
