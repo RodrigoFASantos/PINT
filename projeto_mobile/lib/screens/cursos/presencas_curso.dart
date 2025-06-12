@@ -33,10 +33,9 @@ class _PresencasCursoState extends State<PresencasCurso> {
   DateTime? dataFim;
   TimeOfDay? horaFim;
 
-  // Para marcar presença (formando)
+  // Para marcar presença (formando) - SIMPLIFICADO
   bool showMarcarModal = false;
   String codigoMarcar = '';
-  Map<String, dynamic>? presencaParaMarcar;
 
   // Para ver lista de formandos
   bool showListaFormandosModal = false;
@@ -221,25 +220,12 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // Verificar se uma presença específica ainda está ativa (pode ser marcada)
-  bool _presencaEstaAtiva(Map<String, dynamic> presenca) {
-    try {
-      final agora = DateTime.now();
-      final dataHoraFim =
-          DateTime.parse('${presenca['data_fim']}T${presenca['hora_fim']}');
-      return dataHoraFim.isAfter(agora);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Abrir modal para marcar presença específica
-  void _abrirModalMarcarPresenca(Map<String, dynamic> presenca) {
+  // SIMPLIFICADO: Abrir modal geral para marcar presença
+  void _abrirModalMarcarPresenca() {
     setState(() {
-      presencaParaMarcar = presenca;
       showMarcarModal = true;
       codigoMarcar = '';
-      _codigoMarcarController.clear(); // Limpar o controller
+      _codigoMarcarController.clear();
     });
   }
 
@@ -352,7 +338,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
           dataFim = null;
           horaFim = null;
           horasNovaPresenca = 0;
-          _codigoCriarController.clear(); // Limpar o controller
+          _codigoCriarController.clear();
         });
 
         _showSuccess('Presença criada com sucesso!');
@@ -370,6 +356,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
+  // SIMPLIFICADO: Marcar presença baseado no React
   Future<void> _marcarPresenca() async {
     if (_codigoMarcarController.text.isEmpty) {
       _showError('Preencha o código de presença');
@@ -388,21 +375,21 @@ class _PresencasCursoState extends State<PresencasCurso> {
 
       final body = {
         'id_curso': widget.cursoId,
-        'id_utilizador':
-            currentUser!['id_utilizador'], // CORRIGIDO: Incluir id_utilizador
+        'id_utilizador': currentUser!['id_utilizador'],
         'codigo': _codigoMarcarController.text,
       };
 
       final response = await _apiService.post('/presencas/marcar', body: body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Fechar modal primeiro
         setState(() {
           showMarcarModal = false;
           _codigoMarcarController.clear();
-          presencaParaMarcar = null;
         });
 
         _showSuccess('Presença marcada com sucesso!');
+        // Atualizar dados completos
         await _refreshData();
       } else {
         final errorData = json.decode(response.body);
@@ -674,6 +661,17 @@ class _PresencasCursoState extends State<PresencasCurso> {
                       ),
                     ),
                   ],
+                  // SIMPLIFICADO: Botão geral para marcar presença (formandos)
+                  if (isFormando) ...[
+                    ElevatedButton.icon(
+                      onPressed: _abrirModalMarcarPresenca,
+                      icon: Icon(Icons.check),
+                      label: Text('Marcar Presença'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ],
                   SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
@@ -699,7 +697,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                               presenca['id_curso_presenca'].toString();
                           final jaPresente =
                               minhasPresencas[presencaId] ?? false;
-                          final presencaAtiva = _presencaEstaAtiva(presenca);
 
                           return Card(
                             margin: EdgeInsets.only(bottom: 8),
@@ -749,34 +746,11 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  // Mostrar status para formandos
-                                  if (isFormando &&
-                                      presencaAtiva &&
-                                      !jaPresente)
-                                    Text(
-                                      'Presença ativa - Clique para marcar',
-                                      style: TextStyle(
-                                        color: Colors.blue[700],
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
                                 ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Botão para formandos marcarem presença
-                                  if (isFormando &&
-                                      presencaAtiva &&
-                                      !jaPresente)
-                                    IconButton(
-                                      onPressed: () =>
-                                          _abrirModalMarcarPresenca(presenca),
-                                      icon:
-                                          Icon(Icons.check, color: Colors.blue),
-                                      tooltip: 'Marcar presença',
-                                    ),
                                   // Botão para formadores verem lista
                                   if (isFormador)
                                     IconButton(
@@ -792,10 +766,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                     ),
                                 ],
                               ),
-                              // Permitir tap na presença ativa para formandos
-                              onTap: isFormando && presencaAtiva && !jaPresente
-                                  ? () => _abrirModalMarcarPresenca(presenca)
-                                  : null,
                             ),
                           );
                         },
@@ -805,8 +775,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
           ],
         ),
 
-        // Modais
-        // Modal criar presença
+        // Modal criar presença (formadores)
         if (showCriarModal)
           Container(
             color: Colors.black54,
@@ -1101,7 +1070,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
             ),
           ),
 
-        // Modal marcar presença
+        // SIMPLIFICADO: Modal marcar presença (formandos)
         if (showMarcarModal)
           Container(
             color: Colors.black54,
@@ -1131,43 +1100,12 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           onPressed: () {
                             setState(() {
                               showMarcarModal = false;
-                              presencaParaMarcar = null;
                             });
                           },
                           icon: Icon(Icons.close),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
-                    // Mostrar informação da presença selecionada
-                    if (presencaParaMarcar != null)
-                      Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Presença selecionada:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue[800],
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              '${_formatDate(presencaParaMarcar!['data_inicio'])} ${presencaParaMarcar!['hora_inicio']} - ${_formatDate(presencaParaMarcar!['data_fim'])} ${presencaParaMarcar!['hora_fim']}',
-                              style: TextStyle(
-                                color: Colors.blue[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     SizedBox(height: 16),
                     TextField(
                       controller: _codigoMarcarController,
@@ -1176,7 +1114,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         border: OutlineInputBorder(),
                         hintText: 'Insira o código fornecido pelo formador',
                       ),
-                      // CORRIGIDO: Remover textCapitalization para evitar comportamento estranho
                       autofocus: true,
                     ),
                     SizedBox(height: 24),
@@ -1187,7 +1124,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                             onPressed: () {
                               setState(() {
                                 showMarcarModal = false;
-                                presencaParaMarcar = null;
                               });
                             },
                             child: Text('Cancelar'),
@@ -1196,8 +1132,8 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _marcarPresenca,
-                            child: Text('Marcar'),
+                            onPressed: loading ? null : _marcarPresenca,
+                            child: Text(loading ? 'Processando...' : 'Marcar'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                             ),

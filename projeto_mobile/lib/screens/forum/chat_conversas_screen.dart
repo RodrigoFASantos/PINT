@@ -238,6 +238,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
+  // ✅ CORRIGIDO: Usar endpoint e payload corretos
   Future<void> _denunciarTema(int temaId) async {
     // Verificar se já foi denunciado
     if (temasDenunciados.contains(temaId)) {
@@ -263,8 +264,10 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         }
       });
 
+      // ✅ CORRIGIDO: Usar endpoint correto e incluir id_tema no body
       final response =
-          await _apiService.post('/forum-tema/tema/$temaId/denunciar', body: {
+          await _apiService.post('/denuncias/forum-tema/denunciar', body: {
+        'id_tema': temaId,
         'motivo': motivo,
       });
 

@@ -595,6 +595,12 @@ class _PerfilScreenState extends State<PerfilScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('Perfil'),
+          backgroundColor: const Color(0xFFFF8000),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -612,6 +618,12 @@ class _PerfilScreenState extends State<PerfilScreen>
 
     if (_userData == null) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('Perfil'),
+          backgroundColor: const Color(0xFFFF8000),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -635,6 +647,12 @@ class _PerfilScreenState extends State<PerfilScreen>
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Perfil'),
+        backgroundColor: const Color(0xFFFF8000),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       drawer: SidebarScreen(
         currentUser: _userData,
         currentRoute: '/perfil',
