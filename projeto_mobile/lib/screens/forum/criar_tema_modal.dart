@@ -344,7 +344,8 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
           stream,
           length,
           filename: _anexoInfo!['nome'],
-          contentType: MediaType.parse(contentType),
+          contentType:
+              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
         );
 
         request.files.add(multipartFile);

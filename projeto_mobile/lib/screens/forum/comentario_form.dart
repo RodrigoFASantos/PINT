@@ -365,7 +365,8 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
           length,
           filename:
               _anexoNome ?? 'anexo_${DateTime.now().millisecondsSinceEpoch}',
-          contentType: MediaType.parse(contentType),
+          contentType:
+              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
         );
 
         request.files.add(multipartFile);

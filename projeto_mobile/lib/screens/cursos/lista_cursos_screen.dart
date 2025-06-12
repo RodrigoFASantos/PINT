@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart'; // ← MUDANÇA: usar ApiService
-import '../../main.dart'; // Para AppUtils
+import '../../services/api_service.dart';
+import '../../main.dart';
 import '../../widgets/network_image_widget.dart';
+import '../../components/Navbar_screen.dart';
+import '../../components/sidebar_screen.dart';
+import 'dart:convert';
 
 class ListaCursosPage extends StatefulWidget {
   @override
@@ -9,7 +12,8 @@ class ListaCursosPage extends StatefulWidget {
 }
 
 class _ListaCursosPageState extends State<ListaCursosPage> {
-  final ApiService _apiService = ApiService(); // ← MUDANÇA: usar ApiService
+  final ApiService _apiService = ApiService();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<Map<String, dynamic>> cursos = [];
   List<Map<String, dynamic>> categorias = [];
@@ -32,13 +36,18 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
   String topicoId = '';
   String tipoFiltro = 'todos';
 
+  // Para sidebar e navbar
+  Map<String, dynamic>? currentUser;
+  bool isLoadingUser = true;
+  bool hasConnectionError = false;
+
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _initializeScreen();
     _searchController.addListener(() {
       if (searchTerm != _searchController.text) {
         setState(() {
@@ -49,11 +58,90 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     });
   }
 
+  Future<void> _initializeScreen() async {
+    // Verificar se a API está conectada
+    final isConnected = await _apiService.testConnection();
+    if (!isConnected) {
+      debugPrint('⚠️ API não conectada, tentando reconectar...');
+      await _apiService.reconnect();
+    }
+
+    // Carregar dados do usuário e iniciais
+    await Future.wait([
+      _loadUserData(),
+      _loadInitialData(),
+    ]);
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      setState(() {
+        hasConnectionError = false;
+      });
+
+      // Verificar se há token
+      final token = _apiService.authToken;
+      if (token != null) {
+        // Buscar dados completos do usuário usando o método correto
+        final userData = await _apiService.getCurrentUser();
+        if (userData != null) {
+          setState(() {
+            currentUser = userData;
+            isLoadingUser = false;
+          });
+        } else {
+          // Se falhar ao obter dados, tentar método alternativo
+          final response = await _apiService.get('/users/perfil');
+          if (response.statusCode == 200) {
+            final responseData = json.decode(response.body);
+            setState(() {
+              currentUser = responseData;
+              isLoadingUser = false;
+            });
+          } else {
+            setState(() {
+              isLoadingUser = false;
+              hasConnectionError = true;
+            });
+          }
+        }
+      } else {
+        setState(() {
+          isLoadingUser = false;
+        });
+      }
+    } catch (error) {
+      debugPrint('Erro ao carregar dados do usuário: $error');
+      setState(() {
+        isLoadingUser = false;
+        hasConnectionError = true;
+      });
+    }
+  }
+
+  Future<void> _retryConnection() async {
+    setState(() {
+      isLoadingUser = true;
+      hasConnectionError = false;
+    });
+
+    await _apiService.reconnect();
+    await _initializeScreen();
+  }
+
+  void _toggleSidebar() {
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      _scaffoldKey.currentState?.closeDrawer();
+    } else {
+      _scaffoldKey.currentState?.openDrawer();
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -67,8 +155,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
 
   Future<void> _fetchCategorias() async {
     try {
-      final response =
-          await _apiService.get('/categorias'); // ← MUDANÇA: usar ApiService
+      final response = await _apiService.get('/categorias');
 
       if (response.statusCode == 200) {
         final data = _apiService.parseResponseToList(response);
@@ -85,8 +172,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
 
   Future<void> _fetchAreas() async {
     try {
-      final response =
-          await _apiService.get('/areas'); // ← MUDANÇA: usar ApiService
+      final response = await _apiService.get('/areas');
 
       if (response.statusCode == 200) {
         final data = _apiService.parseResponseToList(response);
@@ -103,8 +189,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
 
   Future<void> _fetchTopicos() async {
     try {
-      final response =
-          await _apiService.get('/topicos-area'); // ← MUDANÇA: usar ApiService
+      final response = await _apiService.get('/topicos-area');
 
       if (response.statusCode == 200) {
         final data = _apiService.parseResponseToList(response);
@@ -145,8 +230,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
         endpoint += '?$queryString';
       }
 
-      final response =
-          await _apiService.get(endpoint); // ← MUDANÇA: usar ApiService
+      final response = await _apiService.get(endpoint);
 
       if (response.statusCode == 200) {
         final data = _apiService.parseResponseToMap(response);
@@ -224,7 +308,6 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
   }
 
   void _navigateToCurso(Map<String, dynamic> curso) {
-    // ← MUDANÇA: navegar para rota /curso com ID como argumento
     final cursoId = curso['id_curso']?.toString() ?? curso['id']?.toString();
 
     if (cursoId != null && cursoId.isNotEmpty) {
@@ -238,14 +321,14 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
-  // MUDANÇA: Usar método do ApiService para URL das imagens
   String _getImageUrl(Map<String, dynamic> curso) {
+    // Primeiro: verificar se tem imagem_path
     final imagePath = curso['imagem_path'] as String?;
     if (imagePath != null && imagePath.isNotEmpty) {
       return _apiService.getCursoImageUrl(imagePath);
     }
 
-    // Tentar usar nome do curso como fallback
+    // Segundo: tentar usar nome do curso como fallback
     final nomeCurso = curso['nome'] as String?;
     if (nomeCurso != null && nomeCurso.isNotEmpty) {
       final nomeCursoSlug = nomeCurso
@@ -255,7 +338,13 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
       return _apiService.getCursoCapaUrl(nomeCursoSlug);
     }
 
-    // Fallback para imagem padrão
+    // Terceiro: usar dir_path se disponível
+    final dirPath = curso['dir_path'] as String?;
+    if (dirPath != null && dirPath.isNotEmpty) {
+      return _apiService.getCursoImageUrl('$dirPath/capa.png');
+    }
+
+    // Fallback final: imagem padrão
     return _apiService.getCursoImageUrl(null);
   }
 
@@ -468,6 +557,8 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
                   height: 200,
                   fit: BoxFit.cover,
                   borderRadius: BorderRadius.circular(8),
+                  cursoNome: curso['nome'],
+                  showLoadingText: false,
                 ),
               ),
               // Overlay com informações
@@ -590,12 +681,91 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Mostrar loading enquanto carrega os dados do usuário
+    if (isLoadingUser) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8000)),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'A carregar dados...',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Mostrar erro de conectividade se existir
+    if (hasConnectionError) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Cursos'),
+          backgroundColor: Color(0xFFFF8000),
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.cloud_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Problema de Conectividade',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Não foi possível conectar ao servidor.\nVerifique sua conexão e tente novamente.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _retryConnection,
+                  icon: Icon(Icons.refresh),
+                  label: Text('Tentar Novamente'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFF8000),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Cursos'),
-        elevation: 1,
-        backgroundColor: Color(0xFFFF8000), // ← MUDANÇA: usar cor padrão da app
-        foregroundColor: Colors.white,
+      key: _scaffoldKey,
+      appBar: NavbarScreen(
+        onToggleSidebar: _toggleSidebar,
+        currentUser: currentUser,
+      ),
+      drawer: SidebarScreen(
+        currentUser: currentUser,
+        currentRoute: '/cursos',
       ),
       body: Column(
         children: [

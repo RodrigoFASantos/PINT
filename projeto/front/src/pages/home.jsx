@@ -16,12 +16,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshCount, setRefreshCount] = useState(0);
-  const [showPasswordModal, setShowPasswordModal] = useState(false); // Estado para controlar o modal
-  const [userId, setUserId] = useState(null); // Estado para armazenar o ID do usuário
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [filtroAtivo, setFiltroAtivo] = useState('todos'); // Estado para o filtro
+
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalInscricoes, setTotalInscricoes] = useState(0);
+  const inscricoesPerPage = 12; // Número de inscrições por página
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const textRef = useRef(null); // REFERÊNCIA para o span
+  const textRef = useRef(null);
 
   const texts = [
     "Aprender aqui é mais fácil",
@@ -159,9 +166,10 @@ export default function Home() {
     return fallbackCurso;
   };
 
+  // Função atualizada para buscar inscrições com paginação
   const buscarInscricoes = async () => {
     try {
-      console.log(`Buscando inscrições (contagem: ${refreshCount})`);
+      console.log(`Buscando inscrições (página: ${currentPage}, contagem: ${refreshCount})`);
       setLoading(true);
       const token = localStorage.getItem('token');
 
@@ -177,9 +185,29 @@ export default function Home() {
         }
       };
 
-      const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes`, config);
+      // Adicionar parâmetros de paginação
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: inscricoesPerPage.toString()
+      });
+
+      const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes?${params.toString()}`, config);
       console.log('Inscrições recebidas:', response.data);
-      setInscricoes(response.data);
+      
+      // Verificar se a resposta tem a estrutura esperada com paginação
+      if (response.data.inscricoes) {
+        // Se a API retorna um objeto com paginação
+        setInscricoes(response.data.inscricoes);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalInscricoes(response.data.total || response.data.inscricoes.length);
+      } else {
+        // Se a API retorna apenas um array (compatibilidade com versão anterior)
+        setInscricoes(response.data);
+        const total = response.data.length;
+        setTotalInscricoes(total);
+        setTotalPages(Math.ceil(total / inscricoesPerPage));
+      }
+      
       setLoading(false);
       setRefreshCount(prev => prev + 1);
     } catch (err) {
@@ -193,6 +221,54 @@ export default function Home() {
     console.log('Redirecionando para o curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
   };
+
+  // Função para filtrar as inscrições
+  const filtrarInscricoes = () => {
+    if (filtroAtivo === 'ativos') {
+      // Filtra apenas cursos com status que indicam atividade
+      return inscricoes.filter(inscricao => {
+        const status = inscricao.status ? inscricao.status.toLowerCase() : 'agendado';
+        // Considera ativos: em andamento, agendado, iniciado, etc.
+        // Exclui: finalizado, cancelado, concluído, etc.
+        return !['finalizado', 'cancelado', 'concluído', 'terminado', 'encerrado'].includes(status);
+      });
+    }
+    return inscricoes; // Retorna todos se filtro for 'todos'
+  };
+
+  const inscricoesFiltradas = filtrarInscricoes();
+
+  // Buscar inscrições sempre que a página mudar
+  useEffect(() => {
+    buscarInscricoes();
+  }, [currentPage]);
+
+  // Resetar para primeira página quando filtro mudar
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [filtroAtivo]);
+
+  // Funções para navegação de páginas
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Calcular o total de inscrições filtradas para exibir nos botões
+  const totalTodos = inscricoes.length;
+  const totalAtivos = inscricoes.filter(inscricao => {
+    const status = inscricao.status ? inscricao.status.toLowerCase() : 'agendado';
+    return !['finalizado', 'cancelado', 'concluído', 'terminado', 'encerrado'].includes(status);
+  }).length;
 
   return (
     <div className="home-container">
@@ -217,48 +293,97 @@ export default function Home() {
 
       <div className="content-container">
         <section className="cursos-section">
-          <h2 className="section-title">Cursos Inscrito</h2>
+          <div className="section-header">
+            <h2 className="section-title">Cursos Inscrito</h2>
+            
+            {/* Filtro de cursos */}
+            <div className="filtro-cursos">
+              <button 
+                className={`filtro-btn ${filtroAtivo === 'todos' ? 'ativo' : ''}`}
+                onClick={() => setFiltroAtivo('todos')}
+              >
+                Todos ({totalTodos})
+              </button>
+              <button 
+                className={`filtro-btn ${filtroAtivo === 'ativos' ? 'ativo' : ''}`}
+                onClick={() => setFiltroAtivo('ativos')}
+              >
+                Ativos ({totalAtivos})
+              </button>
+            </div>
+          </div>
+
           {loading ? (
             <div className="loading">Carregando cursos...</div>
           ) : error ? (
             <div className="error-message">{error}</div>
-          ) : inscricoes.length > 0 ? (
-            <div className="cursos-grid">
+          ) : inscricoesFiltradas.length > 0 ? (
+            <>
+              <div className="cursos-grid">
+                {inscricoesFiltradas.map((inscricao) => (
+                  <div
+                    key={inscricao.id}
+                    className="cartao-curso"
+                    onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
+                  >
+                    <div className="curso-imagem-container">
+                      <img
+                        src={getImageUrl(inscricao)}
+                        alt={inscricao.nomeCurso}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = fallbackCurso;
+                        }}
+                      />
+                    </div>
+                    <div className="curso-info">
+                      <p className="curso-titulo">{inscricao.nomeCurso}</p>
+                      <p className="curso-detalhe">Categoria: {inscricao.categoria}</p>
+                      <p className="curso-detalhe">Área: {inscricao.area}</p>
 
-              {inscricoes.map((inscricao) => (
-                <div
-                  key={inscricao.id}
-                  className="cartao-curso"
-                  onClick={() => redirecionarParaDetalheCurso(inscricao.cursoId)}
-                >
-                  <div className="curso-imagem-container">
-                    <img
-                      src={getImageUrl(inscricao)}
-                      alt={inscricao.nomeCurso}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = fallbackCurso;
-                      }}
-                    />
-                  </div>
-                  <div className="curso-info">
-                    <p className="curso-titulo">{inscricao.nomeCurso}</p>
-                    <p className="curso-detalhe">Categoria: {inscricao.categoria}</p>
-                    <p className="curso-detalhe">Área: {inscricao.area}</p>
-
-                    
-                    <div className={`estado-curso status-${inscricao.status ? inscricao.status.toLowerCase().replace(/\s+/g, '-') : 'agendado'}`}>
-                      {inscricao.status || 'Agendado'}
+                      <div className={`estado-curso status-${inscricao.status ? inscricao.status.toLowerCase().replace(/\s+/g, '-') : 'agendado'}`}>
+                        {inscricao.status || 'Agendado'}
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {/* Paginação - só mostra se há mais de uma página */}
+              {totalPages > 1 && (
+                <div className="pagination-container">
+                  <button 
+                    onClick={goToPreviousPage} 
+                    disabled={currentPage === 1} 
+                    className={`pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
+                    aria-label="Página anterior"
+                  >
+                    <span className="pagination-icon">&#10094;</span>
+                  </button>
+                  
+                  <span className="pagination-info">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  
+                  <button 
+                    onClick={goToNextPage} 
+                    disabled={currentPage === totalPages} 
+                    className={`pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
+                    aria-label="Próxima página"
+                  >
+                    <span className="pagination-icon">&#10095;</span>
+                  </button>
                 </div>
-              ))}
-
-            </div>
-
+              )}
+            </>
           ) : (
             <div className="sem-inscricoes">
-              <p>Você não está inscrito em nenhum curso.</p>
+              <p>
+                {filtroAtivo === 'ativos' 
+                  ? 'Você não possui cursos ativos no momento.' 
+                  : 'Você não está inscrito em nenhum curso.'
+                }
+              </p>
             </div>
           )}
         </section>
@@ -269,8 +394,6 @@ export default function Home() {
             <CursosSugeridos />
           </div>
         </section>
-
-        
       </div>
     </div>
   );

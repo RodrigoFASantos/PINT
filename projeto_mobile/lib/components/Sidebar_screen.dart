@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../main.dart'; // Para AppUtils
+import '../providers/notificacoes_provider.dart';
+import '../screens/notificacoes_screen.dart';
+import '../main.dart';
 
 class SidebarScreen extends StatefulWidget {
   final Map<String, dynamic>? currentUser;
@@ -18,6 +21,7 @@ class SidebarScreen extends StatefulWidget {
 
 class _SidebarScreenState extends State<SidebarScreen> {
   int? userRole;
+  final _apiService = ApiService();
 
   @override
   void initState() {
@@ -36,16 +40,19 @@ class _SidebarScreenState extends State<SidebarScreen> {
         color: Colors.white,
         child: Column(
           children: [
-            _buildHeader(),
+            // ✅ REMOVIDO: NavbarScreen (agora está sempre no AppBar principal)
+
+            // Conteúdo da sidebar
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
+                    _buildUserSection(),
                     _buildGeneralSection(),
-                    if (userRole == 3) _buildFormandoSection(),
-                    if (userRole == 2) _buildFormadorSection(),
-                    if (userRole == 1) _buildAdminSection(),
-                    _buildConfiguracoesSection(),
+                    _buildFormandoSection(),
+                    _buildFormadorSection(),
+                    _buildAdminSection(),
+                    _buildPessoalSection(),
                   ],
                 ),
               ),
@@ -56,97 +63,55 @@ class _SidebarScreenState extends State<SidebarScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  /// Secção do utilizador (avatar grande + informações)
+  Widget _buildUserSection() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFFF8000),
-            const Color(0xFFFF6600),
-          ],
-        ),
-      ),
-      child: SafeArea(
-        child: Container(
-          height: 180, // Altura reduzida
-          child: Column(
-            children: [
-              // Botão de fechar
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Avatar grande
+          if (widget.currentUser != null) ...[
+            _buildUserAvatar(),
+            const SizedBox(height: 12),
+            Text(
+              widget.currentUser!['nome'] ?? 'Utilizador',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
-
-              const Spacer(),
-
-              // Avatar e informações do utilizador
-              if (widget.currentUser != null) ...[
-                CircleAvatar(
-                  radius: 30, // Reduzido de 35 para 30
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 27, // Reduzido proporcionalmente
-                    backgroundColor: const Color(0xFFFF8000),
-                    child: Text(
-                      _getUserInitials(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20, // Reduzido de 24 para 20
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8), // Reduzido de 12 para 8
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    widget.currentUser!['nome'] ?? 'Utilizador',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16, // Reduzido de 18 para 16
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 2), // Reduzido de 4 para 2
-                Text(
-                  _getUserRole(),
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 13, // Reduzido de 14 para 13
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ] else ...[
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 35, color: Color(0xFFFF8000)),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Utilizador',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 16), // Reduzido de 20 para 16
-            ],
-          ),
-        ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _getUserRole(),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ] else ...[
+            const CircleAvatar(
+              radius: 40,
+              backgroundColor: Color(0xFFFF8000),
+              child: Icon(Icons.person, size: 40, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Utilizador',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          const Divider(height: 1, thickness: 1),
+        ],
       ),
     );
   }
@@ -164,15 +129,19 @@ class _SidebarScreenState extends State<SidebarScreen> {
   }
 
   Widget _buildFormandoSection() {
+    // Sempre mostrar para todos os utilizadores (como no React)
     return _buildSection(
       'Formando',
       [
-        // Por enquanto vazio como no React
+        // Secção vazia como no React - sempre visível para todos os utilizadores
       ],
     );
   }
 
   Widget _buildFormadorSection() {
+    // Só mostrar se for formador
+    if (userRole != 2) return const SizedBox();
+
     return _buildSection(
       'Formador',
       [
@@ -182,17 +151,20 @@ class _SidebarScreenState extends State<SidebarScreen> {
   }
 
   Widget _buildAdminSection() {
+    // Só mostrar se for administrador
+    if (userRole != 1) return const SizedBox();
+
     return _buildSection(
       'Administração',
       [
         _buildMenuItem('Dashboard', Icons.dashboard, '/admin/dashboard'),
-        _buildMenuItem('Gerir Cursos', Icons.book_outlined, '/admin/cursos'),
+        _buildMenuItem('Gerir Cursos', Icons.book_online, '/admin/cursos'),
         _buildMenuItem('Gerir Utilizadores', Icons.people, '/admin/usuarios'),
         _buildMenuItem('Gerenciar Denúncias', Icons.flag, '/admin/denuncias'),
         _buildMenuItem('Percurso Formandos', Icons.trending_up,
             '/admin/percurso-formandos'),
         _buildMenuItem('Gerir Categorias', Icons.category, '/admin/categorias'),
-        _buildMenuItem('Gerir Áreas', Icons.business, '/admin/areas'),
+        _buildMenuItem('Gerir Áreas', Icons.domain, '/admin/areas'),
         _buildMenuItem('Gerir Tópicos', Icons.topic, '/admin/topicos'),
         _buildMenuItem('Criar Curso', Icons.add_circle, '/admin/criar-curso'),
         _buildMenuItem(
@@ -201,14 +173,12 @@ class _SidebarScreenState extends State<SidebarScreen> {
     );
   }
 
-  Widget _buildConfiguracoesSection() {
+  Widget _buildPessoalSection() {
     return _buildSection(
-      'Configurações',
+      'Pessoal',
       [
         _buildMenuItem('Meu Percurso', Icons.timeline, '/percurso-formativo'),
         _buildMenuItem('Perfil', Icons.person_outline, '/perfil'),
-        _buildMenuItem('Definições', Icons.settings, '/definicoes'),
-        _buildMenuItem('Ajuda', Icons.help_outline, null, onTap: _showHelp),
       ],
     );
   }
@@ -255,14 +225,13 @@ class _SidebarScreenState extends State<SidebarScreen> {
         '/cursos': ['/cursos'],
         '/formadores': ['/formadores'],
         '/forum': ['/forum'],
-        '/definicoes': ['/definicoes'],
       };
 
       // Verificar se a rota atual corresponde a alguma das rotas mapeadas
       if (routeMapping.containsKey(route)) {
         isActive = routeMapping[route]!.contains(widget.currentRoute);
       } else {
-        // Para rotas admin e outras, verificar se a rota atual começa com a rota do menu
+        // Para outras rotas, verificar se a rota atual começa com a rota do menu
         isActive = widget.currentRoute == route ||
             (route != '/' && widget.currentRoute.startsWith(route));
       }
@@ -307,6 +276,8 @@ class _SidebarScreenState extends State<SidebarScreen> {
     );
   }
 
+  // Métodos de navegação e utilitários
+
   void _navigate(String? route) {
     if (route == null) return;
 
@@ -335,7 +306,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
       '/cursos': ['/cursos'],
       '/formadores': ['/formadores'],
       '/forum': ['/forum'],
-      '/definicoes': ['/definicoes'],
     };
 
     if (routeMapping.containsKey(route)) {
@@ -344,34 +314,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
 
     return widget.currentRoute == route ||
         (route != '/' && widget.currentRoute.startsWith(route));
-  }
-
-  void _showHelp() {
-    Navigator.pop(context); // Fechar sidebar
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ajuda'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Como posso ajudar?'),
-            SizedBox(height: 16),
-            Text('• Para suporte técnico, contacte o administrador'),
-            Text('• Para dúvidas sobre cursos, consulte a secção Cursos'),
-            Text('• Para gerir o seu perfil, aceda às Configurações'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   String _getUserInitials() {
@@ -399,5 +341,103 @@ class _SidebarScreenState extends State<SidebarScreen> {
       default:
         return 'Utilizador';
     }
+  }
+
+  // Método para obter URL da imagem do avatar (grande)
+  String? _getAvatarUrl() {
+    if (widget.currentUser == null) return null;
+
+    final email = widget.currentUser!['email'] as String?;
+    final fotoPerfilPath = widget.currentUser!['foto_perfil'] as String?;
+
+    if (email == null || email.isEmpty) return null;
+
+    // Se a foto_perfil é o padrão ou está vazia, não usar imagem
+    if (fotoPerfilPath == null ||
+        fotoPerfilPath.isEmpty ||
+        fotoPerfilPath == 'AVATAR.png') {
+      return null;
+    }
+
+    return _apiService.getUserAvatarUrl(email);
+  }
+
+  // Widget para o avatar grande com imagem ou iniciais
+  Widget _buildUserAvatar() {
+    final avatarUrl = _getAvatarUrl();
+
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: Colors.white,
+      child: avatarUrl != null
+          ? CircleAvatar(
+              radius: 37,
+              backgroundColor: const Color(0xFFFF8000),
+              child: ClipOval(
+                child: Image.network(
+                  avatarUrl,
+                  width: 74,
+                  height: 74,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('Erro ao carregar avatar na sidebar: $error');
+                    // Fallback para iniciais quando a imagem falha
+                    return Container(
+                      width: 74,
+                      height: 74,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF8000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getUserInitials(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    // Mostrar iniciais enquanto carrega
+                    return Container(
+                      width: 74,
+                      height: 74,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF8000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getUserInitials(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            )
+          : CircleAvatar(
+              radius: 37,
+              backgroundColor: const Color(0xFFFF8000),
+              child: Text(
+                _getUserInitials(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+    );
   }
 }

@@ -44,6 +44,19 @@ class _PresencasCursoState extends State<PresencasCurso> {
   List<Map<String, dynamic>> formandosLista = [];
   bool loadingFormandos = false;
 
+  // Controllers para os TextFields
+  late TextEditingController _codigoMarcarController;
+  late TextEditingController _codigoCriarController;
+
+  // Variáveis para horas do curso
+  double horasDisponiveis = 0.0;
+  double duracaoCurso = 0.0;
+  double horasUtilizadas = 0.0;
+  double horasNovaPresenca = 0.0;
+
+  // Dados do usuário atual
+  Map<String, dynamic>? currentUser;
+
   final ApiService _apiService = ApiService();
 
   // Verificar se é formador (cargos 1=admin ou 2=formador) ou formando (cargo 3)
@@ -53,7 +66,31 @@ class _PresencasCursoState extends State<PresencasCurso> {
   @override
   void initState() {
     super.initState();
-    _refreshData();
+    // Inicializar os controllers
+    _codigoMarcarController = TextEditingController();
+    _codigoCriarController = TextEditingController();
+    _getCurrentUser();
+  }
+
+  @override
+  void dispose() {
+    // Fazer dispose dos controllers
+    _codigoMarcarController.dispose();
+    _codigoCriarController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentUser() async {
+    try {
+      currentUser = await _apiService.getCurrentUser();
+      _refreshData();
+    } catch (e) {
+      print('Erro ao obter usuário atual: $e');
+      setState(() {
+        error = 'Erro ao obter dados do usuário';
+        loading = false;
+      });
+    }
   }
 
   Future<void> _refreshData() async {
@@ -115,11 +152,16 @@ class _PresencasCursoState extends State<PresencasCurso> {
           }
         }
 
+        // Se for formador, buscar horas disponíveis
+        if (isFormador) {
+          await _fetchHorasDisponiveis();
+        }
+
         // Se for formando, buscar suas presenças
-        if (isFormando) {
+        if (isFormando && currentUser != null) {
           try {
-            final minhasPresencasResponse = await _apiService
-                .get('/presencas/formando/${widget.cursoId}/me');
+            final minhasPresencasResponse = await _apiService.get(
+                '/presencas/formando/${widget.cursoId}/${currentUser!['id_utilizador']}');
 
             if (minhasPresencasResponse.statusCode == 200) {
               final minhasPresencasData =
@@ -161,6 +203,24 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
+  Future<void> _fetchHorasDisponiveis() async {
+    try {
+      final response = await _apiService
+          .get('/presencas/horas-disponiveis/${widget.cursoId}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          horasDisponiveis = (data['horasDisponiveis'] ?? 0.0).toDouble();
+          duracaoCurso = (data['duracaoCurso'] ?? 0.0).toDouble();
+          horasUtilizadas = (data['horasUtilizadas'] ?? 0.0).toDouble();
+        });
+      }
+    } catch (e) {
+      print('Erro ao buscar horas disponíveis: $e');
+    }
+  }
+
   // Verificar se uma presença específica ainda está ativa (pode ser marcada)
   bool _presencaEstaAtiva(Map<String, dynamic> presenca) {
     try {
@@ -179,7 +239,49 @@ class _PresencasCursoState extends State<PresencasCurso> {
       presencaParaMarcar = presenca;
       showMarcarModal = true;
       codigoMarcar = '';
+      _codigoMarcarController.clear(); // Limpar o controller
     });
+  }
+
+  void _calcularHorasNovaPresenca() {
+    if (dataInicio != null &&
+        horaInicio != null &&
+        dataFim != null &&
+        horaFim != null) {
+      try {
+        final inicio = DateTime(
+          dataInicio!.year,
+          dataInicio!.month,
+          dataInicio!.day,
+          horaInicio!.hour,
+          horaInicio!.minute,
+        );
+
+        final fim = DateTime(
+          dataFim!.year,
+          dataFim!.month,
+          dataFim!.day,
+          horaFim!.hour,
+          horaFim!.minute,
+        );
+
+        if (fim.isAfter(inicio)) {
+          final diferencaMs = fim.difference(inicio).inMilliseconds;
+          final diferencaHoras = diferencaMs / (1000 * 60 * 60);
+          setState(() {
+            horasNovaPresenca = diferencaHoras > 0 ? diferencaHoras : 0;
+          });
+        } else {
+          setState(() {
+            horasNovaPresenca = 0;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          horasNovaPresenca = 0;
+        });
+      }
+    }
   }
 
   Future<void> _criarPresenca() async {
@@ -214,6 +316,13 @@ class _PresencasCursoState extends State<PresencasCurso> {
       return;
     }
 
+    // Verificar se excede horas disponíveis
+    if (horasNovaPresenca > horasDisponiveis) {
+      _showError(
+          'A presença excede as horas disponíveis (${horasDisponiveis.toStringAsFixed(2)}h restantes)');
+      return;
+    }
+
     try {
       setState(() {
         loading = true;
@@ -242,6 +351,8 @@ class _PresencasCursoState extends State<PresencasCurso> {
           horaInicio = null;
           dataFim = null;
           horaFim = null;
+          horasNovaPresenca = 0;
+          _codigoCriarController.clear(); // Limpar o controller
         });
 
         _showSuccess('Presença criada com sucesso!');
@@ -260,8 +371,13 @@ class _PresencasCursoState extends State<PresencasCurso> {
   }
 
   Future<void> _marcarPresenca() async {
-    if (codigoMarcar.isEmpty) {
+    if (_codigoMarcarController.text.isEmpty) {
       _showError('Preencha o código de presença');
+      return;
+    }
+
+    if (currentUser == null) {
+      _showError('Erro: usuário não identificado');
       return;
     }
 
@@ -272,7 +388,9 @@ class _PresencasCursoState extends State<PresencasCurso> {
 
       final body = {
         'id_curso': widget.cursoId,
-        'codigo': codigoMarcar,
+        'id_utilizador':
+            currentUser!['id_utilizador'], // CORRIGIDO: Incluir id_utilizador
+        'codigo': _codigoMarcarController.text,
       };
 
       final response = await _apiService.post('/presencas/marcar', body: body);
@@ -280,7 +398,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         setState(() {
           showMarcarModal = false;
-          codigoMarcar = '';
+          _codigoMarcarController.clear();
           presencaParaMarcar = null;
         });
 
@@ -510,7 +628,26 @@ class _PresencasCursoState extends State<PresencasCurso> {
                     ),
                   ),
                   Spacer(),
-                  if (isFormador)
+                  if (isFormador) ...[
+                    // Mostrar informações de horas para formadores
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Text(
+                        '${horasUtilizadas.toStringAsFixed(1)}h / ${duracaoCurso.toStringAsFixed(1)}h',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: temPresencaAtiva
                           ? null
@@ -525,6 +662,8 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                 horaFim = TimeOfDay.fromDateTime(
                                     agora.add(Duration(hours: 2)));
                                 codigo = _gerarCodigo();
+                                _codigoCriarController.text = codigo;
+                                _calcularHorasNovaPresenca();
                               });
                             },
                       icon: Icon(Icons.add),
@@ -534,6 +673,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                             temPresencaAtiva ? Colors.grey : Colors.green,
                       ),
                     ),
+                  ],
                   SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
@@ -708,6 +848,75 @@ class _PresencasCursoState extends State<PresencasCurso> {
                       ),
                       SizedBox(height: 16),
 
+                      // Mostrar informações de horas
+                      if (isFormador) ...[
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Duração do curso:'),
+                                  Text('${duracaoCurso.toStringAsFixed(1)}h'),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Horas utilizadas:'),
+                                  Text(
+                                      '${horasUtilizadas.toStringAsFixed(2)}h'),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Horas disponíveis:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  Text(
+                                      '${horasDisponiveis.toStringAsFixed(2)}h',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              if (horasNovaPresenca > 0) ...[
+                                SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Esta presença:'),
+                                    Text(
+                                      '${horasNovaPresenca.toStringAsFixed(2)}h',
+                                      style: TextStyle(
+                                        color:
+                                            horasNovaPresenca > horasDisponiveis
+                                                ? Colors.red
+                                                : Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                      ],
+
                       // Código
                       Row(
                         children: [
@@ -717,7 +926,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                 labelText: 'Código',
                                 border: OutlineInputBorder(),
                               ),
-                              controller: TextEditingController(text: codigo),
+                              controller: _codigoCriarController,
                               onChanged: (value) {
                                 setState(() {
                                   codigo = value;
@@ -728,8 +937,10 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           SizedBox(width: 8),
                           ElevatedButton(
                             onPressed: () {
+                              final novoCodigo = _gerarCodigo();
                               setState(() {
-                                codigo = _gerarCodigo();
+                                codigo = novoCodigo;
+                                _codigoCriarController.text = novoCodigo;
                               });
                             },
                             child: Text('Gerar'),
@@ -751,6 +962,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           if (date != null) {
                             setState(() {
                               dataInicio = date;
+                              _calcularHorasNovaPresenca();
                             });
                           }
                         },
@@ -778,6 +990,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           if (time != null) {
                             setState(() {
                               horaInicio = time;
+                              _calcularHorasNovaPresenca();
                             });
                           }
                         },
@@ -808,6 +1021,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           if (date != null) {
                             setState(() {
                               dataFim = date;
+                              _calcularHorasNovaPresenca();
                             });
                           }
                         },
@@ -835,6 +1049,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           if (time != null) {
                             setState(() {
                               horaFim = time;
+                              _calcularHorasNovaPresenca();
                             });
                           }
                         },
@@ -868,7 +1083,9 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _criarPresenca,
+                              onPressed: (horasNovaPresenca > horasDisponiveis)
+                                  ? null
+                                  : _criarPresenca,
                               child: Text('Criar'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
@@ -953,18 +1170,13 @@ class _PresencasCursoState extends State<PresencasCurso> {
                       ),
                     SizedBox(height: 16),
                     TextField(
+                      controller: _codigoMarcarController,
                       decoration: InputDecoration(
                         labelText: 'Código de Presença',
                         border: OutlineInputBorder(),
                         hintText: 'Insira o código fornecido pelo formador',
                       ),
-                      controller: TextEditingController(text: codigoMarcar),
-                      onChanged: (value) {
-                        setState(() {
-                          codigoMarcar = value.toUpperCase();
-                        });
-                      },
-                      textCapitalization: TextCapitalization.characters,
+                      // CORRIGIDO: Remover textCapitalization para evitar comportamento estranho
                       autofocus: true,
                     ),
                     SizedBox(height: 24),

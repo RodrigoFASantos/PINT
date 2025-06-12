@@ -3,7 +3,6 @@ import 'dart:io';
 import '../../services/api_service.dart';
 import '../../main.dart';
 import '../../components/sidebar_screen.dart';
-import '../../components/anexo_widget.dart';
 import '../../screens/forum/criar_tema_modal.dart';
 
 class ChatConversasScreen extends StatefulWidget {
@@ -733,38 +732,10 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                 SizedBox(height: 8),
               ],
 
-              // ✅ ANEXO ÚNICO DO TEMA
+              // ✅ ANEXO ÚNICO DO TEMA - CORRIGIDO PARA MOSTRAR IMAGENS
               if (temAnexo) ...[
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _getIconForType(tipoAnexo),
-                        size: 16,
-                        color: Color(0xFF4A90E2),
-                      ),
-                      SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          anexoNome ?? 'Anexo',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF4A90E2),
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildAnexoTema(
+                    anexoUrl!, anexoNome ?? 'Anexo', tipoAnexo ?? 'arquivo'),
                 SizedBox(height: 8),
               ],
 
@@ -825,6 +796,147 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                     ],
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ NOVO WIDGET PARA MOSTRAR ANEXO DO TEMA
+  Widget _buildAnexoTema(String anexoUrl, String anexoNome, String tipoAnexo) {
+    // Construir URL completa
+    final fullUrl = anexoUrl.startsWith('http')
+        ? anexoUrl
+        : '${_apiService.apiBase.replaceAll('/api', '')}/$anexoUrl';
+
+    if (tipoAnexo == 'imagem') {
+      return InkWell(
+        onTap: () => _showImageDialog(fullUrl, anexoNome),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              fullUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 200,
+                color: Colors.grey[200],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image,
+                          color: Colors.grey[400], size: 32),
+                      SizedBox(height: 8),
+                      Text('Erro ao carregar imagem',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      SizedBox(height: 4),
+                      Text(fullUrl,
+                          style:
+                              TextStyle(color: Colors.grey[500], fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getIconForType(tipoAnexo),
+              size: 16,
+              color: Color(0xFF4A90E2),
+            ),
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                anexoNome,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF4A90E2),
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // ✅ FUNÇÃO PARA MOSTRAR IMAGEM EM FULLSCREEN
+  void _showImageDialog(String imageUrl, String imageName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        child: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: Text(imageName, style: TextStyle(color: Colors.white)),
+                backgroundColor: Colors.black,
+                iconTheme: IconThemeData(color: Colors.white),
+              ),
+              Expanded(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image,
+                              color: Colors.white, size: 64),
+                          SizedBox(height: 16),
+                          Text('Erro ao carregar imagem',
+                              style: TextStyle(color: Colors.white)),
+                          SizedBox(height: 8),
+                          Text(imageUrl,
+                              style: TextStyle(
+                                  color: Colors.grey[400], fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

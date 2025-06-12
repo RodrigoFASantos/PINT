@@ -68,10 +68,20 @@
   clear: both;
 }
 
+/* NOVO: Header da seção com filtro */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
 .section-title {
   font-size: 24px;
   color: #333;
-  margin-bottom: 20px;
+  margin-bottom: 0; /* Removido margin-bottom pois agora está no header */
   position: relative;
   padding-bottom: 10px;
 }
@@ -84,6 +94,46 @@
   width: 50px;
   height: 3px;
   background-color: #ff8000;
+}
+
+/* NOVO: Filtro de cursos */
+.filtro-cursos {
+  display: flex;
+  gap: 10px;
+  background-color: #f8f9fa;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filtro-btn {
+  background-color: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.filtro-btn:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.filtro-btn.ativo {
+  background-color: #ff8000;
+  color: white;
+  box-shadow: 0 2px 4px rgba(255, 128, 0, 0.3);
+}
+
+.filtro-btn.ativo:hover {
+  background-color: #e6720a;
 }
 
 /* Grids */
@@ -119,14 +169,12 @@
   object-fit: cover;
 }
 
-
 .cartao-curso h3 {
   font-size: 1.1rem;
   margin-top: 0;
   margin-bottom: 8px;
   color: #ff8000;
 }
-
 
 /* Status dos cursos */
 .curso-info {
@@ -169,12 +217,6 @@
   background-color: #dcfce7 !important;
 }
 
-
-
-
-
-
-
 /* Mensagens */
 .loading,
 .error-message,
@@ -209,63 +251,7 @@
   font-style: italic;
 }
 
-/* Tablet */
-@media (max-width: 1024px) {
-
-  .cursos-grid,
-  .topicos-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .overlay-text h1 {
-    font-size: 50px;
-  }
-
-  .overlay-text p {
-    font-size: 24px;
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-
-  .cursos-grid,
-  .topicos-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .overlay-text h1 {
-    font-size: 40px;
-  }
-
-  .overlay-text p {
-    font-size: 20px;
-    padding-left: 20px;
-  }
-}
-
-/* Mobile pequeno */
-@media (max-width: 600px) {
-
-  .cursos-grid,
-  .topicos-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .overlay-text h1 {
-    font-size: 32px;
-  }
-
-  .overlay-text p {
-    font-size: 16px;
-    padding-left: 10px;
-  }
-}
-
-
-
-/* Adicione estes estilos ao seu arquivo home.css */
-
+/* Imagens dos cursos */
 .curso-imagem-container {
   width: 100%;
   height: 140px;
@@ -321,10 +307,6 @@
   color: black;
 }
 
-
-
-
-
 .estado-curso {
   display: inline-block;
   padding: 6px 12px;
@@ -379,34 +361,7 @@
   padding-bottom: 8px;
 }
 
-/* Responsividade para telas menores */
-@media (max-width: 768px) {
-  .cursos-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .cursos-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* Animação do cursor */
 .cursor {
   display: inline-block;
   width: 2px;
@@ -447,12 +402,10 @@
 }
 
 @keyframes blink {
-
   0%,
   50% {
     opacity: 1;
   }
-
   51%,
   100% {
     opacity: 0;
@@ -460,15 +413,196 @@
 }
 
 @keyframes jump {
-
   0%,
   100% {
     transform: translateY(0);
     opacity: 0;
   }
-
   50% {
     transform: translateY(-5px);
     opacity: 1;
+  }
+}
+
+/* RESPONSIVIDADE */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .cursos-grid,
+  .topicos-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .overlay-text h1 {
+    font-size: 50px;
+  }
+
+  .overlay-text p {
+    font-size: 24px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filtro-cursos {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .cursos-grid,
+  .topicos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .overlay-text h1 {
+    font-size: 40px;
+  }
+
+  .overlay-text p {
+    font-size: 20px;
+    padding-left: 20px;
+  }
+
+  .cursos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filtro-cursos {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .filtro-btn {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* Mobile pequeno */
+@media (max-width: 600px) {
+  .cursos-grid,
+  .topicos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overlay-text h1 {
+    font-size: 32px;
+  }
+
+  .overlay-text p {
+    font-size: 16px;
+    padding-left: 10px;
+  }
+
+  .cursos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtro-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-width: 70px;
+  }
+}
+
+/* PAGINAÇÃO */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 30px 0;
+  gap: 15px;
+}
+
+.pagination-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.pagination-button:hover:not(.pagination-disabled) {
+  background-color: #ff8000;
+  border-color: #ff8000;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(255, 128, 0, 0.3);
+}
+
+.pagination-button.pagination-active {
+  background-color: #fff;
+  border-color: #ff8000;
+  color: #ff8000;
+}
+
+.pagination-button.pagination-disabled {
+  background-color: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.pagination-icon {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.pagination-info {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin: 0 10px;
+  white-space: nowrap;
+}
+
+/* Responsividade da paginação */
+@media (max-width: 768px) {
+  .pagination-container {
+    margin: 20px 0;
+    gap: 10px;
+  }
+  
+  .pagination-button {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .pagination-info {
+    font-size: 14px;
+    margin: 0 5px;
+  }
+  
+  .pagination-icon {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-info {
+    font-size: 12px;
+  }
+  
+  .pagination-button {
+    width: 30px;
+    height: 30px;
   }
 }

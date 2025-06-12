@@ -455,15 +455,15 @@ const createCurso = async (req, res) => {
   }
 };
 
-
+// 🔧 FUNÇÃO UPDATECURSO CORRIGIDA COM RENOMEAÇÃO DE PASTA
 const updateCurso = async (req, res) => {
   try {
     console.log("Update course request received:");
     console.log("Request params:", req.params);
     console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
 
     const id = req.params.id;
-    // ✅ CORREÇÃO: Adicionar id_topico_area no destructuring
     const { 
       nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, 
       id_formador, id_area, id_categoria, id_topico_area, ativo 
@@ -481,7 +481,81 @@ const updateCurso = async (req, res) => {
 
     console.log(`Course found: ${cursoAtual.nome} (ID: ${id})`);
 
-    // Guardar os dados antigos para comparação
+    // 🔧 NOVA LÓGICA: Verificar se o nome do curso mudou
+    const nomeAtual = cursoAtual.nome;
+    const novoNome = nome || nomeAtual;
+    const nomeMudou = novoNome !== nomeAtual;
+
+    console.log(`📝 Nome atual: "${nomeAtual}"`);
+    console.log(`📝 Novo nome: "${novoNome}"`);
+    console.log(`📝 Nome mudou? ${nomeMudou ? 'SIM' : 'NÃO'}`);
+
+    // Determinar caminhos de pastas
+    const cursoSlugAtual = uploadUtils.normalizarNome(nomeAtual);
+    const novoCursoSlug = uploadUtils.normalizarNome(novoNome);
+    
+    const pastaAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual);
+    const novaPasta = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', novoCursoSlug);
+    
+    const dirPathAtual = cursoAtual.dir_path || `uploads/cursos/${cursoSlugAtual}`;
+    const novoDirPath = `uploads/cursos/${novoCursoSlug}`;
+
+    console.log(`📁 Pasta atual: ${pastaAtual}`);
+    console.log(`📁 Nova pasta: ${novaPasta}`);
+
+    // 🔧 PROCESSAR RENOMEAÇÃO DE PASTA SE NECESSÁRIO
+    let pastaRenomeada = false;
+    if (nomeMudou && fs.existsSync(pastaAtual)) {
+      try {
+        console.log(`🔄 Renomeando pasta de "${pastaAtual}" para "${novaPasta}"`);
+        
+        // Verificar se a nova pasta já existe
+        if (fs.existsSync(novaPasta)) {
+          console.log(`⚠️ Pasta de destino já existe: ${novaPasta}`);
+          // Se já existe, vamos criar um nome único
+          let contador = 1;
+          let novaPastaUnica = `${novaPasta}_${contador}`;
+          while (fs.existsSync(novaPastaUnica)) {
+            contador++;
+            novaPastaUnica = `${novaPasta}_${contador}`;
+          }
+          console.log(`📁 Usando nome único: ${novaPastaUnica}`);
+          fs.renameSync(pastaAtual, novaPastaUnica);
+          
+          // Atualizar caminhos para o nome único
+          const slugUnico = `${novoCursoSlug}_${contador}`;
+          novoDirPath = `uploads/cursos/${slugUnico}`;
+        } else {
+          // Renomear normalmente
+          fs.renameSync(pastaAtual, novaPasta);
+        }
+        
+        pastaRenomeada = true;
+        console.log(`✅ Pasta renomeada com sucesso!`);
+      } catch (renameError) {
+        console.error(`❌ Erro ao renomear pasta:`, renameError);
+        // Continuar sem falhar, mas registar o erro
+        pastaRenomeada = false;
+      }
+    }
+
+    // 🔧 PROCESSAR NOVA IMAGEM
+    let novaImagemPath = cursoAtual.imagem_path; // Manter imagem atual por defeito
+    
+    if (req.file) {
+      // Usar o novo caminho de diretório (após possível renomeação)
+      novaImagemPath = `${novoDirPath}/capa.png`;
+      
+      console.log(`📷 Nova imagem recebida. Caminho: ${novaImagemPath}`);
+      console.log(`📷 Ficheiro original: ${req.file.originalname}`);
+      console.log(`📷 Tamanho: ${req.file.size} bytes`);
+    } else if (nomeMudou && cursoAtual.imagem_path) {
+      // Se não há nova imagem mas o nome mudou, atualizar o caminho da imagem existente
+      novaImagemPath = `${novoDirPath}/capa.png`;
+      console.log(`📷 Atualizando caminho da imagem existente: ${novaImagemPath}`);
+    }
+
+    // Guardar os dados antigos para comparação (notificações)
     const dataInicioAntiga = cursoAtual.data_inicio;
     const dataFimAntiga = cursoAtual.data_fim;
     const formadorAntigo = cursoAtual.formador ? {
@@ -508,9 +582,9 @@ const updateCurso = async (req, res) => {
       console.log(`Estado do curso determinado automaticamente: ${novoEstado}`);
     }
 
-    // ✅ CORREÇÃO: Incluir id_topico_area no update
+    // 🔧 ATUALIZAR CURSO NA BASE DE DADOS
     await cursoAtual.update({
-      nome: nome || cursoAtual.nome,
+      nome: novoNome,
       descricao: descricao || cursoAtual.descricao,
       tipo: tipo || cursoAtual.tipo,
       vagas: vagas || cursoAtual.vagas,
@@ -519,21 +593,29 @@ const updateCurso = async (req, res) => {
       id_formador: id_formador || cursoAtual.id_formador,
       id_area: id_area || cursoAtual.id_area,
       id_categoria: id_categoria || cursoAtual.id_categoria,
-      id_topico_area: id_topico_area || cursoAtual.id_topico_area, // ✅ ADICIONADO
+      id_topico_area: id_topico_area || cursoAtual.id_topico_area,
       duracao: duracao !== undefined ? parseInt(duracao, 10) : cursoAtual.duracao,
       ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
-      estado: novoEstado
+      estado: novoEstado,
+      imagem_path: novaImagemPath, // ✅ Caminho da imagem atualizado
+      dir_path: novoDirPath // ✅ Caminho do diretório atualizado
     });
+
+    console.log(`✅ Curso atualizado com sucesso!`);
+    console.log(`📝 Nome mudou: ${nomeMudou ? 'SIM' : 'NÃO'}`);
+    console.log(`📁 Pasta renomeada: ${pastaRenomeada ? 'SIM' : 'NÃO'}`);
+    console.log(`📷 Nova imagem: ${req.file ? 'SIM' : 'NÃO'}`);
 
     // Recarregar o curso atualizado com as suas relações
     const cursoAtualizado = await Curso.findByPk(id, {
       include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
     });
 
+    // NOTIFICAÇÕES (código existente)
+    
     // Verificar se o formador foi alterado
     if (id_formador && id_formador !== cursoAtual.id_formador) {
       try {
-        // Chamar a função de notificação diretamente
         await notificacaoController.notificarFormadorAlterado(
           cursoAtualizado,
           formadorAntigo,
@@ -542,7 +624,6 @@ const updateCurso = async (req, res) => {
         console.log("Notificação de alteração de formador enviada com sucesso");
       } catch (notificationError) {
         console.error("Erro ao enviar notificação de alteração de formador:", notificationError);
-        // Continuar mesmo com erro na notificação
       }
     }
 
@@ -554,7 +635,6 @@ const updateCurso = async (req, res) => {
 
     if (dataInicioAlterada || dataFimAlterada) {
       try {
-        // Chamar a função de notificação diretamente
         await notificacaoController.notificarDataCursoAlterada(
           cursoAtualizado,
           dataInicioAntiga,
@@ -563,14 +643,16 @@ const updateCurso = async (req, res) => {
         console.log("Notificação de alteração de datas enviada com sucesso");
       } catch (notificationError) {
         console.error("Erro ao enviar notificação de alteração de datas:", notificationError);
-        // Continuar mesmo com erro na notificação
       }
     }
 
     // Responder com sucesso
     return res.status(200).json({
       message: "Curso atualizado com sucesso",
-      curso: cursoAtualizado
+      curso: cursoAtualizado,
+      imagemAtualizada: !!req.file,
+      pastaRenomeada: pastaRenomeada,
+      nomeMudou: nomeMudou
     });
   } catch (error) {
     console.error("Erro ao atualizar curso:", error);
@@ -580,7 +662,6 @@ const updateCurso = async (req, res) => {
     });
   }
 };
-
 
 
 // Nova função: Associar formador a um curso
@@ -866,10 +947,6 @@ const getCursosSugeridos = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao procurar cursos sugeridos." });
   }
 };
-
-
-
-
 
 /*TÓPICOS*/
 // Obter tópicos de um curso

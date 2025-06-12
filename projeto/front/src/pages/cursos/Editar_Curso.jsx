@@ -304,68 +304,106 @@ const EditarCurso = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // Validar formador para cursos síncronos
-    if (formData.tipo === 'sincrono' && !formData.id_formador) {
-      toast.error('É necessário selecionar um formador para cursos síncronos', {
-        containerId: "editar-curso-toast"
-      });
-      return;
-    }
+  console.log("🔍 DEBUG: Iniciando submit do formulário");
+  console.log("🔍 DEBUG: FormData atual:", formData);
+  console.log("🔍 DEBUG: Imagem selecionada:", formData.imagem);
 
-    // Validar datas
-    if (!validarDatas(formData.data_inicio, formData.data_fim)) {
-      toast.error('A data de fim deve ser posterior à data de início', {
-        containerId: "editar-curso-toast"
-      });
-      setErroDataFim('A data de fim deve ser posterior à data de início');
-      return;
-    }
+  // Validar formador para cursos síncronos
+  if (formData.tipo === 'sincrono' && !formData.id_formador) {
+    toast.error('É necessário selecionar um formador para cursos síncronos', {
+      containerId: "editar-curso-toast"
+    });
+    return;
+  }
 
-    // Validação adicional: verificar se as datas não estão no passado (apenas para novos cursos)
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dataInicio = new Date(formData.data_inicio);
+  // Validar datas
+  if (!validarDatas(formData.data_inicio, formData.data_fim)) {
+    toast.error('A data de fim deve ser posterior à data de início', {
+      containerId: "editar-curso-toast"
+    });
+    setErroDataFim('A data de fim deve ser posterior à data de início');
+    return;
+  }
 
-    if (dataInicio < hoje && !dataInicioUltrapassada) {
-      toast.error('A data de início não pode ser no passado', {
-        containerId: "editar-curso-toast"
-      });
-      return;
-    }
+  // Validação adicional: verificar se as datas não estão no passado
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(formData.data_inicio);
 
-    const data = new FormData();
-    for (let key in formData) {
-      if (formData[key] !== null && formData[key] !== '' && key !== 'imagem_path') {
+  if (dataInicio < hoje && !dataInicioUltrapassada) {
+    toast.error('A data de início não pode ser no passado', {
+      containerId: "editar-curso-toast"
+    });
+    return;
+  }
+
+  // 🔧 CORREÇÃO: Criar FormData corretamente
+  const data = new FormData();
+  
+  // Adicionar todos os campos (exceto imagem_path que não deve ser enviado)
+  for (let key in formData) {
+    if (key !== 'imagem_path' && formData[key] !== null && formData[key] !== '') {
+      // 🔧 CORREÇÃO: Verificar se é o campo de imagem
+      if (key === 'imagem' && formData[key]) {
+        console.log("📷 DEBUG: Adicionando imagem ao FormData:", formData[key]);
+        console.log("📷 DEBUG: Tipo de ficheiro:", formData[key].type);
+        console.log("📷 DEBUG: Tamanho:", formData[key].size);
+        data.append(key, formData[key]);
+      } else if (key !== 'imagem') {
+        // Para outros campos, adicionar normalmente
         data.append(key, formData[key]);
       }
     }
+  }
 
-    try {
-      // Atualizar o curso
-      await axios.put(`${API_BASE}/cursos/${id}`, data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-      });
-      toast.success('Curso atualizado com sucesso!', {
-        containerId: "editar-curso-toast"
-      });
-
-      // Redirecionar para a página de detalhes depois de 2 segundos
-      setTimeout(() => {
-        navigate(`/cursos/${id}`);
-      }, 2000);
-    } catch (error) {
-      console.error('Erro ao atualizar curso:', error);
-      toast.error('Erro ao atualizar curso: ' + (error.response?.data?.message || 'Erro desconhecido'), {
-        containerId: "editar-curso-toast"
-      });
+  // 🔍 DEBUG: Verificar o que está no FormData
+  console.log("🔍 DEBUG: Conteúdo do FormData:");
+  for (let pair of data.entries()) {
+    if (pair[1] instanceof File) {
+      console.log(`📷 ${pair[0]}:`, pair[1].name, pair[1].type, pair[1].size + " bytes");
+    } else {
+      console.log(`📝 ${pair[0]}:`, pair[1]);
     }
-  };
+  }
+
+  try {
+    console.log("🚀 DEBUG: Enviando requisição PUT...");
+    
+    // Atualizar o curso
+    const response = await axios.put(`${API_BASE}/cursos/${id}`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+    });
+
+    console.log("✅ DEBUG: Resposta do servidor:", response.data);
+
+    toast.success('Curso atualizado com sucesso!', {
+      containerId: "editar-curso-toast"
+    });
+
+    // 🔧 CORREÇÃO: Verificar se a imagem foi atualizada na resposta
+    if (response.data.imagemAtualizada) {
+      console.log("📷 DEBUG: Imagem foi atualizada com sucesso");
+    }
+
+    // Redirecionar para a página de detalhes depois de 2 segundos
+    setTimeout(() => {
+      navigate(`/cursos/${id}`);
+    }, 2000);
+  } catch (error) {
+    console.error('❌ DEBUG: Erro ao atualizar curso:', error);
+    console.error('❌ DEBUG: Response data:', error.response?.data);
+    
+    toast.error('Erro ao atualizar curso: ' + (error.response?.data?.message || 'Erro desconhecido'), {
+      containerId: "editar-curso-toast"
+    });
+  }
+};
 
   if (loading) {
     return (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 import '../components/sidebar_screen.dart';
+import '../components/navbar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -56,77 +57,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildBanner() {
-    return Container(
-      height: 200,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFFF8000),
-            const Color(0xFFFF6600),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Imagem de fundo (opcional)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-            ),
-          ),
-          // Texto sobreposto
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Aprender aqui é mais fácil',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(1, 1),
-                        blurRadius: 3,
-                        color: Colors.black.withOpacity(0.5),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Não vale a pena estar a inventar a roda ou a descobrir a pólvora!',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 16,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                        color: Colors.black.withOpacity(0.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCursoCard(Map<String, dynamic> curso) {
     final nomeCurso = curso['nomeCurso'] ?? curso['nome'] ?? 'Curso sem nome';
-    final categoria = curso['categoria'] ?? 'Não especificada';
-    final area = curso['area'] ?? 'Não especificada';
+
+    // Extrair apenas o nome da categoria (caso seja objeto)
+    String categoria = 'Não especificada';
+    if (curso['categoria'] != null) {
+      if (curso['categoria'] is String) {
+        categoria = curso['categoria'];
+      } else if (curso['categoria'] is Map &&
+          curso['categoria']['nome'] != null) {
+        categoria = curso['categoria']['nome'];
+      }
+    }
+
+    // Extrair apenas o nome da área (caso seja objeto)
+    String area = 'Não especificada';
+    if (curso['area'] != null) {
+      if (curso['area'] is String) {
+        area = curso['area'];
+      } else if (curso['area'] is Map && curso['area']['nome'] != null) {
+        area = curso['area']['nome'];
+      }
+    }
+
     final status = curso['status'] ?? 'Inscrito';
 
     // Determinar cor do status
@@ -152,8 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () =>
-            _navigateToCurso(curso), // ← MUDANÇA: navegar para página do curso
+        onTap: () => _navigateToCurso(curso),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -240,66 +193,112 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCursoSugeridoCard(Map<String, dynamic> curso) {
     final nomeCurso = curso['nome'] ?? 'Curso sem nome';
-    final categoria = curso['categoria'] ?? 'Não especificada';
-    final area = curso['area'] ?? 'Não especificada';
+
+    // Extrair apenas o nome da categoria (caso seja objeto)
+    String categoria = 'Não especificada';
+    if (curso['categoria'] != null) {
+      if (curso['categoria'] is String) {
+        categoria = curso['categoria'];
+      } else if (curso['categoria'] is Map &&
+          curso['categoria']['nome'] != null) {
+        categoria = curso['categoria']['nome'];
+      }
+    }
+
+    // Extrair apenas o nome da área (caso seja objeto)
+    String area = 'Não especificada';
+    if (curso['area'] != null) {
+      if (curso['area'] is String) {
+        area = curso['area'];
+      } else if (curso['area'] is Map && curso['area']['nome'] != null) {
+        area = curso['area']['nome'];
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () =>
-            _navigateToCurso(curso), // ← MUDANÇA: navegar para página do curso
+        onTap: () => _navigateToCurso(curso),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ícone do curso
+              Row(
+                children: [
+                  // Ícone do curso
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.school_outlined,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nomeCurso,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Categoria: $categoria',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Área: $area',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Badge "Disponível" para cursos sugeridos
               Container(
-                width: 40,
-                height: 40,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
                 ),
-                child: Icon(
-                  Icons.school_outlined,
-                  color: Colors.grey.shade600,
-                  size: 20,
+                child: Text(
+                  'Disponível',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nomeCurso,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$categoria • $area',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 14,
-                color: Colors.grey.shade400,
               ),
             ],
           ),
@@ -308,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ← NOVO MÉTODO: Navegar para página individual do curso
+  // Navegar para página individual do curso
   void _navigateToCurso(Map<String, dynamic> curso) {
     // Tentar obter o ID do curso de diferentes campos possíveis
     final cursoId = curso['id_curso']?.toString() ??
@@ -327,6 +326,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCursoDetails(Map<String, dynamic> curso) {
+    // Extrair apenas o nome da categoria (caso seja objeto)
+    String categoria = 'N/A';
+    if (curso['categoria'] != null) {
+      if (curso['categoria'] is String) {
+        categoria = curso['categoria'];
+      } else if (curso['categoria'] is Map &&
+          curso['categoria']['nome'] != null) {
+        categoria = curso['categoria']['nome'];
+      }
+    }
+
+    // Extrair apenas o nome da área (caso seja objeto)
+    String area = 'N/A';
+    if (curso['area'] != null) {
+      if (curso['area'] is String) {
+        area = curso['area'];
+      } else if (curso['area'] is Map && curso['area']['nome'] != null) {
+        area = curso['area']['nome'];
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -335,9 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Categoria: ${curso['categoria'] ?? 'N/A'}'),
+            Text('Categoria: $categoria'),
             const SizedBox(height: 8),
-            Text('Área: ${curso['area'] ?? 'N/A'}'),
+            Text('Área: $area'),
             const SizedBox(height: 8),
             Text('Status: ${curso['status'] ?? 'N/A'}'),
             if (curso['dataInicio'] != null) ...[
@@ -358,8 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _navigateToCurso(
-                  curso); // ← MUDANÇA: navegar em vez de mostrar mensagem
+              _navigateToCurso(curso);
             },
             child: const Text('Ver Curso'),
           ),
@@ -369,6 +388,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCursoSugeridoDetails(Map<String, dynamic> curso) {
+    // Extrair apenas o nome da categoria (caso seja objeto)
+    String categoria = 'N/A';
+    if (curso['categoria'] != null) {
+      if (curso['categoria'] is String) {
+        categoria = curso['categoria'];
+      } else if (curso['categoria'] is Map &&
+          curso['categoria']['nome'] != null) {
+        categoria = curso['categoria']['nome'];
+      }
+    }
+
+    // Extrair apenas o nome da área (caso seja objeto)
+    String area = 'N/A';
+    if (curso['area'] != null) {
+      if (curso['area'] is String) {
+        area = curso['area'];
+      } else if (curso['area'] is Map && curso['area']['nome'] != null) {
+        area = curso['area']['nome'];
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -377,9 +417,9 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Categoria: ${curso['categoria'] ?? 'N/A'}'),
+            Text('Categoria: $categoria'),
             const SizedBox(height: 8),
-            Text('Área: ${curso['area'] ?? 'N/A'}'),
+            Text('Área: $area'),
             if (curso['descricao'] != null) ...[
               const SizedBox(height: 8),
               Text('Descrição: ${curso['descricao']}'),
@@ -398,8 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _navigateToCurso(
-                  curso); // ← MUDANÇA: navegar para página do curso
+              _navigateToCurso(curso);
             },
             child: const Text('Ver Curso'),
           ),
@@ -421,23 +460,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Início'),
-        backgroundColor: const Color(0xFFFF8000),
-        elevation: 0,
-        actions: [
-          // ← ADICIONADO: Botão para ir para lista completa de cursos
-          IconButton(
-            icon: const Icon(Icons.library_books),
-            onPressed: () => Navigator.pushNamed(context, '/cursos'),
-            tooltip: 'Ver todos os cursos',
-          ),
-        ],
+      // ✅ Navbar sempre visível no topo
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: NavbarScreen(
+          currentUser: _currentUser,
+        ),
       ),
+
+      // ✅ SidebarScreen como Drawer (sem NavbarScreen integrada)
       drawer: SidebarScreen(
         currentUser: _currentUser,
         currentRoute: '/home',
       ),
+
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
@@ -471,11 +507,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
                       children: [
-                        // Banner
-                        _buildBanner(),
-
-                        const SizedBox(height: 24),
-
                         // Seção de Cursos Inscritos
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -494,13 +525,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: Colors.grey.shade800,
                                     ),
                                   ),
-                                  if (_inscricoes != null &&
-                                      _inscricoes!.isNotEmpty)
-                                    TextButton(
-                                      onPressed: () => Navigator.pushNamed(
-                                          context, '/cursos'),
-                                      child: const Text('Ver todos'),
-                                    ),
                                 ],
                               ),
                               const SizedBox(height: 16),

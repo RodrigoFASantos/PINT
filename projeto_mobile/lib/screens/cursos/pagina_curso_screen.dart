@@ -51,15 +51,20 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         loading = true;
       });
 
-      // Obter dados do utilizador atual primeiro
+      // Obter dados do utilizador atual primeiro - ROTA CORRIGIDA
       try {
-        final userResponse = await _apiService.get('/users/me');
+        final userResponse = await _apiService.get('/users/perfil');
         if (userResponse.statusCode == 200) {
           final userData = json.decode(userResponse.body);
           userRole = userData['id_cargo'];
+          print(
+              '👤 Utilizador carregado: ${userData['nome']} (Cargo: $userRole)');
+        } else {
+          print(
+              '⚠️ Erro ao obter dados do utilizador: ${userResponse.statusCode}');
         }
       } catch (e) {
-        print('Erro ao obter dados do utilizador: $e');
+        print('❌ Erro ao obter dados do utilizador: $e');
       }
 
       // Obter dados do curso usando ApiService
@@ -67,35 +72,52 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
 
       if (cursoResponse.statusCode == 200) {
         final cursoData = json.decode(cursoResponse.body);
+        print('📚 Curso carregado: ${cursoData['nome']}');
 
-        // Verificar acesso ao curso
-        final dataAtual = DateTime.now();
-        final dataFimCurso = DateTime.parse(cursoData['data_fim']);
-        final cursoTerminado = dataFimCurso.isBefore(dataAtual);
-
-        // Se for curso assíncrono terminado e não for admin, negar acesso
-        if (cursoData['tipo'] == 'assincrono' &&
-            cursoTerminado &&
-            userRole != 1) {
-          setState(() {
-            acessoNegado = true;
-            loading = false;
-          });
-          return;
-        }
-
-        // Verificar inscrição do usuário usando ApiService
+        // Verificar inscrição do usuário ANTES da verificação de acesso
         bool userInscrito = false;
         try {
+          print('🔍 Verificando inscrição para curso ${widget.cursoId}...');
           final inscricaoResponse =
               await _apiService.get('/inscricoes/verificar/${widget.cursoId}');
 
           if (inscricaoResponse.statusCode == 200) {
             final inscricaoData = json.decode(inscricaoResponse.body);
             userInscrito = inscricaoData['inscrito'] ?? false;
+            print(
+                '📝 Estado da inscrição: ${userInscrito ? "Inscrito" : "Não inscrito"}');
+          } else {
+            print(
+                '❌ Erro ao verificar inscrição: ${inscricaoResponse.statusCode}');
           }
         } catch (e) {
-          print('Erro ao verificar inscrição: $e');
+          print('❌ Erro ao verificar inscrição: $e');
+        }
+
+        // Verificar acesso ao curso
+        final dataAtual = DateTime.now();
+        final dataFimCurso = DateTime.parse(cursoData['data_fim']);
+        final cursoTerminado = dataFimCurso.isBefore(dataAtual);
+
+        // Verificação de acesso para cursos terminados:
+        // - Cursos assíncronos terminados: apenas administradores
+        // - Cursos síncronos terminados: apenas administradores OU alunos inscritos
+        if (cursoTerminado && userRole != 1) {
+          if (cursoData['tipo'] == 'assincrono') {
+            // Curso assíncrono terminado: apenas admins
+            setState(() {
+              acessoNegado = true;
+              loading = false;
+            });
+            return;
+          } else if (cursoData['tipo'] == 'sincrono' && !userInscrito) {
+            // Curso síncrono terminado: apenas admins ou inscritos
+            setState(() {
+              acessoNegado = true;
+              loading = false;
+            });
+            return;
+          }
         }
 
         setState(() {
@@ -141,11 +163,57 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
     }
   }
 
+  String _formatEstadoParaExibicao(String? estado) {
+    if (estado == null) return 'Indisponível';
+
+    const estadosMap = {
+      'planeado': 'Planeado',
+      'em_curso': 'Em Curso',
+      'terminado': 'Terminado',
+      'inativo': 'Inativo'
+    };
+
+    final estadoNormalizado = estado.toLowerCase().replaceAll(' ', '_');
+    return estadosMap[estadoNormalizado] ?? estado;
+  }
+
+  Color _getEstadoColor(String? estado) {
+    if (estado == null) return Colors.grey;
+
+    const estadoCores = {
+      'planeado': Colors.amber,
+      'em_curso': Colors.green,
+      'terminado': Colors.red,
+      'inativo': Colors.grey
+    };
+
+    final estadoNormalizado = estado.toLowerCase().replaceAll(' ', '_');
+    return estadoCores[estadoNormalizado] ?? Colors.grey;
+  }
+
   String _getImageUrl() {
     if (curso?['imagem_path'] != null && curso!['imagem_path'].isNotEmpty) {
       return '${_apiService.apiBase.replaceAll('/api', '')}/${curso!['imagem_path']}';
     }
     return 'assets/images/default_course.png';
+  }
+
+  String _getAccessDeniedMessage() {
+    if (curso != null) {
+      final dataAtual = DateTime.now();
+      final dataFimCurso = DateTime.parse(curso!['data_fim']);
+      final cursoTerminado = dataFimCurso.isBefore(dataAtual);
+
+      if (cursoTerminado) {
+        if (curso!['tipo'] == 'assincrono') {
+          return 'Este curso assíncrono já foi encerrado e apenas administradores podem aceder ao seu conteúdo.';
+        } else {
+          return 'Este curso síncrono já foi encerrado. Apenas administradores e alunos que estavam inscritos podem aceder ao seu conteúdo.';
+        }
+      }
+    }
+
+    return 'Não tem permissão para aceder a este curso.';
   }
 
   Widget _buildErrorWidget() {
@@ -191,7 +259,7 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
               SizedBox(height: 8),
               Text(
                 acessoNegado
-                    ? 'Este curso assíncrono já foi encerrado e apenas administradores podem aceder ao seu conteúdo.'
+                    ? _getAccessDeniedMessage()
                     : error ?? 'Curso não encontrado',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -242,6 +310,9 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
   }
 
   Widget _buildCourseHeader() {
+    final status = _formatEstadoParaExibicao(curso?['estado']);
+    final statusColor = _getEstadoColor(curso?['estado']);
+
     return Container(
       height: 200,
       decoration: BoxDecoration(
@@ -275,13 +346,36 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        curso?['nome'] ?? '',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      // Título e estado do curso
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              curso?['nome'] ?? '',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 8),
                       Row(

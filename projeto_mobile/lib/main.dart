@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 // Importar os serviços e telas
 import 'services/api_service.dart';
@@ -13,6 +14,10 @@ import 'screens/users/perfil_screen.dart';
 import 'screens/users/percurso_formativo_screen.dart';
 import 'screens/users/formadores_screen.dart';
 import 'screens/forum/forum_screen.dart';
+import 'screens/Notificacoes_screen.dart'; // Adicionar import das notificações
+
+// Importar providers
+import 'providers/notificacoes_provider.dart';
 
 // Importar sistema de rotas do fórum
 import 'components/forum_route.dart';
@@ -43,258 +48,272 @@ void main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SoftSkills',
-      debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        // Provider das notificações
+        ChangeNotifierProvider(create: (_) => NotificacoesProvider()),
+      ],
+      child: MaterialApp(
+        title: 'SoftSkills',
+        debugShowCheckedModeBanner: false,
 
-      // Tema claro
-      theme: ThemeData(
-        primarySwatch: Colors.orange,
-        primaryColor: const Color(0xFFFF8000), // Laranja da tua marca
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        // Tema claro
+        theme: ThemeData(
+          primarySwatch: Colors.orange,
+          primaryColor: const Color(0xFFFF8000), // Laranja da tua marca
+          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
 
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFF8000),
-          foregroundColor: Colors.white,
-          elevation: 2,
-          centerTitle: true,
-          systemOverlayStyle: SystemUiOverlayStyle.light,
-        ),
-
-        cardTheme: CardTheme(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        ),
-
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF8000),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFFF8000),
             foregroundColor: Colors.white,
+            elevation: 2,
+            centerTitle: true,
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+
+          cardTheme: CardTheme(
+            elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            elevation: 2,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF8000),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              elevation: 2,
+            ),
+          ),
+
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFFF8000), width: 2),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            fillColor: Colors.grey.shade50,
+            filled: true,
+          ),
+
+          snackBarTheme: SnackBarThemeData(
+            backgroundColor: Colors.grey.shade800,
+            contentTextStyle: const TextStyle(color: Colors.white),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            behavior: SnackBarBehavior.floating,
           ),
         ),
 
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFFF8000), width: 2),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          fillColor: Colors.grey.shade50,
-          filled: true,
-        ),
+        // Modo de tema
+        themeMode: ThemeMode.system,
 
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: Colors.grey.shade800,
-          contentTextStyle: const TextStyle(color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      ),
+        // Rota inicial
+        initialRoute: '/splash',
 
-      // Modo de tema
-      themeMode: ThemeMode.system,
+        // Sistema de geração de rotas dinâmicas
+        onGenerateRoute: (settings) {
+          debugPrint('🔧 [MAIN] Gerando rota para: ${settings.name}');
 
-      // Rota inicial
-      initialRoute: '/splash',
-
-      // Sistema de geração de rotas dinâmicas
-      onGenerateRoute: (settings) {
-        debugPrint('🔧 [MAIN] Gerando rota para: ${settings.name}');
-
-        // 1. Primeiro, tentar as rotas do fórum
-        if (ForumRoutes.isForumRoute(settings.name)) {
-          final forumRoute = ForumRoutes.generateRoute(settings);
-          if (forumRoute != null) {
-            debugPrint('✅ [MAIN] Rota do fórum encontrada: ${settings.name}');
-            return forumRoute;
+          // 1. Primeiro, tentar as rotas do fórum
+          if (ForumRoutes.isForumRoute(settings.name)) {
+            final forumRoute = ForumRoutes.generateRoute(settings);
+            if (forumRoute != null) {
+              debugPrint('✅ [MAIN] Rota do fórum encontrada: ${settings.name}');
+              return forumRoute;
+            }
           }
-        }
 
-        // 2. Se não for rota do fórum, usar rotas principais da aplicação
-        switch (settings.name) {
-          case '/splash':
-            return MaterialPageRoute(
-              builder: (context) => SplashScreen(),
-              settings: settings,
-            );
-
-          case '/login':
-            return MaterialPageRoute(
-              builder: (context) => LoginScreen(),
-              settings: settings,
-            );
-
-          case '/':
-          case '/home':
-            return MaterialPageRoute(
-              builder: (context) => HomeScreen(),
-              settings: settings,
-            );
-
-          case '/cursos':
-            return MaterialPageRoute(
-              builder: (context) => ListaCursosPage(),
-              settings: settings,
-            );
-
-          // Rota para página individual do curso
-          case '/curso':
-            final cursoId = settings.arguments as String?;
-            if (cursoId != null) {
+          // 2. Se não for rota do fórum, usar rotas principais da aplicação
+          switch (settings.name) {
+            case '/splash':
               return MaterialPageRoute(
-                builder: (context) => PaginaCursoPage(cursoId: cursoId),
+                builder: (context) => SplashScreen(),
                 settings: settings,
               );
-            } else {
-              // Se não tiver cursoId, voltar para lista de cursos
+
+            case '/login':
+              return MaterialPageRoute(
+                builder: (context) => LoginScreen(),
+                settings: settings,
+              );
+
+            case '/':
+            case '/home':
+              return MaterialPageRoute(
+                builder: (context) => HomeScreen(),
+                settings: settings,
+              );
+
+            case '/cursos':
               return MaterialPageRoute(
                 builder: (context) => ListaCursosPage(),
                 settings: settings,
               );
-            }
 
-          case '/perfil':
-            return MaterialPageRoute(
-              builder: (context) => PerfilScreen(),
-              settings: settings,
-            );
+            // Rota para página individual do curso
+            case '/curso':
+              final cursoId = settings.arguments as String?;
+              if (cursoId != null) {
+                return MaterialPageRoute(
+                  builder: (context) => PaginaCursoPage(cursoId: cursoId),
+                  settings: settings,
+                );
+              } else {
+                // Se não tiver cursoId, voltar para lista de cursos
+                return MaterialPageRoute(
+                  builder: (context) => ListaCursosPage(),
+                  settings: settings,
+                );
+              }
 
-          case '/percurso-formativo':
-            return MaterialPageRoute(
-              builder: (context) => PercursoFormativoScreen(),
-              settings: settings,
-            );
+            case '/perfil':
+              return MaterialPageRoute(
+                builder: (context) => PerfilScreen(),
+                settings: settings,
+              );
 
-          case '/formadores':
-            return MaterialPageRoute(
-              builder: (context) => FormadoresScreen(),
-              settings: settings,
-            );
+            case '/percurso-formativo':
+              return MaterialPageRoute(
+                builder: (context) => PercursoFormativoScreen(),
+                settings: settings,
+              );
 
-          case '/forum':
-            return MaterialPageRoute(
-              builder: (context) => ForumScreen(),
-              settings: settings,
-            );
+            case '/formadores':
+              return MaterialPageRoute(
+                builder: (context) => FormadoresScreen(),
+                settings: settings,
+              );
 
-          // Rotas de desenvolvimento/admin
-          case '/area-formador':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Área do Formador'),
-              settings: settings,
-            );
+            case '/forum':
+              return MaterialPageRoute(
+                builder: (context) => ForumScreen(),
+                settings: settings,
+              );
 
-          case '/admin/dashboard':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Dashboard Admin'),
-              settings: settings,
-            );
+            // NOVA ROTA: Notificações
+            case '/notificacoes':
+              return MaterialPageRoute(
+                builder: (context) => NotificacoesScreen(),
+                settings: settings,
+              );
 
-          case '/admin/cursos':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerir Cursos'),
-              settings: settings,
-            );
+            // Rotas de desenvolvimento/admin
+            case '/area-formador':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Área do Formador'),
+                settings: settings,
+              );
 
-          case '/admin/usuarios':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerir Utilizadores'),
-              settings: settings,
-            );
+            case '/admin/dashboard':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Dashboard Admin'),
+                settings: settings,
+              );
 
-          case '/admin/denuncias':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerenciar Denúncias'),
-              settings: settings,
-            );
+            case '/admin/cursos':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerir Cursos'),
+                settings: settings,
+              );
 
-          case '/admin/percurso-formandos':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Percurso Formandos'),
-              settings: settings,
-            );
+            case '/admin/usuarios':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerir Utilizadores'),
+                settings: settings,
+              );
 
-          case '/admin/categorias':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerir Categorias'),
-              settings: settings,
-            );
+            case '/admin/denuncias':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerenciar Denúncias'),
+                settings: settings,
+              );
 
-          case '/admin/areas':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerir Áreas'),
-              settings: settings,
-            );
+            case '/admin/percurso-formandos':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Percurso Formandos'),
+                settings: settings,
+              );
 
-          case '/admin/topicos':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Gerir Tópicos'),
-              settings: settings,
-            );
+            case '/admin/categorias':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerir Categorias'),
+                settings: settings,
+              );
 
-          case '/admin/criar-curso':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Criar Curso'),
-              settings: settings,
-            );
+            case '/admin/areas':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerir Áreas'),
+                settings: settings,
+              );
 
-          case '/admin/criar-usuario':
-            return MaterialPageRoute(
-              builder: (context) =>
-                  _buildNotImplementedPage(context, 'Criar Utilizador'),
-              settings: settings,
-            );
+            case '/admin/topicos':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Gerir Tópicos'),
+                settings: settings,
+              );
 
-          // 3. Rota não encontrada
-          default:
-            debugPrint('❌ [MAIN] Rota não encontrada: ${settings.name}');
-            return MaterialPageRoute(
-              builder: (context) => _buildNotFoundPage(context, settings.name),
-              settings: settings,
-            );
-        }
-      },
+            case '/admin/criar-curso':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Criar Curso'),
+                settings: settings,
+              );
 
-      // Rota para páginas não encontradas (fallback)
-      onUnknownRoute: (settings) {
-        debugPrint('⚠️ [MAIN] Rota desconhecida: ${settings.name}');
-        return MaterialPageRoute(
-          builder: (context) => _buildNotFoundPage(context, settings.name),
-        );
-      },
+            case '/admin/criar-usuario':
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotImplementedPage(context, 'Criar Utilizador'),
+                settings: settings,
+              );
+
+            // 3. Rota não encontrada
+            default:
+              debugPrint('❌ [MAIN] Rota não encontrada: ${settings.name}');
+              return MaterialPageRoute(
+                builder: (context) =>
+                    _buildNotFoundPage(context, settings.name),
+                settings: settings,
+              );
+          }
+        },
+
+        // Rota para páginas não encontradas (fallback)
+        onUnknownRoute: (settings) {
+          debugPrint('⚠️ [MAIN] Rota desconhecida: ${settings.name}');
+          return MaterialPageRoute(
+            builder: (context) => _buildNotFoundPage(context, settings.name),
+          );
+        },
+      ),
     );
   }
 
@@ -352,6 +371,14 @@ class MyApp extends StatelessWidget {
                     Navigator.pushReplacementNamed(context, '/forum'),
                 icon: const Icon(Icons.forum),
                 label: const Text('Voltar ao Fórum'),
+              ),
+            ],
+            if (routeName == '/notificacoes') ...[
+              TextButton.icon(
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/notificacoes'),
+                icon: const Icon(Icons.notifications),
+                label: const Text('Voltar às Notificações'),
               ),
             ],
           ],

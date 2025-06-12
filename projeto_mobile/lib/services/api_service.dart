@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -254,6 +255,54 @@ class ApiService {
     }, autoRetry);
   }
 
+  /// Requisição PATCH com retry
+  Future<http.Response> patch(String endpoint,
+      {Object? body,
+      Map<String, String>? headers,
+      bool autoRetry = true}) async {
+    return _executeWithRetry(() async {
+      final url = Uri.parse('$_apiBase$endpoint');
+      debugPrint('📡 [PATCH] $url');
+
+      final response = await http.patch(
+        url,
+        headers: {..._defaultHeaders, ...?headers},
+        body: body != null ? jsonEncode(body) : null,
+      );
+      _logResponse('PATCH', endpoint, response);
+      return response;
+    }, autoRetry);
+  }
+
+  /// PUT method
+  Future<http.Response> put(String endpoint,
+      {Object? body,
+      Map<String, String>? headers,
+      bool autoRetry = true}) async {
+    return _executeWithRetry(() async {
+      final url = Uri.parse('$_apiBase$endpoint');
+      debugPrint('📡 [PUT] $url');
+      final response = await http.put(url,
+          headers: {..._defaultHeaders, ...?headers},
+          body: body != null ? jsonEncode(body) : null);
+      _logResponse('PUT', endpoint, response);
+      return response;
+    }, autoRetry);
+  }
+
+  /// DELETE method
+  Future<http.Response> delete(String endpoint,
+      {Map<String, String>? headers, bool autoRetry = true}) async {
+    return _executeWithRetry(() async {
+      final url = Uri.parse('$_apiBase$endpoint');
+      debugPrint('📡 [DELETE] $url');
+      final response =
+          await http.delete(url, headers: {..._defaultHeaders, ...?headers});
+      _logResponse('DELETE', endpoint, response);
+      return response;
+    }, autoRetry);
+  }
+
   /// Executa uma requisição com retry automático em caso de falha de rede
   Future<http.Response> _executeWithRetry(
       Future<http.Response> Function() request, bool autoRetry) async {
@@ -275,39 +324,6 @@ class ApiService {
         error is HttpException ||
         error.toString().contains('Connection refused') ||
         error.toString().contains('Network unreachable');
-  }
-
-  /// PUT, PATCH, DELETE methods...
-  Future<http.Response> put(String endpoint,
-      {Object? body, Map<String, String>? headers}) async {
-    final url = Uri.parse('$_apiBase$endpoint');
-    debugPrint('📡 [PUT] $url');
-    final response = await http.put(url,
-        headers: {..._defaultHeaders, ...?headers},
-        body: body != null ? jsonEncode(body) : null);
-    _logResponse('PUT', endpoint, response);
-    return response;
-  }
-
-  Future<http.Response> patch(String endpoint,
-      {Object? body, Map<String, String>? headers}) async {
-    final url = Uri.parse('$_apiBase$endpoint');
-    debugPrint('📡 [PATCH] $url');
-    final response = await http.patch(url,
-        headers: {..._defaultHeaders, ...?headers},
-        body: body != null ? jsonEncode(body) : null);
-    _logResponse('PATCH', endpoint, response);
-    return response;
-  }
-
-  Future<http.Response> delete(String endpoint,
-      {Map<String, String>? headers}) async {
-    final url = Uri.parse('$_apiBase$endpoint');
-    debugPrint('📡 [DELETE] $url');
-    final response =
-        await http.delete(url, headers: {..._defaultHeaders, ...?headers});
-    _logResponse('DELETE', endpoint, response);
-    return response;
   }
 
   /// Log das respostas HTTP
@@ -347,6 +363,453 @@ class ApiService {
       }
     }
     return null;
+  }
+
+  // ===========================================
+  // MÉTODOS PARA NOTIFICAÇÕES
+  // ===========================================
+
+  /// Obter todas as notificações do utilizador autenticado
+  Future<List<dynamic>?> getNotificacoes() async {
+    try {
+      debugPrint('🔔 [API] A obter notificações...');
+      final response = await get('/notificacoes');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('✅ [API] ${data?.length ?? 0} notificações obtidas');
+        return data ?? [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter notificações: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter notificações: $e');
+      return null;
+    }
+  }
+
+  /// Obter contagem de notificações não lidas
+  Future<int> getNotificacoesNaoLidasContagem() async {
+    try {
+      debugPrint('🔔 [API] A obter contagem de notificações não lidas...');
+      final response = await get('/notificacoes/nao-lidas/contagem');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        final count = data?['count'] ?? 0;
+        debugPrint('✅ [API] $count notificações não lidas');
+        return count;
+      } else {
+        debugPrint('❌ [API] Erro ao obter contagem: ${response.statusCode}');
+        return 0;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter contagem: $e');
+      return 0;
+    }
+  }
+
+  /// Marcar uma notificação como lida
+  Future<Map<String, dynamic>?> marcarNotificacaoComoLida(
+      int idNotificacao) async {
+    try {
+      debugPrint('🔔 [API] A marcar notificação $idNotificacao como lida...');
+      final response = await put('/notificacoes/$idNotificacao/lida');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('✅ [API] Notificação marcada como lida');
+        return data ??
+            {'success': true, 'message': 'Notificação marcada como lida'};
+      } else {
+        debugPrint('❌ [API] Erro ao marcar como lida: ${response.statusCode}');
+        return {'success': false, 'message': 'Erro ao marcar notificação'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao marcar como lida: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  /// Marcar todas as notificações como lidas
+  Future<Map<String, dynamic>?> marcarTodasNotificacoesComoLidas() async {
+    try {
+      debugPrint('🔔 [API] A marcar todas as notificações como lidas...');
+      final response = await put('/notificacoes/marcar-todas-como-lidas');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('✅ [API] Todas as notificações marcadas como lidas');
+        return data ??
+            {
+              'success': true,
+              'message': 'Todas as notificações marcadas como lidas'
+            };
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao marcar todas como lidas: ${response.statusCode}');
+        return {'success': false, 'message': 'Erro ao marcar notificações'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao marcar todas como lidas: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // ===========================================
+  // MÉTODOS AUXILIARES PARA NOTIFICAÇÕES
+  // ===========================================
+
+  /// Obter ícone baseado no tipo de notificação
+  String getNotificacaoIcon(String tipo) {
+    switch (tipo) {
+      case 'curso_adicionado':
+        return '📚';
+      case 'formador_alterado':
+        return '✏️';
+      case 'formador_criado':
+        return '👤';
+      case 'admin_criado':
+        return '👑';
+      case 'data_curso_alterada':
+        return '📅';
+      default:
+        return '🔔';
+    }
+  }
+
+  /// Obter cor baseada no tipo de notificação
+  Color getNotificacaoColor(String tipo) {
+    switch (tipo) {
+      case 'curso_adicionado':
+        return Colors.blue;
+      case 'formador_alterado':
+      case 'formador_criado':
+        return Colors.orange;
+      case 'admin_criado':
+        return Colors.purple;
+      case 'data_curso_alterada':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Formatar data relativa
+  String formatRelativeTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return 'data desconhecida';
+
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inSeconds < 60) return 'há poucos segundos';
+      if (diff.inMinutes < 60)
+        return 'há ${diff.inMinutes} minuto${diff.inMinutes > 1 ? 's' : ''}';
+      if (diff.inHours < 24)
+        return 'há ${diff.inHours} hora${diff.inHours > 1 ? 's' : ''}';
+      if (diff.inDays < 30)
+        return 'há ${diff.inDays} dia${diff.inDays > 1 ? 's' : ''}';
+      final meses = (diff.inDays / 30).floor();
+      return 'há $meses mês${meses > 1 ? 'es' : ''}';
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao formatar data: $e, $dateString');
+      return 'data inválida';
+    }
+  }
+
+  // ===========================================
+  // MÉTODOS PARA FORMADORES
+  // ===========================================
+
+  /// Obter lista de formadores com paginação
+  Future<Map<String, dynamic>?> getFormadores(
+      {int page = 1, int limit = 10}) async {
+    try {
+      debugPrint('👨‍🏫 [API] A obter lista de formadores (página $page)...');
+      final response = await get('/formadores?page=$page&limit=$limit');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null) {
+          debugPrint(
+              '✅ [API] ${data['formadores']?.length ?? 0} formadores obtidos');
+          return data;
+        }
+        debugPrint('❌ [API] Resposta não contém dados de formadores');
+        return null;
+      } else {
+        debugPrint('❌ [API] Erro ao obter formadores: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter formadores: $e');
+      return null;
+    }
+  }
+
+  /// Obter todos os formadores (sem paginação)
+  Future<List<dynamic>?> getAllFormadores() async {
+    try {
+      debugPrint('👨‍🏫 [API] A obter todos os formadores...');
+      final response = await get('/formadores');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null && data['formadores'] != null) {
+          debugPrint('✅ [API] ${data['formadores'].length} formadores obtidos');
+          return data['formadores'] as List<dynamic>;
+        }
+        debugPrint('❌ [API] Resposta não contém campo "formadores"');
+        return [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter todos os formadores: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter todos os formadores: $e');
+      return null;
+    }
+  }
+
+  /// Obter detalhes de um formador específico
+  Future<Map<String, dynamic>?> getFormador(int formadorId) async {
+    try {
+      debugPrint('👨‍🏫 [API] A obter formador ID: $formadorId');
+      final response = await get('/formadores/$formadorId');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('✅ [API] Dados do formador $formadorId obtidos');
+        return data;
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter formador $formadorId: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter formador $formadorId: $e');
+      return null;
+    }
+  }
+
+  /// Obter cursos ministrados por um formador
+  Future<List<dynamic>?> getCursosFormador(int formadorId) async {
+    try {
+      debugPrint('📚 [API] A obter cursos do formador ID: $formadorId');
+      final response = await get('/formadores/$formadorId/cursos');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('✅ [API] ${data?.length ?? 0} cursos do formador obtidos');
+        return data ?? [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter cursos do formador $formadorId: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter cursos do formador $formadorId: $e');
+      return [];
+    }
+  }
+
+  /// Obter categorias de um formador
+  Future<List<dynamic>?> getCategoriasFormador(int formadorId) async {
+    try {
+      debugPrint('📂 [API] A obter categorias do formador ID: $formadorId');
+      final response = await get('/formadores/$formadorId/categorias');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint(
+            '✅ [API] ${data?.length ?? 0} categorias do formador obtidas');
+        return data ?? [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter categorias do formador $formadorId: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint(
+          '❌ [API] Exceção ao obter categorias do formador $formadorId: $e');
+      return [];
+    }
+  }
+
+  /// Obter áreas de especialização de um formador
+  Future<List<dynamic>?> getAreasFormador(int formadorId) async {
+    try {
+      debugPrint('🎯 [API] A obter áreas do formador ID: $formadorId');
+      final response = await get('/formadores/$formadorId/areas');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('✅ [API] ${data?.length ?? 0} áreas do formador obtidas');
+        return data ?? [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter áreas do formador $formadorId: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter áreas do formador $formadorId: $e');
+      return [];
+    }
+  }
+
+  /// Registar um novo formador (pendente de confirmação)
+  Future<Map<String, dynamic>?> registerFormador({
+    required String nome,
+    required String email,
+    required String password,
+    required int idade,
+    required String telefone,
+    required String morada,
+    required String codigo_postal,
+    List<int>? categorias,
+    List<int>? areas,
+    int? curso,
+  }) async {
+    try {
+      debugPrint('📝 [API] A registar novo formador: $email');
+      final response = await post('/formadores/register', body: {
+        'nome': nome,
+        'email': email,
+        'password': password,
+        'idade': idade,
+        'telefone': telefone,
+        'morada': morada,
+        'codigo_postal': codigo_postal,
+        if (categorias != null) 'categorias': categorias,
+        if (areas != null) 'areas': areas,
+        if (curso != null) 'curso': curso,
+      });
+
+      final data = parseResponseToMap(response);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Formador registado com sucesso');
+        return data;
+      } else {
+        debugPrint('❌ [API] Erro ao registar formador: ${response.statusCode}');
+        return data ??
+            {'success': false, 'message': 'Erro ao registar formador'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao registar formador: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  /// Obter perfil do formador atual (se o utilizador logado for formador)
+  Future<Map<String, dynamic>?> getFormadorProfile() async {
+    try {
+      debugPrint('👤 [API] A obter perfil do formador atual...');
+      final response = await get('/formadores/profile');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('✅ [API] Perfil do formador obtido');
+        return data;
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter perfil do formador: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter perfil do formador: $e');
+      return null;
+    }
+  }
+
+  /// Atualizar dados do formador
+  Future<Map<String, dynamic>?> updateFormador(
+      int formadorId, Map<String, dynamic> dadosParaAtualizar) async {
+    try {
+      debugPrint('📝 [API] A atualizar formador ID: $formadorId');
+      final response =
+          await put('/formadores/$formadorId', body: dadosParaAtualizar);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('✅ [API] Formador atualizado com sucesso');
+        return data;
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao atualizar formador: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao atualizar formador: $e');
+      return null;
+    }
+  }
+
+  // ===========================================
+  // MÉTODOS AUXILIARES PARA FORMADORES
+  // ===========================================
+
+  /// Obter URL da imagem de perfil do formador
+  String getFormadorAvatarUrl(String email) {
+    return getUserAvatarUrl(email);
+  }
+
+  /// Obter URL da imagem de capa do formador
+  String getFormadorCapaUrl(String email) {
+    return getUserCapaUrl(email);
+  }
+
+  /// Verificar se o utilizador atual é um formador
+  Future<bool> isCurrentUserFormador() async {
+    try {
+      final currentUser = await getCurrentUser();
+      return currentUser?['id_cargo'] == 2;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao verificar se utilizador é formador: $e');
+      return false;
+    }
+  }
+
+  /// Pesquisar formadores por nome ou email
+  Future<List<dynamic>?> searchFormadores(String query) async {
+    try {
+      debugPrint('🔍 [API] A pesquisar formadores: $query');
+      final response =
+          await get('/formadores?search=${Uri.encodeComponent(query)}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null && data['formadores'] != null) {
+          debugPrint(
+              '✅ [API] ${data['formadores'].length} formadores encontrados');
+          return data['formadores'] as List<dynamic>;
+        }
+        return [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao pesquisar formadores: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao pesquisar formadores: $e');
+      return null;
+    }
   }
 
   // ===========================================
@@ -560,17 +1023,33 @@ class ApiService {
     }
   }
 
-  /// Inscrever-se num curso
+  /// Inscrever-se num curso - CORRIGIDO
   Future<Map<String, dynamic>?> inscreverNoCurso(int cursoId) async {
     try {
       debugPrint('📝 [API] A inscrever no curso ID: $cursoId');
+
+      // Obter o utilizador atual para extrair o ID
+      final currentUser = await getCurrentUser();
+      if (currentUser == null) {
+        debugPrint('❌ [API] Erro: Utilizador não autenticado');
+        return {'success': false, 'message': 'Utilizador não autenticado'};
+      }
+
+      final userId = currentUser['id_utilizador'];
+      debugPrint('👤 [API] ID do utilizador: $userId');
+
       final response = await post('/inscricoes', body: {
+        'id_utilizador': userId,
         'id_curso': cursoId,
       });
       return parseResponseToMap(response);
     } catch (e) {
       debugPrint('❌ [API] Erro ao inscrever no curso $cursoId: $e');
-      return null;
+      return {
+        'success': false,
+        'message': 'Erro ao processar inscrição',
+        'error': e.toString()
+      };
     }
   }
 

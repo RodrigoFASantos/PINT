@@ -213,37 +213,240 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
     }
   }
 
+  bool _isFileType(String? tipo) {
+    final tipoLower = tipo?.toLowerCase();
+    return tipoLower == 'file' ||
+        tipoLower == 'ficheiro' ||
+        tipoLower == 'arquivo';
+  }
+
+  bool _isVideoType(String? tipo) {
+    return tipo?.toLowerCase() == 'video';
+  }
+
   Future<void> _handleConteudoClick(Map<String, dynamic> conteudo) async {
+    print(
+        'Clique no conteúdo: ${conteudo['titulo']} - Tipo: ${conteudo['tipo']}');
+
     if (!podeAcederConteudos) {
+      print('Acesso negado aos conteúdos');
       _showAccessDeniedDialog();
       return;
     }
 
     final tipo = conteudo['tipo']?.toLowerCase();
-    String? url;
+    print('Tipo normalizado: $tipo');
 
-    if (tipo == 'link' && conteudo['url'] != null) {
-      url = conteudo['url'];
-    } else if (tipo == 'video' && conteudo['url'] != null) {
-      url = conteudo['url'];
-    } else if (tipo == 'file' && conteudo['arquivo_path'] != null) {
-      url =
-          '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
-    }
-
-    if (url != null) {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      if (_isFileType(tipo)) {
+        // Para arquivos, mostrar modal com ambos os botões
+        print('Abrindo modal para arquivo: ${conteudo['arquivo_path']}');
+        _showContentModal(conteudo,
+            showViewButton: true, showDownloadButton: true);
+      } else if (_isVideoType(tipo)) {
+        // Para vídeos, mostrar modal apenas com botão de abrir
+        print('Abrindo modal para vídeo: ${conteudo['url']}');
+        _showContentModal(conteudo,
+            showViewButton: false, showDownloadButton: true);
+      } else if (tipo == 'link' && conteudo['url'] != null) {
+        print('Abrindo link: ${conteudo['url']}');
+        final url = conteudo['url'] as String;
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          _showErrorSnackBar('Não foi possível abrir o link');
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Não foi possível abrir o conteúdo'),
-            backgroundColor: Colors.red,
+        print('Tipo de conteúdo não suportado ou URL/caminho não encontrado');
+        _showErrorSnackBar('Tipo de conteúdo não suportado');
+      }
+    } catch (e) {
+      print('Erro ao abrir conteúdo: $e');
+      _showErrorSnackBar('Erro ao abrir conteúdo: $e');
+    }
+  }
+
+  void _showContentModal(Map<String, dynamic> conteudo,
+      {required bool showViewButton, required bool showDownloadButton}) {
+    final tipo = conteudo['tipo']?.toLowerCase();
+    final isVideo = _isVideoType(tipo);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Container(
+            padding: EdgeInsets.all(20),
+            constraints: BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Cabeçalho
+                Row(
+                  children: [
+                    Icon(
+                        isVideo ? Icons.play_circle_outline : Icons.attach_file,
+                        color: isVideo ? Colors.red : Colors.blue,
+                        size: 24),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        conteudo['titulo'] ?? (isVideo ? 'Vídeo' : 'Arquivo'),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(Icons.close),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 20),
+
+                // Descrição (se existir)
+                if (conteudo['descricao'] != null &&
+                    conteudo['descricao'].isNotEmpty) ...[
+                  Text(
+                    conteudo['descricao'],
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+                ],
+
+                // Botão de ação para arquivos
+                if (!isVideo && showViewButton && showDownloadButton)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _viewFile(conteudo),
+                          icon: Icon(Icons.open_in_browser),
+                          label: Text('Abrir'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                // Botão único para vídeos
+                if (isVideo)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _downloadVideo(conteudo),
+                      icon: Icon(Icons.play_arrow),
+                      label: Text('Abrir Vídeo'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
+      },
+    );
+  }
+
+  Future<void> _viewFile(Map<String, dynamic> conteudo) async {
+    try {
+      if (conteudo['arquivo_path'] != null) {
+        final fileUrl =
+            '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
+        print('Visualizando arquivo: $fileUrl');
+
+        final uri = Uri.parse(fileUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          Navigator.of(context).pop(); // Fechar modal
+        } else {
+          _showErrorSnackBar(
+              'Não foi possível abrir o arquivo para visualização');
+        }
       }
+    } catch (e) {
+      print('Erro ao visualizar arquivo: $e');
+      _showErrorSnackBar('Erro ao visualizar arquivo: $e');
     }
+  }
+
+  Future<void> _downloadFile(Map<String, dynamic> conteudo) async {
+    try {
+      if (conteudo['arquivo_path'] != null) {
+        final fileUrl =
+            '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
+        print('Abrindo arquivo: $fileUrl');
+
+        final uri = Uri.parse(fileUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          Navigator.of(context).pop(); // Fechar modal
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Arquivo aberto no navegador'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          _showErrorSnackBar('Não foi possível abrir o arquivo');
+        }
+      }
+    } catch (e) {
+      print('Erro ao abrir arquivo: $e');
+      _showErrorSnackBar('Erro ao abrir arquivo: $e');
+    }
+  }
+
+  Future<void> _downloadVideo(Map<String, dynamic> conteudo) async {
+    try {
+      if (conteudo['url'] != null) {
+        final videoUrl = conteudo['url'] as String;
+        print('Abrindo vídeo: $videoUrl');
+
+        final uri = Uri.parse(videoUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          Navigator.of(context).pop(); // Fechar modal
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Vídeo aberto no navegador'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          _showErrorSnackBar('Não foi possível abrir o vídeo');
+        }
+      }
+    } catch (e) {
+      print('Erro ao abrir vídeo: $e');
+      _showErrorSnackBar('Erro ao abrir vídeo: $e');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   void _showAccessDeniedDialog() {
@@ -460,8 +663,14 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
         child: ListTile(
           dense: true,
           onTap: temAcesso
-              ? () => _handleConteudoClick(conteudo)
-              : () => _showAccessDeniedDialog(),
+              ? () {
+                  print('Clique detectado no conteúdo: ${conteudo['titulo']}');
+                  _handleConteudoClick(conteudo);
+                }
+              : () {
+                  print('Acesso negado - mostrando dialog');
+                  _showAccessDeniedDialog();
+                },
           leading: Container(
             padding: EdgeInsets.all(6),
             decoration: BoxDecoration(

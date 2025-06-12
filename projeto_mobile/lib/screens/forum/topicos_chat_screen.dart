@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart'; // ✅ ADICIONADO
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:mime/mime.dart'; // ✅ ADICIONADO
 import '../../services/api_service.dart';
 import '../../main.dart';
 import '../../components/sidebar_screen.dart';
-import '../../components/anexo_widget.dart';
 
 class TopicosChatScreen extends StatefulWidget {
   final String topicoId;
@@ -39,6 +40,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
   Map<int, String> avaliacoes = {}; // Para controlar likes/dislikes do usuário
   File? _anexo;
   String? _anexoTipo; // 'imagem', 'video', 'arquivo'
+  String? _anexoMimeType; // ✅ ADICIONADO para armazenar MIME type
 
   // 🚀 WEBSOCKET PARA TEMPO REAL
   IO.Socket? socket;
@@ -56,6 +58,54 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     _scrollController.dispose();
     _disconnectSocket();
     super.dispose();
+  }
+
+  // ✅ NOVA FUNÇÃO: Detectar Content-Type baseado na extensão
+  String _detectContentType(String filePath, String? originalMimeType) {
+    // Primeiro, tentar usar o MIME type original se disponível e válido
+    if (originalMimeType != null &&
+        originalMimeType != 'application/octet-stream' &&
+        originalMimeType.isNotEmpty) {
+      return originalMimeType;
+    }
+
+    // Se não tiver MIME type válido, detectar pela extensão
+    final mimeType = lookupMimeType(filePath);
+    if (mimeType != null) {
+      return mimeType;
+    }
+
+    // Fallback baseado na extensão manual
+    final extension = filePath.toLowerCase().split('.').last;
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'mp4':
+        return 'video/mp4';
+      case 'avi':
+        return 'video/avi';
+      case 'mov':
+        return 'video/quicktime';
+      case 'webm':
+        return 'video/webm';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   // INICIALIZAR WEBSOCKET
@@ -279,7 +329,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     try {
       debugPrint('🔧 [TOPICOS_CHAT] Enviando comentário');
 
-      // 🚀 IMPLEMENTAÇÃO CORRIGIDA COM NOME DO CAMPO CORRETO
+      // 🚀 IMPLEMENTAÇÃO CORRIGIDA COM CONTENT-TYPE
       Map<String, String> headers = {
         'Authorization': 'Bearer ${await _getAuthToken()}',
       };
@@ -293,15 +343,25 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       // Adicionar texto
       request.fields['texto'] = _comentarioController.text;
 
-      // ✅ CORRIGIDO: Usar nome de campo 'anexo' (singular) como o backend espera
+      // ✅ CORRIGIDO: Usar nome de campo 'anexo' com CONTENT-TYPE correto
       if (_anexo != null) {
         var stream = http.ByteStream(_anexo!.openRead());
         var length = await _anexo!.length();
+
+        // ✅ DETECTAR E DEFINIR CONTENT-TYPE CORRETO
+        final contentType = _detectContentType(_anexo!.path, _anexoMimeType);
+
+        debugPrint('📎 [UPLOAD] Comentário - Arquivo: ${_anexo!.path}');
+        debugPrint('📎 [UPLOAD] Content-Type detectado: $contentType');
+        debugPrint('📎 [UPLOAD] Tamanho: $length bytes');
+
         var multipartFile = http.MultipartFile(
-          'anexo', // ✅ CORRIGIDO: era 'anexos', agora é 'anexo'
+          'anexo', // ✅ Campo correto
           stream,
           length,
           filename: 'anexo_${DateTime.now().millisecondsSinceEpoch}',
+          contentType:
+              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
         );
         request.files.add(multipartFile);
       }
@@ -314,6 +374,9 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       // Enviar requisição
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📡 [TOPICOS_CHAT] Status: ${response.statusCode}');
+      debugPrint('📡 [TOPICOS_CHAT] Response: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -330,6 +393,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
             _comentarioController.clear();
             _anexo = null;
             _anexoTipo = null;
+            _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
           });
 
           // Auto-scroll
@@ -675,10 +739,10 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
             SizedBox(height: 12),
           ],
 
-          // 🆕 ANEXOS DO TEMA
-          if (tema!['anexos'] != null && tema!['anexos'].isNotEmpty) ...[
+          // ✅ ANEXO ÚNICO DO TEMA (CORRIGIDO)
+          if (tema!['anexo_url'] != null && tema!['anexo_url'].isNotEmpty) ...[
             Text(
-              'Anexos do tema:',
+              'Anexo do tema:',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -686,9 +750,10 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
               ),
             ),
             SizedBox(height: 8),
-            ListaAnexos(
-              anexos: tema!['anexos'],
-              isPreview: true,
+            _buildAnexoTema(
+              tema!['anexo_url'],
+              tema!['anexo_nome'] ?? 'Anexo',
+              tema!['tipo_anexo'] ?? 'arquivo',
             ),
             SizedBox(height: 12),
           ],
@@ -729,6 +794,81 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         ],
       ),
     );
+  }
+
+  // ✅ WIDGET PARA MOSTRAR ANEXO DO TEMA
+  Widget _buildAnexoTema(String anexoUrl, String anexoNome, String tipoAnexo) {
+    // Construir URL completa
+    final fullUrl = anexoUrl.startsWith('http')
+        ? anexoUrl
+        : '${_apiService.apiBase.replaceAll('/api', '')}/$anexoUrl';
+
+    if (tipoAnexo == 'imagem') {
+      return InkWell(
+        onTap: () => _showImageDialog(fullUrl, anexoNome),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              fullUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 200,
+                color: Colors.grey[200],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image,
+                          color: Colors.grey[400], size: 32),
+                      SizedBox(height: 8),
+                      Text('Erro ao carregar imagem',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              tipoAnexo == 'video' ? Icons.video_file : Icons.insert_drive_file,
+              color: Color(0xFF4A90E2),
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                anexoNome,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(Icons.download, color: Colors.grey[600], size: 20),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildStatChip(IconData icon, int value) {
@@ -799,7 +939,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     final isAutor = comentario['id_utilizador'] ==
         (currentUser?['id_utilizador'] ?? currentUser?['id']);
     final foiDenunciado = comentario['foi_denunciado'] == true;
-    final anexos = comentario['anexos'] ?? [];
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -877,11 +1016,13 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                     SizedBox(height: 8),
                   ],
 
-                  // 🆕 ANEXOS DO COMENTÁRIO
-                  if (anexos.isNotEmpty) ...[
-                    ListaAnexos(
-                      anexos: anexos,
-                      isPreview: false,
+                  // ✅ ANEXO ÚNICO DO COMENTÁRIO (CORRIGIDO)
+                  if (comentario['anexo_url'] != null &&
+                      comentario['anexo_url'].isNotEmpty) ...[
+                    _buildAnexoComentario(
+                      comentario['anexo_url'],
+                      comentario['anexo_nome'] ?? 'Anexo',
+                      comentario['tipo_anexo'] ?? 'arquivo',
                     ),
                     SizedBox(height: 8),
                   ],
@@ -906,7 +1047,8 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                       ),
                       Spacer(),
                       // Indicador de anexo
-                      if (anexos.isNotEmpty)
+                      if (comentario['anexo_url'] != null &&
+                          comentario['anexo_url'].isNotEmpty)
                         Container(
                           margin: EdgeInsets.only(right: 8),
                           child: Icon(
@@ -932,6 +1074,126 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ WIDGET PARA MOSTRAR ANEXO DO COMENTÁRIO
+  Widget _buildAnexoComentario(
+      String anexoUrl, String anexoNome, String tipoAnexo) {
+    // Construir URL completa
+    final fullUrl = anexoUrl.startsWith('http')
+        ? anexoUrl
+        : '${_apiService.apiBase.replaceAll('/api', '')}/$anexoUrl';
+
+    if (tipoAnexo == 'imagem') {
+      return InkWell(
+        onTap: () => _showImageDialog(fullUrl, anexoNome),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              fullUrl,
+              height: 150,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 150,
+                color: Colors.grey[200],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image,
+                          color: Colors.grey[400], size: 24),
+                      SizedBox(height: 4),
+                      Text('Erro ao carregar imagem',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              tipoAnexo == 'video' ? Icons.video_file : Icons.insert_drive_file,
+              color: Color(0xFF4A90E2),
+              size: 16,
+            ),
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                anexoNome,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF4A90E2),
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // ✅ FUNÇÃO PARA MOSTRAR IMAGEM EM FULLSCREEN
+  void _showImageDialog(String imageUrl, String imageName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        child: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: Text(imageName, style: TextStyle(color: Colors.white)),
+                backgroundColor: Colors.black,
+                iconTheme: IconThemeData(color: Colors.white),
+              ),
+              Expanded(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image,
+                              color: Colors.white, size: 64),
+                          SizedBox(height: 16),
+                          Text('Erro ao carregar imagem',
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1049,6 +1311,18 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
+                        // ✅ MOSTRAR MIME TYPE PARA DEBUG
+                        if (_anexoMimeType != null) ...[
+                          SizedBox(height: 2),
+                          Text(
+                            'Tipo: $_anexoMimeType',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1059,6 +1333,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                       setState(() {
                         _anexo = null;
                         _anexoTipo = null;
+                        _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
                       });
                     },
                     icon: Icon(Icons.close, size: 20),
@@ -1201,7 +1476,12 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         setState(() {
           _anexo = File(image.path);
           _anexoTipo = 'imagem';
+          _anexoMimeType = _detectContentType(
+              image.path, image.mimeType); // ✅ ARMAZENAR MIME TYPE
         });
+
+        debugPrint('📎 [IMAGEM] Selecionada: ${image.name}');
+        debugPrint('📎 [IMAGEM] MIME Type: $_anexoMimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao selecionar imagem: $error');
@@ -1222,7 +1502,12 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         setState(() {
           _anexo = File(image.path);
           _anexoTipo = 'imagem';
+          _anexoMimeType = _detectContentType(
+              image.path, image.mimeType); // ✅ ARMAZENAR MIME TYPE
         });
+
+        debugPrint('📎 [FOTO] Tirada: ${image.name}');
+        debugPrint('📎 [FOTO] MIME Type: $_anexoMimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao tirar foto: $error');
@@ -1242,6 +1527,8 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
 
         setState(() {
           _anexo = file;
+          _anexoMimeType =
+              _detectContentType(file.path, null); // ✅ ARMAZENAR MIME TYPE
 
           if (['mp4', 'avi', 'mov'].contains(extension)) {
             _anexoTipo = 'video';
@@ -1249,6 +1536,9 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
             _anexoTipo = 'arquivo';
           }
         });
+
+        debugPrint('📎 [ARQUIVO] Selecionado: ${result.files.single.name}');
+        debugPrint('📎 [ARQUIVO] MIME Type: $_anexoMimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao selecionar arquivo: $error');
