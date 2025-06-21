@@ -315,6 +315,7 @@ class ForumActionButton extends StatelessWidget {
   final Color? activeColor;
   final VoidCallback? onPressed;
   final double iconSize;
+  final bool isDisabled;
 
   const ForumActionButton({
     Key? key,
@@ -325,15 +326,19 @@ class ForumActionButton extends StatelessWidget {
     this.activeColor,
     this.onPressed,
     this.iconSize = 16,
+    this.isDisabled = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        isActive ? (activeColor ?? Color(0xFF4A90E2)) : Colors.grey[600];
+    final color = isDisabled
+        ? Colors.grey[400]
+        : isActive
+            ? (activeColor ?? Color(0xFF4A90E2))
+            : Colors.grey[600];
 
     return InkWell(
-      onTap: onPressed,
+      onTap: isDisabled ? null : onPressed,
       borderRadius: BorderRadius.circular(4),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -360,6 +365,63 @@ class ForumActionButton extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 🚩 NOVO: Widget para botão de denúncia melhorado
+class ForumDenunciaButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final bool foiDenunciado;
+  final String tooltip;
+  final double iconSize;
+
+  const ForumDenunciaButton({
+    Key? key,
+    this.onPressed,
+    this.foiDenunciado = false,
+    this.tooltip = 'Denunciar',
+    this.iconSize = 16,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: foiDenunciado
+            ? Colors.red.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: foiDenunciado
+            ? Border.all(color: Colors.red.withOpacity(0.3))
+            : null,
+      ),
+      child: IconButton(
+        onPressed: foiDenunciado ? null : onPressed,
+        icon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.flag,
+              color: foiDenunciado ? Colors.red : Colors.grey[600],
+              size: iconSize,
+            ),
+            if (foiDenunciado) ...[
+              SizedBox(width: 4),
+              Text(
+                'Denunciado',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+        tooltip: foiDenunciado ? "Já denunciado" : tooltip,
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -544,6 +606,145 @@ class ForumEmptyState extends StatelessWidget {
   }
 }
 
+/// 🚩 NOVO: Widget para modal de denúncia
+class ForumDenunciaModal extends StatefulWidget {
+  final String tipo; // 'tema' ou 'comentario'
+  final Function(String motivo) onDenunciar;
+
+  const ForumDenunciaModal({
+    Key? key,
+    required this.tipo,
+    required this.onDenunciar,
+  }) : super(key: key);
+
+  @override
+  _ForumDenunciaModalState createState() => _ForumDenunciaModalState();
+}
+
+class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
+  String? motivoSelecionado;
+  String motivoCustom = '';
+  final TextEditingController _customController = TextEditingController();
+
+  final List<String> motivosPreDefinidos = [
+    'Spam',
+    'Conteúdo ofensivo',
+    'Discurso de ódio',
+    'Assédio',
+    'Conteúdo inadequado',
+    'Informação falsa',
+    'Outro'
+  ];
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
+  }
+
+  String get motivoFinal =>
+      motivoSelecionado == 'Outro' ? motivoCustom : (motivoSelecionado ?? '');
+  bool get podeEnviar =>
+      motivoSelecionado != null &&
+      (motivoSelecionado != 'Outro' || motivoCustom.trim().isNotEmpty);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.flag, color: Colors.red),
+          SizedBox(width: 8),
+          Text('Denunciar ${widget.tipo == 'tema' ? 'Tema' : 'Comentário'}'),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Por favor, selecione o motivo da denúncia:'),
+            SizedBox(height: 16),
+
+            // Motivos pré-definidos
+            ...motivosPreDefinidos.map(
+              (motivo) => RadioListTile<String>(
+                value: motivo,
+                groupValue: motivoSelecionado,
+                onChanged: (value) {
+                  setState(() {
+                    motivoSelecionado = value;
+                    if (value != 'Outro') {
+                      motivoCustom = '';
+                      _customController.clear();
+                    }
+                  });
+                },
+                title: Text(motivo, style: TextStyle(fontSize: 14)),
+                dense: true,
+              ),
+            ),
+
+            // Campo para "Outro"
+            if (motivoSelecionado == 'Outro') ...[
+              SizedBox(height: 8),
+              TextField(
+                controller: _customController,
+                onChanged: (value) {
+                  setState(() {
+                    motivoCustom = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Descreva o motivo...',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                maxLines: 3,
+                maxLength: 500,
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: podeEnviar
+              ? () {
+                  widget.onDenunciar(motivoFinal);
+                  Navigator.pop(context);
+                }
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          child: Text('Denunciar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 🚩 FUNÇÃO AUXILIAR: Mostrar modal de denúncia
+Future<void> showForumDenunciaModal({
+  required BuildContext context,
+  required String tipo,
+  required Function(String motivo) onDenunciar,
+}) {
+  return showDialog(
+    context: context,
+    builder: (context) => ForumDenunciaModal(
+      tipo: tipo,
+      onDenunciar: onDenunciar,
+    ),
+  );
+}
+
 /// Função utilitária para formatar datas no contexto do fórum
 String formatarDataForum(String? dataString) {
   if (dataString == null) return 'Data indisponível';
@@ -616,6 +817,77 @@ class _ForumExpandableTextState extends State<ForumExpandableText> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// 🚩 NOVO: Widget para mostrar feedback de denúncia
+class ForumDenunciaFeedback extends StatelessWidget {
+  final bool foiDenunciado;
+  final String? motivoDenuncia;
+  final VoidCallback? onCancelarDenuncia;
+
+  const ForumDenunciaFeedback({
+    Key? key,
+    required this.foiDenunciado,
+    this.motivoDenuncia,
+    this.onCancelarDenuncia,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!foiDenunciado) return SizedBox.shrink();
+
+    return Container(
+      margin: EdgeInsets.only(top: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.flag, color: Colors.red, size: 16),
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Conteúdo denunciado',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (motivoDenuncia != null) ...[
+                  SizedBox(height: 2),
+                  Text(
+                    'Motivo: $motivoDenuncia',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onCancelarDenuncia != null)
+            TextButton(
+              onPressed: onCancelarDenuncia,
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

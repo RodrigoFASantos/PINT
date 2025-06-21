@@ -286,10 +286,17 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
       const token = localStorage.getItem('token');
 
       const formData = new FormData();
-      // Aqui está a alteração - usando sempre 'file' como tipo
-      formData.append('tipo', 'file');
-      // Adicionando um campo extra para identificar se é vídeo ou outro tipo de arquivo
+      
+      // CORREÇÃO: Enviar o tipo correto baseado na seleção do usuário
+      if (isVideo) {
+        formData.append('tipo', 'video');
+      } else {
+        formData.append('tipo', 'file');
+      }
+      
+      // Manter compatibilidade com campo tipo_midia se necessário
       formData.append('tipo_midia', isVideo ? 'video' : 'documento');
+      
       formData.append('titulo', titulo || arquivo.name);
       formData.append('descricao', '');
       formData.append('id_pasta', pasta.id_pasta);

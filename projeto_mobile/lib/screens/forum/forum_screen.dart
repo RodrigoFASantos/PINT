@@ -167,9 +167,11 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
+  // ✅ ALTERADO: Navegar diretamente para as conversas do tópico
   void _handleVerTopico(int topicoId) {
-    debugPrint('🔧 [FORUM] Navegando para tópico: $topicoId');
-    Navigator.pushNamed(context, '/forum/topico/$topicoId');
+    debugPrint(
+        '🔧 [FORUM] Navegando diretamente para conversas do tópico: $topicoId');
+    Navigator.pushNamed(context, '/forum/topico/$topicoId/conversas');
   }
 
   String _formatarData(String? dataString) {
@@ -435,13 +437,44 @@ class _ForumScreenState extends State<ForumScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    topico['titulo'] ?? 'Sem título',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF5181B8),
-                    ),
+                  // ✅ MELHORADO: Visual mais claro para indicar que vai direto para chat
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          topico['titulo'] ?? 'Sem título',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF5181B8),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF4CAF50).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.chat,
+                                size: 14, color: Color(0xFF4CAF50)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Chat',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF4CAF50),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (topico['descricao'] != null) ...[
                     SizedBox(height: 8),
@@ -467,12 +500,19 @@ class _ForumScreenState extends State<ForumScreen> {
                           color: Colors.grey[700],
                         ),
                       ),
-                      Text(
-                        _formatarData(topico['data_criacao']),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time,
+                              size: 12, color: Colors.grey[600]),
+                          SizedBox(width: 4),
+                          Text(
+                            _formatarData(topico['data_criacao']),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

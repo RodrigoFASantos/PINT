@@ -23,35 +23,19 @@ class _PresencasCursoState extends State<PresencasCurso> {
   Map<String, bool> minhasPresencas = {};
   bool loading = true;
   String? error;
-  bool temPresencaAtiva = false;
 
-  // Para criar presença (formador)
-  bool showCriarModal = false;
-  String codigo = '';
-  DateTime? dataInicio;
-  TimeOfDay? horaInicio;
-  DateTime? dataFim;
-  TimeOfDay? horaFim;
-
-  // Para marcar presença (formando) - SIMPLIFICADO
+  // Para marcar presença (formando)
   bool showMarcarModal = false;
   String codigoMarcar = '';
 
-  // Para ver lista de formandos
+  // Para ver lista de formandos (formadores)
   bool showListaFormandosModal = false;
   Map<String, dynamic>? presencaSelecionada;
   List<Map<String, dynamic>> formandosLista = [];
   bool loadingFormandos = false;
 
-  // Controllers para os TextFields
+  // Controller para o TextField
   late TextEditingController _codigoMarcarController;
-  late TextEditingController _codigoCriarController;
-
-  // Variáveis para horas do curso
-  double horasDisponiveis = 0.0;
-  double duracaoCurso = 0.0;
-  double horasUtilizadas = 0.0;
-  double horasNovaPresenca = 0.0;
 
   // Dados do usuário atual
   Map<String, dynamic>? currentUser;
@@ -65,17 +49,15 @@ class _PresencasCursoState extends State<PresencasCurso> {
   @override
   void initState() {
     super.initState();
-    // Inicializar os controllers
+    // Inicializar o controller
     _codigoMarcarController = TextEditingController();
-    _codigoCriarController = TextEditingController();
     _getCurrentUser();
   }
 
   @override
   void dispose() {
-    // Fazer dispose dos controllers
+    // Fazer dispose do controller
     _codigoMarcarController.dispose();
-    _codigoCriarController.dispose();
     super.dispose();
   }
 
@@ -119,42 +101,11 @@ class _PresencasCursoState extends State<PresencasCurso> {
           allPresencas = data.cast<Map<String, dynamic>>();
         }
 
-        // Filtrar presenças para formandos - só mostrar aquelas cuja data/hora de início já passou
-        if (isFormando) {
-          final agora = DateTime.now();
-          allPresencas = allPresencas.where((presenca) {
-            try {
-              final dataHoraInicio = DateTime.parse(
-                  '${presenca['data_inicio']}T${presenca['hora_inicio']}');
-              return dataHoraInicio.isBefore(agora) ||
-                  dataHoraInicio.isAtSameMomentAs(agora);
-            } catch (e) {
-              return false;
-            }
-          }).toList();
-        }
-
-        // Verificar se existe presença ativa
-        final agora = DateTime.now();
-        bool presencaAtiva = false;
-
-        for (var presenca in allPresencas) {
-          try {
-            final dataHoraFim = DateTime.parse(
-                '${presenca['data_fim']}T${presenca['hora_fim']}');
-            if (dataHoraFim.isAfter(agora)) {
-              presencaAtiva = true;
-              break;
-            }
-          } catch (e) {
-            // Ignorar erros de parsing
-          }
-        }
-
-        // Se for formador, buscar horas disponíveis
-        if (isFormador) {
-          await _fetchHorasDisponiveis();
-        }
+        // Para formandos, mostrar todas as presenças (com diferentes status)
+        // Para formadores, mostrar todas as presenças
+        setState(() {
+          presencas = allPresencas;
+        });
 
         // Se for formando, buscar suas presenças
         if (isFormando && currentUser != null) {
@@ -184,8 +135,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
         }
 
         setState(() {
-          presencas = allPresencas;
-          temPresencaAtiva = presencaAtiva;
           loading = false;
         });
       } else {
@@ -202,169 +151,69 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  Future<void> _fetchHorasDisponiveis() async {
-    try {
-      final response = await _apiService
-          .get('/presencas/horas-disponiveis/${widget.cursoId}');
+  // Determinar o status da presença para formandos
+  String _getStatusPresenca(Map<String, dynamic> presenca) {
+    final presencaId = presenca['id_curso_presenca'].toString();
+    final jaPresente = minhasPresencas[presencaId] ?? false;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          horasDisponiveis = (data['horasDisponiveis'] ?? 0.0).toDouble();
-          duracaoCurso = (data['duracaoCurso'] ?? 0.0).toDouble();
-          horasUtilizadas = (data['horasUtilizadas'] ?? 0.0).toDouble();
-        });
+    if (jaPresente) {
+      return 'Presente';
+    }
+
+    // Verificar se ainda está dentro da validade
+    try {
+      final dataHoraFim =
+          DateTime.parse('${presenca['data_fim']}T${presenca['hora_fim']}');
+      final agora = DateTime.now();
+
+      if (dataHoraFim.isAfter(agora)) {
+        return 'Registar';
+      } else {
+        return 'Ausente';
       }
     } catch (e) {
-      print('Erro ao buscar horas disponíveis: $e');
+      return 'Ausente';
     }
   }
 
-  // SIMPLIFICADO: Abrir modal geral para marcar presença
-  void _abrirModalMarcarPresenca() {
+  // Determinar a cor do status
+  Color _getCorStatus(String status) {
+    switch (status) {
+      case 'Presente':
+        return Colors.green;
+      case 'Registar':
+        return Colors.orange;
+      case 'Ausente':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Verificar se a presença pode ser marcada (está válida e não foi marcada)
+  bool _podeMarcarPresenca(Map<String, dynamic> presenca) {
+    return _getStatusPresenca(presenca) == 'Registar';
+  }
+
+  // Abrir modal para marcar presença específica
+  void _abrirModalMarcarPresenca(Map<String, dynamic> presenca) {
     setState(() {
+      presencaSelecionada = presenca;
       showMarcarModal = true;
       codigoMarcar = '';
       _codigoMarcarController.clear();
     });
   }
 
-  void _calcularHorasNovaPresenca() {
-    if (dataInicio != null &&
-        horaInicio != null &&
-        dataFim != null &&
-        horaFim != null) {
-      try {
-        final inicio = DateTime(
-          dataInicio!.year,
-          dataInicio!.month,
-          dataInicio!.day,
-          horaInicio!.hour,
-          horaInicio!.minute,
-        );
-
-        final fim = DateTime(
-          dataFim!.year,
-          dataFim!.month,
-          dataFim!.day,
-          horaFim!.hour,
-          horaFim!.minute,
-        );
-
-        if (fim.isAfter(inicio)) {
-          final diferencaMs = fim.difference(inicio).inMilliseconds;
-          final diferencaHoras = diferencaMs / (1000 * 60 * 60);
-          setState(() {
-            horasNovaPresenca = diferencaHoras > 0 ? diferencaHoras : 0;
-          });
-        } else {
-          setState(() {
-            horasNovaPresenca = 0;
-          });
-        }
-      } catch (e) {
-        setState(() {
-          horasNovaPresenca = 0;
-        });
-      }
-    }
-  }
-
-  Future<void> _criarPresenca() async {
-    if (codigo.isEmpty ||
-        dataInicio == null ||
-        horaInicio == null ||
-        dataFim == null ||
-        horaFim == null) {
-      _showError('Preencha todos os campos');
-      return;
-    }
-
-    // Validar que data/hora fim > data/hora início
-    final inicio = DateTime(
-      dataInicio!.year,
-      dataInicio!.month,
-      dataInicio!.day,
-      horaInicio!.hour,
-      horaInicio!.minute,
-    );
-
-    final fim = DateTime(
-      dataFim!.year,
-      dataFim!.month,
-      dataFim!.day,
-      horaFim!.hour,
-      horaFim!.minute,
-    );
-
-    if (fim.isBefore(inicio) || fim.isAtSameMomentAs(inicio)) {
-      _showError('A data/hora de fim deve ser posterior à data/hora de início');
-      return;
-    }
-
-    // Verificar se excede horas disponíveis
-    if (horasNovaPresenca > horasDisponiveis) {
-      _showError(
-          'A presença excede as horas disponíveis (${horasDisponiveis.toStringAsFixed(2)}h restantes)');
-      return;
-    }
-
-    try {
-      setState(() {
-        loading = true;
-      });
-
-      final body = {
-        'id_curso': widget.cursoId,
-        'data_inicio':
-            '${dataInicio!.year}-${dataInicio!.month.toString().padLeft(2, '0')}-${dataInicio!.day.toString().padLeft(2, '0')}',
-        'hora_inicio':
-            '${horaInicio!.hour.toString().padLeft(2, '0')}:${horaInicio!.minute.toString().padLeft(2, '0')}',
-        'data_fim':
-            '${dataFim!.year}-${dataFim!.month.toString().padLeft(2, '0')}-${dataFim!.day.toString().padLeft(2, '0')}',
-        'hora_fim':
-            '${horaFim!.hour.toString().padLeft(2, '0')}:${horaFim!.minute.toString().padLeft(2, '0')}',
-        'codigo': codigo,
-      };
-
-      final response = await _apiService.post('/presencas/criar', body: body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        setState(() {
-          showCriarModal = false;
-          codigo = '';
-          dataInicio = null;
-          horaInicio = null;
-          dataFim = null;
-          horaFim = null;
-          horasNovaPresenca = 0;
-          _codigoCriarController.clear();
-        });
-
-        _showSuccess('Presença criada com sucesso!');
-        await _refreshData();
-      } else {
-        final errorData = json.decode(response.body);
-        _showError(errorData['message'] ?? 'Erro ao criar presença');
-      }
-    } catch (e) {
-      _showError('Erro ao criar presença: $e');
-    } finally {
-      setState(() {
-        loading = false;
-      });
-    }
-  }
-
-  // SIMPLIFICADO: Marcar presença baseado no React
+  // Marcar presença
   Future<void> _marcarPresenca() async {
     if (_codigoMarcarController.text.isEmpty) {
-      _showError('Preencha o código de presença');
+      _showError('Código inválido');
       return;
     }
 
     if (currentUser == null) {
-      _showError('Erro: usuário não identificado');
+      _showError('Código inválido');
       return;
     }
 
@@ -385,6 +234,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
         // Fechar modal primeiro
         setState(() {
           showMarcarModal = false;
+          presencaSelecionada = null;
           _codigoMarcarController.clear();
         });
 
@@ -392,12 +242,10 @@ class _PresencasCursoState extends State<PresencasCurso> {
         // Atualizar dados completos
         await _refreshData();
       } else {
-        final errorData = json.decode(response.body);
-        _showError(
-            errorData['message'] ?? 'Código de presença inválido ou expirado');
+        _showError('Código inválido');
       }
     } catch (e) {
-      _showError('Erro ao marcar presença: $e');
+      _showError('Código inválido');
     } finally {
       setState(() {
         loading = false;
@@ -444,14 +292,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
     } catch (e) {
       return dateString;
     }
-  }
-
-  String _gerarCodigo() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return String.fromCharCodes(Iterable.generate(
-        6,
-        (_) => chars.codeUnitAt(
-            (DateTime.now().millisecondsSinceEpoch) % chars.length)));
   }
 
   void _showSuccess(String message) {
@@ -615,64 +455,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                     ),
                   ),
                   Spacer(),
-                  if (isFormador) ...[
-                    // Mostrar informações de horas para formadores
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue[200]!),
-                      ),
-                      child: Text(
-                        '${horasUtilizadas.toStringAsFixed(1)}h / ${duracaoCurso.toStringAsFixed(1)}h',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: temPresencaAtiva
-                          ? null
-                          : () {
-                              setState(() {
-                                showCriarModal = true;
-                                // Definir valores padrão
-                                final agora = DateTime.now();
-                                dataInicio = agora;
-                                dataFim = agora;
-                                horaInicio = TimeOfDay.fromDateTime(agora);
-                                horaFim = TimeOfDay.fromDateTime(
-                                    agora.add(Duration(hours: 2)));
-                                codigo = _gerarCodigo();
-                                _codigoCriarController.text = codigo;
-                                _calcularHorasNovaPresenca();
-                              });
-                            },
-                      icon: Icon(Icons.add),
-                      label: Text('Criar Presença'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            temPresencaAtiva ? Colors.grey : Colors.green,
-                      ),
-                    ),
-                  ],
-                  // SIMPLIFICADO: Botão geral para marcar presença (formandos)
-                  if (isFormando) ...[
-                    ElevatedButton.icon(
-                      onPressed: _abrirModalMarcarPresenca,
-                      icon: Icon(Icons.check),
-                      label: Text('Marcar Presença'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
-                    ),
-                  ],
-                  SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
                     icon: Icon(Icons.refresh),
@@ -695,28 +477,52 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           final presenca = presencas[index];
                           final presencaId =
                               presenca['id_curso_presenca'].toString();
-                          final jaPresente =
-                              minhasPresencas[presencaId] ?? false;
+
+                          // Para formandos, determinar status e cor
+                          String statusText = '';
+                          Color statusColor = Colors.grey;
+                          Color cardColor = Colors.white;
+                          bool podeClicar = false;
+
+                          if (isFormando) {
+                            statusText = _getStatusPresenca(presenca);
+                            statusColor = _getCorStatus(statusText);
+                            podeClicar = _podeMarcarPresenca(presenca);
+
+                            // Definir cor do card baseada no status
+                            switch (statusText) {
+                              case 'Presente':
+                                cardColor = Colors.green[50]!;
+                                break;
+                              case 'Registar':
+                                cardColor = Colors.orange[50]!;
+                                break;
+                              case 'Ausente':
+                                cardColor = Colors.red[50]!;
+                                break;
+                            }
+                          }
 
                           return Card(
                             margin: EdgeInsets.only(bottom: 8),
-                            color: isFormando
-                                ? (jaPresente
-                                    ? Colors.green[50]
-                                    : Colors.red[50])
-                                : null,
+                            color: cardColor,
                             child: ListTile(
+                              onTap: (isFormando && podeClicar)
+                                  ? () => _abrirModalMarcarPresenca(presenca)
+                                  : null,
                               leading: Container(
                                 padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: isFormando
-                                      ? (jaPresente ? Colors.green : Colors.red)
-                                      : Colors.blue,
+                                  color: isFormando ? statusColor : Colors.blue,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   isFormando
-                                      ? (jaPresente ? Icons.check : Icons.close)
+                                      ? (statusText == 'Presente'
+                                          ? Icons.check
+                                          : statusText == 'Registar'
+                                              ? Icons.access_time
+                                              : Icons.close)
                                       : Icons.people,
                                   color: Colors.white,
                                   size: 20,
@@ -735,13 +541,11 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                     Text('Código: ${presenca['codigo']}'),
                                   Text(
                                     isFormando
-                                        ? (jaPresente ? 'Presente' : 'Ausente')
+                                        ? statusText
                                         : '${presenca['presentes'] ?? 0} presentes / ${presenca['total'] ?? 0} inscritos',
                                     style: TextStyle(
                                       color: isFormando
-                                          ? (jaPresente
-                                              ? Colors.green[700]
-                                              : Colors.red[700])
+                                          ? statusColor
                                           : Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -764,6 +568,13 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                       icon: Icon(Icons.people_outline),
                                       tooltip: 'Ver formandos',
                                     ),
+                                  // Indicador clicável para formandos
+                                  if (isFormando && podeClicar)
+                                    Icon(
+                                      Icons.touch_app,
+                                      color: Colors.orange,
+                                      size: 20,
+                                    ),
                                 ],
                               ),
                             ),
@@ -775,303 +586,8 @@ class _PresencasCursoState extends State<PresencasCurso> {
           ],
         ),
 
-        // Modal criar presença (formadores)
-        if (showCriarModal)
-          Container(
-            color: Colors.black54,
-            child: Center(
-              child: Container(
-                margin: EdgeInsets.all(16),
-                padding: EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Criar Nova Presença',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Spacer(),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                showCriarModal = false;
-                              });
-                            },
-                            icon: Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-
-                      // Mostrar informações de horas
-                      if (isFormador) ...[
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue[200]!),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Duração do curso:'),
-                                  Text('${duracaoCurso.toStringAsFixed(1)}h'),
-                                ],
-                              ),
-                              SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Horas utilizadas:'),
-                                  Text(
-                                      '${horasUtilizadas.toStringAsFixed(2)}h'),
-                                ],
-                              ),
-                              SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Horas disponíveis:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  Text(
-                                      '${horasDisponiveis.toStringAsFixed(2)}h',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              if (horasNovaPresenca > 0) ...[
-                                SizedBox(height: 4),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Esta presença:'),
-                                    Text(
-                                      '${horasNovaPresenca.toStringAsFixed(2)}h',
-                                      style: TextStyle(
-                                        color:
-                                            horasNovaPresenca > horasDisponiveis
-                                                ? Colors.red
-                                                : Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                      ],
-
-                      // Código
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              decoration: InputDecoration(
-                                labelText: 'Código',
-                                border: OutlineInputBorder(),
-                              ),
-                              controller: _codigoCriarController,
-                              onChanged: (value) {
-                                setState(() {
-                                  codigo = value;
-                                });
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              final novoCodigo = _gerarCodigo();
-                              setState(() {
-                                codigo = novoCodigo;
-                                _codigoCriarController.text = novoCodigo;
-                              });
-                            },
-                            child: Text('Gerar'),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-
-                      // Data início
-                      InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: dataInicio ?? DateTime.now(),
-                            firstDate:
-                                DateTime.now().subtract(Duration(days: 30)),
-                            lastDate: DateTime.now().add(Duration(days: 365)),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              dataInicio = date;
-                              _calcularHorasNovaPresenca();
-                            });
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: 'Data de Início',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            dataInicio != null
-                                ? '${dataInicio!.day}/${dataInicio!.month}/${dataInicio!.year}'
-                                : 'Selecionar data',
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Hora início
-                      InkWell(
-                        onTap: () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: horaInicio ?? TimeOfDay.now(),
-                          );
-                          if (time != null) {
-                            setState(() {
-                              horaInicio = time;
-                              _calcularHorasNovaPresenca();
-                            });
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: 'Hora de Início',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            horaInicio != null
-                                ? '${horaInicio!.hour.toString().padLeft(2, '0')}:${horaInicio!.minute.toString().padLeft(2, '0')}'
-                                : 'Selecionar hora',
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Data fim
-                      InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: dataFim ?? DateTime.now(),
-                            firstDate:
-                                DateTime.now().subtract(Duration(days: 30)),
-                            lastDate: DateTime.now().add(Duration(days: 365)),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              dataFim = date;
-                              _calcularHorasNovaPresenca();
-                            });
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: 'Data de Fim',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            dataFim != null
-                                ? '${dataFim!.day}/${dataFim!.month}/${dataFim!.year}'
-                                : 'Selecionar data',
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Hora fim
-                      InkWell(
-                        onTap: () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: horaFim ?? TimeOfDay.now(),
-                          );
-                          if (time != null) {
-                            setState(() {
-                              horaFim = time;
-                              _calcularHorasNovaPresenca();
-                            });
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: 'Hora de Fim',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            horaFim != null
-                                ? '${horaFim!.hour.toString().padLeft(2, '0')}:${horaFim!.minute.toString().padLeft(2, '0')}'
-                                : 'Selecionar hora',
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 24),
-
-                      // Botões
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  showCriarModal = false;
-                                });
-                              },
-                              child: Text('Cancelar'),
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: (horasNovaPresenca > horasDisponiveis)
-                                  ? null
-                                  : _criarPresenca,
-                              child: Text('Criar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // SIMPLIFICADO: Modal marcar presença (formandos)
-        if (showMarcarModal)
+        // Modal marcar presença (formandos)
+        if (showMarcarModal && presencaSelecionada != null)
           Container(
             color: Colors.black54,
             child: Center(
@@ -1100,11 +616,20 @@ class _PresencasCursoState extends State<PresencasCurso> {
                           onPressed: () {
                             setState(() {
                               showMarcarModal = false;
+                              presencaSelecionada = null;
                             });
                           },
                           icon: Icon(Icons.close),
                         ),
                       ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '${_formatDate(presencaSelecionada!['data_inicio'])} ${presencaSelecionada!['hora_inicio']} - ${_formatDate(presencaSelecionada!['data_fim'])} ${presencaSelecionada!['hora_fim']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
                     ),
                     SizedBox(height: 16),
                     TextField(
@@ -1115,6 +640,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         hintText: 'Insira o código fornecido pelo formador',
                       ),
                       autofocus: true,
+                      onSubmitted: (_) => _marcarPresenca(),
                     ),
                     SizedBox(height: 24),
                     Row(
@@ -1124,6 +650,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                             onPressed: () {
                               setState(() {
                                 showMarcarModal = false;
+                                presencaSelecionada = null;
                               });
                             },
                             child: Text('Cancelar'),
@@ -1147,7 +674,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
             ),
           ),
 
-        // Modal lista formandos
+        // Modal lista formandos (para formadores)
         if (showListaFormandosModal && presencaSelecionada != null)
           Container(
             color: Colors.black54,

@@ -504,6 +504,7 @@ const createConteudo = async (req, res) => {
 
     console.log(`Tópico "${topico.nome}" ${isAvaliacaoTopico ? 'identificado como avaliação' : 'não é de avaliação'}`);
 
+    // CORREÇÃO: Aceitar os tipos corretos incluindo 'video'
     if (!['file', 'link', 'video'].includes(tipo)) {
       return res.status(400).json({ message: 'Tipo de conteúdo inválido. Use: file, link ou video' });
     }
@@ -535,11 +536,10 @@ const createConteudo = async (req, res) => {
     // Garantir que o diretório de conteúdos existe
     uploadUtils.ensureDir(conteudosDir);
 
-
     let conteudoData = {
       titulo,
       descricao: descricao || '',
-      tipo,
+      tipo, // CORREÇÃO: Usar o tipo recebido diretamente
       id_pasta,
       id_curso,
       ativo: true,
@@ -550,7 +550,8 @@ const createConteudo = async (req, res) => {
     // Usar a função uploadUtils.normalizarNome para normalização consistente
     const tituloBase = uploadUtils.normalizarNome(titulo);
 
-    if (tipo === 'file') {
+    // CORREÇÃO: Tratar 'video' e 'file' como tipos de arquivo
+    if (tipo === 'file' || tipo === 'video') {
       if (!req.file) return res.status(400).json({ message: 'Ficheiro não enviado' });
 
       const tempPath = req.file.path;
@@ -565,10 +566,10 @@ const createConteudo = async (req, res) => {
       }
 
       conteudoData.arquivo_path = `${conteudosPath}/${fileName}`;
-    } else if (tipo === 'link' || tipo === 'video') {
-      if (!url) return res.status(400).json({ message: 'URL é obrigatória para tipos link e video' });
+    } else if (tipo === 'link') {
+      if (!url) return res.status(400).json({ message: 'URL é obrigatória para tipo link' });
 
-      // Para links e vídeos, criar um ficheiro de referência
+      // Para links, criar um ficheiro de referência
       const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
       const fakeFilePath = path.join(conteudosDir, fakeFileName);
 
@@ -741,6 +742,7 @@ const updateConteudo = async (req, res) => {
 
       // Se estiver a mudar o tipo, verificar os campos necessários
       if (tipo !== undefined && tipo !== conteudo.tipo) {
+        // CORREÇÃO: Aceitar os tipos corretos incluindo 'video'
         if (!['file', 'link', 'video'].includes(tipo)) {
           return res.status(400).json({
             message: 'Tipo de conteúdo inválido. Use: file, link ou video'
@@ -753,10 +755,11 @@ const updateConteudo = async (req, res) => {
         const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
         const timestamp = Date.now();
 
-        if (tipo === 'file') {
+        // CORREÇÃO: Tratar 'video' e 'file' como tipos de arquivo
+        if (tipo === 'file' || tipo === 'video') {
           if (!req.file && !conteudo.arquivo_path) {
             return res.status(400).json({
-              message: 'Ficheiro é obrigatório para o tipo file'
+              message: 'Ficheiro é obrigatório para o tipo file/video'
             });
           }
           dadosAtualizacao.url = null;
@@ -801,10 +804,10 @@ const updateConteudo = async (req, res) => {
 
             dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fileName}`;
           }
-        } else {
+        } else if (tipo === 'link') {
           if (!url && !conteudo.url) {
             return res.status(400).json({
-              message: 'URL é obrigatória para tipos link e video'
+              message: 'URL é obrigatória para tipo link'
             });
           }
 
@@ -851,7 +854,8 @@ const updateConteudo = async (req, res) => {
       // Mesmo local, mas ficheiro atualizado
       console.log('A atualizar ficheiro no mesmo local');
 
-      if (conteudo.tipo === 'file') {
+      // CORREÇÃO: Aceitar tanto 'file' quanto 'video' para upload de arquivo
+      if (conteudo.tipo === 'file' || conteudo.tipo === 'video') {
         // Se já existe um ficheiro, remover o antigo
         if (conteudo.arquivo_path) {
           const arquivoAntigoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
@@ -879,9 +883,9 @@ const updateConteudo = async (req, res) => {
 
         dadosAtualizacao.arquivo_path = `${conteudoPathAtual}/${fileName}`;
       }
-    } else if (url !== undefined && (conteudo.tipo === 'link' || conteudo.tipo === 'video')) {
+    } else if (url !== undefined && conteudo.tipo === 'link') {
       // Atualizar URL e ficheiro de referência
-      console.log('A atualizar URL para conteúdo tipo link/video');
+      console.log('A atualizar URL para conteúdo tipo link');
 
       if (conteudo.arquivo_path) {
         // Atualizar o conteúdo do ficheiro de referência
@@ -982,7 +986,6 @@ const uploadMiddleware = (req, res, next) => {
   // Rapaz, este middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
   next();
 };
-
 
 module.exports = {
   uploadMiddleware,

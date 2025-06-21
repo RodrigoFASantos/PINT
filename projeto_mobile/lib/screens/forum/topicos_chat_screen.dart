@@ -38,6 +38,8 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
   bool loading = true;
   String? erro;
   Map<int, String> avaliacoes = {}; // Para controlar likes/dislikes do usuário
+  List<int> comentariosDenunciados =
+      []; // 🚩 NOVO: Para controlar comentários denunciados
   File? _anexo;
   String? _anexoTipo; // 'imagem', 'video', 'arquivo'
   String? _anexoMimeType; // ✅ ADICIONADO para armazenar MIME type
@@ -303,6 +305,9 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         });
         debugPrint(
             '✅ [TOPICOS_CHAT] ${comentarios.length} comentários carregados');
+
+        // 🚩 MARCAR COMENTÁRIOS DENUNCIADOS
+        _marcarComentariosDenunciados();
       } else {
         setState(() {
           comentarios = [];
@@ -315,6 +320,20 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         loading = false;
       });
       debugPrint('❌ [TOPICOS_CHAT] Erro ao carregar comentários: $error');
+    }
+  }
+
+  // 🚩 NOVA FUNÇÃO: Marcar comentários denunciados
+  void _marcarComentariosDenunciados() {
+    if (comentariosDenunciados.isNotEmpty) {
+      setState(() {
+        for (int i = 0; i < comentarios.length; i++) {
+          final comentarioId = comentarios[i]['id_comentario'];
+          if (comentariosDenunciados.contains(comentarioId)) {
+            comentarios[i]['foi_denunciado'] = true;
+          }
+        }
+      });
     }
   }
 
@@ -495,71 +514,146 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
+  // 🚩 NOVA FUNÇÃO COMPLETA: Denunciar comentário usando ApiService
   Future<void> _denunciarComentario(int comentarioId) async {
+    // Verificar se já foi denunciado
+    if (comentariosDenunciados.contains(comentarioId)) {
+      AppUtils.showInfo(context, 'Já denunciou este comentário anteriormente.');
+      return;
+    }
+
     final motivo = await _showMotivoDialog();
     if (motivo == null || motivo.isEmpty) return;
 
     try {
-      debugPrint('🔧 [TOPICOS_CHAT] Denunciando comentário $comentarioId');
+      debugPrint('🚩 [TOPICOS_CHAT] Denunciando comentário $comentarioId');
 
-      final response = await _apiService
-          .post('/forum-tema/comentario/$comentarioId/denunciar', body: {
-        'motivo': motivo,
+      // Atualizar estado local imediatamente para feedback visual
+      setState(() {
+        comentariosDenunciados.add(comentarioId);
+        for (int i = 0; i < comentarios.length; i++) {
+          if (comentarios[i]['id_comentario'] == comentarioId) {
+            comentarios[i]['foi_denunciado'] = true;
+            break;
+          }
+        }
       });
 
-      final data = _apiService.parseResponseToMap(response);
-      if (data != null) {
-        // Marcar comentário como denunciado localmente
-        setState(() {
-          for (int i = 0; i < comentarios.length; i++) {
-            if (comentarios[i]['id_comentario'] == comentarioId) {
-              comentarios[i]['foi_denunciado'] = true;
-              break;
-            }
-          }
-        });
+      // ✅ USAR O MÉTODO DO ApiService
+      final result = await _apiService.denunciarComentario(
+        idComentario: comentarioId,
+        motivo: motivo,
+      );
 
+      if (result != null && result['success'] == true) {
         AppUtils.showSuccess(context,
             'Comentário denunciado com sucesso. Obrigado pela sua contribuição.');
+      } else {
+        // Reverter mudanças se falhou
+        _revertDenunciaComentario(comentarioId);
+        AppUtils.showError(
+            context, result?['message'] ?? 'Erro ao denunciar comentário');
       }
     } catch (error) {
+      // Reverter mudanças em caso de erro
+      _revertDenunciaComentario(comentarioId);
       debugPrint('❌ [TOPICOS_CHAT] Erro ao denunciar comentário: $error');
       AppUtils.showError(context, 'Erro ao denunciar comentário: $error');
     }
   }
 
+  // 🚩 FUNÇÃO AUXILIAR: Reverter denúncia em caso de erro
+  void _revertDenunciaComentario(int comentarioId) {
+    setState(() {
+      comentariosDenunciados.remove(comentarioId);
+      for (int i = 0; i < comentarios.length; i++) {
+        if (comentarios[i]['id_comentario'] == comentarioId) {
+          comentarios[i]['foi_denunciado'] = false;
+          break;
+        }
+      }
+    });
+  }
+
   Future<String?> _showMotivoDialog() async {
     String motivo = '';
+    String? motivoSelecionado;
 
     return await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Denunciar Comentário'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Por favor, informe o motivo da denúncia:'),
-            SizedBox(height: 16),
-            TextField(
-              onChanged: (value) => motivo = value,
-              decoration: InputDecoration(
-                hintText: 'Motivo da denúncia...',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.flag, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Denunciar Comentário'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Por favor, selecione o motivo da denúncia:'),
+              SizedBox(height: 16),
+
+              // Motivos pré-definidos
+              ...[
+                'Spam',
+                'Conteúdo ofensivo',
+                'Discurso de ódio',
+                'Assédio',
+                'Conteúdo inadequado',
+                'Outro'
+              ].map(
+                (motivoOpcao) => RadioListTile<String>(
+                  value: motivoOpcao,
+                  groupValue: motivoSelecionado,
+                  onChanged: (value) {
+                    setState(() {
+                      motivoSelecionado = value;
+                      if (value != 'Outro') {
+                        motivo = value!;
+                      }
+                    });
+                  },
+                  title: Text(motivoOpcao, style: TextStyle(fontSize: 14)),
+                  dense: true,
+                ),
               ),
-              maxLines: 3,
+
+              // Campo para "Outro"
+              if (motivoSelecionado == 'Outro') ...[
+                SizedBox(height: 8),
+                TextField(
+                  onChanged: (value) => motivo = value,
+                  decoration: InputDecoration(
+                    hintText: 'Descreva o motivo...',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: (motivoSelecionado != null && motivo.isNotEmpty)
+                  ? () => Navigator.pop(context, motivo)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: Text('Denunciar'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, motivo),
-            child: Text('Denunciar'),
-          ),
-        ],
       ),
     );
   }
@@ -1027,6 +1121,34 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                     SizedBox(height: 8),
                   ],
 
+                  // 🚩 INDICADOR DE DENÚNCIA (SE DENUNCIADO)
+                  if (foiDenunciado) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.flag, size: 12, color: Colors.red),
+                          SizedBox(width: 4),
+                          Text(
+                            'Denunciado',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                  ],
+
                   // Ações do comentário
                   Row(
                     children: [
@@ -1057,14 +1179,27 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                             color: Color(0xFF4A90E2),
                           ),
                         ),
-                      IconButton(
-                        onPressed: foiDenunciado
-                            ? null
-                            : () => _denunciarComentario(comentarioId),
-                        icon: Icon(
-                          Icons.flag,
-                          color: foiDenunciado ? Colors.red : Colors.grey[600],
-                          size: 16,
+                      // 🚩 BOTÃO DE DENÚNCIA MELHORADO
+                      Container(
+                        decoration: BoxDecoration(
+                          color: foiDenunciado
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: foiDenunciado
+                              ? null
+                              : () => _denunciarComentario(comentarioId),
+                          icon: Icon(
+                            Icons.flag,
+                            color:
+                                foiDenunciado ? Colors.red : Colors.grey[600],
+                            size: 16,
+                          ),
+                          tooltip: foiDenunciado
+                              ? "Já denunciado"
+                              : "Denunciar comentário",
                         ),
                       ),
                     ],
@@ -1527,8 +1662,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
 
         setState(() {
           _anexo = file;
-          _anexoMimeType =
-              _detectContentType(file.path, null); // ✅ ARMAZENAR MIME TYPE
+          _anexoMimeType = _detectContentType(file.path, null);
 
           if (['mp4', 'avi', 'mov'].contains(extension)) {
             _anexoTipo = 'video';

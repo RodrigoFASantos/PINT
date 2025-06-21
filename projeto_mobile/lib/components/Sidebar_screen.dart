@@ -40,8 +40,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
         color: Colors.white,
         child: Column(
           children: [
-            // ✅ REMOVIDO: NavbarScreen (agora está sempre no AppBar principal)
-
             // Conteúdo da sidebar
             Expanded(
               child: SingleChildScrollView(
@@ -50,8 +48,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
                     _buildUserSection(),
                     _buildGeneralSection(),
                     _buildFormandoSection(),
-                    _buildFormadorSection(),
-                    _buildAdminSection(),
                     _buildPessoalSection(),
                   ],
                 ),
@@ -129,46 +125,12 @@ class _SidebarScreenState extends State<SidebarScreen> {
   }
 
   Widget _buildFormandoSection() {
-    // Sempre mostrar para todos os utilizadores (como no React)
+    // Agora sempre visível para todos os utilizadores com conteúdo específico de formando
     return _buildSection(
-      'Formando',
+      'Formação',
       [
-        // Secção vazia como no React - sempre visível para todos os utilizadores
-      ],
-    );
-  }
-
-  Widget _buildFormadorSection() {
-    // Só mostrar se for formador
-    if (userRole != 2) return const SizedBox();
-
-    return _buildSection(
-      'Formador',
-      [
-        _buildMenuItem('Cursos Lecionados', Icons.school, '/area-formador'),
-      ],
-    );
-  }
-
-  Widget _buildAdminSection() {
-    // Só mostrar se for administrador
-    if (userRole != 1) return const SizedBox();
-
-    return _buildSection(
-      'Administração',
-      [
-        _buildMenuItem('Dashboard', Icons.dashboard, '/admin/dashboard'),
-        _buildMenuItem('Gerir Cursos', Icons.book_online, '/admin/cursos'),
-        _buildMenuItem('Gerir Utilizadores', Icons.people, '/admin/usuarios'),
-        _buildMenuItem('Gerenciar Denúncias', Icons.flag, '/admin/denuncias'),
-        _buildMenuItem('Percurso Formandos', Icons.trending_up,
-            '/admin/percurso-formandos'),
-        _buildMenuItem('Gerir Categorias', Icons.category, '/admin/categorias'),
-        _buildMenuItem('Gerir Áreas', Icons.domain, '/admin/areas'),
-        _buildMenuItem('Gerir Tópicos', Icons.topic, '/admin/topicos'),
-        _buildMenuItem('Criar Curso', Icons.add_circle, '/admin/criar-curso'),
-        _buildMenuItem(
-            'Criar Utilizador', Icons.person_add, '/admin/criar-usuario'),
+        _buildMenuItem('Meus Cursos', Icons.school, '/meus-cursos'),
+        _buildMenuItem('Certificados', Icons.card_membership, '/certificados'),
       ],
     );
   }
@@ -225,6 +187,8 @@ class _SidebarScreenState extends State<SidebarScreen> {
         '/cursos': ['/cursos'],
         '/formadores': ['/formadores'],
         '/forum': ['/forum'],
+        '/meus-cursos': ['/meus-cursos'],
+        '/certificados': ['/certificados'],
       };
 
       // Verificar se a rota atual corresponde a alguma das rotas mapeadas
@@ -306,6 +270,8 @@ class _SidebarScreenState extends State<SidebarScreen> {
       '/cursos': ['/cursos'],
       '/formadores': ['/formadores'],
       '/forum': ['/forum'],
+      '/meus-cursos': ['/meus-cursos'],
+      '/certificados': ['/certificados'],
     };
 
     if (routeMapping.containsKey(route)) {

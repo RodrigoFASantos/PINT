@@ -224,6 +224,10 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
     return tipo?.toLowerCase() == 'video';
   }
 
+  bool _isLinkType(String? tipo) {
+    return tipo?.toLowerCase() == 'link';
+  }
+
   Future<void> _handleConteudoClick(Map<String, dynamic> conteudo) async {
     print(
         'Clique no conteúdo: ${conteudo['titulo']} - Tipo: ${conteudo['tipo']}');
@@ -238,27 +242,20 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
     print('Tipo normalizado: $tipo');
 
     try {
-      if (_isFileType(tipo)) {
-        // Para arquivos, mostrar modal com ambos os botões
-        print('Abrindo modal para arquivo: ${conteudo['arquivo_path']}');
-        _showContentModal(conteudo,
-            showViewButton: true, showDownloadButton: true);
-      } else if (_isVideoType(tipo)) {
-        // Para vídeos, mostrar modal apenas com botão de abrir
-        print('Abrindo modal para vídeo: ${conteudo['url']}');
-        _showContentModal(conteudo,
-            showViewButton: false, showDownloadButton: true);
-      } else if (tipo == 'link' && conteudo['url'] != null) {
-        print('Abrindo link: ${conteudo['url']}');
-        final url = conteudo['url'] as String;
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (_isLinkType(tipo)) {
+        // Para links, abrir diretamente
+        if (conteudo['url'] != null) {
+          print('Abrindo link: ${conteudo['url']}');
+          await _openUrl(conteudo['url'], 'link');
         } else {
-          _showErrorSnackBar('Não foi possível abrir o link');
+          _showErrorSnackBar('URL do link não encontrada');
         }
+      } else if (_isVideoType(tipo) || _isFileType(tipo)) {
+        // Para vídeos e arquivos, mostrar modal
+        print('Abrindo modal para ${_isVideoType(tipo) ? 'vídeo' : 'arquivo'}');
+        _showContentModal(conteudo);
       } else {
-        print('Tipo de conteúdo não suportado ou URL/caminho não encontrado');
+        print('Tipo de conteúdo não suportado: $tipo');
         _showErrorSnackBar('Tipo de conteúdo não suportado');
       }
     } catch (e) {
@@ -267,10 +264,10 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
     }
   }
 
-  void _showContentModal(Map<String, dynamic> conteudo,
-      {required bool showViewButton, required bool showDownloadButton}) {
+  void _showContentModal(Map<String, dynamic> conteudo) {
     final tipo = conteudo['tipo']?.toLowerCase();
     final isVideo = _isVideoType(tipo);
+    final isFile = _isFileType(tipo);
 
     showDialog(
       context: context,
@@ -288,9 +285,10 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
                 Row(
                   children: [
                     Icon(
-                        isVideo ? Icons.play_circle_outline : Icons.attach_file,
-                        color: isVideo ? Colors.red : Colors.blue,
-                        size: 24),
+                      isVideo ? Icons.play_circle_outline : Icons.attach_file,
+                      color: isVideo ? Colors.red : Colors.blue,
+                      size: 24,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -321,40 +319,21 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
                   SizedBox(height: 20),
                 ],
 
-                // Botão de ação para arquivos
-                if (!isVideo && showViewButton && showDownloadButton)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _viewFile(conteudo),
-                          icon: Icon(Icons.open_in_browser),
-                          label: Text('Abrir'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                // Botão único para vídeos
-                if (isVideo)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _downloadVideo(conteudo),
-                      icon: Icon(Icons.play_arrow),
-                      label: Text('Abrir Vídeo'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
+                // Botão de ação
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openConteudo(conteudo),
+                    icon: Icon(
+                        isVideo ? Icons.play_arrow : Icons.open_in_browser),
+                    label: Text(isVideo ? 'Abrir Vídeo' : 'Abrir Arquivo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isVideo ? Colors.red : Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -363,80 +342,94 @@ class _ConteudosCursoState extends State<ConteudosCurso> {
     );
   }
 
-  Future<void> _viewFile(Map<String, dynamic> conteudo) async {
+  Future<void> _openConteudo(Map<String, dynamic> conteudo) async {
     try {
-      if (conteudo['arquivo_path'] != null) {
-        final fileUrl =
-            '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
-        print('Visualizando arquivo: $fileUrl');
+      final tipo = conteudo['tipo']?.toLowerCase();
+      String? urlToOpen;
 
-        final uri = Uri.parse(fileUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          Navigator.of(context).pop(); // Fechar modal
-        } else {
-          _showErrorSnackBar(
-              'Não foi possível abrir o arquivo para visualização');
+      if (_isVideoType(tipo)) {
+        // Para vídeos: verificar se tem URL direta ou arquivo_path
+        if (conteudo['url'] != null && conteudo['url'].toString().isNotEmpty) {
+          // Vídeo com URL externa (ex: YouTube, Vimeo)
+          urlToOpen = conteudo['url'];
+          print('Abrindo vídeo com URL: $urlToOpen');
+        } else if (conteudo['arquivo_path'] != null) {
+          // Vídeo uploadado como arquivo
+          urlToOpen =
+              '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
+          print('Abrindo vídeo uploadado: $urlToOpen');
+        }
+      } else if (_isFileType(tipo)) {
+        // Para arquivos: sempre usar arquivo_path
+        if (conteudo['arquivo_path'] != null) {
+          urlToOpen =
+              '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
+          print('Abrindo arquivo: $urlToOpen');
         }
       }
+
+      if (urlToOpen != null) {
+        await _openUrl(urlToOpen, tipo);
+        Navigator.of(context).pop(); // Fechar modal
+      } else {
+        _showErrorSnackBar('URL ou caminho do conteúdo não encontrado');
+      }
     } catch (e) {
-      print('Erro ao visualizar arquivo: $e');
-      _showErrorSnackBar('Erro ao visualizar arquivo: $e');
+      print('Erro ao abrir conteúdo: $e');
+      _showErrorSnackBar('Erro ao abrir conteúdo: $e');
     }
   }
 
-  Future<void> _downloadFile(Map<String, dynamic> conteudo) async {
+  Future<void> _openUrl(String url, String tipo) async {
     try {
-      if (conteudo['arquivo_path'] != null) {
-        final fileUrl =
-            '${_apiService.apiBase.replaceAll('/api', '')}/${conteudo['arquivo_path']}';
-        print('Abrindo arquivo: $fileUrl');
+      final uri = Uri.parse(url);
+      print('Tentando abrir URL: $url');
 
-        final uri = Uri.parse(fileUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          Navigator.of(context).pop(); // Fechar modal
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Arquivo aberto no navegador'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          _showErrorSnackBar('Não foi possível abrir o arquivo');
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_getSuccessMessage(tipo)),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        _showErrorSnackBar('Não foi possível abrir o ${_getTipoLabel(tipo)}');
       }
     } catch (e) {
-      print('Erro ao abrir arquivo: $e');
-      _showErrorSnackBar('Erro ao abrir arquivo: $e');
+      print('Erro ao abrir URL $url: $e');
+      _showErrorSnackBar('Erro ao abrir ${_getTipoLabel(tipo)}: $e');
     }
   }
 
-  Future<void> _downloadVideo(Map<String, dynamic> conteudo) async {
-    try {
-      if (conteudo['url'] != null) {
-        final videoUrl = conteudo['url'] as String;
-        print('Abrindo vídeo: $videoUrl');
+  String _getTipoLabel(String? tipo) {
+    switch (tipo?.toLowerCase()) {
+      case 'video':
+        return 'vídeo';
+      case 'link':
+        return 'link';
+      case 'file':
+      case 'arquivo':
+      case 'ficheiro':
+        return 'arquivo';
+      default:
+        return 'conteúdo';
+    }
+  }
 
-        final uri = Uri.parse(videoUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          Navigator.of(context).pop(); // Fechar modal
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Vídeo aberto no navegador'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          _showErrorSnackBar('Não foi possível abrir o vídeo');
-        }
-      }
-    } catch (e) {
-      print('Erro ao abrir vídeo: $e');
-      _showErrorSnackBar('Erro ao abrir vídeo: $e');
+  String _getSuccessMessage(String? tipo) {
+    switch (tipo?.toLowerCase()) {
+      case 'video':
+        return 'Vídeo aberto no navegador';
+      case 'link':
+        return 'Link aberto no navegador';
+      case 'file':
+      case 'arquivo':
+      case 'ficheiro':
+        return 'Arquivo aberto no navegador';
+      default:
+        return 'Conteúdo aberto no navegador';
     }
   }
 

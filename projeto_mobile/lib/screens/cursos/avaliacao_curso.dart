@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../services/api_service.dart';
 import './quiz_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AvaliacaoCurso extends StatefulWidget {
   final String cursoId;
@@ -127,6 +128,56 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
         quizzes = [];
         loadingQuizzes = false;
       });
+    }
+  }
+
+  Future<void> _abrirConteudoNoBrowser(Map<String, dynamic> conteudo) async {
+    try {
+      // Construir a URL completa do arquivo
+      final arquivoPath = conteudo['arquivo_path'];
+      if (arquivoPath == null || arquivoPath.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Caminho do arquivo não encontrado'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Usar o mesmo padrão do código React: API_BASE + arquivo_path
+      final apiBase = _apiService.apiBase; // ou substitua pela sua URL base
+      final url = '$apiBase/$arquivoPath';
+
+      print('🌐 Abrindo URL no browser: $url');
+
+      final uri = Uri.parse(url);
+
+      // Verificar se pode abrir a URL
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode
+              .externalApplication, // Força abertura no browser externo
+        );
+        print('✅ URL aberta com sucesso');
+      } else {
+        print('❌ Não foi possível abrir a URL: $url');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Não foi possível abrir o arquivo'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Erro ao abrir conteúdo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao abrir arquivo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -1174,17 +1225,10 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
                           ),
                         ),
                         IconButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    'Visualização de conteúdo em desenvolvimento'),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
-                          },
+                          onPressed: () => _abrirConteudoNoBrowser(conteudo),
                           icon: Icon(Icons.open_in_new,
                               size: 16, color: Colors.blue[700]),
+                          tooltip: 'Abrir no browser',
                         ),
                       ],
                     ),

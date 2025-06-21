@@ -366,6 +366,118 @@ class ApiService {
   }
 
   // ===========================================
+  // 🚩 MÉTODOS PARA DENÚNCIAS - NOVOS
+  // ===========================================
+
+  /// Denunciar um tema do fórum
+  Future<Map<String, dynamic>?> denunciarTema({
+    required int idTema,
+    required String motivo,
+    String? descricao,
+  }) async {
+    try {
+      debugPrint('🚩 [API] Denunciando tema ID: $idTema');
+      final response = await post('/denuncias/forum-tema/denunciar', body: {
+        'id_tema': idTema,
+        'motivo': motivo,
+        if (descricao != null) 'descricao': descricao,
+      });
+
+      final data = parseResponseToMap(response);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Tema denunciado com sucesso');
+        return data ??
+            {'success': true, 'message': 'Tema denunciado com sucesso'};
+      } else {
+        debugPrint('❌ [API] Erro ao denunciar tema: ${response.statusCode}');
+        return data ?? {'success': false, 'message': 'Erro ao denunciar tema'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao denunciar tema: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  /// Denunciar um comentário do fórum
+  Future<Map<String, dynamic>?> denunciarComentario({
+    required int idComentario,
+    required String motivo,
+    String? descricao,
+  }) async {
+    try {
+      debugPrint('🚩 [API] Denunciando comentário ID: $idComentario');
+      final response =
+          await post('/forum/comentario/$idComentario/denunciar', body: {
+        'motivo': motivo,
+        if (descricao != null) 'descricao': descricao,
+      });
+
+      final data = parseResponseToMap(response);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Comentário denunciado com sucesso');
+        return data ??
+            {'success': true, 'message': 'Comentário denunciado com sucesso'};
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao denunciar comentário: ${response.statusCode}');
+        return data ??
+            {'success': false, 'message': 'Erro ao denunciar comentário'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao denunciar comentário: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  /// Obter temas já denunciados pelo utilizador atual
+  Future<List<int>?> getTemasDenunciados() async {
+    try {
+      debugPrint('🚩 [API] Obtendo temas denunciados pelo utilizador...');
+      final response = await get('/denuncias/usuario/denuncias-temas');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null && data['data'] != null) {
+          final temasDenunciados = List<int>.from(data['data']);
+          debugPrint(
+              '✅ [API] ${temasDenunciados.length} temas denunciados encontrados');
+          return temasDenunciados;
+        }
+        return [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter temas denunciados: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao obter temas denunciados: $e');
+      return null;
+    }
+  }
+
+  /// Verificar se um tema específico foi denunciado pelo utilizador
+  Future<bool> temaDenunciado(int idTema) async {
+    try {
+      final temasDenunciados = await getTemasDenunciados();
+      if (temasDenunciados != null) {
+        return temasDenunciados.contains(idTema);
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao verificar se tema foi denunciado: $e');
+      return false;
+    }
+  }
+
+  // ===========================================
   // MÉTODOS PARA NOTIFICAÇÕES
   // ===========================================
 

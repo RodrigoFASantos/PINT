@@ -26,7 +26,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
   int pagina = 1;
   int totalPaginas = 1;
   Map<int, String> avaliacoes = {}; // Para controlar likes/dislikes do usuário
-  List<int> temasDenunciados = [];
+  List<int> temasDenunciados = []; // 🚩 Para controlar temas denunciados
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
       await _loadUserData();
       await _loadTopico();
       await _loadTemas();
-      await _loadTemasDenunciados();
+      await _loadTemasDenunciados(); // 🚩 CARREGAR TEMAS DENUNCIADOS
     } catch (error) {
       setState(() {
         erro = 'Erro ao carregar dados: $error';
@@ -122,15 +122,14 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
+  // 🚩 NOVA FUNÇÃO: Carregar temas denunciados usando ApiService
   Future<void> _loadTemasDenunciados() async {
     try {
-      final response =
-          await _apiService.get('/denuncias/usuario/denuncias-temas');
-      final data = _apiService.parseResponseToMap(response);
+      final temasDenunciadosData = await _apiService.getTemasDenunciados();
 
-      if (data != null && data['data'] != null) {
+      if (temasDenunciadosData != null) {
         setState(() {
-          temasDenunciados = List<int>.from(data['data']);
+          temasDenunciados = temasDenunciadosData;
         });
         debugPrint(
             '✅ [CHAT_CONVERSAS] ${temasDenunciados.length} temas denunciados pelo usuário');
@@ -238,7 +237,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // ✅ CORRIGIDO: Usar endpoint e payload corretos
+  // 🚩 FUNÇÃO MELHORADA: Denunciar tema usando ApiService
   Future<void> _denunciarTema(int temaId) async {
     // Verificar se já foi denunciado
     if (temasDenunciados.contains(temaId)) {
@@ -246,12 +245,11 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
       return;
     }
 
-    // Solicitar motivo da denúncia
     final motivo = await _showMotivoDialog();
     if (motivo == null || motivo.isEmpty) return;
 
     try {
-      debugPrint('🔧 [CHAT_CONVERSAS] Denunciando tema $temaId');
+      debugPrint('🚩 [CHAT_CONVERSAS] Denunciando tema $temaId');
 
       // Atualizar estado local imediatamente
       setState(() {
@@ -264,67 +262,121 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         }
       });
 
-      // ✅ CORRIGIDO: Usar endpoint correto e incluir id_tema no body
-      final response =
-          await _apiService.post('/denuncias/forum-tema/denunciar', body: {
-        'id_tema': temaId,
-        'motivo': motivo,
-      });
+      // ✅ USAR O MÉTODO DO ApiService
+      final result = await _apiService.denunciarTema(
+        idTema: temaId,
+        motivo: motivo,
+      );
 
-      final data = _apiService.parseResponseToMap(response);
-      if (data != null && data['success'] == true) {
+      if (result != null && result['success'] == true) {
         AppUtils.showSuccess(context,
             'Tema denunciado com sucesso. Obrigado pela sua contribuição.');
+      } else {
+        // Reverter mudanças se falhou
+        _revertDenunciaTema(temaId);
+        AppUtils.showError(
+            context, result?['message'] ?? 'Erro ao denunciar tema');
       }
     } catch (error) {
       // Reverter estado em caso de erro
-      setState(() {
-        temasDenunciados.remove(temaId);
-        for (int i = 0; i < temas.length; i++) {
-          if (temas[i]['id_tema'] == temaId) {
-            temas[i]['foi_denunciado'] = false;
-            break;
-          }
-        }
-      });
-
+      _revertDenunciaTema(temaId);
       debugPrint('❌ [CHAT_CONVERSAS] Erro ao denunciar tema: $error');
       AppUtils.showError(context, 'Erro ao denunciar tema: $error');
     }
   }
 
+  // 🚩 FUNÇÃO AUXILIAR: Reverter denúncia em caso de erro
+  void _revertDenunciaTema(int temaId) {
+    setState(() {
+      temasDenunciados.remove(temaId);
+      for (int i = 0; i < temas.length; i++) {
+        if (temas[i]['id_tema'] == temaId) {
+          temas[i]['foi_denunciado'] = false;
+          break;
+        }
+      }
+    });
+  }
+
   Future<String?> _showMotivoDialog() async {
     String motivo = '';
+    String? motivoSelecionado;
 
     return await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Denunciar Tema'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Por favor, informe o motivo da denúncia:'),
-            SizedBox(height: 16),
-            TextField(
-              onChanged: (value) => motivo = value,
-              decoration: InputDecoration(
-                hintText: 'Motivo da denúncia...',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.flag, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Denunciar Tema'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Por favor, selecione o motivo da denúncia:'),
+              SizedBox(height: 16),
+
+              // Motivos pré-definidos
+              ...[
+                'Spam',
+                'Conteúdo ofensivo',
+                'Discurso de ódio',
+                'Assédio',
+                'Conteúdo inadequado',
+                'Outro'
+              ].map(
+                (motivoOpcao) => RadioListTile<String>(
+                  value: motivoOpcao,
+                  groupValue: motivoSelecionado,
+                  onChanged: (value) {
+                    setState(() {
+                      motivoSelecionado = value;
+                      if (value != 'Outro') {
+                        motivo = value!;
+                      }
+                    });
+                  },
+                  title: Text(motivoOpcao, style: TextStyle(fontSize: 14)),
+                  dense: true,
+                ),
               ),
-              maxLines: 3,
+
+              // Campo para "Outro"
+              if (motivoSelecionado == 'Outro') ...[
+                SizedBox(height: 8),
+                TextField(
+                  onChanged: (value) => motivo = value,
+                  decoration: InputDecoration(
+                    hintText: 'Descreva o motivo...',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: (motivoSelecionado != null && motivo.isNotEmpty)
+                  ? () => Navigator.pop(context, motivo)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: Text('Denunciar'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, motivo),
-            child: Text('Denunciar'),
-          ),
-        ],
       ),
     );
   }
@@ -348,6 +400,12 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
+  // ✅ NOVA FUNÇÃO: Voltar para o fórum
+  void _voltarParaForum() {
+    debugPrint('🔧 [CHAT_CONVERSAS] Voltando para o fórum');
+    Navigator.pushReplacementNamed(context, '/forum');
+  }
+
   String _formatarData(String? dataString) {
     if (dataString == null) return 'Data indisponível';
 
@@ -366,6 +424,11 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         appBar: AppBar(
           title: Text('Conversas'),
           backgroundColor: Color(0xFFFF8000),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: _voltarParaForum,
+            tooltip: 'Voltar ao Fórum',
+          ),
         ),
         drawer: SidebarScreen(
           currentUser: currentUser,
@@ -391,6 +454,11 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         appBar: AppBar(
           title: Text('Erro'),
           backgroundColor: Color(0xFFFF8000),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: _voltarParaForum,
+            tooltip: 'Voltar ao Fórum',
+          ),
         ),
         drawer: SidebarScreen(
           currentUser: currentUser,
@@ -427,6 +495,12 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                 icon: Icon(Icons.refresh),
                 label: Text('Tentar Novamente'),
               ),
+              SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _voltarParaForum,
+                icon: Icon(Icons.arrow_back),
+                label: Text('Voltar ao Fórum'),
+              ),
             ],
           ),
         ),
@@ -435,12 +509,33 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Conversas'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Conversas', style: TextStyle(fontSize: 18)),
+            if (topico != null)
+              Text(
+                topico!['titulo'] ?? 'Tópico',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+          ],
+        ),
         backgroundColor: Color(0xFFFF8000),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _voltarParaForum,
+          tooltip: 'Voltar ao Fórum',
         ),
+        actions: [
+          // ✅ NOVO: Botão para ver detalhes do tópico (opcional)
+          IconButton(
+            icon: Icon(Icons.info_outline),
+            onPressed: () {
+              Navigator.pushNamed(context, '/forum/topico/${widget.topicoId}');
+            },
+            tooltip: 'Ver detalhes do tópico',
+          ),
+        ],
       ),
       drawer: SidebarScreen(
         currentUser: currentUser,
@@ -450,8 +545,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         color: Color(0xFFF5F7FB),
         child: Column(
           children: [
-            // Header do tópico
-            if (topico != null) _buildTopicoHeader(),
+            // Header do tópico (mais compacto)
+            if (topico != null) _buildTopicoHeaderCompacto(),
 
             // Filtros e botão criar tema
             _buildFiltrosContainer(),
@@ -465,6 +560,82 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
             if (totalPaginas > 1) _buildPaginacao(),
           ],
         ),
+      ),
+    );
+  }
+
+  // ✅ NOVO: Header mais compacto do tópico
+  Widget _buildTopicoHeaderCompacto() {
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.topic, color: Color(0xFF4A90E2), size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  topico!['titulo'] ?? 'Sem título',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (topico!['descricao'] != null) ...[
+            SizedBox(height: 8),
+            Text(
+              topico!['descricao'],
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.category, size: 14, color: Colors.grey[500]),
+              SizedBox(width: 4),
+              Text(
+                topico!['categoria']?['nome'] ?? 'Categoria',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(width: 16),
+              Icon(Icons.person, size: 14, color: Colors.grey[500]),
+              SizedBox(width: 4),
+              Text(
+                topico!['criador']?['nome'] ?? 'Utilizador',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -627,6 +798,18 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
               color: Colors.grey[500],
             ),
           ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _showCriarTemaDialog,
+            icon: Icon(Icons.add),
+            label: Text('Criar Primeiro Tema'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF4CAF50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -704,6 +887,29 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                       ],
                     ),
                   ),
+                  // ✅ NOVO: Indicador visual para entrar no chat
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF4A90E2).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.chat, size: 12, color: Color(0xFF4A90E2)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Entrar',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF4A90E2),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
 
@@ -739,6 +945,34 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
               if (temAnexo) ...[
                 _buildAnexoTema(
                     anexoUrl!, anexoNome ?? 'Anexo', tipoAnexo ?? 'arquivo'),
+                SizedBox(height: 8),
+              ],
+
+              // 🚩 INDICADOR DE DENÚNCIA (SE DENUNCIADO)
+              if (foiDenunciado) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.flag, size: 12, color: Colors.red),
+                      SizedBox(width: 4),
+                      Text(
+                        'Denunciado',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 SizedBox(height: 8),
               ],
 
@@ -787,13 +1021,27 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                           ),
                         ),
                       SizedBox(width: 8),
-                      IconButton(
-                        onPressed:
-                            foiDenunciado ? null : () => _denunciarTema(temaId),
-                        icon: Icon(
-                          Icons.flag,
-                          color: foiDenunciado ? Colors.red : Colors.grey[600],
-                          size: 20,
+                      // 🚩 BOTÃO DE DENÚNCIA MELHORADO
+                      Container(
+                        decoration: BoxDecoration(
+                          color: foiDenunciado
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: foiDenunciado
+                              ? null
+                              : () => _denunciarTema(temaId),
+                          icon: Icon(
+                            Icons.flag,
+                            color:
+                                foiDenunciado ? Colors.red : Colors.grey[600],
+                            size: 20,
+                          ),
+                          tooltip: foiDenunciado
+                              ? "Já denunciado"
+                              : "Denunciar tema",
                         ),
                       ),
                     ],
