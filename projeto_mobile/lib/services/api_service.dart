@@ -12,10 +12,10 @@ class ApiService {
   late String _apiBase;
   String? _authToken;
 
-  // URLs possíveis do teu servidor
-  static const String _localIp = '192.168.8.29:4000'; // IP na rede local
-  static const String _publicIp = '188.82.118.49:4000'; // IP público
-  static const String _localhost = 'localhost:4000'; // Para emulador
+  // URLs possíveis do servidor
+  static const String _localIp = '192.168.8.29:4000';
+  static const String _publicIp = '188.82.118.49:4000';
+  static const String _localhost = 'localhost:4000';
 
   // Headers padrão para todas as requisições
   Map<String, String> get _defaultHeaders => {
@@ -23,56 +23,54 @@ class ApiService {
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
-  /// Getter público para o token (necessário para usar nas requisições customizadas)
+  // Getter público para o token
   String? get authToken => _authToken;
 
-  /// Inicializa o serviço API com detecção automática da URL base
+  // Inicializa o serviço API com detecção automática da URL base
   Future<void> initialize({String? customApiUrl}) async {
     if (customApiUrl != null) {
       _apiBase = customApiUrl;
-      debugPrint('🌐 [API] URL customizada definida: $_apiBase');
+      debugPrint('URL customizada definida: $_apiBase');
       return;
     }
 
     _apiBase = await _detectBestApiBase();
-    debugPrint('🌐 [API] =================================');
-    debugPrint('🌐 [API] URL Base FINAL detectada: $_apiBase');
-    debugPrint('🌐 [API] =================================');
+    debugPrint('URL Base FINAL detectada: $_apiBase');
   }
 
-  /// Detecção inteligente da melhor URL da API
+  // Detecção inteligente da melhor URL da API
   Future<String> _detectBestApiBase() async {
-    debugPrint('🔍 [API] Iniciando detecção inteligente da URL...');
+    debugPrint('Iniciando detecção inteligente da URL...');
 
-    // 1. Verificar variável de ambiente primeiro
+    // Verificar variável de ambiente primeiro
     const envApiUrl = String.fromEnvironment('API_URL');
     if (envApiUrl.isNotEmpty) {
-      debugPrint('✅ [API] Usando variável de ambiente: $envApiUrl');
+      debugPrint('Usando variável de ambiente: $envApiUrl');
       return envApiUrl;
     }
 
-    // 2. URLs de teste baseadas no ambiente e conectividade
+    // URLs de teste baseadas no ambiente e conectividade
     final List<String> possibleUrls = await _buildPossibleUrls();
 
-    // 3. Testar cada URL para ver qual responde mais rápido
+    // Testar cada URL para ver qual responde mais rápido
     final workingUrl = await _findWorkingUrl(possibleUrls);
 
     if (workingUrl != null) {
       return workingUrl;
     }
 
-    // 4. Fallback baseado no ambiente
+    // Fallback baseado no ambiente
     final fallbackUrl = _getFallbackUrl();
-    debugPrint('⚠️ [API] Nenhuma URL respondeu, usando fallback: $fallbackUrl');
+    debugPrint('Nenhuma URL respondeu, usando fallback: $fallbackUrl');
     return fallbackUrl;
   }
 
-  /// Constrói lista de URLs possíveis baseada no ambiente
+  // Constrói lista de URLs possíveis baseada no ambiente
   Future<List<String>> _buildPossibleUrls() async {
     final List<String> urls = [];
 
     if (kDebugMode) {
-      debugPrint('🔍 [API] Modo debug - testando URLs de desenvolvimento...');
+      debugPrint('Modo debug - testando URLs de desenvolvimento...');
 
       // Para emulador Android
       urls.add('http://10.0.2.2:4000/api');
@@ -93,21 +91,19 @@ class ApiService {
         urls.add('http://$detectedIp:4000/api');
       }
     } else {
-      debugPrint('🔍 [API] Modo produção - usando URLs de produção...');
+      debugPrint('Modo produção - usando URLs de produção...');
       // Em produção, priorizar IP público e HTTPS
       urls.add('https://$_publicIp/api');
       urls.add('http://$_publicIp/api');
-      // Aqui poderias adicionar o teu domínio se tiveres um
-      // urls.add('https://meudominio.com/api');
     }
 
-    debugPrint('🔍 [API] URLs a testar: ${urls.length}');
+    debugPrint('URLs a testar: ${urls.length}');
     return urls;
   }
 
-  /// Encontra a primeira URL que responde
+  // Encontra a primeira URL que responde
   Future<String?> _findWorkingUrl(List<String> urls) async {
-    debugPrint('🔍 [API] Testando conectividade...');
+    debugPrint('Testando conectividade...');
 
     // Testar URLs em paralelo para ser mais rápido
     final futures = urls.map((url) => _testUrlWithTimeout(url));
@@ -116,7 +112,7 @@ class ApiService {
     // Encontrar a primeira que funcionou
     for (int i = 0; i < urls.length; i++) {
       if (results[i]) {
-        debugPrint('✅ [API] URL funcionando encontrada: ${urls[i]}');
+        debugPrint('URL funcionando encontrada: ${urls[i]}');
         return urls[i];
       }
     }
@@ -124,28 +120,26 @@ class ApiService {
     return null;
   }
 
-  /// Testa uma URL com timeout e retry
+  // Testa uma URL com timeout e retry
   Future<bool> _testUrlWithTimeout(String url) async {
     try {
-      debugPrint('🔍 [API] Testando: $url');
+      debugPrint('Testando: $url');
 
       final response = await http.get(
-        Uri.parse(url.replaceAll('/api', '/api')), // Testar endpoint da API
+        Uri.parse(url.replaceAll('/api', '/api')),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 2)); // Timeout curto para ser rápido
+      ).timeout(const Duration(seconds: 2));
 
       final isWorking = response.statusCode == 200;
-      debugPrint(
-          '${isWorking ? '✅' : '❌'} [API] $url - Status: ${response.statusCode}');
+      debugPrint('$url - Status: ${response.statusCode}');
       return isWorking;
     } catch (e) {
-      debugPrint(
-          '❌ [API] Falha ao testar $url: ${e.toString().split('\n').first}');
+      debugPrint('Falha ao testar $url: ${e.toString().split('\n').first}');
       return false;
     }
   }
 
-  /// Tenta detectar o IP da rede local atual
+  // Tenta detectar o IP da rede local atual
   Future<String?> _getLocalNetworkIp() async {
     try {
       final interfaces = await NetworkInterface.list();
@@ -154,40 +148,40 @@ class ApiService {
           if (addr.type == InternetAddressType.IPv4 &&
               !addr.isLoopback &&
               _isPrivateIp(addr.address)) {
-            debugPrint('🔍 [API] IP local detectado: ${addr.address}');
+            debugPrint('IP local detectado: ${addr.address}');
             return addr.address;
           }
         }
       }
     } catch (e) {
-      debugPrint('⚠️ [API] Erro ao detectar IP local: $e');
+      debugPrint('Erro ao detectar IP local: $e');
     }
     return null;
   }
 
-  /// Verifica se um IP é privado (rede local)
+  // Verifica se um IP é privado (rede local)
   bool _isPrivateIp(String ip) {
     return ip.startsWith('192.168.') ||
         ip.startsWith('10.') ||
         ip.startsWith('172.');
   }
 
-  /// URL de fallback baseada no ambiente
+  // URL de fallback baseada no ambiente
   String _getFallbackUrl() {
     if (kDebugMode) {
-      return 'http://$_localIp/api'; // Tentar IP local primeiro
+      return 'http://$_localIp/api';
     } else {
-      return 'http://$_publicIp/api'; // Em produção usar IP público
+      return 'http://$_publicIp/api';
     }
   }
 
-  /// Força reconexão (útil quando mudas de rede)
+  // Força reconexão (útil quando mudas de rede)
   Future<void> reconnect() async {
-    debugPrint('🔄 [API] Forçando reconexão...');
+    debugPrint('Forçando reconexão...');
     _apiBase = await _detectBestApiBase();
   }
 
-  /// Verifica se a conexão atual ainda funciona
+  // Verifica se a conexão atual ainda funciona
   Future<bool> isConnectionAlive() async {
     try {
       final response = await http
@@ -203,31 +197,29 @@ class ApiService {
     }
   }
 
-  /// Define o token de autenticação
+  // Define o token de autenticação
   void setAuthToken(String? token) {
     _authToken = token;
-    debugPrint('🔐 [API] Token ${token != null ? 'definido' : 'removido'}');
+    debugPrint('Token definido');
   }
 
-  /// Remove o token de autenticação
+  // Remove o token de autenticação
   void clearAuthToken() {
     _authToken = null;
-    debugPrint('🔐 [API] Token removido');
+    debugPrint('Token removido');
   }
 
-  /// Getter para a URL base da API
+  // Getter para a URL base da API
   String get apiBase => _apiBase;
 
-  // ===========================================
   // MÉTODOS HTTP COM RETRY AUTOMÁTICO
-  // ===========================================
 
-  /// Requisição GET com retry em caso de falha de rede
+  // Requisição GET com retry em caso de falha de rede
   Future<http.Response> get(String endpoint,
       {Map<String, String>? headers, bool autoRetry = true}) async {
     return _executeWithRetry(() async {
       final url = Uri.parse('$_apiBase$endpoint');
-      debugPrint('📡 [GET] $url');
+      debugPrint('GET: $url');
 
       final response =
           await http.get(url, headers: {..._defaultHeaders, ...?headers});
@@ -236,14 +228,14 @@ class ApiService {
     }, autoRetry);
   }
 
-  /// Requisição POST com retry
+  // Requisição POST com retry
   Future<http.Response> post(String endpoint,
       {Object? body,
       Map<String, String>? headers,
       bool autoRetry = true}) async {
     return _executeWithRetry(() async {
       final url = Uri.parse('$_apiBase$endpoint');
-      debugPrint('📡 [POST] $url');
+      debugPrint('POST: $url');
 
       final response = await http.post(
         url,
@@ -255,14 +247,14 @@ class ApiService {
     }, autoRetry);
   }
 
-  /// Requisição PATCH com retry
+  // Requisição PATCH com retry
   Future<http.Response> patch(String endpoint,
       {Object? body,
       Map<String, String>? headers,
       bool autoRetry = true}) async {
     return _executeWithRetry(() async {
       final url = Uri.parse('$_apiBase$endpoint');
-      debugPrint('📡 [PATCH] $url');
+      debugPrint('PATCH: $url');
 
       final response = await http.patch(
         url,
@@ -274,14 +266,14 @@ class ApiService {
     }, autoRetry);
   }
 
-  /// PUT method
+  // Requisição PUT
   Future<http.Response> put(String endpoint,
       {Object? body,
       Map<String, String>? headers,
       bool autoRetry = true}) async {
     return _executeWithRetry(() async {
       final url = Uri.parse('$_apiBase$endpoint');
-      debugPrint('📡 [PUT] $url');
+      debugPrint('PUT: $url');
       final response = await http.put(url,
           headers: {..._defaultHeaders, ...?headers},
           body: body != null ? jsonEncode(body) : null);
@@ -290,12 +282,12 @@ class ApiService {
     }, autoRetry);
   }
 
-  /// DELETE method
+  // Requisição DELETE
   Future<http.Response> delete(String endpoint,
       {Map<String, String>? headers, bool autoRetry = true}) async {
     return _executeWithRetry(() async {
       final url = Uri.parse('$_apiBase$endpoint');
-      debugPrint('📡 [DELETE] $url');
+      debugPrint('DELETE: $url');
       final response =
           await http.delete(url, headers: {..._defaultHeaders, ...?headers});
       _logResponse('DELETE', endpoint, response);
@@ -303,22 +295,22 @@ class ApiService {
     }, autoRetry);
   }
 
-  /// Executa uma requisição com retry automático em caso de falha de rede
+  // Executa uma requisição with retry automático em caso de falha de rede
   Future<http.Response> _executeWithRetry(
       Future<http.Response> Function() request, bool autoRetry) async {
     try {
       return await request();
     } catch (e) {
       if (autoRetry && _isNetworkError(e)) {
-        debugPrint('🔄 [API] Erro de rede detectado, tentando reconectar...');
+        debugPrint('Erro de rede detectado, tentando reconectar...');
         await reconnect();
-        return await request(); // Retry uma vez
+        return await request();
       }
       rethrow;
     }
   }
 
-  /// Verifica se é um erro de rede
+  // Verifica se é um erro de rede
   bool _isNetworkError(dynamic error) {
     return error is SocketException ||
         error is HttpException ||
@@ -326,31 +318,84 @@ class ApiService {
         error.toString().contains('Network unreachable');
   }
 
-  /// Log das respostas HTTP
+  // Log das respostas HTTP
   void _logResponse(String method, String endpoint, http.Response response) {
     final status = response.statusCode;
     final emoji = status >= 200 && status < 300 ? '✅' : '❌';
     debugPrint('$emoji [$method] $endpoint - Status: $status');
 
     if (kDebugMode && response.statusCode >= 400) {
-      debugPrint('📄 Response body: ${response.body}');
+      debugPrint('Response body: ${response.body}');
     }
   }
 
-  // ===========================================
   // MÉTODOS AUXILIARES
-  // ===========================================
 
   Map<String, dynamic>? parseResponseToMap(http.Response response) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      try {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (e) {
-        debugPrint('❌ [API] Erro ao fazer parse da resposta: $e');
+    try {
+      // ✅ NOVO: Sempre tentar fazer parse, independente do status code
+      final responseBody = response.body;
+      if (responseBody.isEmpty) {
+        debugPrint('⚠️ [API] Response body vazio');
         return null;
       }
+
+      final parsed = jsonDecode(responseBody) as Map<String, dynamic>;
+
+      // ✅ DEBUG: Log da resposta parseada
+      if (kDebugMode && response.statusCode >= 400) {
+        debugPrint('📋 [API] Response parseada (erro): $parsed');
+      }
+
+      return parsed;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao fazer parse da resposta: $e');
+      debugPrint('📝 [API] Response body original: ${response.body}');
+      return null;
     }
-    return null;
+  }
+
+  String extractErrorMessage(http.Response response) {
+    try {
+      final data = parseResponseToMap(response);
+      if (data != null) {
+        // Tentar diferentes campos que podem conter a mensagem
+        if (data['message'] != null) {
+          String message = data['message'];
+          // Se também tem detalhes, adicionar
+          if (data['detalhes'] != null) {
+            message += '\n${data['detalhes']}';
+          }
+          return message;
+        }
+
+        if (data['error'] != null) {
+          return data['error'];
+        }
+
+        if (data['detalhes'] != null) {
+          return data['detalhes'];
+        }
+      }
+
+      // Fallback: mensagem baseada no status code
+      switch (response.statusCode) {
+        case 400:
+          return 'Dados inválidos';
+        case 401:
+          return 'Não autorizado';
+        case 403:
+          return 'Acesso negado';
+        case 404:
+          return 'Não encontrado';
+        case 500:
+          return 'Erro interno do servidor';
+        default:
+          return 'Erro desconhecido (${response.statusCode})';
+      }
+    } catch (e) {
+      return 'Erro ao processar resposta';
+    }
   }
 
   List<dynamic>? parseResponseToList(http.Response response) {
@@ -358,18 +403,98 @@ class ApiService {
       try {
         return jsonDecode(response.body) as List<dynamic>;
       } catch (e) {
-        debugPrint('❌ [API] Erro ao fazer parse da resposta: $e');
+        debugPrint('Erro ao fazer parse da resposta: $e');
         return null;
       }
     }
     return null;
   }
 
-  // ===========================================
-  // 🚩 MÉTODOS PARA DENÚNCIAS - NOVOS
-  // ===========================================
+  // ✅ CORRIGIDO: MÉTODOS PARA COMENTÁRIOS DO FÓRUM
 
-  /// Denunciar um tema do fórum
+  // ✅ MÉTODO CORRIGIDO: Obter comentários de um tema específico - RETORNA LISTA DIRETAMENTE
+  Future<List<dynamic>?> getComentariosTema(String temaId) async {
+    try {
+      debugPrint('🔧 [API] Carregando comentários para tema: $temaId');
+
+      // ✅ USAR O ENDPOINT CORRETO QUE FUNCIONA NA WEB
+      final response = await get('/forum-tema/tema/$temaId/comentarios');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null) {
+          debugPrint('✅ [API] Comentários carregados com sucesso');
+          debugPrint('✅ [API] Estrutura dos dados: ${data.keys}');
+
+          // ✅ RETORNAR DIRETAMENTE A LISTA DE COMENTÁRIOS
+          if (data['success'] == true && data['data'] != null) {
+            final comentarios = data['data'] as List<dynamic>;
+            debugPrint('✅ [API] ${comentarios.length} comentários encontrados');
+            return comentarios;
+          } else if (data['data'] != null) {
+            // Formato alternativo - tentar interpretar como lista
+            final comentarios = data['data'] as List<dynamic>? ?? [];
+            debugPrint(
+                '✅ [API] ${comentarios.length} comentários encontrados (formato alternativo)');
+            return comentarios;
+          } else {
+            debugPrint('⚠️ [API] Resposta válida mas sem dados de comentários');
+            return [];
+          }
+        }
+        debugPrint('⚠️ [API] Resposta não contém dados de comentários');
+        return [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao carregar comentários: ${response.statusCode}');
+        debugPrint('❌ [API] Response body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao carregar comentários: $e');
+      return null;
+    }
+  }
+
+  // ✅ NOVO: Método para criar comentário no tema
+  Future<Map<String, dynamic>?> criarComentarioTema({
+    required String temaId,
+    required String texto,
+    File? anexo,
+  }) async {
+    try {
+      debugPrint('🔧 [API] Criando comentário para tema: $temaId');
+
+      // Este método será usado pelo comentario_form.dart
+      // que já faz a requisição multipart diretamente
+
+      final response = await post('/forum-tema/tema/$temaId/comentario', body: {
+        'texto': texto,
+      });
+
+      final data = parseResponseToMap(response);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Comentário criado com sucesso');
+        return data ??
+            {'success': true, 'message': 'Comentário criado com sucesso'};
+      } else {
+        debugPrint('❌ [API] Erro ao criar comentário: ${response.statusCode}');
+        return data ??
+            {'success': false, 'message': 'Erro ao criar comentário'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao criar comentário: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // MÉTODOS PARA DENÚNCIAS
+
+  // Denunciar um tema do fórum
   Future<Map<String, dynamic>?> denunciarTema({
     required int idTema,
     required String motivo,
@@ -402,42 +527,7 @@ class ApiService {
     }
   }
 
-  /// Denunciar um comentário do fórum
-  Future<Map<String, dynamic>?> denunciarComentario({
-    required int idComentario,
-    required String motivo,
-    String? descricao,
-  }) async {
-    try {
-      debugPrint('🚩 [API] Denunciando comentário ID: $idComentario');
-      final response =
-          await post('/forum/comentario/$idComentario/denunciar', body: {
-        'motivo': motivo,
-        if (descricao != null) 'descricao': descricao,
-      });
-
-      final data = parseResponseToMap(response);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        debugPrint('✅ [API] Comentário denunciado com sucesso');
-        return data ??
-            {'success': true, 'message': 'Comentário denunciado com sucesso'};
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao denunciar comentário: ${response.statusCode}');
-        return data ??
-            {'success': false, 'message': 'Erro ao denunciar comentário'};
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao denunciar comentário: $e');
-      return {
-        'success': false,
-        'message': 'Erro de conexão',
-        'error': e.toString()
-      };
-    }
-  }
-
-  /// Obter temas já denunciados pelo utilizador atual
+  // Obter temas já denunciados pelo utilizador atual
   Future<List<int>?> getTemasDenunciados() async {
     try {
       debugPrint('🚩 [API] Obtendo temas denunciados pelo utilizador...');
@@ -448,7 +538,7 @@ class ApiService {
         if (data != null && data['data'] != null) {
           final temasDenunciados = List<int>.from(data['data']);
           debugPrint(
-              '✅ [API] ${temasDenunciados.length} temas denunciados encontrados');
+              '✅ [API] Temas denunciados encontrados: ${temasDenunciados.length}');
           return temasDenunciados;
         }
         return [];
@@ -463,7 +553,7 @@ class ApiService {
     }
   }
 
-  /// Verificar se um tema específico foi denunciado pelo utilizador
+  // Verificar se um tema específico foi denunciado pelo utilizador
   Future<bool> temaDenunciado(int idTema) async {
     try {
       final temasDenunciados = await getTemasDenunciados();
@@ -477,70 +567,37 @@ class ApiService {
     }
   }
 
-  // ===========================================
-  // MÉTODOS PARA NOTIFICAÇÕES
-  // ===========================================
-
-  /// Obter todas as notificações do utilizador autenticado
-  Future<List<dynamic>?> getNotificacoes() async {
+  // MÉTODOS PARA DENÚNCIAS DE COMENTÁRIOS
+// ✅ CORRIGIDO FINAL: Denunciar um comentário - usar rota correta com ID no path
+  Future<Map<String, dynamic>?> denunciarComentario({
+    required int idComentario,
+    required String motivo,
+    String? descricao,
+  }) async {
     try {
-      debugPrint('🔔 [API] A obter notificações...');
-      final response = await get('/notificacoes');
+      debugPrint('🚩 [API] Denunciando comentário ID: $idComentario');
 
+      // ✅ USAR A ROTA CORRETA QUE EXISTE: /comentarios/:id/denunciar
+      final response =
+          await post('/comentarios/$idComentario/denunciar', body: {
+        'motivo': motivo,
+        if (descricao != null) 'descricao': descricao,
+      });
+
+      final data = parseResponseToMap(response);
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToList(response);
-        debugPrint('✅ [API] ${data?.length ?? 0} notificações obtidas');
-        return data ?? [];
+        debugPrint('✅ [API] Comentário denunciado com sucesso');
+        return data ??
+            {'success': true, 'message': 'Comentário denunciado com sucesso'};
       } else {
         debugPrint(
-            '❌ [API] Erro ao obter notificações: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter notificações: $e');
-      return null;
-    }
-  }
-
-  /// Obter contagem de notificações não lidas
-  Future<int> getNotificacoesNaoLidasContagem() async {
-    try {
-      debugPrint('🔔 [API] A obter contagem de notificações não lidas...');
-      final response = await get('/notificacoes/nao-lidas/contagem');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        final count = data?['count'] ?? 0;
-        debugPrint('✅ [API] $count notificações não lidas');
-        return count;
-      } else {
-        debugPrint('❌ [API] Erro ao obter contagem: ${response.statusCode}');
-        return 0;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter contagem: $e');
-      return 0;
-    }
-  }
-
-  /// Marcar uma notificação como lida
-  Future<Map<String, dynamic>?> marcarNotificacaoComoLida(
-      int idNotificacao) async {
-    try {
-      debugPrint('🔔 [API] A marcar notificação $idNotificacao como lida...');
-      final response = await put('/notificacoes/$idNotificacao/lida');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        debugPrint('✅ [API] Notificação marcada como lida');
+            '❌ [API] Erro ao denunciar comentário: ${response.statusCode}');
+        debugPrint('❌ [API] Response body: ${response.body}');
         return data ??
-            {'success': true, 'message': 'Notificação marcada como lida'};
-      } else {
-        debugPrint('❌ [API] Erro ao marcar como lida: ${response.statusCode}');
-        return {'success': false, 'message': 'Erro ao marcar notificação'};
+            {'success': false, 'message': 'Erro ao denunciar comentário'};
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao marcar como lida: $e');
+      debugPrint('❌ [API] Exceção ao denunciar comentário: $e');
       return {
         'success': false,
         'message': 'Erro de conexão',
@@ -549,27 +606,260 @@ class ApiService {
     }
   }
 
-  /// Marcar todas as notificações como lidas
+  // Obter comentários já denunciados pelo utilizador atual
+  Future<List<int>?> getComentariosDenunciados() async {
+    try {
+      debugPrint('🚩 [API] Obtendo comentários denunciados pelo utilizador...');
+      final response = await get('/denuncias/usuario/denuncias-comentarios');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null && data['data'] != null) {
+          final comentariosDenunciados = List<int>.from(data['data']);
+          debugPrint(
+              '✅ [API] Comentários denunciados encontrados: ${comentariosDenunciados.length}');
+          return comentariosDenunciados;
+        }
+        return [];
+      } else if (response.statusCode == 404) {
+        // ✅ CORRIGIDO: Tratar 404 como lista vazia (rota pode não existir ainda)
+        debugPrint(
+            'ℹ️ [API] Rota de comentários denunciados não encontrada (404) - retornando lista vazia');
+        return [];
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao obter comentários denunciados: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      // ✅ CORRIGIDO: Em caso de erro de conexão, retornar lista vazia em vez de null
+      debugPrint(
+          '⚠️ [API] Exceção ao obter comentários denunciados (não crítico): $e');
+      return []; // Retornar lista vazia em vez de null para não quebrar a UI
+    }
+  }
+
+  // Verificar se um comentário específico foi denunciado pelo utilizador
+  Future<bool> comentarioDenunciado(int idComentario) async {
+    try {
+      final comentariosDenunciados = await getComentariosDenunciados();
+      if (comentariosDenunciados != null) {
+        return comentariosDenunciados.contains(idComentario);
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao verificar se comentário foi denunciado: $e');
+      return false;
+    }
+  }
+
+  // MÉTODOS PARA PRESENÇAS
+
+  // Marcar presença num curso
+  Future<Map<String, dynamic>?> marcarPresenca({
+    required String idCurso,
+    required int idUtilizador,
+    required String codigo,
+  }) async {
+    try {
+      debugPrint('🔧 [API] Marcando presença:');
+      debugPrint('🔧 [API] Curso: $idCurso');
+      debugPrint('🔧 [API] Utilizador: $idUtilizador');
+      debugPrint('🔧 [API] Código: $codigo');
+
+      final body = {
+        'id_curso': idCurso,
+        'id_utilizador': idUtilizador,
+        'codigo': codigo,
+      };
+
+      final response = await post('/presencas/marcar', body: body);
+
+      debugPrint('✅ [API] Status da resposta: ${response.statusCode}');
+      debugPrint('✅ [API] Body da resposta: ${response.body}');
+
+      // ✅ CORRIGIDO: Verificar se é sucesso (200-299)
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Presença marcada com sucesso!');
+
+        // ✅ IMPORTANTE: Para sucesso, sempre retornar success: true
+        Map<String, dynamic>? responseData;
+        try {
+          responseData = parseResponseToMap(response);
+        } catch (e) {
+          debugPrint('⚠️ [API] Erro ao fazer parse (mas foi sucesso): $e');
+        }
+
+        // ✅ GARANTIR que sempre retorna success: true para códigos de sucesso
+        return {
+          'success': true,
+          'message': 'Presença marcada com sucesso!',
+          'data': responseData, // Dados originais do backend
+          'status_code': response.statusCode,
+        };
+      } else {
+        // ✅ ERRO: Extrair mensagem específica
+        debugPrint('❌ [API] Erro ao marcar presença: ${response.statusCode}');
+
+        Map<String, dynamic>? responseData;
+        try {
+          responseData = parseResponseToMap(response);
+        } catch (e) {
+          debugPrint('⚠️ [API] Erro ao fazer parse do erro: $e');
+        }
+
+        String errorMessage = 'Erro ao marcar presença';
+        String? detalhes;
+
+        if (responseData != null) {
+          // Extrair mensagem específica do backend
+          if (responseData['message'] != null) {
+            errorMessage = responseData['message'];
+          }
+          if (responseData['detalhes'] != null) {
+            detalhes = responseData['detalhes'];
+          }
+
+          debugPrint('📋 [API] Mensagem de erro: $errorMessage');
+          if (detalhes != null) {
+            debugPrint('📋 [API] Detalhes: $detalhes');
+          }
+        } else {
+          // ✅ FALLBACK: Tentar parse manual da resposta
+          try {
+            final Map<String, dynamic> errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] ?? errorMessage;
+            detalhes = errorData['detalhes'];
+          } catch (e) {
+            // ✅ ÚLTIMO RECURSO: Mensagem baseada no status
+            switch (response.statusCode) {
+              case 400:
+                errorMessage = 'Dados inválidos ou código incorreto';
+                break;
+              case 401:
+                errorMessage = 'Não autorizado - faça login novamente';
+                break;
+              case 403:
+                errorMessage = 'Acesso negado';
+                break;
+              case 404:
+                errorMessage = 'Presença não encontrada';
+                break;
+              case 500:
+                errorMessage = 'Erro interno do servidor';
+                break;
+            }
+          }
+        }
+
+        return {
+          'success': false,
+          'message': errorMessage,
+          'detalhes': detalhes,
+          'status_code': response.statusCode,
+          'raw_response': response.body,
+        };
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao marcar presença: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'detalhes': 'Verifique a sua ligação à internet e tente novamente',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // MÉTODOS PARA NOTIFICAÇÕES
+
+  // Obter todas as notificações do utilizador autenticado
+  Future<List<dynamic>?> getNotificacoes() async {
+    try {
+      debugPrint('Obtendo notificações...');
+      final response = await get('/notificacoes');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToList(response);
+        debugPrint('Notificações obtidas: ${data?.length ?? 0}');
+        return data ?? [];
+      } else {
+        debugPrint('Erro ao obter notificações: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Exceção ao obter notificações: $e');
+      return null;
+    }
+  }
+
+  // Obter contagem de notificações não lidas
+  Future<int> getNotificacoesNaoLidasContagem() async {
+    try {
+      debugPrint('Obtendo contagem de notificações não lidas...');
+      final response = await get('/notificacoes/nao-lidas/contagem');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        final count = data?['count'] ?? 0;
+        debugPrint('Notificações não lidas: $count');
+        return count;
+      } else {
+        debugPrint('Erro ao obter contagem: ${response.statusCode}');
+        return 0;
+      }
+    } catch (e) {
+      debugPrint('Exceção ao obter contagem: $e');
+      return 0;
+    }
+  }
+
+  // Marcar uma notificação como lida
+  Future<Map<String, dynamic>?> marcarNotificacaoComoLida(
+      int idNotificacao) async {
+    try {
+      debugPrint('Marcando notificação $idNotificacao como lida...');
+      final response = await put('/notificacoes/$idNotificacao/lida');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        debugPrint('Notificação marcada como lida');
+        return data ??
+            {'success': true, 'message': 'Notificação marcada como lida'};
+      } else {
+        debugPrint('Erro ao marcar como lida: ${response.statusCode}');
+        return {'success': false, 'message': 'Erro ao marcar notificação'};
+      }
+    } catch (e) {
+      debugPrint('Exceção ao marcar como lida: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Marcar todas as notificações como lidas
   Future<Map<String, dynamic>?> marcarTodasNotificacoesComoLidas() async {
     try {
-      debugPrint('🔔 [API] A marcar todas as notificações como lidas...');
+      debugPrint('Marcando todas as notificações como lidas...');
       final response = await put('/notificacoes/marcar-todas-como-lidas');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = parseResponseToMap(response);
-        debugPrint('✅ [API] Todas as notificações marcadas como lidas');
+        debugPrint('Todas as notificações marcadas como lidas');
         return data ??
             {
               'success': true,
               'message': 'Todas as notificações marcadas como lidas'
             };
       } else {
-        debugPrint(
-            '❌ [API] Erro ao marcar todas como lidas: ${response.statusCode}');
+        debugPrint('Erro ao marcar todas como lidas: ${response.statusCode}');
         return {'success': false, 'message': 'Erro ao marcar notificações'};
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao marcar todas como lidas: $e');
+      debugPrint('Exceção ao marcar todas como lidas: $e');
       return {
         'success': false,
         'message': 'Erro de conexão',
@@ -578,29 +868,9 @@ class ApiService {
     }
   }
 
-  // ===========================================
   // MÉTODOS AUXILIARES PARA NOTIFICAÇÕES
-  // ===========================================
 
-  /// Obter ícone baseado no tipo de notificação
-  String getNotificacaoIcon(String tipo) {
-    switch (tipo) {
-      case 'curso_adicionado':
-        return '📚';
-      case 'formador_alterado':
-        return '✏️';
-      case 'formador_criado':
-        return '👤';
-      case 'admin_criado':
-        return '👑';
-      case 'data_curso_alterada':
-        return '📅';
-      default:
-        return '🔔';
-    }
-  }
-
-  /// Obter cor baseada no tipo de notificação
+  // Obter cor baseada no tipo de notificação
   Color getNotificacaoColor(String tipo) {
     switch (tipo) {
       case 'curso_adicionado':
@@ -617,7 +887,7 @@ class ApiService {
     }
   }
 
-  /// Formatar data relativa
+  // Formatar data relativa
   String formatRelativeTime(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'data desconhecida';
 
@@ -636,304 +906,70 @@ class ApiService {
       final meses = (diff.inDays / 30).floor();
       return 'há $meses mês${meses > 1 ? 'es' : ''}';
     } catch (e) {
-      debugPrint('❌ [API] Erro ao formatar data: $e, $dateString');
+      debugPrint('Erro ao formatar data: $e, $dateString');
       return 'data inválida';
     }
   }
 
-  // ===========================================
   // MÉTODOS PARA FORMADORES
-  // ===========================================
 
-  /// Obter lista de formadores com paginação
+  // Obter lista de formadores com paginação
   Future<Map<String, dynamic>?> getFormadores(
       {int page = 1, int limit = 10}) async {
     try {
-      debugPrint('👨‍🏫 [API] A obter lista de formadores (página $page)...');
+      debugPrint('Obtendo lista de formadores (página $page)...');
       final response = await get('/formadores?page=$page&limit=$limit');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = parseResponseToMap(response);
         if (data != null) {
-          debugPrint(
-              '✅ [API] ${data['formadores']?.length ?? 0} formadores obtidos');
+          debugPrint('Formadores obtidos: ${data['formadores']?.length ?? 0}');
           return data;
         }
-        debugPrint('❌ [API] Resposta não contém dados de formadores');
+        debugPrint('Resposta não contém dados de formadores');
         return null;
       } else {
-        debugPrint('❌ [API] Erro ao obter formadores: ${response.statusCode}');
+        debugPrint('Erro ao obter formadores: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter formadores: $e');
+      debugPrint('Exceção ao obter formadores: $e');
       return null;
     }
   }
 
-  /// Obter todos os formadores (sem paginação)
+  // Obter todos os formadores (sem paginação)
   Future<List<dynamic>?> getAllFormadores() async {
     try {
-      debugPrint('👨‍🏫 [API] A obter todos os formadores...');
+      debugPrint('Obtendo todos os formadores...');
       final response = await get('/formadores');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = parseResponseToMap(response);
         if (data != null && data['formadores'] != null) {
-          debugPrint('✅ [API] ${data['formadores'].length} formadores obtidos');
+          debugPrint('Formadores obtidos: ${data['formadores'].length}');
           return data['formadores'] as List<dynamic>;
         }
-        debugPrint('❌ [API] Resposta não contém campo "formadores"');
+        debugPrint('Resposta não contém campo formadores');
         return [];
       } else {
-        debugPrint(
-            '❌ [API] Erro ao obter todos os formadores: ${response.statusCode}');
+        debugPrint('Erro ao obter todos os formadores: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter todos os formadores: $e');
+      debugPrint('Exceção ao obter todos os formadores: $e');
       return null;
     }
   }
 
-  /// Obter detalhes de um formador específico
-  Future<Map<String, dynamic>?> getFormador(int formadorId) async {
-    try {
-      debugPrint('👨‍🏫 [API] A obter formador ID: $formadorId');
-      final response = await get('/formadores/$formadorId');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        debugPrint('✅ [API] Dados do formador $formadorId obtidos');
-        return data;
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter formador $formadorId: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter formador $formadorId: $e');
-      return null;
-    }
-  }
-
-  /// Obter cursos ministrados por um formador
-  Future<List<dynamic>?> getCursosFormador(int formadorId) async {
-    try {
-      debugPrint('📚 [API] A obter cursos do formador ID: $formadorId');
-      final response = await get('/formadores/$formadorId/cursos');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToList(response);
-        debugPrint('✅ [API] ${data?.length ?? 0} cursos do formador obtidos');
-        return data ?? [];
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter cursos do formador $formadorId: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter cursos do formador $formadorId: $e');
-      return [];
-    }
-  }
-
-  /// Obter categorias de um formador
-  Future<List<dynamic>?> getCategoriasFormador(int formadorId) async {
-    try {
-      debugPrint('📂 [API] A obter categorias do formador ID: $formadorId');
-      final response = await get('/formadores/$formadorId/categorias');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToList(response);
-        debugPrint(
-            '✅ [API] ${data?.length ?? 0} categorias do formador obtidas');
-        return data ?? [];
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter categorias do formador $formadorId: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      debugPrint(
-          '❌ [API] Exceção ao obter categorias do formador $formadorId: $e');
-      return [];
-    }
-  }
-
-  /// Obter áreas de especialização de um formador
-  Future<List<dynamic>?> getAreasFormador(int formadorId) async {
-    try {
-      debugPrint('🎯 [API] A obter áreas do formador ID: $formadorId');
-      final response = await get('/formadores/$formadorId/areas');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToList(response);
-        debugPrint('✅ [API] ${data?.length ?? 0} áreas do formador obtidas');
-        return data ?? [];
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter áreas do formador $formadorId: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter áreas do formador $formadorId: $e');
-      return [];
-    }
-  }
-
-  /// Registar um novo formador (pendente de confirmação)
-  Future<Map<String, dynamic>?> registerFormador({
-    required String nome,
-    required String email,
-    required String password,
-    required int idade,
-    required String telefone,
-    required String morada,
-    required String codigo_postal,
-    List<int>? categorias,
-    List<int>? areas,
-    int? curso,
-  }) async {
-    try {
-      debugPrint('📝 [API] A registar novo formador: $email');
-      final response = await post('/formadores/register', body: {
-        'nome': nome,
-        'email': email,
-        'password': password,
-        'idade': idade,
-        'telefone': telefone,
-        'morada': morada,
-        'codigo_postal': codigo_postal,
-        if (categorias != null) 'categorias': categorias,
-        if (areas != null) 'areas': areas,
-        if (curso != null) 'curso': curso,
-      });
-
-      final data = parseResponseToMap(response);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        debugPrint('✅ [API] Formador registado com sucesso');
-        return data;
-      } else {
-        debugPrint('❌ [API] Erro ao registar formador: ${response.statusCode}');
-        return data ??
-            {'success': false, 'message': 'Erro ao registar formador'};
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao registar formador: $e');
-      return {
-        'success': false,
-        'message': 'Erro de conexão',
-        'error': e.toString()
-      };
-    }
-  }
-
-  /// Obter perfil do formador atual (se o utilizador logado for formador)
-  Future<Map<String, dynamic>?> getFormadorProfile() async {
-    try {
-      debugPrint('👤 [API] A obter perfil do formador atual...');
-      final response = await get('/formadores/profile');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        debugPrint('✅ [API] Perfil do formador obtido');
-        return data;
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter perfil do formador: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter perfil do formador: $e');
-      return null;
-    }
-  }
-
-  /// Atualizar dados do formador
-  Future<Map<String, dynamic>?> updateFormador(
-      int formadorId, Map<String, dynamic> dadosParaAtualizar) async {
-    try {
-      debugPrint('📝 [API] A atualizar formador ID: $formadorId');
-      final response =
-          await put('/formadores/$formadorId', body: dadosParaAtualizar);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        debugPrint('✅ [API] Formador atualizado com sucesso');
-        return data;
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao atualizar formador: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao atualizar formador: $e');
-      return null;
-    }
-  }
-
-  // ===========================================
-  // MÉTODOS AUXILIARES PARA FORMADORES
-  // ===========================================
-
-  /// Obter URL da imagem de perfil do formador
-  String getFormadorAvatarUrl(String email) {
-    return getUserAvatarUrl(email);
-  }
-
-  /// Obter URL da imagem de capa do formador
-  String getFormadorCapaUrl(String email) {
-    return getUserCapaUrl(email);
-  }
-
-  /// Verificar se o utilizador atual é um formador
-  Future<bool> isCurrentUserFormador() async {
-    try {
-      final currentUser = await getCurrentUser();
-      return currentUser?['id_cargo'] == 2;
-    } catch (e) {
-      debugPrint('❌ [API] Erro ao verificar se utilizador é formador: $e');
-      return false;
-    }
-  }
-
-  /// Pesquisar formadores por nome ou email
-  Future<List<dynamic>?> searchFormadores(String query) async {
-    try {
-      debugPrint('🔍 [API] A pesquisar formadores: $query');
-      final response =
-          await get('/formadores?search=${Uri.encodeComponent(query)}');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        if (data != null && data['formadores'] != null) {
-          debugPrint(
-              '✅ [API] ${data['formadores'].length} formadores encontrados');
-          return data['formadores'] as List<dynamic>;
-        }
-        return [];
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao pesquisar formadores: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao pesquisar formadores: $e');
-      return null;
-    }
-  }
-
-  // ===========================================
-  // MÉTODOS PARA IMAGENS - CORRIGIDOS
-  // ===========================================
+  // MÉTODOS PARA IMAGENS
 
   String _formatEmailForUrl(String email) {
     if (email.isEmpty) return '';
     return email.replaceAll('@', '_at_').replaceAll('.', '_');
   }
 
-  // MUDANÇA: Usar mesmo padrão da web - através da API
+  // Usar mesmo padrão da web - através da API
   String get defaultAvatarUrl => '$_apiBase/uploads/AVATAR.png';
   String get defaultCapaUrl => '$_apiBase/uploads/CAPA.png';
 
@@ -966,25 +1002,23 @@ class ApiService {
     return '$_apiBase/uploads/$imagePath';
   }
 
-  // ===========================================
   // MÉTODOS ESPECÍFICOS DA API
-  // ===========================================
 
-  /// Teste de conectividade com a API
+  // Teste de conectividade com a API
   Future<bool> testConnection() async {
     try {
       final response = await get('/');
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('❌ [API] Erro no teste de conexão: $e');
+      debugPrint('Erro no teste de conexão: $e');
       return false;
     }
   }
 
-  /// Método de login
+  // Método de login
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
-      debugPrint('🔐 [LOGIN] Iniciando login para: $email');
+      debugPrint('Iniciando login para: $email');
       final response = await post('/auth/login',
           body: {'email': email, 'password': password});
 
@@ -997,7 +1031,7 @@ class ApiService {
       }
       return {'success': false, 'message': 'Erro no login'};
     } catch (e) {
-      debugPrint('❌ [API] Erro no login: $e');
+      debugPrint('Erro no login: $e');
       return {
         'success': false,
         'message': 'Erro de conexão',
@@ -1006,149 +1040,145 @@ class ApiService {
     }
   }
 
-  /// Logout
+  // Logout
   Future<void> logout() async {
     clearAuthToken();
   }
 
-  /// Obter utilizador atual
+  // Obter utilizador atual
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
       final response = await get('/users/perfil');
       return parseResponseToMap(response);
     } catch (e) {
-      debugPrint('❌ [API] Erro ao obter utilizador atual: $e');
+      debugPrint('Erro ao obter utilizador atual: $e');
       return null;
     }
   }
 
-  /// Obter lista de cursos
+  // Obter lista de cursos
   Future<List<dynamic>?> getCursos() async {
     try {
-      debugPrint('📚 [API] A obter lista de cursos...');
+      debugPrint('Obtendo lista de cursos...');
       final response = await get('/cursos');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response); // Usar parseResponseToMap
+        final data = parseResponseToMap(response);
         if (data != null && data['cursos'] != null) {
-          debugPrint('✅ [API] ${data['cursos'].length ?? 0} cursos obtidos');
-          return data['cursos'] as List<dynamic>; // Extrair a lista de cursos
+          debugPrint('Cursos obtidos: ${data['cursos'].length ?? 0}');
+          return data['cursos'] as List<dynamic>;
         }
-        debugPrint('❌ [API] Resposta não contém campo "cursos"');
+        debugPrint('Resposta não contém campo cursos');
         return [];
       } else {
-        debugPrint('❌ [API] Erro ao obter cursos: ${response.statusCode}');
+        debugPrint('Erro ao obter cursos: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter cursos: $e');
+      debugPrint('Exceção ao obter cursos: $e');
       return null;
     }
   }
 
-  /// Obter inscrições do utilizador atual (formato completo)
+  // Obter inscrições do utilizador atual (formato completo)
   Future<List<dynamic>?> getMinhasInscricoes() async {
     try {
-      debugPrint('📚 [API] A obter minhas inscrições...');
-      final response =
-          await get('/inscricoes/minhas-inscricoes'); // URL CORRETA
+      debugPrint('Obtendo minhas inscrições...');
+      final response = await get('/inscricoes/minhas-inscricoes');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data =
-            parseResponseToList(response); // Backend retorna lista direta
-        debugPrint('✅ [API] ${data?.length ?? 0} inscrições obtidas');
+        final data = parseResponseToList(response);
+        debugPrint('Inscrições obtidas: ${data?.length ?? 0}');
         return data;
       } else {
-        debugPrint(
-            '❌ [API] Erro ao obter minhas inscrições: ${response.statusCode}');
-        debugPrint('📄 Response body: ${response.body}');
+        debugPrint('Erro ao obter minhas inscrições: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter minhas inscrições: $e');
+      debugPrint('Exceção ao obter minhas inscrições: $e');
       return null;
     }
   }
 
-  /// Obter cursos em que o utilizador está inscrito
+  // Obter cursos em que o utilizador está inscrito
   Future<List<dynamic>?> getMeusCursos() async {
     try {
-      debugPrint('📚 [API] A obter meus cursos...');
+      debugPrint('Obtendo meus cursos...');
       final response = await get('/inscricoes/minhas');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = parseResponseToList(response);
-        debugPrint('✅ [API] ${data?.length ?? 0} inscrições obtidas');
+        debugPrint('Inscrições obtidas: ${data?.length ?? 0}');
         return data;
       } else {
-        debugPrint('❌ [API] Erro ao obter meus cursos: ${response.statusCode}');
+        debugPrint('Erro ao obter meus cursos: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter meus cursos: $e');
+      debugPrint('Exceção ao obter meus cursos: $e');
       return null;
     }
   }
 
-  /// Obter detalhes completos dos cursos inscritos
+  // Obter detalhes completos dos cursos inscritos
   Future<List<dynamic>?> getMeusCursosCompletos() async {
     try {
-      debugPrint('📚 [API] A obter meus cursos completos...');
+      debugPrint('Obtendo meus cursos completos...');
       final response = await get('/inscricoes/meus-cursos-completos');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = parseResponseToList(response);
-        debugPrint('✅ [API] ${data?.length ?? 0} cursos completos obtidos');
+        debugPrint('Cursos completos obtidos: ${data?.length ?? 0}');
         return data;
       } else {
-        debugPrint(
-            '❌ [API] Erro ao obter cursos completos: ${response.statusCode}');
+        debugPrint('Erro ao obter cursos completos: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('❌ [API] Exceção ao obter cursos completos: $e');
+      debugPrint('Exceção ao obter cursos completos: $e');
       return null;
     }
   }
 
-  /// Obter detalhes de um curso específico
+  // Obter detalhes de um curso específico
   Future<Map<String, dynamic>?> getCurso(int cursoId) async {
     try {
-      debugPrint('📚 [API] A obter curso ID: $cursoId');
+      debugPrint('Obtendo curso ID: $cursoId');
       final response = await get('/cursos/$cursoId');
       return parseResponseToMap(response);
     } catch (e) {
-      debugPrint('❌ [API] Erro ao obter curso $cursoId: $e');
+      debugPrint('Erro ao obter curso $cursoId: $e');
       return null;
     }
   }
 
-  /// Obter categorias de cursos
+  // Obter categorias de cursos
   Future<List<dynamic>?> getCategorias() async {
     try {
-      debugPrint('📂 [API] A obter categorias...');
+      debugPrint('Obtendo categorias...');
       final response = await get('/categorias');
       return parseResponseToList(response);
     } catch (e) {
-      debugPrint('❌ [API] Erro ao obter categorias: $e');
+      debugPrint('Erro ao obter categorias: $e');
       return null;
     }
   }
 
-  /// Inscrever-se num curso - CORRIGIDO
+  // Inscrever-se num curso
   Future<Map<String, dynamic>?> inscreverNoCurso(int cursoId) async {
     try {
-      debugPrint('📝 [API] A inscrever no curso ID: $cursoId');
+      debugPrint('Inscrevendo no curso ID: $cursoId');
 
       // Obter o utilizador atual para extrair o ID
       final currentUser = await getCurrentUser();
       if (currentUser == null) {
-        debugPrint('❌ [API] Erro: Utilizador não autenticado');
+        debugPrint('Erro: Utilizador não autenticado');
         return {'success': false, 'message': 'Utilizador não autenticado'};
       }
 
       final userId = currentUser['id_utilizador'];
-      debugPrint('👤 [API] ID do utilizador: $userId');
+      debugPrint('ID do utilizador: $userId');
 
       final response = await post('/inscricoes', body: {
         'id_utilizador': userId,
@@ -1156,7 +1186,7 @@ class ApiService {
       });
       return parseResponseToMap(response);
     } catch (e) {
-      debugPrint('❌ [API] Erro ao inscrever no curso $cursoId: $e');
+      debugPrint('Erro ao inscrever no curso $cursoId: $e');
       return {
         'success': false,
         'message': 'Erro ao processar inscrição',
@@ -1165,7 +1195,7 @@ class ApiService {
     }
   }
 
-  /// Endpoint de health check para testar conectividade
+  // Endpoint de health check para testar conectividade
   Future<Map<String, dynamic>?> healthCheck() async {
     try {
       final response = await get('/');
@@ -1174,8 +1204,39 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      debugPrint('❌ [API] Health check falhou: $e');
+      debugPrint('Health check falhou: $e');
       return null;
+    }
+  }
+
+  // Obter ícone baseado no tipo de notificação
+  String getNotificacaoIcon(String tipo) {
+    switch (tipo) {
+      case 'curso_adicionado':
+        return '📚'; // Ícone de livro/curso
+      case 'formador_alterado':
+      case 'formador_criado':
+        return '👨‍🏫'; // Ícone de professor
+      case 'admin_criado':
+        return '⚙️'; // Ícone de administração
+      case 'data_curso_alterada':
+        return '📅'; // Ícone de calendário
+      case 'inscricao_confirmada':
+        return '✅'; // Ícone de confirmação
+      case 'curso_cancelado':
+        return '❌'; // Ícone de cancelamento
+      case 'lembrete':
+        return '🔔'; // Ícone de sino
+      case 'avaliacao':
+        return '⭐'; // Ícone de estrela
+      case 'certificado':
+        return '🏆'; // Ícone de troféu
+      case 'forum':
+        return '💬'; // Ícone de conversa
+      case 'sistema':
+        return 'ℹ️'; // Ícone de informação
+      default:
+        return '📢'; // Ícone padrão de notificação
     }
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 
-/// Widget para exibir avatar do usuário com fallback
+// Widget para exibir avatar do utilizador com fallback automático
 class ForumAvatar extends StatelessWidget {
   final Map<String, dynamic>? user;
   final double radius;
@@ -40,7 +40,7 @@ class ForumAvatar extends StatelessWidget {
               : _buildFallbackAvatar(),
         ),
 
-        // Indicador de status online
+        // Indicador de status online quando necessário
         if (showOnlineStatus)
           Positioned(
             bottom: 0,
@@ -59,6 +59,7 @@ class ForumAvatar extends StatelessWidget {
     );
   }
 
+  // Constrói a URL do avatar do utilizador
   String _getAvatarUrl(ApiService apiService) {
     final fotoPerfil = user?['foto_perfil'];
     if (fotoPerfil == null) return apiService.defaultAvatarUrl;
@@ -71,6 +72,7 @@ class ForumAvatar extends StatelessWidget {
     return apiService.getUserAvatarUrl(email);
   }
 
+  // Constrói o avatar de fallback com iniciais do nome
   Widget _buildFallbackAvatar() {
     final name = user?['nome'] ?? 'U';
     final initials = _getInitials(name);
@@ -85,6 +87,7 @@ class ForumAvatar extends StatelessWidget {
     );
   }
 
+  // Extrai as iniciais do nome do utilizador
   String _getInitials(String name) {
     final words = name.trim().split(' ');
     if (words.isEmpty) return 'U';
@@ -93,7 +96,7 @@ class ForumAvatar extends StatelessWidget {
   }
 }
 
-/// Widget para exibir anexos (imagens, vídeos, arquivos)
+// Widget para exibir diferentes tipos de anexos (imagens, vídeos, arquivos)
 class ForumAnexo extends StatelessWidget {
   final Map<String, dynamic> anexo;
   final bool isPreview;
@@ -112,6 +115,7 @@ class ForumAnexo extends StatelessWidget {
     final url = anexo['anexo_url'] ?? anexo['url'];
     final nome = anexo['anexo_nome'] ?? anexo['nome'] ?? 'Anexo';
 
+    // Decide qual tipo de anexo renderizar
     if (tipo == 'imagem') {
       return _buildImageAnexo(url, nome);
     } else if (tipo == 'video') {
@@ -121,6 +125,7 @@ class ForumAnexo extends StatelessWidget {
     }
   }
 
+  // Constrói widget para anexos de imagem
   Widget _buildImageAnexo(String url, String nome) {
     return InkWell(
       onTap: onTap,
@@ -153,6 +158,7 @@ class ForumAnexo extends StatelessWidget {
     );
   }
 
+  // Constrói widget para anexos de vídeo
   Widget _buildVideoAnexo(String url, String nome) {
     return InkWell(
       onTap: onTap,
@@ -172,7 +178,10 @@ class ForumAnexo extends StatelessWidget {
                 color: Color(0xFF4A90E2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+              child: Text(
+                'Play',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
             ),
             SizedBox(width: 12),
             Expanded(
@@ -199,38 +208,36 @@ class ForumAnexo extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.open_in_new, color: Colors.grey[600], size: 20),
+            Text(
+              'Abrir',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  // Constrói widget para outros tipos de arquivo
   Widget _buildFileAnexo(String nome, String? tipo) {
-    IconData icon;
-    Color iconColor;
     String tipoLabel;
 
+    // Determina o rótulo baseado no tipo do arquivo
     switch (tipo?.toLowerCase()) {
       case 'pdf':
-        icon = Icons.picture_as_pdf;
-        iconColor = Colors.red;
         tipoLabel = 'PDF';
         break;
       case 'doc':
       case 'docx':
-        icon = Icons.description;
-        iconColor = Colors.blue;
         tipoLabel = 'Documento';
         break;
       case 'txt':
-        icon = Icons.text_snippet;
-        iconColor = Colors.grey;
         tipoLabel = 'Texto';
         break;
       default:
-        icon = Icons.insert_drive_file;
-        iconColor = Color(0xFF4A90E2);
         tipoLabel = 'Arquivo';
     }
 
@@ -246,7 +253,20 @@ class ForumAnexo extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: iconColor, size: 32),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Color(0xFF4A90E2).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Arquivo',
+                style: TextStyle(
+                  color: Color(0xFF4A90E2),
+                  fontSize: 10,
+                ),
+              ),
+            ),
             SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -272,13 +292,20 @@ class ForumAnexo extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.download, color: Colors.grey[600], size: 20),
+            Text(
+              'Download',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  // Constrói widget de erro quando não consegue carregar a imagem
   Widget _buildErrorWidget() {
     return Container(
       height: 150,
@@ -290,7 +317,13 @@ class ForumAnexo extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.broken_image, color: Colors.grey[400], size: 32),
+            Container(
+              padding: EdgeInsets.all(8),
+              child: Text(
+                'Erro',
+                style: TextStyle(color: Colors.grey[400], fontSize: 14),
+              ),
+            ),
             SizedBox(height: 8),
             Text(
               'Erro ao carregar imagem',
@@ -306,26 +339,22 @@ class ForumAnexo extends StatelessWidget {
   }
 }
 
-/// Widget para exibir botões de ação (like, dislike, comentar, etc.)
+// Widget para botões de ação do fórum (like, dislike, comentar, etc.)
 class ForumActionButton extends StatelessWidget {
-  final IconData icon;
   final String? label;
   final int? count;
   final bool isActive;
   final Color? activeColor;
   final VoidCallback? onPressed;
-  final double iconSize;
   final bool isDisabled;
 
   const ForumActionButton({
     Key? key,
-    required this.icon,
     this.label,
     this.count,
     this.isActive = false,
     this.activeColor,
     this.onPressed,
-    this.iconSize = 16,
     this.isDisabled = false,
   }) : super(key: key);
 
@@ -351,7 +380,6 @@ class ForumActionButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: iconSize, color: color),
             if (count != null || label != null) ...[
               SizedBox(width: 4),
               Text(
@@ -370,19 +398,17 @@ class ForumActionButton extends StatelessWidget {
   }
 }
 
-/// 🚩 NOVO: Widget para botão de denúncia melhorado
+// Widget melhorado para botão de denúncia
 class ForumDenunciaButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool foiDenunciado;
   final String tooltip;
-  final double iconSize;
 
   const ForumDenunciaButton({
     Key? key,
     this.onPressed,
     this.foiDenunciado = false,
     this.tooltip = 'Denunciar',
-    this.iconSize = 16,
   }) : super(key: key);
 
   @override
@@ -402,10 +428,15 @@ class ForumDenunciaButton extends StatelessWidget {
         icon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.flag,
-              color: foiDenunciado ? Colors.red : Colors.grey[600],
-              size: iconSize,
+            Container(
+              padding: EdgeInsets.all(4),
+              child: Text(
+                'Flag',
+                style: TextStyle(
+                  color: foiDenunciado ? Colors.red : Colors.grey[600],
+                  fontSize: 10,
+                ),
+              ),
             ),
             if (foiDenunciado) ...[
               SizedBox(width: 4),
@@ -427,40 +458,34 @@ class ForumDenunciaButton extends StatelessWidget {
   }
 }
 
-/// Widget para exibir indicador de status (denunciado, moderado, etc.)
+// Widget para exibir indicador de status (denunciado, moderado, etc.)
 class ForumStatusIndicator extends StatelessWidget {
   final String status;
   final Color? color;
-  final IconData? icon;
 
   const ForumStatusIndicator({
     Key? key,
     required this.status,
     this.color,
-    this.icon,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     Color statusColor;
-    IconData statusIcon;
 
+    // Define a cor baseada no status
     switch (status.toLowerCase()) {
       case 'denunciado':
         statusColor = Colors.red;
-        statusIcon = Icons.flag;
         break;
       case 'moderado':
         statusColor = Colors.orange;
-        statusIcon = Icons.visibility_off;
         break;
       case 'aprovado':
         statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
         break;
       default:
         statusColor = Colors.grey;
-        statusIcon = Icons.info;
     }
 
     return Container(
@@ -473,11 +498,6 @@ class ForumStatusIndicator extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon ?? statusIcon,
-            size: 12,
-            color: color ?? statusColor,
-          ),
           SizedBox(width: 4),
           Text(
             status,
@@ -493,7 +513,7 @@ class ForumStatusIndicator extends StatelessWidget {
   }
 }
 
-/// Widget para exibir estatísticas (likes, comentários, visualizações, etc.)
+// Widget para exibir estatísticas (likes, comentários, visualizações, etc.)
 class ForumStats extends StatelessWidget {
   final List<ForumStat> stats;
   final MainAxisAlignment alignment;
@@ -514,7 +534,16 @@ class ForumStats extends StatelessWidget {
               padding: EdgeInsets.only(right: 16),
               child: Column(
                 children: [
-                  Icon(stat.icon, size: 20, color: Color(0xFF4A90E2)),
+                  Container(
+                    padding: EdgeInsets.all(4),
+                    child: Text(
+                      stat.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF4A90E2),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: 4),
                   Text(
                     stat.value.toString(),
@@ -541,28 +570,25 @@ class ForumStats extends StatelessWidget {
   }
 }
 
+// Classe para representar uma estatística do fórum
 class ForumStat {
-  final IconData icon;
   final String label;
   final int value;
 
   const ForumStat({
-    required this.icon,
     required this.label,
     required this.value,
   });
 }
 
-/// Widget para exibir uma mensagem de estado vazio
+// Widget para exibir uma mensagem de estado vazio
 class ForumEmptyState extends StatelessWidget {
-  final IconData icon;
   final String title;
   final String? subtitle;
   final Widget? action;
 
   const ForumEmptyState({
     Key? key,
-    required this.icon,
     required this.title,
     this.subtitle,
     this.action,
@@ -574,7 +600,16 @@ class ForumEmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: Colors.grey[400]),
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Vazio',
+              style: TextStyle(
+                fontSize: 32,
+                color: Colors.grey[400],
+              ),
+            ),
+          ),
           SizedBox(height: 16),
           Text(
             title,
@@ -606,7 +641,7 @@ class ForumEmptyState extends StatelessWidget {
   }
 }
 
-/// 🚩 NOVO: Widget para modal de denúncia
+// Widget para modal de denúncia melhorado
 class ForumDenunciaModal extends StatefulWidget {
   final String tipo; // 'tema' ou 'comentario'
   final Function(String motivo) onDenunciar;
@@ -642,8 +677,11 @@ class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
     super.dispose();
   }
 
+  // Obtém o motivo final da denúncia
   String get motivoFinal =>
       motivoSelecionado == 'Outro' ? motivoCustom : (motivoSelecionado ?? '');
+
+  // Verifica se pode enviar a denúncia
   bool get podeEnviar =>
       motivoSelecionado != null &&
       (motivoSelecionado != 'Outro' || motivoCustom.trim().isNotEmpty);
@@ -653,8 +691,6 @@ class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.flag, color: Colors.red),
-          SizedBox(width: 8),
           Text('Denunciar ${widget.tipo == 'tema' ? 'Tema' : 'Comentário'}'),
         ],
       ),
@@ -666,7 +702,7 @@ class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
             Text('Por favor, selecione o motivo da denúncia:'),
             SizedBox(height: 16),
 
-            // Motivos pré-definidos
+            // Lista de motivos pré-definidos
             ...motivosPreDefinidos.map(
               (motivo) => RadioListTile<String>(
                 value: motivo,
@@ -685,7 +721,7 @@ class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
               ),
             ),
 
-            // Campo para "Outro"
+            // Campo para motivo personalizado quando seleciona "Outro"
             if (motivoSelecionado == 'Outro') ...[
               SizedBox(height: 8),
               TextField(
@@ -730,7 +766,7 @@ class _ForumDenunciaModalState extends State<ForumDenunciaModal> {
   }
 }
 
-/// 🚩 FUNÇÃO AUXILIAR: Mostrar modal de denúncia
+// Função auxiliar para mostrar modal de denúncia
 Future<void> showForumDenunciaModal({
   required BuildContext context,
   required String tipo,
@@ -745,7 +781,7 @@ Future<void> showForumDenunciaModal({
   );
 }
 
-/// Função utilitária para formatar datas no contexto do fórum
+// Função utilitária para formatar datas no contexto do fórum
 String formatarDataForum(String? dataString) {
   if (dataString == null) return 'Data indisponível';
 
@@ -770,7 +806,7 @@ String formatarDataForum(String? dataString) {
   }
 }
 
-/// Função utilitária para formatar texto longo com "Ver mais"
+// Widget para texto expansível com "Ver mais"
 class ForumExpandableText extends StatefulWidget {
   final String text;
   final int maxLines;
@@ -801,7 +837,8 @@ class _ForumExpandableTextState extends State<ForumExpandableText> {
           maxLines: _isExpanded ? null : widget.maxLines,
           overflow: _isExpanded ? null : TextOverflow.ellipsis,
         ),
-        if (widget.text.length > 100) // Só mostra se o texto for longo
+        // Só mostra o botão se o texto for longo o suficiente
+        if (widget.text.length > 100)
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             child: Padding(
@@ -821,7 +858,7 @@ class _ForumExpandableTextState extends State<ForumExpandableText> {
   }
 }
 
-/// 🚩 NOVO: Widget para mostrar feedback de denúncia
+// Widget para mostrar feedback de denúncia
 class ForumDenunciaFeedback extends StatelessWidget {
   final bool foiDenunciado;
   final String? motivoDenuncia;
@@ -848,7 +885,13 @@ class ForumDenunciaFeedback extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.flag, color: Colors.red, size: 16),
+          Container(
+            padding: EdgeInsets.all(4),
+            child: Text(
+              'Flag',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
           SizedBox(width: 8),
           Expanded(
             child: Column(

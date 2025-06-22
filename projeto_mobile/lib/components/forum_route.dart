@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/forum/detalhe_topico_screen.dart';
 import '../screens/forum/chat_conversas_screen.dart';
 import '../screens/forum/topicos_chat_screen.dart';
 
@@ -19,23 +18,10 @@ class ForumRoutes {
     debugPrint('🔧 [FORUM_ROUTES] Processando rota: $routeName');
 
     // Padrões de rotas do fórum
-    final RegExp topicoDetailsPattern = RegExp(r'^/forum/topico/(\d+)$');
     final RegExp conversasPattern = RegExp(r'^/forum/topico/(\d+)/conversas$');
     final RegExp chatPattern = RegExp(r'^/forum/topico/(\d+)/tema/(\d+)$');
 
-    // 1. Detalhes do tópico: /forum/topico/:id
-    final topicoMatch = topicoDetailsPattern.firstMatch(routeName);
-    if (topicoMatch != null) {
-      final topicoId = topicoMatch.group(1)!;
-      debugPrint('✅ [FORUM_ROUTES] Detalhes do tópico: $topicoId');
-
-      return MaterialPageRoute(
-        builder: (context) => DetalheTopicoScreen(topicoId: topicoId),
-        settings: settings,
-      );
-    }
-
-    // 2. Lista de conversas: /forum/topico/:id/conversas
+    // 1. Lista de conversas: /forum/topico/:id/conversas
     final conversasMatch = conversasPattern.firstMatch(routeName);
     if (conversasMatch != null) {
       final topicoId = conversasMatch.group(1)!;
@@ -47,7 +33,7 @@ class ForumRoutes {
       );
     }
 
-    // 3. Chat de tema específico: /forum/topico/:topicoId/tema/:temaId
+    // 2. Chat de tema específico: /forum/topico/:topicoId/tema/:temaId
     final chatMatch = chatPattern.firstMatch(routeName);
     if (chatMatch != null) {
       final topicoId = chatMatch.group(1)!;
@@ -63,7 +49,7 @@ class ForumRoutes {
       );
     }
 
-    // 4. Rotas futuras do fórum (para expansão)
+    // 3. Rotas futuras do fórum (para expansão)
 
     // Administração do fórum (para admins/formadores)
     if (routeName.startsWith('/forum/admin/')) {
@@ -196,9 +182,9 @@ class _NotImplementedPage extends StatelessWidget {
 
 /// Extensões utilitárias para navegação do fórum
 extension ForumNavigation on BuildContext {
-  /// Navegar para detalhes do tópico
+  /// Navegar diretamente para conversas do tópico (substituindo detalhes)
   void navegarParaTopico(String topicoId) {
-    Navigator.pushNamed(this, '/forum/topico/$topicoId');
+    Navigator.pushNamed(this, '/forum/topico/$topicoId/conversas');
   }
 
   /// Navegar para conversas do tópico

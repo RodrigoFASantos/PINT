@@ -8,6 +8,7 @@ const {
   getForumComentarioDenuncias,
   criarForumTemaDenuncia,
   getUsuarioDenunciasTemas,
+  getUsuarioDenunciasComentarios,
   getChatDenuncias,
   resolverForumTemaDenuncia,
   resolverForumComentarioDenuncia,
@@ -29,6 +30,9 @@ router.post("/forum-tema/denunciar", criarForumTemaDenuncia);
 
 // Rota para verificar denúncias feitas pelo utilizador
 router.get("/usuario/denuncias-temas", getUsuarioDenunciasTemas);
+
+// Rota para verificar comentários denunciados pelo utilizador
+router.get("/usuario/denuncias-comentarios", getUsuarioDenunciasComentarios);
 
 // ========================================
 // ROTAS ADMINISTRATIVAS (apenas para admins - cargo 1)

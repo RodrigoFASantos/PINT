@@ -133,18 +133,54 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         });
         debugPrint(
             '✅ [CHAT_CONVERSAS] ${temasDenunciados.length} temas denunciados pelo usuário');
+      } else {
+        // ✅ CORRIGIDO: Se a rota não existir, inicializar lista vazia
+        setState(() {
+          temasDenunciados = [];
+        });
+        debugPrint(
+            'ℹ️ [CHAT_CONVERSAS] Nenhum tema denunciado encontrado (rota pode não existir)');
       }
     } catch (error) {
+      // ✅ CORRIGIDO: Em caso de erro, inicializar lista vazia para não travar
+      setState(() {
+        temasDenunciados = [];
+      });
       debugPrint(
-          '❌ [CHAT_CONVERSAS] Erro ao carregar temas denunciados: $error');
+          '⚠️ [CHAT_CONVERSAS] Erro ao carregar temas denunciados (não crítico): $error');
     }
+  }
+
+  // ✅ NOVA FUNÇÃO: Extrai ID do tema de forma robusta
+  int _extrairIdTema(Map<String, dynamic> tema) {
+    // Tentar várias chaves possíveis e converter para int
+    final possiveisIds = [
+      tema['id_tema'],
+      tema['id'],
+      tema['tema_id'],
+    ];
+
+    for (var id in possiveisIds) {
+      if (id != null) {
+        if (id is int) return id;
+        if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) return parsed;
+        }
+      }
+    }
+
+    // Fallback: retornar 0 se não conseguir extrair
+    debugPrint(
+        '⚠️ [CHAT_CONVERSAS] Não foi possível extrair ID do tema: $tema');
+    return 0;
   }
 
   void _marcarTemasDenunciados() {
     if (temasDenunciados.isNotEmpty) {
       setState(() {
         for (int i = 0; i < temas.length; i++) {
-          final temaId = temas[i]['id_tema'];
+          final temaId = _extrairIdTema(temas[i]);
           if (temasDenunciados.contains(temaId)) {
             temas[i]['foi_denunciado'] = true;
           }
@@ -174,7 +210,14 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
+  // ✅ CORRIGIDO: Avaliar tema com tratamento robusto de IDs
   Future<void> _avaliarTema(int temaId, String tipo) async {
+    // Verificar ID válido
+    if (temaId <= 0) {
+      AppUtils.showError(context, 'ID do tema inválido.');
+      return;
+    }
+
     try {
       debugPrint('🔧 [CHAT_CONVERSAS] Avaliando tema $temaId como $tipo');
 
@@ -183,7 +226,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         final jaAvaliado = avaliacoes[temaId] == tipo;
 
         for (int i = 0; i < temas.length; i++) {
-          if (temas[i]['id_tema'] == temaId) {
+          final currentTemaId = _extrairIdTema(temas[i]);
+          if (currentTemaId == temaId) {
             if (jaAvaliado) {
               // Remover avaliação (toggle off)
               avaliacoes.remove(temaId);
@@ -211,7 +255,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         }
       });
 
-      // Fazer requisição para o servidor
+      // Fazer a requisição para o servidor
       final response =
           await _apiService.post('/forum-tema/tema/$temaId/avaliar', body: {
         'tipo': tipo,
@@ -223,7 +267,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         // Atualizar com dados do servidor
         setState(() {
           for (int i = 0; i < temas.length; i++) {
-            if (temas[i]['id_tema'] == temaId) {
+            final currentTemaId = _extrairIdTema(temas[i]);
+            if (currentTemaId == temaId) {
               temas[i]['likes'] = serverData['likes'];
               temas[i]['dislikes'] = serverData['dislikes'];
               break;
@@ -237,8 +282,14 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // 🚩 FUNÇÃO MELHORADA: Denunciar tema usando ApiService
+  // 🚩 FUNÇÃO MELHORADA: Denunciar tema usando ApiService com tratamento robusto
   Future<void> _denunciarTema(int temaId) async {
+    // Verificar ID válido
+    if (temaId <= 0) {
+      AppUtils.showError(context, 'ID do tema inválido.');
+      return;
+    }
+
     // Verificar se já foi denunciado
     if (temasDenunciados.contains(temaId)) {
       AppUtils.showInfo(context, 'Já denunciou este tema anteriormente.');
@@ -255,7 +306,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
       setState(() {
         temasDenunciados.add(temaId);
         for (int i = 0; i < temas.length; i++) {
-          if (temas[i]['id_tema'] == temaId) {
+          final currentTemaId = _extrairIdTema(temas[i]);
+          if (currentTemaId == temaId) {
             temas[i]['foi_denunciado'] = true;
             break;
           }
@@ -274,8 +326,9 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
       } else {
         // Reverter mudanças se falhou
         _revertDenunciaTema(temaId);
-        AppUtils.showError(
-            context, result?['message'] ?? 'Erro ao denunciar tema');
+        final mensagem = result?['message'] ?? 'Erro ao denunciar tema';
+        AppUtils.showError(context, mensagem);
+        debugPrint('❌ [CHAT_CONVERSAS] Falha na denúncia: $mensagem');
       }
     } catch (error) {
       // Reverter estado em caso de erro
@@ -290,7 +343,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     setState(() {
       temasDenunciados.remove(temaId);
       for (int i = 0; i < temas.length; i++) {
-        if (temas[i]['id_tema'] == temaId) {
+        final currentTemaId = _extrairIdTema(temas[i]);
+        if (currentTemaId == temaId) {
           temas[i]['foi_denunciado'] = false;
           break;
         }
@@ -381,7 +435,13 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
+  // ✅ CORRIGIDO: Navegação com tratamento robusto de ID
   void _navegarParaTema(int temaId) {
+    if (temaId <= 0) {
+      AppUtils.showError(context, 'ID do tema inválido.');
+      return;
+    }
+
     debugPrint('🔧 [CHAT_CONVERSAS] Navegando para tema: $temaId');
     Navigator.pushNamed(
         context, '/forum/topico/${widget.topicoId}/tema/$temaId');
@@ -526,16 +586,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
           onPressed: _voltarParaForum,
           tooltip: 'Voltar ao Fórum',
         ),
-        actions: [
-          // ✅ NOVO: Botão para ver detalhes do tópico (opcional)
-          IconButton(
-            icon: Icon(Icons.info_outline),
-            onPressed: () {
-              Navigator.pushNamed(context, '/forum/topico/${widget.topicoId}');
-            },
-            tooltip: 'Ver detalhes do tópico',
-          ),
-        ],
+        // ✅ REMOVIDO: Botão de detalhes do tópico já não existe mais
       ),
       drawer: SidebarScreen(
         currentUser: currentUser,
@@ -634,64 +685,6 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopicoHeader() {
-    return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Categoria: ${topico!['categoria']?['nome'] ?? 'Não disponível'}',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            topico!['titulo'] ?? 'Sem título',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (topico!['descricao'] != null) ...[
-            SizedBox(height: 8),
-            Text(
-              topico!['descricao'],
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-          SizedBox(height: 8),
-          Text(
-            'Data: ${_formatarData(topico!['data_criacao'])}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
-            ),
           ),
         ],
       ),
@@ -826,8 +819,9 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
+  // ✅ CORRIGIDO: Card de tema com tratamento robusto de IDs
   Widget _buildTemaCard(Map<String, dynamic> tema) {
-    final temaId = tema['id_tema'];
+    final temaId = _extrairIdTema(tema);
     final foiDenunciado = tema['foi_denunciado'] == true;
 
     // ✅ CORRIGIDO: Verificar se existe anexo único (não lista de anexos)
@@ -847,7 +841,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
             : BorderSide.none,
       ),
       child: InkWell(
-        onTap: () => _navegarParaTema(temaId),
+        onTap: temaId > 0 ? () => _navegarParaTema(temaId) : null,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -888,28 +882,29 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                     ),
                   ),
                   // ✅ NOVO: Indicador visual para entrar no chat
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF4A90E2).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.chat, size: 12, color: Color(0xFF4A90E2)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Entrar',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF4A90E2),
-                            fontWeight: FontWeight.w500,
+                  if (temaId > 0)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF4A90E2).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat, size: 12, color: Color(0xFF4A90E2)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Entrar',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF4A90E2),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
 
@@ -986,14 +981,18 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                         icon: Icons.thumb_up,
                         count: tema['likes'] ?? 0,
                         isActive: avaliacoes[temaId] == 'like',
-                        onPressed: () => _avaliarTema(temaId, 'like'),
+                        onPressed: temaId > 0
+                            ? () => _avaliarTema(temaId, 'like')
+                            : () {},
                       ),
                       SizedBox(width: 12),
                       _buildAcaoButton(
                         icon: Icons.thumb_down,
                         count: tema['dislikes'] ?? 0,
                         isActive: avaliacoes[temaId] == 'dislike',
-                        onPressed: () => _avaliarTema(temaId, 'dislike'),
+                        onPressed: temaId > 0
+                            ? () => _avaliarTema(temaId, 'dislike')
+                            : () {},
                       ),
                     ],
                   ),
@@ -1002,7 +1001,8 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                       _buildAcaoButton(
                         icon: Icons.comment,
                         count: tema['comentarios'] ?? 0,
-                        onPressed: () => _navegarParaTema(temaId),
+                        onPressed:
+                            temaId > 0 ? () => _navegarParaTema(temaId) : () {},
                       ),
                       SizedBox(width: 8),
                       // Indicador de anexo
@@ -1030,7 +1030,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: IconButton(
-                          onPressed: foiDenunciado
+                          onPressed: (foiDenunciado || temaId <= 0)
                               ? null
                               : () => _denunciarTema(temaId),
                           icon: Icon(

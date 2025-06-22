@@ -1,26 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; // ✅ ADICIONADO
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:mime/mime.dart'; // ✅ ADICIONADO
 import '../../services/api_service.dart';
 import '../../main.dart';
 import '../../components/sidebar_screen.dart';
+import '../../screens/forum/comentario_form.dart';
 
 class TopicosChatScreen extends StatefulWidget {
   final String topicoId;
   final String temaId;
 
-  const TopicosChatScreen({
-    Key? key,
-    required this.topicoId,
-    required this.temaId,
-  }) : super(key: key);
+  const TopicosChatScreen(
+      {Key? key, required this.topicoId, required this.temaId})
+      : super(key: key);
 
   @override
   _TopicosChatScreenState createState() => _TopicosChatScreenState();
@@ -28,195 +19,30 @@ class TopicosChatScreen extends StatefulWidget {
 
 class _TopicosChatScreenState extends State<TopicosChatScreen> {
   final ApiService _apiService = ApiService();
-  final TextEditingController _comentarioController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-
-  Map<String, dynamic>? topico;
   Map<String, dynamic>? tema;
+  Map<String, dynamic>? topico;
   List<dynamic> comentarios = [];
   Map<String, dynamic>? currentUser;
   bool loading = true;
   String? erro;
-  Map<int, String> avaliacoes = {}; // Para controlar likes/dislikes do usuário
-  List<int> comentariosDenunciados =
-      []; // 🚩 NOVO: Para controlar comentários denunciados
-  File? _anexo;
-  String? _anexoTipo; // 'imagem', 'video', 'arquivo'
-  String? _anexoMimeType; // ✅ ADICIONADO para armazenar MIME type
 
-  // 🚀 WEBSOCKET PARA TEMPO REAL
-  IO.Socket? socket;
+  // Controle de comentários denunciados pelo usuário atual
+  List<int> comentariosDenunciados = [];
 
   @override
   void initState() {
     super.initState();
     _initializeData();
-    _initializeSocket();
   }
 
-  @override
-  void dispose() {
-    _comentarioController.dispose();
-    _scrollController.dispose();
-    _disconnectSocket();
-    super.dispose();
-  }
-
-  // ✅ NOVA FUNÇÃO: Detectar Content-Type baseado na extensão
-  String _detectContentType(String filePath, String? originalMimeType) {
-    // Primeiro, tentar usar o MIME type original se disponível e válido
-    if (originalMimeType != null &&
-        originalMimeType != 'application/octet-stream' &&
-        originalMimeType.isNotEmpty) {
-      return originalMimeType;
-    }
-
-    // Se não tiver MIME type válido, detectar pela extensão
-    final mimeType = lookupMimeType(filePath);
-    if (mimeType != null) {
-      return mimeType;
-    }
-
-    // Fallback baseado na extensão manual
-    final extension = filePath.toLowerCase().split('.').last;
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'mp4':
-        return 'video/mp4';
-      case 'avi':
-        return 'video/avi';
-      case 'mov':
-        return 'video/quicktime';
-      case 'webm':
-        return 'video/webm';
-      case 'pdf':
-        return 'application/pdf';
-      case 'doc':
-        return 'application/msword';
-      case 'docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case 'txt':
-        return 'text/plain';
-      default:
-        return 'application/octet-stream';
-    }
-  }
-
-  // INICIALIZAR WEBSOCKET
-  void _initializeSocket() {
-    try {
-      final apiBase = _apiService.apiBase.split('/api')[0];
-      debugPrint('🔌 [TOPICOS_CHAT] Conectando ao WebSocket: $apiBase');
-
-      socket = IO.io(apiBase, <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true,
-      });
-
-      socket?.onConnect((_) {
-        debugPrint('✅ [TOPICOS_CHAT] Conectado ao WebSocket');
-        // Entrar no canal do tema específico
-        socket?.emit('joinTema', widget.temaId);
-        debugPrint(
-            '🔧 [TOPICOS_CHAT] Entrou no canal do tema: ${widget.temaId}');
-      });
-
-      socket?.onDisconnect((_) {
-        debugPrint('❌ [TOPICOS_CHAT] Desconectado do WebSocket');
-      });
-
-      // 📨 ESCUTAR NOVOS COMENTÁRIOS
-      socket?.on('novoComentario', (data) {
-        debugPrint('📨 [TOPICOS_CHAT] Novo comentário recebido: $data');
-        if (mounted && data != null) {
-          setState(() {
-            comentarios.add(data);
-          });
-
-          // Auto-scroll para o final
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController.animateTo(
-                _scrollController.position.maxScrollExtent,
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-        }
-      });
-
-      // 📨 ESCUTAR ATUALIZAÇÕES DE COMENTÁRIOS (likes/dislikes)
-      socket?.on('comentarioAtualizado', (data) {
-        debugPrint('📨 [TOPICOS_CHAT] Comentário atualizado: $data');
-        if (mounted && data != null) {
-          _atualizarComentarioLocal(data);
-        }
-      });
-
-      socket?.onError((error) {
-        debugPrint('❌ [TOPICOS_CHAT] Erro no socket: $error');
-      });
-    } catch (error) {
-      debugPrint('❌ [TOPICOS_CHAT] Erro ao inicializar socket: $error');
-    }
-  }
-
-  // DESCONECTAR WEBSOCKET
-  void _disconnectSocket() {
-    if (socket != null) {
-      debugPrint('🔌 [TOPICOS_CHAT] Desconectando...');
-      socket?.emit('leaveTema', widget.temaId);
-      socket?.disconnect();
-      socket = null;
-    }
-  }
-
-  // ATUALIZAR COMENTÁRIO LOCAL COM DADOS DO WEBSOCKET
-  void _atualizarComentarioLocal(Map<String, dynamic> dadosAtualizados) {
-    if (!mounted) return;
-
-    setState(() {
-      for (int i = 0; i < comentarios.length; i++) {
-        if (comentarios[i]['id_comentario'] ==
-            dadosAtualizados['id_comentario']) {
-          if (dadosAtualizados.containsKey('likes')) {
-            comentarios[i]['likes'] = dadosAtualizados['likes'];
-          }
-          if (dadosAtualizados.containsKey('dislikes')) {
-            comentarios[i]['dislikes'] = dadosAtualizados['dislikes'];
-          }
-          break;
-        }
-      }
-    });
-  }
-
+  // Inicializa todos os dados necessários
   Future<void> _initializeData() async {
     try {
       await _loadUserData();
       await _loadTopico();
       await _loadTema();
       await _loadComentarios();
-
-      // Scroll para o final após carregar
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      await _loadComentariosDenunciados();
     } catch (error) {
       setState(() {
         erro = 'Erro ao carregar dados: $error';
@@ -225,6 +51,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
+  // Carrega dados do usuário atual
   Future<void> _loadUserData() async {
     try {
       final response = await _apiService.get('/users/perfil');
@@ -242,6 +69,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
+  // Carrega dados do tópico
   Future<void> _loadTopico() async {
     try {
       debugPrint('🔧 [TOPICOS_CHAT] Carregando tópico ID: ${widget.topicoId}');
@@ -261,6 +89,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
+  // Carrega dados do tema específico
   Future<void> _loadTema() async {
     try {
       debugPrint('🔧 [TOPICOS_CHAT] Carregando tema ID: ${widget.temaId}');
@@ -274,45 +103,40 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
           tema = data['data'];
         });
         debugPrint('✅ [TOPICOS_CHAT] Tema carregado: ${tema?['titulo']}');
-      } else {
-        setState(() {
-          erro = 'Tema não encontrado';
-          loading = false;
-        });
       }
     } catch (error) {
-      setState(() {
-        erro = 'Erro ao carregar tema: $error';
-        loading = false;
-      });
       debugPrint('❌ [TOPICOS_CHAT] Erro ao carregar tema: $error');
     }
   }
 
+  // ✅ CORRIGIDO: Usar o método correto para carregar comentários de tema
   Future<void> _loadComentarios() async {
     try {
       debugPrint(
           '🔧 [TOPICOS_CHAT] Carregando comentários para tema: ${widget.temaId}');
 
-      final response = await _apiService
-          .get('/forum-tema/tema/${widget.temaId}/comentarios');
-      final data = _apiService.parseResponseToMap(response);
+      // ✅ USAR O MÉTODO CORRETO DO API_SERVICE - AGORA RETORNA List<dynamic>? DIRETAMENTE
+      final comentariosData =
+          await _apiService.getComentariosTema(widget.temaId);
 
-      if (data != null && data['data'] != null) {
+      if (comentariosData != null) {
         setState(() {
-          comentarios = data['data'];
+          comentarios = comentariosData; // ✅ Agora é diretamente uma lista
           loading = false;
         });
+
         debugPrint(
             '✅ [TOPICOS_CHAT] ${comentarios.length} comentários carregados');
 
-        // 🚩 MARCAR COMENTÁRIOS DENUNCIADOS
+        // Marcar comentários denunciados após carregamento
         _marcarComentariosDenunciados();
       } else {
         setState(() {
           comentarios = [];
           loading = false;
         });
+        debugPrint(
+            'ℹ️ [TOPICOS_CHAT] Nenhum comentário encontrado para o tema');
       }
     } catch (error) {
       setState(() {
@@ -323,12 +147,43 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
-  // 🚩 NOVA FUNÇÃO: Marcar comentários denunciados
+  // Carrega lista de comentários já denunciados pelo usuário
+  Future<void> _loadComentariosDenunciados() async {
+    try {
+      final comentariosDenunciadosData =
+          await _apiService.getComentariosDenunciados();
+
+      if (comentariosDenunciadosData != null) {
+        setState(() {
+          comentariosDenunciados = comentariosDenunciadosData;
+        });
+        debugPrint(
+            '✅ [TOPICOS_CHAT] ${comentariosDenunciados.length} comentários denunciados pelo usuário');
+      } else {
+        // ✅ CORRIGIDO: Se a rota não existir, inicializar lista vazia
+        setState(() {
+          comentariosDenunciados = [];
+        });
+        debugPrint(
+            'ℹ️ [TOPICOS_CHAT] Nenhum comentário denunciado encontrado (rota pode não existir)');
+      }
+    } catch (error) {
+      // ✅ CORRIGIDO: Em caso de erro, inicializar lista vazia para não travar
+      setState(() {
+        comentariosDenunciados = [];
+      });
+      debugPrint(
+          '⚠️ [TOPICOS_CHAT] Erro ao carregar comentários denunciados (não crítico): $error');
+    }
+  }
+
+  // Marca visualmente os comentários que já foram denunciados
   void _marcarComentariosDenunciados() {
     if (comentariosDenunciados.isNotEmpty) {
       setState(() {
         for (int i = 0; i < comentarios.length; i++) {
-          final comentarioId = comentarios[i]['id_comentario'];
+          final comentarioId =
+              comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
           if (comentariosDenunciados.contains(comentarioId)) {
             comentarios[i]['foi_denunciado'] = true;
           }
@@ -337,209 +192,34 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
-  Future<void> _enviarComentario() async {
-    if ((_comentarioController.text.trim().isEmpty && _anexo == null) ||
-        currentUser == null) {
-      AppUtils.showError(
-          context, 'É necessário fornecer texto ou anexo para o comentário');
-      return;
-    }
-
-    try {
-      debugPrint('🔧 [TOPICOS_CHAT] Enviando comentário');
-
-      // 🚀 IMPLEMENTAÇÃO CORRIGIDA COM CONTENT-TYPE
-      Map<String, String> headers = {
-        'Authorization': 'Bearer ${await _getAuthToken()}',
-      };
-
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-            '${_apiService.apiBase}/forum-tema/tema/${widget.temaId}/comentario'),
-      );
-
-      // Adicionar texto
-      request.fields['texto'] = _comentarioController.text;
-
-      // ✅ CORRIGIDO: Usar nome de campo 'anexo' com CONTENT-TYPE correto
-      if (_anexo != null) {
-        var stream = http.ByteStream(_anexo!.openRead());
-        var length = await _anexo!.length();
-
-        // ✅ DETECTAR E DEFINIR CONTENT-TYPE CORRETO
-        final contentType = _detectContentType(_anexo!.path, _anexoMimeType);
-
-        debugPrint('📎 [UPLOAD] Comentário - Arquivo: ${_anexo!.path}');
-        debugPrint('📎 [UPLOAD] Content-Type detectado: $contentType');
-        debugPrint('📎 [UPLOAD] Tamanho: $length bytes');
-
-        var multipartFile = http.MultipartFile(
-          'anexo', // ✅ Campo correto
-          stream,
-          length,
-          filename: 'anexo_${DateTime.now().millisecondsSinceEpoch}',
-          contentType:
-              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
-        );
-        request.files.add(multipartFile);
-      }
-
-      // Adicionar headers
-      request.headers.addAll(headers);
-
-      debugPrint('📁 [TOPICOS_CHAT] Campo do anexo: anexo (singular)');
-
-      // Enviar requisição
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('📡 [TOPICOS_CHAT] Status: ${response.statusCode}');
-      debugPrint('📡 [TOPICOS_CHAT] Response: ${response.body}');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        if (data != null && data['data'] != null) {
-          // O comentário será adicionado via WebSocket
-          // Mas adicionar localmente caso socket não funcione
-          if (socket == null || !socket!.connected) {
-            setState(() {
-              comentarios.add(data['data']);
-            });
-          }
-
-          setState(() {
-            _comentarioController.clear();
-            _anexo = null;
-            _anexoTipo = null;
-            _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
-          });
-
-          // Auto-scroll
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController.animateTo(
-                _scrollController.position.maxScrollExtent,
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-
-          debugPrint('✅ [TOPICOS_CHAT] Comentário enviado com sucesso');
-        } else {
-          throw Exception('Resposta inválida do servidor');
-        }
-      } else {
-        throw Exception('Erro HTTP: ${response.statusCode}');
-      }
-    } catch (error) {
-      debugPrint('❌ [TOPICOS_CHAT] Erro ao enviar comentário: $error');
-      AppUtils.showError(
-          context, 'Não foi possível enviar o comentário: $error');
-    }
-  }
-
-  Future<String?> _getAuthToken() async {
-    // Obter token de autenticação do SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
-  }
-
-  Future<void> _avaliarComentario(int comentarioId, String tipo) async {
-    try {
-      debugPrint(
-          '🔧 [TOPICOS_CHAT] Avaliando comentário $comentarioId como $tipo');
-
-      // Atualizar estado local para feedback imediato
-      setState(() {
-        final jaAvaliado = avaliacoes[comentarioId] == tipo;
-
-        for (int i = 0; i < comentarios.length; i++) {
-          if (comentarios[i]['id_comentario'] == comentarioId) {
-            if (jaAvaliado) {
-              // Remover avaliação (toggle off)
-              avaliacoes.remove(comentarioId);
-              comentarios[i][tipo == 'like' ? 'likes' : 'dislikes'] =
-                  (comentarios[i][tipo == 'like' ? 'likes' : 'dislikes'] ?? 1) -
-                      1;
-            } else {
-              // Adicionar nova avaliação ou trocar tipo
-              final tipoAnterior = avaliacoes[comentarioId];
-              avaliacoes[comentarioId] = tipo;
-
-              if (tipoAnterior != null) {
-                // Remover avaliação anterior
-                comentarios[i][tipoAnterior == 'like' ? 'likes' : 'dislikes'] =
-                    (comentarios[i][tipoAnterior == 'like'
-                                ? 'likes'
-                                : 'dislikes'] ??
-                            1) -
-                        1;
-              }
-
-              // Adicionar nova avaliação
-              comentarios[i][tipo == 'like' ? 'likes' : 'dislikes'] =
-                  (comentarios[i][tipo == 'like' ? 'likes' : 'dislikes'] ?? 0) +
-                      1;
-            }
-            break;
-          }
-        }
-      });
-
-      // Fazer requisição para o servidor
-      final response = await _apiService
-          .post('/forum-tema/comentario/$comentarioId/avaliar', body: {
-        'tipo': tipo,
-      });
-
-      final data = _apiService.parseResponseToMap(response);
-      if (data != null && data['data'] != null) {
-        final serverData = data['data'];
-        // Atualizar com dados do servidor
-        setState(() {
-          for (int i = 0; i < comentarios.length; i++) {
-            if (comentarios[i]['id_comentario'] == comentarioId) {
-              comentarios[i]['likes'] = serverData['likes'];
-              comentarios[i]['dislikes'] = serverData['dislikes'];
-              break;
-            }
-          }
-        });
-      }
-    } catch (error) {
-      debugPrint('❌ [TOPICOS_CHAT] Erro ao avaliar comentário: $error');
-      AppUtils.showError(context, 'Erro ao avaliar comentário: $error');
-    }
-  }
-
-  // 🚩 NOVA FUNÇÃO COMPLETA: Denunciar comentário usando ApiService
+  // Processa denúncia de comentário
   Future<void> _denunciarComentario(int comentarioId) async {
-    // Verificar se já foi denunciado
+    // Verifica se já foi denunciado
     if (comentariosDenunciados.contains(comentarioId)) {
       AppUtils.showInfo(context, 'Já denunciou este comentário anteriormente.');
       return;
     }
 
-    final motivo = await _showMotivoDialog();
+    // Mostra diálogo para selecionar motivo
+    final motivo = await _showMotivoComentarioDialog();
     if (motivo == null || motivo.isEmpty) return;
 
     try {
       debugPrint('🚩 [TOPICOS_CHAT] Denunciando comentário $comentarioId');
 
-      // Atualizar estado local imediatamente para feedback visual
+      // Atualiza estado local imediatamente para feedback visual
       setState(() {
         comentariosDenunciados.add(comentarioId);
         for (int i = 0; i < comentarios.length; i++) {
-          if (comentarios[i]['id_comentario'] == comentarioId) {
+          final id = comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
+          if (id == comentarioId) {
             comentarios[i]['foi_denunciado'] = true;
             break;
           }
         }
       });
 
-      // ✅ USAR O MÉTODO DO ApiService
+      // Envia denúncia para o servidor
       final result = await _apiService.denunciarComentario(
         idComentario: comentarioId,
         motivo: motivo,
@@ -549,25 +229,26 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         AppUtils.showSuccess(context,
             'Comentário denunciado com sucesso. Obrigado pela sua contribuição.');
       } else {
-        // Reverter mudanças se falhou
+        // Reverte mudanças se falhou
         _revertDenunciaComentario(comentarioId);
         AppUtils.showError(
             context, result?['message'] ?? 'Erro ao denunciar comentário');
       }
     } catch (error) {
-      // Reverter mudanças em caso de erro
+      // Reverte estado em caso de erro
       _revertDenunciaComentario(comentarioId);
       debugPrint('❌ [TOPICOS_CHAT] Erro ao denunciar comentário: $error');
       AppUtils.showError(context, 'Erro ao denunciar comentário: $error');
     }
   }
 
-  // 🚩 FUNÇÃO AUXILIAR: Reverter denúncia em caso de erro
+  // Reverte denúncia em caso de erro na comunicação
   void _revertDenunciaComentario(int comentarioId) {
     setState(() {
       comentariosDenunciados.remove(comentarioId);
       for (int i = 0; i < comentarios.length; i++) {
-        if (comentarios[i]['id_comentario'] == comentarioId) {
+        final id = comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
+        if (id == comentarioId) {
           comentarios[i]['foi_denunciado'] = false;
           break;
         }
@@ -575,7 +256,8 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     });
   }
 
-  Future<String?> _showMotivoDialog() async {
+  // Exibe diálogo para seleção do motivo da denúncia
+  Future<String?> _showMotivoComentarioDialog() async {
     String motivo = '';
     String? motivoSelecionado;
 
@@ -597,7 +279,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
               Text('Por favor, selecione o motivo da denúncia:'),
               SizedBox(height: 16),
 
-              // Motivos pré-definidos
+              // Lista de motivos pré-definidos
               ...[
                 'Spam',
                 'Conteúdo ofensivo',
@@ -622,7 +304,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                 ),
               ),
 
-              // Campo para "Outro"
+              // Campo de texto para motivo personalizado
               if (motivoSelecionado == 'Outro') ...[
                 SizedBox(height: 8),
                 TextField(
@@ -658,6 +340,31 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     );
   }
 
+  // ✅ CORRIGIDO: Função melhorada para adicionar novo comentário
+  void _onNovoComentario(Map<String, dynamic> novoComentario) {
+    setState(() {
+      // Adicionar o novo comentário no final da lista (mais recente)
+      comentarios.add(novoComentario);
+    });
+
+    // Scroll automático para o final da lista (opcional)
+    // Se você tiver um ScrollController, pode implementar isso
+
+    final texto = novoComentario['texto']?.toString() ?? 'sem texto';
+    final textoPreview =
+        texto.length > 30 ? '${texto.substring(0, 30)}...' : texto;
+
+    debugPrint('✅ [TOPICOS_CHAT] Novo comentário adicionado: $textoPreview');
+  }
+
+  // Volta para a tela de conversas do tópico
+  void _voltarParaConversas() {
+    debugPrint('🔧 [TOPICOS_CHAT] Voltando para conversas do tópico');
+    Navigator.pushReplacementNamed(
+        context, '/forum/topico/${widget.topicoId}/conversas');
+  }
+
+  // Formata data para exibição amigável
   String _formatarData(String? dataString) {
     if (dataString == null) return 'Data indisponível';
 
@@ -671,11 +378,17 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Tela de carregamento
     if (loading) {
       return Scaffold(
         appBar: AppBar(
           title: Text('Chat'),
           backgroundColor: Color(0xFFFF8000),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: _voltarParaConversas,
+            tooltip: 'Voltar às Conversas',
+          ),
         ),
         drawer: SidebarScreen(
           currentUser: currentUser,
@@ -689,18 +402,24 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8000)),
               ),
               SizedBox(height: 16),
-              Text('Carregando comentários...'),
+              Text('A carregar chat...'),
             ],
           ),
         ),
       );
     }
 
+    // Tela de erro
     if (erro != null) {
       return Scaffold(
         appBar: AppBar(
           title: Text('Erro'),
           backgroundColor: Color(0xFFFF8000),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: _voltarParaConversas,
+            tooltip: 'Voltar às Conversas',
+          ),
         ),
         drawer: SidebarScreen(
           currentUser: currentUser,
@@ -737,34 +456,38 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                 icon: Icon(Icons.refresh),
                 label: Text('Tentar Novamente'),
               ),
+              SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _voltarParaConversas,
+                icon: Icon(Icons.arrow_back),
+                label: Text('Voltar às Conversas'),
+              ),
             ],
           ),
         ),
       );
     }
 
+    // Tela principal do chat
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Chat', style: TextStyle(fontSize: 18)),
+            if (tema != null)
+              Text(
+                tema!['titulo'] ?? 'Tema',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+          ],
+        ),
         backgroundColor: Color(0xFFFF8000),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Voltar',
+          onPressed: _voltarParaConversas,
+          tooltip: 'Voltar às Conversas',
         ),
-        actions: [
-          // 🔌 Indicador de status do WebSocket
-          Container(
-            margin: EdgeInsets.only(right: 16),
-            child: Center(
-              child: Icon(
-                socket?.connected == true ? Icons.wifi : Icons.wifi_off,
-                color: socket?.connected == true ? Colors.green : Colors.red,
-                size: 20,
-              ),
-            ),
-          ),
-        ],
       ),
       drawer: SidebarScreen(
         currentUser: currentUser,
@@ -784,18 +507,23 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                   : _buildComentariosList(),
             ),
 
-            // Input para novo comentário
-            _buildComentarioInput(),
+            // Formulário para novo comentário
+            NovoComentarioForm(
+              temaId: widget.temaId,
+              onSuccess: _onNovoComentario,
+              placeholder: 'Digite sua mensagem...',
+            ),
           ],
         ),
       ),
     );
   }
 
+  // Constrói header com informações do tema
   Widget _buildTemaHeader() {
     return Container(
       margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -810,61 +538,49 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (tema!['titulo'] != null) ...[
-            Text(
-              tema!['titulo'],
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
-              ),
+          // Título do tema
+          Text(
+            tema!['titulo'] ?? 'Sem título',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
             ),
-            SizedBox(height: 8),
-          ],
+          ),
 
+          // Descrição se existir
           if (tema!['texto'] != null) ...[
+            SizedBox(height: 8),
             Text(
               tema!['texto'],
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF666666),
+                color: Colors.grey[600],
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 12),
           ],
 
-          // ✅ ANEXO ÚNICO DO TEMA (CORRIGIDO)
-          if (tema!['anexo_url'] != null && tema!['anexo_url'].isNotEmpty) ...[
-            Text(
-              'Anexo do tema:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
-              ),
-            ),
-            SizedBox(height: 8),
-            _buildAnexoTema(
-              tema!['anexo_url'],
-              tema!['anexo_nome'] ?? 'Anexo',
-              tema!['tipo_anexo'] ?? 'arquivo',
-            ),
-            SizedBox(height: 12),
-          ],
+          SizedBox(height: 12),
 
-          // Meta informações
+          // Informações do autor e data
           Row(
             children: [
+              Icon(Icons.person, size: 14, color: Colors.grey[500]),
+              SizedBox(width: 4),
               Text(
-                'Por: ${tema!['utilizador']?['nome'] ?? 'Não disponível'}',
+                tema!['utilizador']?['nome'] ?? 'Utilizador',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],
                 ),
               ),
               SizedBox(width: 16),
+              Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+              SizedBox(width: 4),
               Text(
-                'Data: ${_formatarData(tema!['data_criacao'])}',
+                _formatarData(tema!['data_criacao']),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],
@@ -872,123 +588,12 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
               ),
             ],
           ),
-
-          SizedBox(height: 8),
-
-          // Estatísticas
-          Row(
-            children: [
-              _buildStatChip(Icons.thumb_up, tema!['likes'] ?? 0),
-              SizedBox(width: 8),
-              _buildStatChip(Icons.thumb_down, tema!['dislikes'] ?? 0),
-              SizedBox(width: 8),
-              _buildStatChip(Icons.comment, tema!['comentarios'] ?? 0),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  // ✅ WIDGET PARA MOSTRAR ANEXO DO TEMA
-  Widget _buildAnexoTema(String anexoUrl, String anexoNome, String tipoAnexo) {
-    // Construir URL completa
-    final fullUrl = anexoUrl.startsWith('http')
-        ? anexoUrl
-        : '${_apiService.apiBase.replaceAll('/api', '')}/$anexoUrl';
-
-    if (tipoAnexo == 'imagem') {
-      return InkWell(
-        onTap: () => _showImageDialog(fullUrl, anexoNome),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              fullUrl,
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 200,
-                color: Colors.grey[200],
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.broken_image,
-                          color: Colors.grey[400], size: 32),
-                      SizedBox(height: 8),
-                      Text('Erro ao carregar imagem',
-                          style:
-                              TextStyle(color: Colors.grey[600], fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    } else {
-      return Container(
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[200]!),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              tipoAnexo == 'video' ? Icons.video_file : Icons.insert_drive_file,
-              color: Color(0xFF4A90E2),
-              size: 24,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                anexoNome,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Icon(Icons.download, color: Colors.grey[600], size: 20),
-          ],
-        ),
-      );
-    }
-  }
-
-  Widget _buildStatChip(IconData icon, int value) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Color(0xFFF0F2F5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.grey[600]),
-          SizedBox(width: 4),
-          Text(
-            value.toString(),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // Estado vazio quando não há comentários
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -997,7 +602,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
           Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
           SizedBox(height: 16),
           Text(
-            'Nenhum comentário ainda.',
+            'Ainda não há comentários neste tema.',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -1016,212 +621,202 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     );
   }
 
+  // Lista de comentários
   Widget _buildComentariosList() {
     return ListView.builder(
-      controller: _scrollController,
       padding: EdgeInsets.symmetric(horizontal: 16),
       itemCount: comentarios.length,
       itemBuilder: (context, index) {
         final comentario = comentarios[index];
-        return _buildComentarioCard(comentario, index);
+        return _buildComentarioCard(comentario);
       },
     );
   }
 
-  Widget _buildComentarioCard(Map<String, dynamic> comentario, int index) {
-    final comentarioId = comentario['id_comentario'];
-    final isAutor = comentario['id_utilizador'] ==
-        (currentUser?['id_utilizador'] ?? currentUser?['id']);
+  // Card individual de comentário
+  Widget _buildComentarioCard(Map<String, dynamic> comentario) {
+    final comentarioId = comentario['id_comentario'] ?? comentario['id'];
     final foiDenunciado = comentario['foi_denunciado'] == true;
+    final isMyComment = comentario['utilizador']?['id_utilizador'] ==
+        currentUser?['id_utilizador'];
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFFFF8000),
-            child: Text(
-              (comentario['utilizador']?['nome'] ?? 'U')[0].toUpperCase(),
-              style: TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-
-          SizedBox(width: 12),
-
-          // Conteúdo do comentário
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isAutor ? Color(0xFFE3EFFD) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: foiDenunciado
-                    ? Border.all(color: Colors.red, width: 2)
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        // Borda vermelha se foi denunciado
+        side: foiDenunciado
+            ? BorderSide(color: Colors.red, width: 2)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabeçalho do comentário
+            Row(
+              children: [
+                // Avatar do usuário
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0xFFFF8000),
+                  child: Text(
+                    (comentario['utilizador']?['nome'] ?? 'U')[0].toUpperCase(),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header do comentário
-                  Row(
+                ),
+                SizedBox(width: 8),
+
+                // Nome e data
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          comentario['utilizador']?['nome'] ?? 'Usuário',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF333333),
-                          ),
+                      Text(
+                        comentario['utilizador']?['nome'] ?? 'Utilizador',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       Text(
                         _formatarData(comentario['data_criacao']),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Colors.grey[600],
                         ),
                       ),
                     ],
                   ),
+                ),
 
-                  SizedBox(height: 8),
-
-                  // Texto do comentário
-                  if (comentario['texto'] != null &&
-                      comentario['texto'].isNotEmpty) ...[
-                    Text(
-                      comentario['texto'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF444444),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                  ],
-
-                  // ✅ ANEXO ÚNICO DO COMENTÁRIO (CORRIGIDO)
-                  if (comentario['anexo_url'] != null &&
-                      comentario['anexo_url'].isNotEmpty) ...[
-                    _buildAnexoComentario(
-                      comentario['anexo_url'],
-                      comentario['anexo_nome'] ?? 'Anexo',
-                      comentario['tipo_anexo'] ?? 'arquivo',
-                    ),
-                    SizedBox(height: 8),
-                  ],
-
-                  // 🚩 INDICADOR DE DENÚNCIA (SE DENUNCIADO)
-                  if (foiDenunciado) ...[
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.flag, size: 12, color: Colors.red),
-                          SizedBox(width: 4),
-                          Text(
-                            'Denunciado',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.red,
-                              fontWeight: FontWeight.w500,
+                // Menu de ações (só para comentários de outros usuários)
+                if (!isMyComment)
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, size: 18),
+                    onSelected: (value) {
+                      if (value == 'denunciar') {
+                        _denunciarComentario(comentarioId);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'denunciar',
+                        enabled: !foiDenunciado,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.flag,
+                              size: 16,
+                              color: foiDenunciado ? Colors.grey : Colors.red,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                  ],
-
-                  // Ações do comentário
-                  Row(
-                    children: [
-                      _buildComentarioAcao(
-                        icon: Icons.thumb_up,
-                        count: comentario['likes'] ?? 0,
-                        isActive: avaliacoes[comentarioId] == 'like',
-                        onPressed: () =>
-                            _avaliarComentario(comentarioId, 'like'),
-                      ),
-                      SizedBox(width: 12),
-                      _buildComentarioAcao(
-                        icon: Icons.thumb_down,
-                        count: comentario['dislikes'] ?? 0,
-                        isActive: avaliacoes[comentarioId] == 'dislike',
-                        onPressed: () =>
-                            _avaliarComentario(comentarioId, 'dislike'),
-                      ),
-                      Spacer(),
-                      // Indicador de anexo
-                      if (comentario['anexo_url'] != null &&
-                          comentario['anexo_url'].isNotEmpty)
-                        Container(
-                          margin: EdgeInsets.only(right: 8),
-                          child: Icon(
-                            Icons.attach_file,
-                            size: 14,
-                            color: Color(0xFF4A90E2),
-                          ),
-                        ),
-                      // 🚩 BOTÃO DE DENÚNCIA MELHORADO
-                      Container(
-                        decoration: BoxDecoration(
-                          color: foiDenunciado
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: IconButton(
-                          onPressed: foiDenunciado
-                              ? null
-                              : () => _denunciarComentario(comentarioId),
-                          icon: Icon(
-                            Icons.flag,
-                            color:
-                                foiDenunciado ? Colors.red : Colors.grey[600],
-                            size: 16,
-                          ),
-                          tooltip: foiDenunciado
-                              ? "Já denunciado"
-                              : "Denunciar comentário",
+                            SizedBox(width: 8),
+                            Text(
+                              foiDenunciado ? 'Já denunciado' : 'Denunciar',
+                              style: TextStyle(
+                                color: foiDenunciado ? Colors.grey : Colors.red,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+              ],
             ),
-          ),
-        ],
+
+            SizedBox(height: 12),
+
+            // Conteúdo do comentário
+            if (comentario['texto'] != null) ...[
+              Text(
+                comentario['texto'],
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF444444),
+                ),
+              ),
+              SizedBox(height: 8),
+            ],
+
+            // Anexo se existir
+            if (comentario['anexo_url'] != null) ...[
+              _buildAnexoComentario(
+                comentario['anexo_url'],
+                comentario['anexo_nome'] ?? 'Anexo',
+                comentario['tipo_anexo'] ?? 'arquivo',
+              ),
+              SizedBox(height: 8),
+            ],
+
+            // Indicador visual de denúncia
+            if (foiDenunciado) ...[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.flag, size: 12, color: Colors.red),
+                    SizedBox(width: 4),
+                    Text(
+                      'Denunciado',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 8),
+            ],
+
+            // Ações do comentário (likes, etc.)
+            Row(
+              children: [
+                _buildAcaoComentario(
+                  icon: Icons.thumb_up,
+                  count: comentario['likes'] ?? 0,
+                  isActive: false, // Implementar avaliação se necessário
+                  onPressed: () {
+                    // Implementar funcionalidade de like se necessário
+                  },
+                ),
+                SizedBox(width: 12),
+                _buildAcaoComentario(
+                  icon: Icons.thumb_down,
+                  count: comentario['dislikes'] ?? 0,
+                  isActive: false, // Implementar avaliação se necessário
+                  onPressed: () {
+                    // Implementar funcionalidade de dislike se necessário
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ✅ WIDGET PARA MOSTRAR ANEXO DO COMENTÁRIO
+  // Widget para exibir anexo do comentário
   Widget _buildAnexoComentario(
       String anexoUrl, String anexoNome, String tipoAnexo) {
-    // Construir URL completa
+    // Constrói URL completa
     final fullUrl = anexoUrl.startsWith('http')
         ? anexoUrl
         : '${_apiService.apiBase.replaceAll('/api', '')}/$anexoUrl';
 
     if (tipoAnexo == 'imagem') {
+      // Exibe imagem com possibilidade de ampliar
       return InkWell(
         onTap: () => _showImageDialog(fullUrl, anexoNome),
         child: Container(
@@ -1244,20 +839,35 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.broken_image,
-                          color: Colors.grey[400], size: 24),
-                      SizedBox(height: 4),
+                          color: Colors.grey[400], size: 32),
+                      SizedBox(height: 8),
                       Text('Erro ao carregar imagem',
                           style:
-                              TextStyle(color: Colors.grey[600], fontSize: 10)),
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
                     ],
                   ),
                 ),
               ),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  height: 150,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
       );
     } else {
+      // Exibe ícone para outros tipos de arquivo
       return Container(
         padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -1269,9 +879,9 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              tipoAnexo == 'video' ? Icons.video_file : Icons.insert_drive_file,
-              color: Color(0xFF4A90E2),
+              _getIconForType(tipoAnexo),
               size: 16,
+              color: Color(0xFF4A90E2),
             ),
             SizedBox(width: 6),
             Flexible(
@@ -1291,7 +901,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
-  // ✅ FUNÇÃO PARA MOSTRAR IMAGEM EM FULLSCREEN
+  // Exibe imagem em tela cheia
   void _showImageDialog(String imageUrl, String imageName) {
     showDialog(
       context: context,
@@ -1333,7 +943,21 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     );
   }
 
-  Widget _buildComentarioAcao({
+  // Retorna ícone apropriado para tipo de arquivo
+  IconData _getIconForType(String? tipo) {
+    switch (tipo?.toLowerCase()) {
+      case 'imagem':
+        return Icons.image;
+      case 'video':
+        return Icons.video_file;
+      case 'arquivo':
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  // Widget para ações do comentário (like/dislike)
+  Widget _buildAcaoComentario({
     required IconData icon,
     required int count,
     bool isActive = false,
@@ -1352,7 +976,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 16,
               color: isActive ? Color(0xFF4A90E2) : Colors.grey[600],
             ),
             SizedBox(width: 4),
@@ -1368,314 +992,5 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildComentarioInput() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
-      ),
-      child: Column(
-        children: [
-          // Preview do anexo
-          if (_anexo != null) ...[
-            Container(
-              margin: EdgeInsets.only(bottom: 12),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Row(
-                children: [
-                  // Preview do anexo
-                  if (_anexoTipo == 'imagem') ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _anexo!,
-                        height: 60,
-                        width: 60,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ] else ...[
-                    Container(
-                      height: 60,
-                      width: 60,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF4A90E2).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        _anexoTipo == 'video'
-                            ? Icons.video_file
-                            : Icons.insert_drive_file,
-                        color: Color(0xFF4A90E2),
-                        size: 30,
-                      ),
-                    ),
-                  ],
-
-                  SizedBox(width: 12),
-
-                  // Info do arquivo
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Anexo selecionado',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          _anexoTipo == 'imagem'
-                              ? 'Imagem'
-                              : _anexoTipo == 'video'
-                                  ? 'Vídeo'
-                                  : 'Documento',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        // ✅ MOSTRAR MIME TYPE PARA DEBUG
-                        if (_anexoMimeType != null) ...[
-                          SizedBox(height: 2),
-                          Text(
-                            'Tipo: $_anexoMimeType',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Botão remover
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _anexo = null;
-                        _anexoTipo = null;
-                        _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
-                      });
-                    },
-                    icon: Icon(Icons.close, size: 20),
-                    color: Colors.red,
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // Input principal
-          Row(
-            children: [
-              // Campo de texto
-              Expanded(
-                child: TextField(
-                  controller: _comentarioController,
-                  decoration: InputDecoration(
-                    hintText: 'Escreva um comentário...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide(color: Color(0xFFFF8000)),
-                    ),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                ),
-              ),
-
-              SizedBox(width: 8),
-
-              // Botão anexar
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(0xFFE0E6ED),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  onPressed: _mostrarOpcoesAnexo,
-                  icon: Icon(Icons.attach_file),
-                  color: Color(0xFF5181B8),
-                  iconSize: 24,
-                ),
-              ),
-
-              SizedBox(width: 8),
-
-              // Botão enviar
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(0xFFFF8000),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  onPressed: _enviarComentario,
-                  icon: Icon(Icons.send),
-                  color: Colors.white,
-                  iconSize: 24,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _mostrarOpcoesAnexo() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Adicionar Anexo',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 20),
-            ListTile(
-              leading: Icon(Icons.camera_alt, color: Color(0xFF4A90E2)),
-              title: Text('Tirar Foto'),
-              onTap: () {
-                Navigator.pop(context);
-                _tirarFoto();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library, color: Color(0xFF4A90E2)),
-              title: Text('Galeria'),
-              onTap: () {
-                Navigator.pop(context);
-                _selecionarImagem();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.attach_file, color: Color(0xFF4A90E2)),
-              title: Text('Arquivo'),
-              onTap: () {
-                Navigator.pop(context);
-                _selecionarArquivo();
-              },
-            ),
-            SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selecionarImagem() async {
-    try {
-      final ImagePicker imagePicker = ImagePicker();
-      final XFile? image = await imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _anexo = File(image.path);
-          _anexoTipo = 'imagem';
-          _anexoMimeType = _detectContentType(
-              image.path, image.mimeType); // ✅ ARMAZENAR MIME TYPE
-        });
-
-        debugPrint('📎 [IMAGEM] Selecionada: ${image.name}');
-        debugPrint('📎 [IMAGEM] MIME Type: $_anexoMimeType');
-      }
-    } catch (error) {
-      AppUtils.showError(context, 'Erro ao selecionar imagem: $error');
-    }
-  }
-
-  Future<void> _tirarFoto() async {
-    try {
-      final ImagePicker imagePicker = ImagePicker();
-      final XFile? image = await imagePicker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _anexo = File(image.path);
-          _anexoTipo = 'imagem';
-          _anexoMimeType = _detectContentType(
-              image.path, image.mimeType); // ✅ ARMAZENAR MIME TYPE
-        });
-
-        debugPrint('📎 [FOTO] Tirada: ${image.name}');
-        debugPrint('📎 [FOTO] MIME Type: $_anexoMimeType');
-      }
-    } catch (error) {
-      AppUtils.showError(context, 'Erro ao tirar foto: $error');
-    }
-  }
-
-  Future<void> _selecionarArquivo() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'mp4', 'avi', 'mov'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        final extension = result.files.single.extension?.toLowerCase();
-
-        setState(() {
-          _anexo = file;
-          _anexoMimeType = _detectContentType(file.path, null);
-
-          if (['mp4', 'avi', 'mov'].contains(extension)) {
-            _anexoTipo = 'video';
-          } else {
-            _anexoTipo = 'arquivo';
-          }
-        });
-
-        debugPrint('📎 [ARQUIVO] Selecionado: ${result.files.single.name}');
-        debugPrint('📎 [ARQUIVO] MIME Type: $_anexoMimeType');
-      }
-    } catch (error) {
-      AppUtils.showError(context, 'Erro ao selecionar arquivo: $error');
-    }
   }
 }

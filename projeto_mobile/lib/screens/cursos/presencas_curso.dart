@@ -26,11 +26,10 @@ class _PresencasCursoState extends State<PresencasCurso> {
 
   // Para marcar presença (formando)
   bool showMarcarModal = false;
-  String codigoMarcar = '';
+  Map<String, dynamic>? presencaSelecionada;
 
   // Para ver lista de formandos (formadores)
   bool showListaFormandosModal = false;
-  Map<String, dynamic>? presencaSelecionada;
   List<Map<String, dynamic>> formandosLista = [];
   bool loadingFormandos = false;
 
@@ -101,8 +100,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
           allPresencas = data.cast<Map<String, dynamic>>();
         }
 
-        // Para formandos, mostrar todas as presenças (com diferentes status)
-        // Para formadores, mostrar todas as presenças
         setState(() {
           presencas = allPresencas;
         });
@@ -200,20 +197,19 @@ class _PresencasCursoState extends State<PresencasCurso> {
     setState(() {
       presencaSelecionada = presenca;
       showMarcarModal = true;
-      codigoMarcar = '';
       _codigoMarcarController.clear();
     });
   }
 
-  // Marcar presença
+  // ✅ CORRIGIDO: Marcar presença com tratamento adequado dos erros
   Future<void> _marcarPresenca() async {
     if (_codigoMarcarController.text.isEmpty) {
-      _showError('Código inválido');
+      _showError('Por favor, introduza um código');
       return;
     }
 
     if (currentUser == null) {
-      _showError('Código inválido');
+      _showError('Erro: utilizador não autenticado');
       return;
     }
 
@@ -222,30 +218,74 @@ class _PresencasCursoState extends State<PresencasCurso> {
         loading = true;
       });
 
-      final body = {
-        'id_curso': widget.cursoId,
-        'id_utilizador': currentUser!['id_utilizador'],
-        'codigo': _codigoMarcarController.text,
-      };
+      // ✅ DEBUG: Logs detalhados
+      debugPrint('🔧 [MOBILE] === MARCANDO PRESENÇA ===');
+      debugPrint('🔧 [MOBILE] Curso: ${widget.cursoId}');
+      debugPrint('🔧 [MOBILE] Utilizador: ${currentUser!['id_utilizador']}');
+      debugPrint('🔧 [MOBILE] Código: "${_codigoMarcarController.text}"');
+      debugPrint('🔧 [MOBILE] =============================');
 
-      final response = await _apiService.post('/presencas/marcar', body: body);
+      final response = await _apiService.marcarPresenca(
+        idCurso: widget.cursoId,
+        idUtilizador: currentUser!['id_utilizador'],
+        codigo: _codigoMarcarController.text,
+      );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Fechar modal primeiro
-        setState(() {
-          showMarcarModal = false;
-          presencaSelecionada = null;
-          _codigoMarcarController.clear();
-        });
+      // ✅ LOG da resposta completa
+      debugPrint('📱 [MOBILE] Resposta recebida: $response');
 
-        _showSuccess('Presença marcada com sucesso!');
-        // Atualizar dados completos
-        await _refreshData();
+      // ✅ VERIFICAÇÃO ROBUSTA da resposta
+      if (response != null) {
+        final isSuccess = response['success'] == true;
+        debugPrint('📱 [MOBILE] É sucesso? $isSuccess');
+
+        if (isSuccess) {
+          // ✅ SUCESSO
+          debugPrint('🎉 [MOBILE] Presença marcada com sucesso!');
+
+          // Fechar modal primeiro
+          setState(() {
+            showMarcarModal = false;
+            presencaSelecionada = null;
+            _codigoMarcarController.clear();
+          });
+
+          // Mostrar mensagem de sucesso
+          final successMessage =
+              response['message'] ?? 'Presença marcada com sucesso!';
+          _showSuccess(successMessage);
+
+          // Atualizar dados completos
+          await _refreshData();
+        } else {
+          // ✅ ERRO: Extrair mensagem específica
+          debugPrint('❌ [MOBILE] Erro na marcação de presença');
+
+          String errorMessage = 'Código inválido';
+
+          // Tentar extrair mensagem específica
+          if (response['message'] != null) {
+            errorMessage = response['message'];
+          } else if (response['detalhes'] != null) {
+            errorMessage = response['detalhes'];
+          }
+
+          // ✅ Se tem ambos message e detalhes, combinar
+          if (response['message'] != null && response['detalhes'] != null) {
+            errorMessage = '${response['message']}\n${response['detalhes']}';
+          }
+
+          debugPrint('📱 [MOBILE] Mensagem de erro: $errorMessage');
+          _showError(errorMessage);
+        }
       } else {
-        _showError('Código inválido');
+        // ✅ Resposta nula
+        debugPrint('❌ [MOBILE] Resposta nula do servidor');
+        _showError('Erro de comunicação com o servidor');
       }
     } catch (e) {
-      _showError('Código inválido');
+      debugPrint('❌ [MOBILE] Exceção ao marcar presença: $e');
+      _showError('Erro de conexão. Verifique a sua ligação à internet.');
     } finally {
       setState(() {
         loading = false;
@@ -299,15 +339,22 @@ class _PresencasCursoState extends State<PresencasCurso> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
       ),
     );
   }
 
+  // ✅ MELHORADO: Mostrar erro com mais espaço para mensagens longas
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14),
+        ),
         backgroundColor: Colors.red,
+        duration: Duration(seconds: 5), // ✅ Mais tempo para ler
+        behavior: SnackBarBehavior.floating, // ✅ Melhor visualização
       ),
     );
   }
@@ -455,6 +502,24 @@ class _PresencasCursoState extends State<PresencasCurso> {
                     ),
                   ),
                   Spacer(),
+                  // ✅ NOVO: Mostrar ID do curso para debug (pode remover depois)
+                  if (isFormando)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Curso ${widget.cursoId}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
                     icon: Icon(Icons.refresh),
@@ -631,6 +696,16 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         color: Colors.grey[600],
                       ),
                     ),
+                    // ✅ NOVO: Mostrar curso atual para debug
+                    SizedBox(height: 4),
+                    Text(
+                      'Curso: ${widget.cursoId}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                     SizedBox(height: 16),
                     TextField(
                       controller: _codigoMarcarController,
@@ -638,6 +713,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         labelText: 'Código de Presença',
                         border: OutlineInputBorder(),
                         hintText: 'Insira o código fornecido pelo formador',
+                        helperText: 'Verifique se está no curso correto',
                       ),
                       autofocus: true,
                       onSubmitted: (_) => _marcarPresenca(),

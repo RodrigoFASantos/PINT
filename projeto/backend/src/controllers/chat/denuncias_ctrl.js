@@ -457,6 +457,38 @@ const getUsuarioDenunciasTemas = async (req, res) => {
 };
 
 // ========================================
+// OBTER COMENTÁRIOS JÁ DENUNCIADOS PELO UTILIZADOR
+// ========================================
+const getUsuarioDenunciasComentarios = async (req, res) => {
+  try {
+    const id_denunciante = req.utilizador.id_utilizador;
+    
+    console.log(`📋 [DENUNCIAS] Buscando comentários denunciados pelo utilizador ID: ${id_denunciante}`);
+    
+    const denuncias = await ChatDenuncia.findAll({
+      where: { id_denunciante },
+      attributes: ['id_mensagem', 'data_denuncia', 'resolvida'],
+      order: [['data_denuncia', 'DESC']]
+    });
+    
+    // Extrair apenas os IDs dos comentários
+    const comentariosDenunciados = denuncias.map(d => d.id_mensagem);
+    
+    console.log(`✅ [DENUNCIAS] Encontrados ${comentariosDenunciados.length} comentários denunciados pelo utilizador`);
+    
+    res.status(200).json({
+      success: true,
+      data: comentariosDenunciados,
+      total: comentariosDenunciados.length,
+      detalhes: denuncias
+    });
+    
+  } catch (error) {
+    handleError(res, error, 'Erro ao buscar comentários denunciados pelo utilizador');
+  }
+};
+
+// ========================================
 // RESOLVER DENÚNCIA DE TEMA
 // ========================================
 const resolverForumTemaDenuncia = async (req, res) => {
@@ -801,6 +833,7 @@ module.exports = {
   getForumComentarioDenuncias,
   criarForumTemaDenuncia,
   getUsuarioDenunciasTemas,
+  getUsuarioDenunciasComentarios,
   getChatDenuncias,
   resolverForumTemaDenuncia,
   resolverForumComentarioDenuncia,

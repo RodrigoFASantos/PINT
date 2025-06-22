@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; // ✅ ADICIONADO: Importação para MediaType
+import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mime/mime.dart'; // ✅ ADICIONAR ESTA DEPENDÊNCIA
+import 'package:mime/mime.dart';
 import '../../services/api_service.dart';
 import '../../main.dart';
 
@@ -37,7 +37,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
   File? _anexo;
   String? _anexoTipo;
   String? _anexoNome;
-  String? _anexoMimeType; // ✅ ADICIONAR CAMPO PARA MIME TYPE
+  String? _anexoMimeType;
 
   @override
   void dispose() {
@@ -46,22 +46,22 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
     super.dispose();
   }
 
-  // ✅ NOVA FUNÇÃO: Detectar Content-Type baseado na extensão
+  // Detecta automaticamente o tipo MIME correto baseado na extensão do arquivo
   String _detectContentType(String filePath, String? originalMimeType) {
-    // Primeiro, tentar usar o MIME type original se disponível e válido
+    // Tenta usar o MIME type original se for válido
     if (originalMimeType != null &&
         originalMimeType != 'application/octet-stream' &&
         originalMimeType.isNotEmpty) {
       return originalMimeType;
     }
 
-    // Se não tiver MIME type válido, detectar pela extensão
+    // Usa a biblioteca mime para detectar automaticamente
     final mimeType = lookupMimeType(filePath);
     if (mimeType != null) {
       return mimeType;
     }
 
-    // Fallback baseado na extensão manual
+    // Fallback manual baseado na extensão do arquivo
     final extension = filePath.toLowerCase().split('.').last;
     switch (extension) {
       case 'jpg':
@@ -94,10 +94,11 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
       case 'wav':
         return 'audio/wav';
       default:
-        return 'application/octet-stream'; // Último recurso
+        return 'application/octet-stream';
     }
   }
 
+  // Permite ao utilizador selecionar uma imagem da galeria
   Future<void> _selecionarImagem() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -112,18 +113,18 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
           _anexo = File(image.path);
           _anexoTipo = 'imagem';
           _anexoNome = image.name;
-          _anexoMimeType = _detectContentType(
-              image.path, image.mimeType); // ✅ DETECTAR MIME TYPE
+          _anexoMimeType = _detectContentType(image.path, image.mimeType);
         });
 
-        debugPrint('📎 [IMAGEM] Selecionada: ${image.name}');
-        debugPrint('📎 [IMAGEM] MIME Type: $_anexoMimeType');
+        debugPrint('Imagem selecionada: ${image.name}');
+        debugPrint('MIME Type: $_anexoMimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao selecionar imagem: $error');
     }
   }
 
+  // Permite ao utilizador tirar uma foto com a câmera
   Future<void> _tirarFoto() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -138,18 +139,18 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
           _anexo = File(image.path);
           _anexoTipo = 'imagem';
           _anexoNome = image.name;
-          _anexoMimeType = _detectContentType(
-              image.path, image.mimeType); // ✅ DETECTAR MIME TYPE
+          _anexoMimeType = _detectContentType(image.path, image.mimeType);
         });
 
-        debugPrint('📎 [FOTO] Tirada: ${image.name}');
-        debugPrint('📎 [FOTO] MIME Type: $_anexoMimeType');
+        debugPrint('Foto tirada: ${image.name}');
+        debugPrint('MIME Type: $_anexoMimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao tirar foto: $error');
     }
   }
 
+  // Permite ao utilizador selecionar qualquer tipo de arquivo
   Future<void> _selecionarArquivo() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -173,6 +174,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
         final extension = result.files.single.extension?.toLowerCase();
         final nome = result.files.single.name;
 
+        // Determina o tipo de arquivo baseado na extensão
         String tipo = 'arquivo';
         if (['jpg', 'jpeg', 'png', 'gif'].contains(extension)) {
           tipo = 'imagem';
@@ -180,27 +182,27 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
           tipo = 'video';
         }
 
-        // ✅ DETECTAR MIME TYPE
         final mimeType = _detectContentType(file.path, null);
 
         setState(() {
           _anexo = file;
           _anexoTipo = tipo;
           _anexoNome = nome;
-          _anexoMimeType = mimeType; // ✅ GUARDAR MIME TYPE
+          _anexoMimeType = mimeType;
         });
 
-        debugPrint('📎 [ARQUIVO] Selecionado: $nome');
-        debugPrint('📎 [ARQUIVO] Tipo: $tipo');
-        debugPrint('📎 [ARQUIVO] MIME Type: $mimeType');
+        debugPrint('Arquivo selecionado: $nome');
+        debugPrint('Tipo: $tipo');
+        debugPrint('MIME Type: $mimeType');
       }
     } catch (error) {
       AppUtils.showError(context, 'Erro ao selecionar arquivo: $error');
     }
   }
 
+  // Mostra um modal com opções para adicionar anexos
   void _mostrarOpcoesAnexo() {
-    // Blur do input
+    // Remove o foco do campo de texto
     _focusNode.unfocus();
 
     showModalBottomSheet(
@@ -213,7 +215,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
+            // Barra de handle visual
             Container(
               width: 40,
               height: 4,
@@ -232,12 +234,11 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
             ),
             SizedBox(height: 20),
 
-            // Opções em linha como na web
+            // Opções de anexo dispostas horizontalmente
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildOpcaoAnexo(
-                  icon: Icons.camera_alt,
                   label: 'Câmera',
                   color: Colors.green,
                   onTap: () {
@@ -246,7 +247,6 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
                   },
                 ),
                 _buildOpcaoAnexo(
-                  icon: Icons.photo_library,
                   label: 'Galeria',
                   color: Colors.blue,
                   onTap: () {
@@ -255,7 +255,6 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
                   },
                 ),
                 _buildOpcaoAnexo(
-                  icon: Icons.attach_file,
                   label: 'Arquivo',
                   color: Colors.orange,
                   onTap: () {
@@ -272,8 +271,8 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
     );
   }
 
+  // Constrói cada opção do modal de anexos
   Widget _buildOpcaoAnexo({
-    required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
@@ -290,7 +289,6 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 28),
             SizedBox(height: 8),
             Text(
               label,
@@ -306,16 +304,19 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
     );
   }
 
+  // Remove o anexo selecionado
   void _removerAnexo() {
     setState(() {
       _anexo = null;
       _anexoTipo = null;
       _anexoNome = null;
-      _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
+      _anexoMimeType = null;
     });
   }
 
+  // Envia o comentário para o servidor
   Future<void> _enviarComentario() async {
+    // Valida se há conteúdo para enviar
     if (_controller.text.trim().isEmpty && _anexo == null) {
       setState(() {
         _erro =
@@ -330,34 +331,35 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
     });
 
     try {
+      // Obtém o token de autenticação
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
 
+      // Prepara a requisição multipart para upload de arquivos
       var request = http.MultipartRequest(
         'POST',
         Uri.parse(
             '${_apiService.apiBase}/forum-tema/tema/${widget.temaId}/comentario'),
       );
 
-      // Headers
+      // Adiciona headers de autenticação
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
 
-      // Campo de texto
+      // Adiciona o texto do comentário
       request.fields['texto'] = _controller.text;
 
-      // ✅ CORRIGIDO: Adicionar Content-Type correto ao anexo
+      // Adiciona o anexo se existir
       if (_anexo != null) {
         var stream = http.ByteStream(_anexo!.openRead());
         var length = await _anexo!.length();
 
-        // ✅ DETECTAR E DEFINIR CONTENT-TYPE CORRETO
         final contentType = _detectContentType(_anexo!.path, _anexoMimeType);
 
-        debugPrint('📎 [UPLOAD] Comentário - Arquivo: $_anexoNome');
-        debugPrint('📎 [UPLOAD] Content-Type detectado: $contentType');
-        debugPrint('📎 [UPLOAD] Tamanho: $length bytes');
+        debugPrint('Enviando comentário - Arquivo: $_anexoNome');
+        debugPrint('Content-Type detectado: $contentType');
+        debugPrint('Tamanho: $length bytes');
 
         var multipartFile = http.MultipartFile(
           'anexo',
@@ -365,35 +367,33 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
           length,
           filename:
               _anexoNome ?? 'anexo_${DateTime.now().millisecondsSinceEpoch}',
-          contentType:
-              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
+          contentType: MediaType.parse(contentType),
         );
 
         request.files.add(multipartFile);
       }
 
-      debugPrint(
-          '🚀 [COMENTARIO] Enviando comentário${_anexo != null ? ' com anexo' : ''}');
+      debugPrint('Enviando comentário${_anexo != null ? ' com anexo' : ''}');
 
-      // Enviar requisição
+      // Envia a requisição
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('📡 [COMENTARIO] Status: ${response.statusCode}');
-      debugPrint('📡 [COMENTARIO] Response: ${response.body}');
+      debugPrint('Status: ${response.statusCode}');
+      debugPrint('Response: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         if (data != null && data['data'] != null) {
           widget.onSuccess(data['data']);
 
-          // Limpar formulário
+          // Limpa o formulário após sucesso
           setState(() {
             _controller.clear();
             _anexo = null;
             _anexoTipo = null;
             _anexoNome = null;
-            _anexoMimeType = null; // ✅ LIMPAR MIME TYPE
+            _anexoMimeType = null;
           });
 
           AppUtils.showSuccess(context, 'Comentário enviado com sucesso!');
@@ -408,7 +408,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
       setState(() {
         _erro = 'Erro ao enviar comentário: $error';
       });
-      debugPrint('❌ [COMENTARIO] Erro: $error');
+      debugPrint('Erro: $error');
     } finally {
       setState(() {
         _enviando = false;
@@ -434,13 +434,13 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Preview do anexo
+          // Preview do anexo selecionado
           if (_anexo != null) ...[
             _buildAnexoPreview(),
             SizedBox(height: 12),
           ],
 
-          // Mensagem de erro
+          // Mensagem de erro se existir
           if (_erro != null) ...[
             Container(
               padding: EdgeInsets.all(8),
@@ -451,7 +451,6 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: 16),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -468,11 +467,11 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
             SizedBox(height: 12),
           ],
 
-          // Campo de texto e botões
+          // Campo de texto e botões de ação
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Campo de texto
+              // Campo de entrada de texto
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -482,7 +481,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Input de texto
+                      // Campo de texto principal
                       Expanded(
                         child: TextField(
                           controller: _controller,
@@ -503,13 +502,13 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
                               {required currentLength,
                               required isFocused,
                               maxLength}) {
-                            // Ocultar contador
+                            // Oculta o contador de caracteres
                             return null;
                           },
                         ),
                       ),
 
-                      // Botão anexar
+                      // Botão para anexar arquivo
                       Container(
                         margin: EdgeInsets.only(right: 4, bottom: 4),
                         child: IconButton(
@@ -527,7 +526,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
 
               SizedBox(width: 8),
 
-              // Botão enviar
+              // Botão de enviar
               Container(
                 decoration: BoxDecoration(
                   color: Color(0xFFFF8000),
@@ -564,6 +563,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
     );
   }
 
+  // Constrói o preview do anexo selecionado
   Widget _buildAnexoPreview() {
     return Container(
       padding: EdgeInsets.all(12),
@@ -574,7 +574,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
       ),
       child: Row(
         children: [
-          // Preview do conteúdo
+          // Preview visual do conteúdo
           Container(
             width: 60,
             height: 60,
@@ -608,7 +608,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
 
           SizedBox(width: 12),
 
-          // Informações do arquivo
+          // Informações sobre o arquivo
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,7 +634,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
                     color: Colors.grey[600],
                   ),
                 ),
-                // ✅ MOSTRAR MIME TYPE PARA DEBUG
+                // Mostra o MIME type para debug (pode ser removido em produção)
                 if (_anexoMimeType != null) ...[
                   SizedBox(height: 2),
                   Text(
@@ -666,7 +666,7 @@ class _NovoComentarioFormState extends State<NovoComentarioForm> {
             ),
           ),
 
-          // Botão remover
+          // Botão para remover o anexo
           IconButton(
             onPressed: _enviando ? null : _removerAnexo,
             icon: Icon(Icons.close, size: 20),

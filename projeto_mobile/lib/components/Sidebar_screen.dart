@@ -47,7 +47,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
                   children: [
                     _buildUserSection(),
                     _buildGeneralSection(),
-                    _buildFormandoSection(),
                     _buildPessoalSection(),
                   ],
                 ),
@@ -120,17 +119,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
         _buildMenuItem('Cursos', Icons.book, '/cursos'),
         _buildMenuItem('Formadores', Icons.person, '/formadores'),
         _buildMenuItem('Chats', Icons.chat, '/forum'),
-      ],
-    );
-  }
-
-  Widget _buildFormandoSection() {
-    // Agora sempre visível para todos os utilizadores com conteúdo específico de formando
-    return _buildSection(
-      'Formação',
-      [
-        _buildMenuItem('Meus Cursos', Icons.school, '/meus-cursos'),
-        _buildMenuItem('Certificados', Icons.card_membership, '/certificados'),
       ],
     );
   }

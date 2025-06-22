@@ -58,8 +58,16 @@ const createComentario = async (req, res) => {
     const { id } = req.params; // ID do tópico
     const { texto } = req.body;
 
-    // Usar id_utilizador se disponível, caso contrário usar id
-    const id_utilizador = req.user.id_utilizador || req.user.id;
+    // ✅ CORRIGIDO: Usar req.utilizador em vez de req.user
+    const id_utilizador = req.utilizador?.id_utilizador || req.utilizador?.id;
+    
+    if (!id_utilizador) {
+      console.error('❌ [COMENTARIOS] Utilizador não encontrado no req.utilizador:', req.utilizador);
+      return res.status(401).json({
+        success: false,
+        message: 'Utilizador não autenticado'
+      });
+    }
 
     let anexoUrl = null;
     let anexoNome = null;
@@ -254,8 +262,16 @@ const avaliarComentario = async (req, res) => {
       });
     }
     
-    // Usar id_utilizador se disponível, caso contrário usar id
-    const id_utilizador = req.user.id_utilizador || req.user.id;
+    // ✅ CORRIGIDO: Usar req.utilizador em vez de req.user
+    const id_utilizador = req.utilizador?.id_utilizador || req.utilizador?.id;
+    
+    if (!id_utilizador) {
+      console.error('❌ [AVALIACOES] Utilizador não encontrado no req.utilizador:', req.utilizador);
+      return res.status(401).json({
+        success: false,
+        message: 'Utilizador não autenticado'
+      });
+    }
     
     console.log(`Avaliando comentário ${idComentario} como ${tipo} pelo utilizador ${id_utilizador}`);
     
@@ -371,8 +387,16 @@ const denunciarComentario = async (req, res) => {
       });
     }
     
-    // Usar id_utilizador se disponível, caso contrário usar id
-    const id_utilizador = req.user.id_utilizador || req.user.id;
+    // ✅ CORRIGIDO: Usar req.utilizador em vez de req.user
+    const id_utilizador = req.utilizador?.id_utilizador || req.utilizador?.id;
+    
+    if (!id_utilizador) {
+      console.error('❌ [DENUNCIAS] Utilizador não encontrado no req.utilizador:', req.utilizador);
+      return res.status(401).json({
+        success: false,
+        message: 'Utilizador não autenticado'
+      });
+    }
     
     console.log(`Denúncia de comentário ${idComentario} por ${id_utilizador}: ${motivo}`);
     
