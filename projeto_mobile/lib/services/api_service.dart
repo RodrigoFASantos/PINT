@@ -492,7 +492,7 @@ class ApiService {
     }
   }
 
-  // MÉTODOS PARA DENÚNCIAS
+  // MÉTODOS PARA DENÚNCIAS DE TEMAS (mantendo apenas temas)
 
   // Denunciar um tema do fórum
   Future<Map<String, dynamic>?> denunciarTema({
@@ -567,110 +567,37 @@ class ApiService {
     }
   }
 
-  // MÉTODOS PARA DENÚNCIAS DE COMENTÁRIOS
-// ✅ CORRIGIDO FINAL: Denunciar um comentário - usar rota correta com ID no path
-  Future<Map<String, dynamic>?> denunciarComentario({
-    required int idComentario,
-    required String motivo,
-    String? descricao,
-  }) async {
-    try {
-      debugPrint('🚩 [API] Denunciando comentário ID: $idComentario');
-
-      // ✅ USAR A ROTA CORRETA QUE EXISTE: /comentarios/:id/denunciar
-      final response =
-          await post('/comentarios/$idComentario/denunciar', body: {
-        'motivo': motivo,
-        if (descricao != null) 'descricao': descricao,
-      });
-
-      final data = parseResponseToMap(response);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        debugPrint('✅ [API] Comentário denunciado com sucesso');
-        return data ??
-            {'success': true, 'message': 'Comentário denunciado com sucesso'};
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao denunciar comentário: ${response.statusCode}');
-        debugPrint('❌ [API] Response body: ${response.body}');
-        return data ??
-            {'success': false, 'message': 'Erro ao denunciar comentário'};
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Exceção ao denunciar comentário: $e');
-      return {
-        'success': false,
-        'message': 'Erro de conexão',
-        'error': e.toString()
-      };
-    }
-  }
-
-  // Obter comentários já denunciados pelo utilizador atual
-  Future<List<int>?> getComentariosDenunciados() async {
-    try {
-      debugPrint('🚩 [API] Obtendo comentários denunciados pelo utilizador...');
-      final response = await get('/denuncias/usuario/denuncias-comentarios');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = parseResponseToMap(response);
-        if (data != null && data['data'] != null) {
-          final comentariosDenunciados = List<int>.from(data['data']);
-          debugPrint(
-              '✅ [API] Comentários denunciados encontrados: ${comentariosDenunciados.length}');
-          return comentariosDenunciados;
-        }
-        return [];
-      } else if (response.statusCode == 404) {
-        // ✅ CORRIGIDO: Tratar 404 como lista vazia (rota pode não existir ainda)
-        debugPrint(
-            'ℹ️ [API] Rota de comentários denunciados não encontrada (404) - retornando lista vazia');
-        return [];
-      } else {
-        debugPrint(
-            '❌ [API] Erro ao obter comentários denunciados: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      // ✅ CORRIGIDO: Em caso de erro de conexão, retornar lista vazia em vez de null
-      debugPrint(
-          '⚠️ [API] Exceção ao obter comentários denunciados (não crítico): $e');
-      return []; // Retornar lista vazia em vez de null para não quebrar a UI
-    }
-  }
-
-  // Verificar se um comentário específico foi denunciado pelo utilizador
-  Future<bool> comentarioDenunciado(int idComentario) async {
-    try {
-      final comentariosDenunciados = await getComentariosDenunciados();
-      if (comentariosDenunciados != null) {
-        return comentariosDenunciados.contains(idComentario);
-      }
-      return false;
-    } catch (e) {
-      debugPrint('❌ [API] Erro ao verificar se comentário foi denunciado: $e');
-      return false;
-    }
-  }
-
   // MÉTODOS PARA PRESENÇAS
 
-  // Marcar presença num curso
+  // ✅ CORRIGIDO: Marcar presença com melhor tratamento de timezone
   Future<Map<String, dynamic>?> marcarPresenca({
     required String idCurso,
     required int idUtilizador,
     required String codigo,
   }) async {
     try {
-      debugPrint('🔧 [API] Marcando presença:');
+      debugPrint('🔧 [API] === MARCANDO PRESENÇA ===');
       debugPrint('🔧 [API] Curso: $idCurso');
       debugPrint('🔧 [API] Utilizador: $idUtilizador');
-      debugPrint('🔧 [API] Código: $codigo');
+      debugPrint('🔧 [API] Código: "$codigo"');
+
+      // ✅ NOVO: Incluir informação de timezone do cliente
+      final agora = DateTime.now();
+      final agoraUtc = agora.toUtc();
+      final timezoneOffset = agora.timeZoneOffset.inMinutes;
+
+      debugPrint('🌍 [API] Hora local: $agora');
+      debugPrint('🌍 [API] Hora UTC: $agoraUtc');
+      debugPrint('🌍 [API] Timezone offset: $timezoneOffset minutos');
 
       final body = {
         'id_curso': idCurso,
         'id_utilizador': idUtilizador,
         'codigo': codigo,
+        // ✅ ENVIAR INFO DE TIMEZONE PARA O BACKEND
+        'client_time': agora.toIso8601String(),
+        'client_time_utc': agoraUtc.toIso8601String(),
+        'timezone_offset_minutes': timezoneOffset,
       };
 
       final response = await post('/presencas/marcar', body: body);
@@ -768,6 +695,42 @@ class ApiService {
         'detalhes': 'Verifique a sua ligação à internet e tente novamente',
         'error': e.toString()
       };
+    }
+  }
+
+  // ✅ NOVO: Função auxiliar para normalizar data/hora recebida do servidor
+  DateTime? parseServerDateTime(String? dateString, String? timeString) {
+    if (dateString == null || timeString == null) return null;
+
+    try {
+      debugPrint('🕒 [API] Parsing server datetime: $dateString $timeString');
+
+      // Normalizar formato de hora (adicionar segundos se necessário)
+      String normalizedTime = timeString;
+      if (!timeString.contains(':')) {
+        normalizedTime = '$timeString:00:00';
+      } else if (timeString.split(':').length == 2) {
+        normalizedTime = '$timeString:00';
+      }
+
+      // Assumir que o servidor está em UTC e converter para local
+      final utcDateTime = DateTime.parse('${dateString}T${normalizedTime}Z');
+      final localDateTime = utcDateTime.toLocal();
+
+      debugPrint('🕒 [API] Parsed UTC: $utcDateTime');
+      debugPrint('🕒 [API] Converted local: $localDateTime');
+
+      return localDateTime;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao fazer parse da data/hora: $e');
+
+      // Fallback: tentar assumir que já está em local time
+      try {
+        return DateTime.parse('${dateString}T$timeString');
+      } catch (e2) {
+        debugPrint('❌ [API] Fallback também falhou: $e2');
+        return null;
+      }
     }
   }
 

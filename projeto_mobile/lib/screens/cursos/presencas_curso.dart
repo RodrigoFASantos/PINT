@@ -148,7 +148,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // Determinar o status da presença para formandos
+  // ✅ CORRIGIDO: Determinar o status da presença para formandos
   String _getStatusPresenca(Map<String, dynamic> presenca) {
     final presencaId = presenca['id_curso_presenca'].toString();
     final jaPresente = minhasPresencas[presencaId] ?? false;
@@ -157,29 +157,103 @@ class _PresencasCursoState extends State<PresencasCurso> {
       return 'Presente';
     }
 
-    // Verificar se ainda está dentro da validade
+    // ✅ MELHORADA: Verificação da validade com logs detalhados
     try {
-      final dataHoraFim =
-          DateTime.parse('${presenca['data_fim']}T${presenca['hora_fim']}');
       final agora = DateTime.now();
 
-      if (dataHoraFim.isAfter(agora)) {
+      // ✅ DEBUG: Logs detalhados dos dados recebidos
+      debugPrint('🔍 [MOBILE] === VERIFICANDO PRESENÇA ===');
+      debugPrint('🔍 [MOBILE] ID: $presencaId');
+      debugPrint('🔍 [MOBILE] Data fim: ${presenca['data_fim']}');
+      debugPrint('🔍 [MOBILE] Hora fim: ${presenca['hora_fim']}');
+      debugPrint('🔍 [MOBILE] Data início: ${presenca['data_inicio']}');
+      debugPrint('🔍 [MOBILE] Hora início: ${presenca['hora_inicio']}');
+      debugPrint('🔍 [MOBILE] Agora: $agora');
+
+      // ✅ CORRIGIDO: Parsing mais robusto das datas
+      String dataFim = presenca['data_fim']?.toString() ?? '';
+      String horaFim = presenca['hora_fim']?.toString() ?? '';
+      String dataInicio = presenca['data_inicio']?.toString() ?? '';
+      String horaInicio = presenca['hora_inicio']?.toString() ?? '';
+
+      if (dataFim.isEmpty ||
+          horaFim.isEmpty ||
+          dataInicio.isEmpty ||
+          horaInicio.isEmpty) {
+        debugPrint('❌ [MOBILE] Dados incompletos da presença');
+        return 'Ausente';
+      }
+
+      // ✅ PARSING MAIS ROBUSTO: Tentar múltiplos formatos
+      DateTime? dataHoraFim;
+      DateTime? dataHoraInicio;
+
+      // Tentar formato ISO primeiro
+      try {
+        dataHoraFim = DateTime.parse('${dataFim}T$horaFim');
+        dataHoraInicio = DateTime.parse('${dataInicio}T$horaInicio');
+      } catch (e) {
+        debugPrint(
+            '⚠️ [MOBILE] Erro no formato ISO, tentando outros formatos...');
+
+        // Tentar formato alternativo (se vier sem segundos)
+        try {
+          if (!horaFim.contains(':')) {
+            horaFim = '$horaFim:00:00';
+          } else if (horaFim.split(':').length == 2) {
+            horaFim = '$horaFim:00';
+          }
+
+          if (!horaInicio.contains(':')) {
+            horaInicio = '$horaInicio:00:00';
+          } else if (horaInicio.split(':').length == 2) {
+            horaInicio = '$horaInicio:00';
+          }
+
+          dataHoraFim = DateTime.parse('${dataFim}T$horaFim');
+          dataHoraInicio = DateTime.parse('${dataInicio}T$horaInicio');
+        } catch (e2) {
+          debugPrint('❌ [MOBILE] Erro ao fazer parse das datas: $e2');
+          return 'Ausente';
+        }
+      }
+
+      debugPrint('🔍 [MOBILE] Data/hora início parseada: $dataHoraInicio');
+      debugPrint('🔍 [MOBILE] Data/hora fim parseada: $dataHoraFim');
+
+      // ✅ VERIFICAÇÃO ADICIONAL: Se a presença ainda não começou
+      if (dataHoraInicio != null && dataHoraInicio.isAfter(agora)) {
+        debugPrint('⏰ [MOBILE] Presença ainda não começou');
+        return 'Aguardar';
+      }
+
+      // ✅ VERIFICAÇÃO PRINCIPAL: Se ainda está dentro da validade
+      if (dataHoraFim != null && dataHoraFim.isAfter(agora)) {
+        final diferencaMinutos = dataHoraFim.difference(agora).inMinutes;
+        debugPrint(
+            '✅ [MOBILE] Presença ATIVA! Restam $diferencaMinutos minutos');
         return 'Registar';
       } else {
+        final diferencaMinutos =
+            dataHoraFim != null ? agora.difference(dataHoraFim).inMinutes : 0;
+        debugPrint('❌ [MOBILE] Presença EXPIRADA há $diferencaMinutos minutos');
         return 'Ausente';
       }
     } catch (e) {
+      debugPrint('❌ [MOBILE] Exceção ao verificar presença: $e');
       return 'Ausente';
     }
   }
 
-  // Determinar a cor do status
+  // ✅ ATUALIZADA: Determinar a cor do status (incluindo "Aguardar")
   Color _getCorStatus(String status) {
     switch (status) {
       case 'Presente':
         return Colors.green;
       case 'Registar':
         return Colors.orange;
+      case 'Aguardar':
+        return Colors.blue;
       case 'Ausente':
         return Colors.red;
       default:
@@ -324,13 +398,39 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
+  // ✅ MELHORADO: Formatação de data mais robusta
   String _formatDate(String? dateString) {
-    if (dateString == null) return '';
+    if (dateString == null || dateString.isEmpty) return '';
     try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
+      // Tentar parse direto primeiro
+      DateTime date;
+      if (dateString.contains('T')) {
+        date = DateTime.parse(dateString);
+      } else {
+        date = DateTime.parse(dateString + 'T00:00:00');
+      }
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } catch (e) {
+      debugPrint('⚠️ [MOBILE] Erro ao formatar data: $dateString - $e');
       return dateString;
+    }
+  }
+
+  // ✅ NOVA FUNÇÃO: Formatação de hora mais robusta
+  String _formatTime(String? timeString) {
+    if (timeString == null || timeString.isEmpty) return '';
+    try {
+      // Se já está no formato correto, retornar
+      if (timeString.contains(':')) {
+        final parts = timeString.split(':');
+        if (parts.length >= 2) {
+          return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+        }
+      }
+      return timeString;
+    } catch (e) {
+      debugPrint('⚠️ [MOBILE] Erro ao formatar hora: $timeString - $e');
+      return timeString;
     }
   }
 
@@ -502,23 +602,6 @@ class _PresencasCursoState extends State<PresencasCurso> {
                     ),
                   ),
                   Spacer(),
-                  // ✅ NOVO: Mostrar ID do curso para debug (pode remover depois)
-                  if (isFormando)
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Curso ${widget.cursoId}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[800],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
                   SizedBox(width: 8),
                   IconButton(
                     onPressed: _refreshData,
@@ -562,6 +645,9 @@ class _PresencasCursoState extends State<PresencasCurso> {
                               case 'Registar':
                                 cardColor = Colors.orange[50]!;
                                 break;
+                              case 'Aguardar':
+                                cardColor = Colors.blue[50]!;
+                                break;
                               case 'Ausente':
                                 cardColor = Colors.red[50]!;
                                 break;
@@ -587,14 +673,16 @@ class _PresencasCursoState extends State<PresencasCurso> {
                                           ? Icons.check
                                           : statusText == 'Registar'
                                               ? Icons.access_time
-                                              : Icons.close)
+                                              : statusText == 'Aguardar'
+                                                  ? Icons.schedule
+                                                  : Icons.close)
                                       : Icons.people,
                                   color: Colors.white,
                                   size: 20,
                                 ),
                               ),
                               title: Text(
-                                '${_formatDate(presenca['data_inicio'])} ${presenca['hora_inicio']} - ${_formatDate(presenca['data_fim'])} ${presenca['hora_fim']}',
+                                '${_formatDate(presenca['data_inicio'])} ${_formatTime(presenca['hora_inicio'])} - ${_formatDate(presenca['data_fim'])} ${_formatTime(presenca['hora_fim'])}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -690,7 +778,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      '${_formatDate(presencaSelecionada!['data_inicio'])} ${presencaSelecionada!['hora_inicio']} - ${_formatDate(presencaSelecionada!['data_fim'])} ${presencaSelecionada!['hora_fim']}',
+                      '${_formatDate(presencaSelecionada!['data_inicio'])} ${_formatTime(presencaSelecionada!['hora_inicio'])} - ${_formatDate(presencaSelecionada!['data_fim'])} ${_formatTime(presencaSelecionada!['hora_fim'])}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -773,7 +861,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Formandos - ${_formatDate(presencaSelecionada!['data_inicio'])} ${presencaSelecionada!['hora_inicio']}',
+                            'Formandos - ${_formatDate(presencaSelecionada!['data_inicio'])} ${_formatTime(presencaSelecionada!['hora_inicio'])}',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

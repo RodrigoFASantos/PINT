@@ -26,9 +26,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
   bool loading = true;
   String? erro;
 
-  // Controle de comentários denunciados pelo usuário atual
-  List<int> comentariosDenunciados = [];
-
   @override
   void initState() {
     super.initState();
@@ -42,7 +39,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       await _loadTopico();
       await _loadTema();
       await _loadComentarios();
-      await _loadComentariosDenunciados();
     } catch (error) {
       setState(() {
         erro = 'Erro ao carregar dados: $error';
@@ -127,9 +123,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
 
         debugPrint(
             '✅ [TOPICOS_CHAT] ${comentarios.length} comentários carregados');
-
-        // Marcar comentários denunciados após carregamento
-        _marcarComentariosDenunciados();
       } else {
         setState(() {
           comentarios = [];
@@ -145,199 +138,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       });
       debugPrint('❌ [TOPICOS_CHAT] Erro ao carregar comentários: $error');
     }
-  }
-
-  // Carrega lista de comentários já denunciados pelo usuário
-  Future<void> _loadComentariosDenunciados() async {
-    try {
-      final comentariosDenunciadosData =
-          await _apiService.getComentariosDenunciados();
-
-      if (comentariosDenunciadosData != null) {
-        setState(() {
-          comentariosDenunciados = comentariosDenunciadosData;
-        });
-        debugPrint(
-            '✅ [TOPICOS_CHAT] ${comentariosDenunciados.length} comentários denunciados pelo usuário');
-      } else {
-        // ✅ CORRIGIDO: Se a rota não existir, inicializar lista vazia
-        setState(() {
-          comentariosDenunciados = [];
-        });
-        debugPrint(
-            'ℹ️ [TOPICOS_CHAT] Nenhum comentário denunciado encontrado (rota pode não existir)');
-      }
-    } catch (error) {
-      // ✅ CORRIGIDO: Em caso de erro, inicializar lista vazia para não travar
-      setState(() {
-        comentariosDenunciados = [];
-      });
-      debugPrint(
-          '⚠️ [TOPICOS_CHAT] Erro ao carregar comentários denunciados (não crítico): $error');
-    }
-  }
-
-  // Marca visualmente os comentários que já foram denunciados
-  void _marcarComentariosDenunciados() {
-    if (comentariosDenunciados.isNotEmpty) {
-      setState(() {
-        for (int i = 0; i < comentarios.length; i++) {
-          final comentarioId =
-              comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
-          if (comentariosDenunciados.contains(comentarioId)) {
-            comentarios[i]['foi_denunciado'] = true;
-          }
-        }
-      });
-    }
-  }
-
-  // Processa denúncia de comentário
-  Future<void> _denunciarComentario(int comentarioId) async {
-    // Verifica se já foi denunciado
-    if (comentariosDenunciados.contains(comentarioId)) {
-      AppUtils.showInfo(context, 'Já denunciou este comentário anteriormente.');
-      return;
-    }
-
-    // Mostra diálogo para selecionar motivo
-    final motivo = await _showMotivoComentarioDialog();
-    if (motivo == null || motivo.isEmpty) return;
-
-    try {
-      debugPrint('🚩 [TOPICOS_CHAT] Denunciando comentário $comentarioId');
-
-      // Atualiza estado local imediatamente para feedback visual
-      setState(() {
-        comentariosDenunciados.add(comentarioId);
-        for (int i = 0; i < comentarios.length; i++) {
-          final id = comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
-          if (id == comentarioId) {
-            comentarios[i]['foi_denunciado'] = true;
-            break;
-          }
-        }
-      });
-
-      // Envia denúncia para o servidor
-      final result = await _apiService.denunciarComentario(
-        idComentario: comentarioId,
-        motivo: motivo,
-      );
-
-      if (result != null && result['success'] == true) {
-        AppUtils.showSuccess(context,
-            'Comentário denunciado com sucesso. Obrigado pela sua contribuição.');
-      } else {
-        // Reverte mudanças se falhou
-        _revertDenunciaComentario(comentarioId);
-        AppUtils.showError(
-            context, result?['message'] ?? 'Erro ao denunciar comentário');
-      }
-    } catch (error) {
-      // Reverte estado em caso de erro
-      _revertDenunciaComentario(comentarioId);
-      debugPrint('❌ [TOPICOS_CHAT] Erro ao denunciar comentário: $error');
-      AppUtils.showError(context, 'Erro ao denunciar comentário: $error');
-    }
-  }
-
-  // Reverte denúncia em caso de erro na comunicação
-  void _revertDenunciaComentario(int comentarioId) {
-    setState(() {
-      comentariosDenunciados.remove(comentarioId);
-      for (int i = 0; i < comentarios.length; i++) {
-        final id = comentarios[i]['id_comentario'] ?? comentarios[i]['id'];
-        if (id == comentarioId) {
-          comentarios[i]['foi_denunciado'] = false;
-          break;
-        }
-      }
-    });
-  }
-
-  // Exibe diálogo para seleção do motivo da denúncia
-  Future<String?> _showMotivoComentarioDialog() async {
-    String motivo = '';
-    String? motivoSelecionado;
-
-    return await showDialog<String>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.flag, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Denunciar Comentário'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Por favor, selecione o motivo da denúncia:'),
-              SizedBox(height: 16),
-
-              // Lista de motivos pré-definidos
-              ...[
-                'Spam',
-                'Conteúdo ofensivo',
-                'Discurso de ódio',
-                'Assédio',
-                'Conteúdo inadequado',
-                'Outro'
-              ].map(
-                (motivoOpcao) => RadioListTile<String>(
-                  value: motivoOpcao,
-                  groupValue: motivoSelecionado,
-                  onChanged: (value) {
-                    setState(() {
-                      motivoSelecionado = value;
-                      if (value != 'Outro') {
-                        motivo = value!;
-                      }
-                    });
-                  },
-                  title: Text(motivoOpcao, style: TextStyle(fontSize: 14)),
-                  dense: true,
-                ),
-              ),
-
-              // Campo de texto para motivo personalizado
-              if (motivoSelecionado == 'Outro') ...[
-                SizedBox(height: 8),
-                TextField(
-                  onChanged: (value) => motivo = value,
-                  decoration: InputDecoration(
-                    hintText: 'Descreva o motivo...',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  maxLines: 2,
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: (motivoSelecionado != null && motivo.isNotEmpty)
-                  ? () => Navigator.pop(context, motivo)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text('Denunciar'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // ✅ CORRIGIDO: Função melhorada para adicionar novo comentário
@@ -635,20 +435,11 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
 
   // Card individual de comentário
   Widget _buildComentarioCard(Map<String, dynamic> comentario) {
-    final comentarioId = comentario['id_comentario'] ?? comentario['id'];
-    final foiDenunciado = comentario['foi_denunciado'] == true;
-    final isMyComment = comentario['utilizador']?['id_utilizador'] ==
-        currentUser?['id_utilizador'];
-
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        // Borda vermelha se foi denunciado
-        side: foiDenunciado
-            ? BorderSide(color: Colors.red, width: 2)
-            : BorderSide.none,
       ),
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -691,39 +482,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
                     ],
                   ),
                 ),
-
-                // Menu de ações (só para comentários de outros usuários)
-                if (!isMyComment)
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, size: 18),
-                    onSelected: (value) {
-                      if (value == 'denunciar') {
-                        _denunciarComentario(comentarioId);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'denunciar',
-                        enabled: !foiDenunciado,
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.flag,
-                              size: 16,
-                              color: foiDenunciado ? Colors.grey : Colors.red,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              foiDenunciado ? 'Já denunciado' : 'Denunciar',
-                              style: TextStyle(
-                                color: foiDenunciado ? Colors.grey : Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
               ],
             ),
 
@@ -750,57 +508,6 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
               ),
               SizedBox(height: 8),
             ],
-
-            // Indicador visual de denúncia
-            if (foiDenunciado) ...[
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.flag, size: 12, color: Colors.red),
-                    SizedBox(width: 4),
-                    Text(
-                      'Denunciado',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 8),
-            ],
-
-            // Ações do comentário (likes, etc.)
-            Row(
-              children: [
-                _buildAcaoComentario(
-                  icon: Icons.thumb_up,
-                  count: comentario['likes'] ?? 0,
-                  isActive: false, // Implementar avaliação se necessário
-                  onPressed: () {
-                    // Implementar funcionalidade de like se necessário
-                  },
-                ),
-                SizedBox(width: 12),
-                _buildAcaoComentario(
-                  icon: Icons.thumb_down,
-                  count: comentario['dislikes'] ?? 0,
-                  isActive: false, // Implementar avaliação se necessário
-                  onPressed: () {
-                    // Implementar funcionalidade de dislike se necessário
-                  },
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -954,43 +661,5 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
       default:
         return Icons.insert_drive_file;
     }
-  }
-
-  // Widget para ações do comentário (like/dislike)
-  Widget _buildAcaoComentario({
-    required IconData icon,
-    required int count,
-    bool isActive = false,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isActive ? Color(0xFF4A90E2).withOpacity(0.1) : null,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive ? Color(0xFF4A90E2) : Colors.grey[600],
-            ),
-            SizedBox(width: 4),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                color: isActive ? Color(0xFF4A90E2) : Colors.grey[600],
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

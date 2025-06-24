@@ -370,7 +370,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
   Widget _buildCursoHeader() {
     return Container(
-      margin: EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Reduzido
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -388,7 +388,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           // Header com imagem apenas quando NÃO expandido
           if (!widget.mostrarDetalhes)
             Container(
-              height: 200,
+              height: 160, // Reduzido de 200 para 160
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12),
@@ -404,7 +404,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   imageUrl: _getImageUrl(),
                   fallbackUrl: _apiService.getCursoImageUrl(null),
                   width: double.infinity,
-                  height: 200,
+                  height: 160, // Ajustado
                   fit: BoxFit.cover,
                   gradient: LinearGradient(
                     begin: Alignment.centerLeft,
@@ -429,7 +429,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
   Widget _buildDetalhesExpandidos() {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(16), // Reduzido de 20 para 16
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
@@ -447,7 +447,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   formadorData?['email'] ?? '',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8), // Reduzido
               Expanded(
                 child: _buildInfoCard(
                   Icons.people,
@@ -461,7 +461,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                       : 'Assíncrono',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8), // Reduzido
               Expanded(
                 child: _buildInfoCard(
                   Icons.schedule,
@@ -472,7 +472,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               ),
             ],
           ),
-          SizedBox(height: 15),
+          SizedBox(height: 12), // Reduzido
 
           // Segunda linha: Categoria, Área, Tópico
           Row(
@@ -485,7 +485,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   '',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Expanded(
                 child: _buildInfoCard(
                   Icons.bookmark,
@@ -494,7 +494,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   '',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Expanded(
                 child: _buildInfoCard(
                   Icons.topic,
@@ -505,7 +505,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               ),
             ],
           ),
-          SizedBox(height: 15),
+          SizedBox(height: 12),
 
           // Terceira linha: Datas
           Row(
@@ -518,7 +518,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   '',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Expanded(
                 child: _buildInfoCard(
                   Icons.calendar_today,
@@ -527,18 +527,18 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                   '',
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Expanded(child: Container()), // Espaço vazio
             ],
           ),
-          SizedBox(height: 15),
+          SizedBox(height: 12),
 
           // Descrição completa
           if (widget.curso['descricao'] != null &&
               widget.curso['descricao'].toString().isNotEmpty)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(12), // Reduzido de 16 para 12
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -551,7 +551,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                     children: [
                       Icon(Icons.description,
                           color: Colors.grey[600], size: 16),
-                      SizedBox(width: 8),
+                      SizedBox(width: 6), // Reduzido
                       Text(
                         'Descrição',
                         style: TextStyle(
@@ -562,18 +562,20 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 6), // Reduzido
                   Text(
                     widget.curso['descricao'].toString(),
                     style: TextStyle(
                       fontSize: 14,
-                      height: 1.5,
+                      height: 1.4, // Reduzido de 1.5 para 1.4
                     ),
+                    maxLines: 4, // Limitado para evitar muito texto
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          SizedBox(height: 20),
+          SizedBox(height: 16), // Reduzido
 
           // Botão de inscrição
           _buildActionButton(),
@@ -585,7 +587,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
   Widget _buildInfoCard(
       IconData icon, String label, String value, String subtitle) {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: EdgeInsets.all(10), // Reduzido de 12 para 10
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -596,13 +598,13 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.grey[600], size: 16),
-              SizedBox(width: 6),
+              Icon(icon, color: Colors.grey[600], size: 14), // Reduzido
+              SizedBox(width: 4), // Reduzido
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11, // Reduzido
                     fontWeight: FontWeight.w500,
                     color: Colors.grey[600],
                   ),
@@ -610,11 +612,11 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               ),
             ],
           ),
-          SizedBox(height: 6),
+          SizedBox(height: 4), // Reduzido
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13, // Reduzido
               fontWeight: FontWeight.w600,
             ),
             maxLines: 2,
@@ -625,9 +627,11 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11, // Reduzido
                 color: Colors.grey[600],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
@@ -646,7 +650,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       if (cursoTerminado && !widget.inscrito) {
         return Container(
           width: double.infinity,
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12), // Reduzido
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
@@ -654,13 +658,13 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           ),
           child: Row(
             children: [
-              Icon(Icons.event_busy, color: Colors.grey),
-              SizedBox(width: 12),
+              Icon(Icons.event_busy, color: Colors.grey, size: 20),
+              SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Este curso já terminou',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14, // Reduzido
                     color: Colors.grey[600],
                   ),
                 ),
@@ -675,7 +679,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           !widget.inscrito) {
         return Container(
           width: double.infinity,
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12), // Reduzido
           decoration: BoxDecoration(
             color: Colors.orange[50],
             borderRadius: BorderRadius.circular(8),
@@ -683,13 +687,13 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           ),
           child: Row(
             children: [
-              Icon(Icons.people, color: Colors.orange),
-              SizedBox(width: 12),
+              Icon(Icons.people, color: Colors.orange, size: 20),
+              SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Não há vagas disponíveis',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14, // Reduzido
                     color: Colors.orange[700],
                   ),
                 ),
@@ -701,7 +705,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
       return SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 45, // Reduzido de 50 para 45
         child: ElevatedButton(
           onPressed: _isLoading ? null : _handleInscricao,
           style: ElevatedButton.styleFrom(
@@ -712,8 +716,8 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           ),
           child: _isLoading
               ? SizedBox(
-                  height: 20,
-                  width: 20,
+                  height: 18, // Reduzido
+                  width: 18, // Reduzido
                   child: CircularProgressIndicator(
                     color: Colors.white,
                     strokeWidth: 2,
@@ -725,12 +729,13 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                     Icon(
                       widget.inscrito ? Icons.cancel : Icons.add_circle,
                       color: Colors.white,
+                      size: 20, // Reduzido
                     ),
-                    SizedBox(width: 8),
+                    SizedBox(width: 6), // Reduzido
                     Text(
                       widget.inscrito ? 'Cancelar Inscrição' : 'Inscrever-se',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14, // Reduzido
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -743,7 +748,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       print('❌ Erro ao construir botão de ação: $e');
       return Container(
         width: double.infinity,
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(12), // Reduzido
         decoration: BoxDecoration(
           color: Colors.red[50],
           borderRadius: BorderRadius.circular(8),
@@ -751,13 +756,13 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         ),
         child: Row(
           children: [
-            Icon(Icons.error, color: Colors.red),
-            SizedBox(width: 12),
+            Icon(Icons.error, color: Colors.red, size: 20),
+            SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Erro ao carregar informações do curso',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14, // Reduzido
                   color: Colors.red[700],
                 ),
               ),
@@ -770,12 +775,27 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildCursoHeader(),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: ClampingScrollPhysics(), // Melhora a performance do scroll
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight, // Garante altura mínima
+            ),
+            child: IntrinsicHeight(
+              // Permite que o conteúdo se ajuste naturalmente
+              child: Column(
+                children: [
+                  _buildCursoHeader(),
+                  SizedBox(
+                      height: 8), // Espaço extra no final para evitar overflow
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

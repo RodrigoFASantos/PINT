@@ -570,28 +570,52 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 32),
 
                               // Seção de Cursos Sugeridos
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Cursos Sugeridos para Você',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey.shade800,
+                              Text(
+                                'Cursos Sugeridos para Você',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Botão "Ver todos" com design melhorado
+                              if (_cursosSugeridos != null &&
+                                  _cursosSugeridos!.isNotEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () =>
+                                        Navigator.pushNamed(context, '/cursos'),
+                                    icon: const Icon(
+                                      Icons.explore_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      'Ver todos os cursos',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFF8000),
+                                      foregroundColor: Colors.white,
+                                      elevation: 2,
+                                      shadowColor: const Color(0xFFFF8000)
+                                          .withOpacity(0.3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
                                     ),
                                   ),
-                                  if (_cursosSugeridos != null &&
-                                      _cursosSugeridos!.isNotEmpty)
-                                    TextButton(
-                                      onPressed: () => Navigator.pushNamed(
-                                          context, '/cursos'),
-                                      child: const Text('Ver todos'),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
+                                ),
 
                               if (_cursosSugeridos == null ||
                                   _cursosSugeridos!.isEmpty)
