@@ -8,6 +8,7 @@ import { NotificacoesProvider } from './contexts/NotificacoesContext';
 // Páginas de Autenticação
 import Login from './pages/auth/login';
 import ConfirmAccount from './pages/auth/confirmAccount';
+import RedefinirSenha from './pages/auth/Redefinir_Senha';
 
 // Páginas Principais
 import Home from './pages/home';
@@ -91,6 +92,12 @@ const App = () => {
               <Route path="/confirm-account" element={
                 <RouteWrapper path="/confirm-account">
                   <ConfirmAccount />
+                </RouteWrapper>
+              } />
+              {/* NOVA ROTA PARA REDEFINIR SENHA */}
+              <Route path="/reset-password" element={
+                <RouteWrapper path="/reset-password">
+                  <RedefinirSenha />
                 </RouteWrapper>
               } />
 

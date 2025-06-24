@@ -196,55 +196,51 @@ const GerenciarUtilizadores = () => {
 
   // Função para excluir o utilizador
   const handleExcluirUtilizador = async () => {
-    if (!utilizadorParaExcluir) return;
+  if (!utilizadorParaExcluir) return;
 
-    const utilizadorId = utilizadorParaExcluir.id_utilizador;
-    let shouldCloseModal = true;
+  const utilizadorId = utilizadorParaExcluir.id_utilizador;
+  let shouldCloseModal = true;
 
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE}/users/${utilizadorId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  try {
+    const token = localStorage.getItem('token');
+    await axios.delete(`${API_BASE}/users/${utilizadorId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-      // Remover da lista local
-      const novaLista = utilizadores.filter(u => u.id_utilizador !== utilizadorId);
-      setUtilizadores(novaLista);
-      setTotalUtilizadores(novaLista.length);
-      toast.success('Utilizador excluído com sucesso!');
+    // Remover da lista local
+    const novaLista = utilizadores.filter(u => u.id_utilizador !== utilizadorId);
+    setUtilizadores(novaLista);
+    setTotalUtilizadores(novaLista.length);
+    toast.success('Utilizador excluído com sucesso!');
 
-    } catch (error) {
-      console.error('Erro ao excluir utilizador:', error);
+  } catch (error) {
+    console.error('Erro ao excluir utilizador:', error);
 
-      if (error.response?.status === 400) {
-        const data = error.response.data;
+    if (error.response?.status === 400) {
+      const data = error.response.data;
 
-        // Formador com cursos ativos - mostrar modal
-        if (data.tipo === "formador_com_cursos") {
-          setFormadorComCursos(utilizadorParaExcluir);
-          setCursosFormador(data.cursos);
-          setShowCursosModal(true);
-          setShowDeleteConfirmation(false);
-          shouldCloseModal = false;
-        }
-        // Utilizador com inscrições
-        else if (data.tipo === "utilizador_com_inscricoes") {
-          toast.error(`${data.message}. Total de inscrições: ${data.inscricoes}`);
-        }
-        // Qualquer outra mensagem de erro 400
-        else {
-          toast.error(data.message);
-        }
-      } else {
-        toast.error('Erro ao excluir utilizador: ' + (error.response?.data?.message || error.message));
-      }
-    } finally {
-      if (shouldCloseModal) {
+      // Apenas formador com cursos ativos - mostrar modal
+      if (data.tipo === "formador_com_cursos") {
+        setFormadorComCursos(utilizadorParaExcluir);
+        setCursosFormador(data.cursos);
+        setShowCursosModal(true);
         setShowDeleteConfirmation(false);
-        setUtilizadorParaExcluir(null);
+        shouldCloseModal = false;
       }
+      // Qualquer outra mensagem de erro 400
+      else {
+        toast.error(data.message);
+      }
+    } else {
+      toast.error('Erro ao excluir utilizador: ' + (error.response?.data?.message || error.message));
     }
-  };
+  } finally {
+    if (shouldCloseModal) {
+      setShowDeleteConfirmation(false);
+      setUtilizadorParaExcluir(null);
+    }
+  }
+};
 
   // Função para criar um novo utilizador
   const handleCriarUtilizador = () => {

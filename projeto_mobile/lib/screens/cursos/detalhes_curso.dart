@@ -28,6 +28,7 @@ class DetalhesCurso extends StatefulWidget {
 
 class _DetalhesCursoState extends State<DetalhesCurso> {
   bool _isLoading = false;
+  bool _dadosCarregados = false;
   Map<String, dynamic>? formadorData;
   Map<String, dynamic>? categoriaData;
   Map<String, dynamic>? areaData;
@@ -41,42 +42,41 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     super.initState();
     print('=== DETALHES CURSO INICIADO ===');
     print('Curso ID: ${widget.cursoId}');
-    print('ID da área: ${widget.curso['id_area']}');
-    print('ID da categoria: ${widget.curso['id_categoria']}');
-    print('ID do formador: ${widget.curso['id_formador']}');
-    print('ID do tópico área: ${widget.curso['id_topico_area']}');
+    print('Mostrar detalhes: ${widget.mostrarDetalhes}');
+    print('Curso data: ${widget.curso}');
     print('===========================');
+
+    // Sempre carregar dados básicos
     _loadAdditionalData();
   }
 
   Future<void> _loadAdditionalData() async {
+    if (_dadosCarregados) return;
+
     print('🔄 Iniciando carregamento de dados adicionais...');
 
     try {
-      // Carregar dados do formador
-      await _loadFormadorData();
-
-      // Carregar dados da categoria
-      await _loadCategoriaData();
-
-      // Carregar dados da área
-      await _loadAreaData();
-
-      // Carregar dados do tópico de área
-      await _loadTopicoAreaData();
-
-      // Carregar tópicos do curso
-      await _loadTopicosData();
+      // Carregar dados em paralelo para ser mais rápido
+      await Future.wait([
+        _loadFormadorData(),
+        _loadCategoriaData(),
+        _loadAreaData(),
+        _loadTopicoAreaData(),
+        _loadTopicosData(),
+      ]);
 
       if (mounted) {
         setState(() {
+          _dadosCarregados = true;
           print('✅ Todos os dados carregados e UI atualizada');
         });
       }
     } catch (e) {
       print('❌ Erro geral ao carregar dados: $e');
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _dadosCarregados = true; // Marcar como carregado mesmo com erro
+        });
       }
     }
   }
@@ -92,9 +92,17 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           print('✅ Formador carregado: ${formadorData?['nome']}');
         } else {
           print('❌ Erro ao carregar formador: ${response.statusCode}');
+          // Usar dados do curso se disponível
+          if (widget.curso['formador'] != null) {
+            formadorData = widget.curso['formador'];
+          }
         }
       } catch (e) {
         print('❌ Exceção ao carregar formador: $e');
+        // Fallback para dados do curso
+        if (widget.curso['formador'] != null) {
+          formadorData = widget.curso['formador'];
+        }
       }
     }
   }
@@ -110,9 +118,17 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           print('✅ Categoria carregada: ${categoriaData?['nome']}');
         } else {
           print('❌ Erro ao carregar categoria: ${response.statusCode}');
+          // Usar dados do curso se disponível
+          if (widget.curso['categoria'] != null) {
+            categoriaData = widget.curso['categoria'];
+          }
         }
       } catch (e) {
         print('❌ Exceção ao carregar categoria: $e');
+        // Fallback para dados do curso
+        if (widget.curso['categoria'] != null) {
+          categoriaData = widget.curso['categoria'];
+        }
       }
     }
   }
@@ -124,16 +140,23 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         final response =
             await _apiService.get('/areas/${widget.curso['id_area']}');
         print('📡 Status da resposta da área: ${response.statusCode}');
-        print('📡 Body da resposta da área: ${response.body}');
 
         if (response.statusCode == 200) {
           areaData = json.decode(response.body);
           print('✅ Área carregada: ${areaData?['nome']}');
         } else {
           print('❌ Erro ao carregar área: ${response.statusCode}');
+          // Usar dados do curso se disponível
+          if (widget.curso['area'] != null) {
+            areaData = widget.curso['area'];
+          }
         }
       } catch (e) {
         print('❌ Exceção ao carregar área: $e');
+        // Fallback para dados do curso
+        if (widget.curso['area'] != null) {
+          areaData = widget.curso['area'];
+        }
       }
     } else {
       print('⚠️ ID da área não encontrado no curso');
@@ -152,9 +175,17 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
           print('✅ Tópico de área carregado: ${topicoAreaData?['titulo']}');
         } else {
           print('❌ Erro ao carregar tópico de área: ${response.statusCode}');
+          // Fallback se disponível no curso
+          if (widget.curso['Topico_Area'] != null) {
+            topicoAreaData = widget.curso['Topico_Area'];
+          }
         }
       } catch (e) {
         print('❌ Exceção ao carregar tópico de área: $e');
+        // Fallback para dados do curso
+        if (widget.curso['Topico_Area'] != null) {
+          topicoAreaData = widget.curso['Topico_Area'];
+        }
       }
     }
   }
@@ -172,89 +203,75 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         }
       } else {
         print('❌ Erro ao carregar tópicos: ${response.statusCode}');
+        // Usar dados do curso se disponível
+        if (widget.curso['topicos'] != null) {
+          topicos = List<Map<String, dynamic>>.from(widget.curso['topicos']);
+        }
       }
     } catch (e) {
       print('❌ Exceção ao carregar tópicos: $e');
+      // Fallback para dados do curso
+      if (widget.curso['topicos'] != null) {
+        topicos = List<Map<String, dynamic>>.from(widget.curso['topicos']);
+      }
     }
   }
 
+  // ✅ REMOVIDO COMPLETAMENTE: Toda a lógica de cancelar inscrição foi removida
+  // Agora só permite INSCREVER (nunca cancelar)
   Future<void> _handleInscricao() async {
     if (_isLoading) return;
+
+    // ✅ NOVO: Se já está inscrito, não fazer nada
+    if (widget.inscrito) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Já está inscrito neste curso!'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      http.Response response;
+      // ✅ APENAS INSCREVER (nunca cancelar)
+      print('📝 Criando nova inscrição...');
 
-      if (widget.inscrito) {
-        // Cancelar inscrição - primeiro precisamos obter o ID da inscrição
-        print('🔄 Procurando ID da inscrição para cancelar...');
-        final verificacaoResponse =
-            await _apiService.get('/inscricoes/verificar/${widget.cursoId}');
-
-        if (verificacaoResponse.statusCode == 200) {
-          final verificacaoData = json.decode(verificacaoResponse.body);
-          if (verificacaoData['inscricao'] != null &&
-              verificacaoData['inscricao']['id'] != null) {
-            final inscricaoId = verificacaoData['inscricao']['id'];
-            print('📝 ID da inscrição encontrado: $inscricaoId');
-
-            // Cancelar usando o ID correto
-            response = await _apiService.patch(
-                '/inscricoes/cancelar-inscricao/$inscricaoId',
-                body: {'motivo_cancelamento': 'Cancelamento pelo utilizador'});
-          } else {
-            throw Exception('ID da inscrição não encontrado');
-          }
-        } else {
-          throw Exception('Erro ao verificar inscrição');
-        }
-      } else {
-        // Inscrever - usar a rota correta com dados no body
-        print('📝 Criando nova inscrição...');
-
-        // Obter o utilizador atual para extrair o ID
-        final userResponse = await _apiService.get('/users/perfil');
-        if (userResponse.statusCode != 200) {
-          throw Exception('Erro ao obter dados do utilizador');
-        }
-
-        final userData = json.decode(userResponse.body);
-        final userId = userData['id_utilizador'];
-
-        print('👤 ID do utilizador: $userId');
-        print('📚 ID do curso: ${widget.cursoId}');
-
-        // Criar inscrição com a rota e dados corretos
-        response = await _apiService.post('/inscricoes', body: {
-          'id_utilizador': userId,
-          'id_curso': int.parse(widget.cursoId),
-        });
+      final userResponse = await _apiService.get('/users/perfil');
+      if (userResponse.statusCode != 200) {
+        throw Exception('Erro ao obter dados do utilizador');
       }
 
+      final userData = json.decode(userResponse.body);
+      final userId = userData['id_utilizador'];
+
+      print('👤 ID do utilizador: $userId');
+      print('📚 ID do curso: ${widget.cursoId}');
+
+      final response = await _apiService.post('/inscricoes', body: {
+        'id_utilizador': userId,
+        'id_curso': int.parse(widget.cursoId),
+      });
+
       print('📡 Status da resposta: ${response.statusCode}');
-      print('📡 Body da resposta: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final newState = !widget.inscrito;
-        widget.onInscricaoChanged?.call(newState);
+        // ✅ SUCESSO: Chamar callback para atualizar o estado
+        widget.onInscricaoChanged?.call(true);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                newState
-                    ? 'Inscrito com sucesso!'
-                    : 'Inscrição cancelada com sucesso!',
-              ),
-              backgroundColor: newState ? Colors.green : Colors.orange,
+              content: Text('Inscrito com sucesso!'),
+              backgroundColor: Colors.green,
             ),
           );
         }
       } else {
-        // Tentar extrair mensagem de erro da resposta
         String errorMessage = 'Erro ao processar inscrição';
         try {
           final errorData = json.decode(response.body);
@@ -293,7 +310,6 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     }
   }
 
-  // Função para formatar o estado do curso para exibição
   String _formatEstadoParaExibicao(String? estado) {
     if (estado == null) return 'Indisponível';
 
@@ -308,7 +324,6 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     return estadosMap[estadoNormalizado] ?? estado;
   }
 
-  // Função para obter a cor do estado do curso
   Color _getEstadoColor(String? estado) {
     if (estado == null) return Colors.grey;
 
@@ -324,7 +339,8 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
   }
 
   bool _canEnroll() {
-    if (widget.inscrito) return true;
+    if (widget.inscrito)
+      return false; // ✅ Já inscrito, não pode inscrever novamente
 
     try {
       final now = DateTime.now();
@@ -368,68 +384,269 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     return _apiService.getCursoImageUrl(null);
   }
 
-  Widget _buildCursoHeader() {
+  // Helper para obter dados com fallback
+  String _getFormadorNome() {
+    return formadorData?['nome'] ??
+        widget.curso['formador']?['nome'] ??
+        'Não definido';
+  }
+
+  String _getFormadorEmail() {
+    return formadorData?['email'] ?? widget.curso['formador']?['email'] ?? '';
+  }
+
+  String _getCategoriaNome() {
+    return categoriaData?['nome'] ??
+        widget.curso['categoria']?['nome'] ??
+        'Não definida';
+  }
+
+  String _getAreaNome() {
+    return areaData?['nome'] ?? widget.curso['area']?['nome'] ?? 'Não definida';
+  }
+
+  String _getTopicoAreaTitulo() {
+    return topicoAreaData?['titulo'] ??
+        widget.curso['Topico_Area']?['titulo'] ??
+        'Não definido';
+  }
+
+  Widget _buildInfoCard(
+      IconData icon, String label, String value, String subtitle) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Reduzido
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header com imagem apenas quando NÃO expandido
-          if (!widget.mostrarDetalhes)
-            Container(
-              height: 160, // Reduzido de 200 para 160
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: CursoImage(
-                  imageUrl: _getImageUrl(),
-                  fallbackUrl: _apiService.getCursoImageUrl(null),
-                  width: double.infinity,
-                  height: 160, // Ajustado
-                  fit: BoxFit.cover,
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Colors.blue.withOpacity(0.8),
-                      Colors.blue.withOpacity(0.6),
-                    ],
+          Row(
+            children: [
+              Icon(icon, color: Colors.grey[600], size: 16),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
                   ),
-                  cursoNome: widget.curso['nome'],
-                  showLoadingText: false,
                 ),
               ),
+            ],
+          ),
+          SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
-
-          // Detalhes expandidos
-          if (widget.mostrarDetalhes) _buildDetalhesExpandidos(),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (subtitle.isNotEmpty) ...[
+            SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
   }
 
+  // ✅ COMPLETAMENTE REFORMULADO: Botão sem opção de cancelar
+  Widget _buildActionButton() {
+    final canEnroll = _canEnroll();
+
+    try {
+      final now = DateTime.now();
+      final dataFim = DateTime.parse(widget.curso['data_fim']);
+      final cursoTerminado = dataFim.isBefore(now);
+
+      // ✅ Se já está inscrito, mostrar indicador de sucesso (SEM botão de cancelar)
+      if (widget.inscrito) {
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Inscrito neste curso',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Acesso garantido aos conteúdos',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Se o curso terminou e não está inscrito
+      if (cursoTerminado) {
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.event_busy, color: Colors.grey, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Este curso já terminou',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Se não há vagas
+      if (widget.curso['tipo'] == 'sincrono' && !canEnroll) {
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.people, color: Colors.orange, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Não há vagas disponíveis',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // ✅ APENAS botão de INSCREVER (nunca cancelar)
+      return SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _handleInscricao,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_circle,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Inscrever-se',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      );
+    } catch (e) {
+      print('❌ Erro ao construir botão de ação: $e');
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red[200]!),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Erro ao carregar informações do curso',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.red[700],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Widget _buildDetalhesExpandidos() {
     return Container(
-      padding: EdgeInsets.all(16), // Reduzido de 20 para 16
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
@@ -443,11 +660,11 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 child: _buildInfoCard(
                   Icons.person,
                   'Formador',
-                  formadorData?['nome'] ?? 'Carregando...',
-                  formadorData?['email'] ?? '',
+                  _getFormadorNome(),
+                  _getFormadorEmail(),
                 ),
               ),
-              SizedBox(width: 8), // Reduzido
+              SizedBox(width: 8),
               Expanded(
                 child: _buildInfoCard(
                   Icons.people,
@@ -461,7 +678,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                       : 'Assíncrono',
                 ),
               ),
-              SizedBox(width: 8), // Reduzido
+              SizedBox(width: 8),
               Expanded(
                 child: _buildInfoCard(
                   Icons.schedule,
@@ -472,7 +689,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               ),
             ],
           ),
-          SizedBox(height: 12), // Reduzido
+          SizedBox(height: 12),
 
           // Segunda linha: Categoria, Área, Tópico
           Row(
@@ -481,7 +698,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 child: _buildInfoCard(
                   Icons.category,
                   'Categoria',
-                  categoriaData?['nome'] ?? 'Carregando...',
+                  _getCategoriaNome(),
                   '',
                 ),
               ),
@@ -490,7 +707,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 child: _buildInfoCard(
                   Icons.bookmark,
                   'Área',
-                  areaData?['nome'] ?? 'Carregando...',
+                  _getAreaNome(),
                   '',
                 ),
               ),
@@ -499,7 +716,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 child: _buildInfoCard(
                   Icons.topic,
                   'Tópico',
-                  topicoAreaData?['titulo'] ?? 'Carregando...',
+                  _getTopicoAreaTitulo(),
                   '',
                 ),
               ),
@@ -538,7 +755,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               widget.curso['descricao'].toString().isNotEmpty)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(12), // Reduzido de 16 para 12
+              padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -551,7 +768,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                     children: [
                       Icon(Icons.description,
                           color: Colors.grey[600], size: 16),
-                      SizedBox(width: 6), // Reduzido
+                      SizedBox(width: 6),
                       Text(
                         'Descrição',
                         style: TextStyle(
@@ -562,240 +779,52 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 6), // Reduzido
+                  SizedBox(height: 6),
                   Text(
                     widget.curso['descricao'].toString(),
                     style: TextStyle(
                       fontSize: 14,
-                      height: 1.4, // Reduzido de 1.5 para 1.4
+                      height: 1.4,
                     ),
-                    maxLines: 4, // Limitado para evitar muito texto
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          SizedBox(height: 16), // Reduzido
+          SizedBox(height: 16),
 
-          // Botão de inscrição
+          // ✅ Botão de ação (SEM cancelar inscrição)
           _buildActionButton(),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard(
-      IconData icon, String label, String value, String subtitle) {
-    return Container(
-      padding: EdgeInsets.all(10), // Reduzido de 12 para 10
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.grey[600], size: 14), // Reduzido
-              SizedBox(width: 4), // Reduzido
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11, // Reduzido
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 4), // Reduzido
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13, // Reduzido
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (subtitle.isNotEmpty) ...[
-            SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11, // Reduzido
-                color: Colors.grey[600],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton() {
-    final canEnroll = _canEnroll();
-
-    try {
-      final now = DateTime.now();
-      final dataFim = DateTime.parse(widget.curso['data_fim']);
-      final cursoTerminado = dataFim.isBefore(now);
-
-      if (cursoTerminado && !widget.inscrito) {
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(12), // Reduzido
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.event_busy, color: Colors.grey, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Este curso já terminou',
-                  style: TextStyle(
-                    fontSize: 14, // Reduzido
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      if (widget.curso['tipo'] == 'sincrono' &&
-          !canEnroll &&
-          !widget.inscrito) {
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(12), // Reduzido
-          decoration: BoxDecoration(
-            color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orange[200]!),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.people, color: Colors.orange, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Não há vagas disponíveis',
-                  style: TextStyle(
-                    fontSize: 14, // Reduzido
-                    color: Colors.orange[700],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      return SizedBox(
-        width: double.infinity,
-        height: 45, // Reduzido de 50 para 45
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _handleInscricao,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: widget.inscrito ? Colors.red : Colors.green,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: _isLoading
-              ? SizedBox(
-                  height: 18, // Reduzido
-                  width: 18, // Reduzido
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      widget.inscrito ? Icons.cancel : Icons.add_circle,
-                      color: Colors.white,
-                      size: 20, // Reduzido
-                    ),
-                    SizedBox(width: 6), // Reduzido
-                    Text(
-                      widget.inscrito ? 'Cancelar Inscrição' : 'Inscrever-se',
-                      style: TextStyle(
-                        fontSize: 14, // Reduzido
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      );
-    } catch (e) {
-      print('❌ Erro ao construir botão de ação: $e');
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(12), // Reduzido
-        decoration: BoxDecoration(
-          color: Colors.red[50],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red[200]!),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error, color: Colors.red, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Erro ao carregar informações do curso',
-                style: TextStyle(
-                  fontSize: 14, // Reduzido
-                  color: Colors.red[700],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: ClampingScrollPhysics(), // Melhora a performance do scroll
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight, // Garante altura mínima
-            ),
-            child: IntrinsicHeight(
-              // Permite que o conteúdo se ajuste naturalmente
-              child: Column(
-                children: [
-                  _buildCursoHeader(),
-                  SizedBox(
-                      height: 8), // Espaço extra no final para evitar overflow
-                ],
-              ),
-            ),
+    print(
+        '🏗️ Building DetalhesCurso - mostrarDetalhes: ${widget.mostrarDetalhes}');
+
+    // SEMPRE mostrar algum conteúdo
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-        );
-      },
+        ],
+      ),
+      child: Column(
+        children: [
+          // SEMPRE mostrar os detalhes expandidos
+          _buildDetalhesExpandidos(),
+        ],
+      ),
     );
   }
 }

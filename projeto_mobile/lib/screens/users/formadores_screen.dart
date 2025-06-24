@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../main.dart';
 import '../../components/sidebar_screen.dart';
+import '../../components/navbar_screen.dart';
 
 class FormadoresScreen extends StatefulWidget {
   @override
@@ -399,10 +400,12 @@ class _FormadoresScreenState extends State<FormadoresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Formadores'),
-        backgroundColor: const Color(0xFFFF8000),
-        foregroundColor: Colors.white,
+      // ✅ CORRIGIDO: Usar NavbarScreen em vez de AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: NavbarScreen(
+          currentUser: _currentUser,
+        ),
       ),
       drawer: SidebarScreen(
         currentUser: _currentUser,

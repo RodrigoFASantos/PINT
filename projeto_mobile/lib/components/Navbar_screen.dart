@@ -28,7 +28,7 @@ class NavbarScreen extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       title: const Text(
-        'EduGest',
+        'SoftSkills',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,

@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config();
 
-// Configurar o "transportador" de email diretamente com variáveis definidas no .env
+// CORREÇÃO: createTransport() em vez de createTransporter()
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -13,6 +13,18 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Verificar configuração do transportador na inicialização
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ [EMAIL] Erro na configuração do email:', error);
+  } else {
+    console.log('✅ [EMAIL] Servidor de email configurado e pronto para enviar mensagens');
+    console.log('📧 [EMAIL] Host:', process.env.EMAIL_HOST);
+    console.log('📧 [EMAIL] Porta:', process.env.EMAIL_PORT);
+    console.log('📧 [EMAIL] Utilizador:', process.env.EMAIL_USER);
+  }
+});
+
 /**
  * Envia email de confirmação de registo para o user
  * @param {Object} user - Objeto com informações do user
@@ -20,11 +32,15 @@ const transporter = nodemailer.createTransport({
  */
 const sendRegistrationEmail = async (user) => {
   try {
+    console.log('📧 [EMAIL] === ENVIANDO EMAIL DE CONFIRMAÇÃO ===');
+    console.log('📧 [EMAIL] Destinatário:', user.email);
+    console.log('📧 [EMAIL] Nome:', user.nome);
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     // Usar o token fornecido pelo user pendente
     const confirmationUrl = `${frontendUrl}/confirm-account?token=${user.token}`;
 
-    console.log(`Enviando email para ${user.email} com link: ${confirmationUrl}`);
+    console.log('📧 [EMAIL] URL de confirmação:', confirmationUrl);
 
     // Criar tabela com os dados da conta
     const accountDetailsTable = `
@@ -105,17 +121,21 @@ const sendRegistrationEmail = async (user) => {
           
           <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
             <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
+            <p>Este email foi enviado para: ${user.email}</p>
           </div>
         </div>
       `
     };
 
+    console.log('📧 [EMAIL] A enviar email de confirmação...');
     // Enviar o email
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email enviado: ${info.messageId}`);
+    console.log('✅ [EMAIL] Email de confirmação enviado com sucesso:', info.messageId);
+    console.log('📧 [EMAIL] Response:', info.response);
     return info;
   } catch (error) {
-    console.error('Erro ao enviar email de registo:', error);
+    console.error('❌ [EMAIL] Erro ao enviar email de registo:', error);
+    console.error('❌ [EMAIL] Stack:', error.stack);
     throw error;
   }
 };
@@ -128,10 +148,14 @@ const sendRegistrationEmail = async (user) => {
  */
 const sendPasswordResetEmail = async (user, token) => {
   try {
+    console.log('🔑 [EMAIL] === ENVIANDO EMAIL DE RECUPERAÇÃO ===');
+    console.log('🔑 [EMAIL] Destinatário:', user.email);
+    console.log('🔑 [EMAIL] Nome:', user.nome);
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    console.log(`Enviando email de recuperação para ${user.email}`);
+    console.log('🔑 [EMAIL] URL de recuperação:', resetUrl);
 
     // Template do email de recuperação de senha
     const mailOptions = {
@@ -141,39 +165,57 @@ const sendPasswordResetEmail = async (user, token) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #3b82f6;">Recuperação de Senha</h2>
+            <h2 style="color: #ef4444;">Recuperação de Senha</h2>
           </div>
           
           <div style="margin-bottom: 30px;">
-            <p>Olá, ${user.nome}!</p>
+            <p>Olá, <strong>${user.nome}</strong>!</p>
             <p>Recebemos uma solicitação para redefinir sua senha na Plataforma de Cursos.</p>
-            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <p>Se você fez esta solicitação, clique no botão abaixo para criar uma nova senha:</p>
+          </div>
+          
+          <div style="margin: 30px 0; background-color: #fef2f2; padding: 15px; border-radius: 5px; border-left: 4px solid #ef4444;">
+            <p style="margin: 0; color: #dc2626;"><strong>⚠️ Importante:</strong></p>
+            <ul style="margin: 10px 0; color: #dc2626;">
+              <li>Este link é válido por apenas <strong>1 hora</strong></li>
+              <li>Após clicar no link, você será redirecionado para criar uma nova senha</li>
+              <li>Por segurança, o link só pode ser usado uma vez</li>
+            </ul>
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Redefinir Senha</a>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Redefinir Senha</a>
+          </div>
+          
+          <div style="margin: 30px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #64748b;">
+            <p style="margin: 0; color: #475569;"><strong>Não solicitou esta recuperação?</strong></p>
+            <p style="margin: 10px 0 0 0; color: #475569;">Se você não pediu para recuperar sua senha, pode ignorar este email com segurança. Sua conta permanece protegida.</p>
           </div>
           
           <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
-            <p>Se você não solicitou esta redefinição, por favor ignore este email.</p>
-            <p>Se o botão acima não funcionar, copie e cole o link abaixo no seu navegador:</p>
-            <p style="word-break: break-all;">${resetUrl}</p>
-            <p>Este link expira em 1 hora.</p>
+            <p><strong>Problemas com o botão?</strong> Copie e cole o link abaixo no seu navegador:</p>
+            <p style="word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8em;">${resetUrl}</p>
+            <p style="color: #dc2626;"><strong>Lembrete:</strong> Este link expira em 1 hora por motivos de segurança.</p>
           </div>
           
           <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
             <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
+            <p>Este email foi enviado para: ${user.email}</p>
+            <p>Horário da solicitação: ${new Date().toLocaleString('pt-PT')}</p>
           </div>
         </div>
       `
     };
 
+    console.log('🔑 [EMAIL] A enviar email de recuperação...');
     // Enviar o email
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email de recuperação enviado: ${info.messageId}`);
+    console.log('✅ [EMAIL] Email de recuperação enviado com sucesso:', info.messageId);
+    console.log('🔑 [EMAIL] Response:', info.response);
     return info;
   } catch (error) {
-    console.error('Erro ao enviar email de recuperação de senha:', error);
+    console.error('❌ [EMAIL] Erro ao enviar email de recuperação de senha:', error);
+    console.error('❌ [EMAIL] Stack:', error.stack);
     throw error;
   }
 };
@@ -187,6 +229,10 @@ const sendPasswordResetEmail = async (user, token) => {
  */
 const sendMailingList = async (formandos, cursos, area = null) => {
   try {
+    console.log('📢 [EMAIL] === ENVIANDO DIVULGAÇÃO DE CURSOS ===');
+    console.log('📢 [EMAIL] Destinatários:', formandos.length);
+    console.log('📢 [EMAIL] Cursos:', cursos.length);
+
     // Preparar conteúdo dos cursos para o email
     const cursosHtml = cursos.map(curso => `
       <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px;">
@@ -242,15 +288,15 @@ const sendMailingList = async (formandos, cursos, area = null) => {
 
       // Enviar email para este formando
       const info = await transporter.sendMail(mailOptions);
-      console.log(`Email de divulgação enviado para ${formando.email}: ${info.messageId}`);
+      console.log(`📢 [EMAIL] Email de divulgação enviado para ${formando.email}:`, info.messageId);
       return info;
     });
 
     // Esperar que todos os emails sejam enviados
     await Promise.all(promises);
-    console.log(`Divulgação enviada para ${formandos.length} formandos.`);
+    console.log(`✅ [EMAIL] Divulgação enviada para ${formandos.length} formandos.`);
   } catch (error) {
-    console.error('Erro ao enviar emails de divulgação:', error);
+    console.error('❌ [EMAIL] Erro ao enviar emails de divulgação:', error);
     throw error;
   }
 };
@@ -263,10 +309,12 @@ const sendMailingList = async (formandos, cursos, area = null) => {
  */
 const sendCourseInscricaoEmail = async (user, curso) => {
   try {
+    console.log('📚 [EMAIL] === ENVIANDO CONFIRMAÇÃO DE INSCRIÇÃO ===');
+    console.log('📚 [EMAIL] Utilizador:', user.email);
+    console.log('📚 [EMAIL] Curso:', curso.nome);
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const cursoUrl = `${frontendUrl}/cursos/${curso.id_curso}`;
-
-    console.log(`Enviando email de confirmação de inscrição para ${user.email}`);
 
     // Formatar datas
     const dataInicio = new Date(curso.data_inicio).toLocaleDateString('pt-PT');
@@ -312,18 +360,16 @@ const sendCourseInscricaoEmail = async (user, curso) => {
       `
     };
 
+    console.log('📚 [EMAIL] A enviar email de confirmação de inscrição...');
     // Enviar o email
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email de confirmação de inscrição enviado: ${info.messageId}`);
+    console.log('✅ [EMAIL] Email de confirmação de inscrição enviado:', info.messageId);
     return info;
   } catch (error) {
-    console.error('Erro ao enviar email de confirmação de inscrição:', error);
+    console.error('❌ [EMAIL] Erro ao enviar email de confirmação de inscrição:', error);
     throw error;
   }
 };
-
-
-
 
 module.exports = {
   sendRegistrationEmail,

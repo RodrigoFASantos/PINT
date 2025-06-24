@@ -1,10 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { sendRegistrationEmail } = require("../../utils/emailService");
+const { sendRegistrationEmail, sendPasswordResetEmail } = require("../../utils/emailService");
 const fs = require("fs");
 const path = require("path");
 const uploadUtils = require("../../middleware/upload");
-
 
 const User_Pendente = require("../../database/models/User_Pendente.js");
 const User = require("../../database/models/User.js");
@@ -14,14 +13,6 @@ const FormadorCategoria = require("../../database/models/Formador_Categoria");
 const FormadorArea = require("../../database/models/Formador_Area");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const Curso = require("../../database/models/Curso");
-
-
-
-
-
-
-
-
 
 /*
  FUNÇÕES DE CONSULTA
@@ -90,8 +81,6 @@ const getGestores = async (req, res) => {
  * FUNÇÕES DE UPLOAD DE IMAGENS
  */
 
-
-
 const initDefaultUserImages = () => {
   try {
     // Garantir que o diretório base exista
@@ -135,7 +124,6 @@ const initDefaultUserImages = () => {
     console.error('Erro ao inicializar imagens padrão:', error);
   }
 };
-
 
 /**
  * Função auxiliar para migrar e limpar ficheiros de imagem do utilizador
@@ -227,7 +215,6 @@ const uploadImagemPerfil = async (req, res) => {
   }
 };
 
-
 const uploadImagemCapa = async (req, res) => {
   try {
     // 1. Verificar se a imagem foi enviada
@@ -309,7 +296,6 @@ const uploadImagemCapa = async (req, res) => {
   }
 };
 
-
 /**
  * FUNÇÕES DE GESTÃO DE PERFIL
  */
@@ -356,56 +342,6 @@ const perfilUser = async (req, res) => {
     res.status(500).json({ message: "Erro ao obter o perfil do utilizador" });
   }
 };
-
-/* const updatePerfilUser = async (req, res) => {
-  try {
-    // Utilizar o ID dos parâmetros, não do utilizador autenticado, pois é o admin a atualizar o perfil de outro utilizador
-    const userId = req.params.id;
-    const {
-      nome,
-      email,
-      telefone,
-      idade,
-      morada,
-      cidade,
-      distrito,
-      freguesia,
-      codigo_postal,
-      descricao,
-      id_cargo // Adicionado: permitir atualização do cargo
-    } = req.body;
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Utilizador não encontrado" });
-    }
-
-    // Criar objeto com os campos para atualizar
-    const updateData = {
-      ...(nome && { nome }),
-      ...(email && { email }),
-      ...(telefone && { telefone }),
-      ...(idade && { idade }),
-      ...(morada && { morada }),
-      ...(cidade && { cidade }),
-      ...(distrito && { distrito }),
-      ...(freguesia && { freguesia }),
-      ...(codigo_postal && { codigo_postal }),
-      ...(descricao && { descricao }),
-      ...(id_cargo && { id_cargo }) // Adicionado: permitir atualização do cargo
-    };
-
-    // Atualizar os campos
-    await User.update(updateData, { where: { id_utilizador: userId } });
-
-    const updatedUser = await User.findByPk(userId);
-    res.json(updatedUser);
-  } catch (error) {
-    console.error("Erro ao atualizar perfil:", error);
-    res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
-  }
-};
- */
 
 const updatePerfilUser = async (req, res) => {
   try {
@@ -456,8 +392,6 @@ const updatePerfilUser = async (req, res) => {
     res.status(500).json({ message: "Erro ao atualizar o perfil do utilizador" });
   }
 };
-
-
 
 const changePassword = async (req, res) => {
   try {
@@ -815,7 +749,6 @@ const confirmAccount = async (req, res) => {
           }
         }
 
-
         // Remover as associações pendentes
         await associacoesPendentes.destroy();
         console.log("✅ Associações pendentes processadas e removidas");
@@ -900,154 +833,6 @@ const confirmAccount = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor ao confirmar conta" });
   }
 };
-
-
-
-/* 
-const loginUser = async (req, res) => {
-  console.log('🔍 [LOGIN] === INICIANDO PROCESSO DE LOGIN ===');
-  
-  try {
-    const { email, password } = req.body;
-    
-    console.log('🔍 [LOGIN] Email recebido:', email);
-    console.log('🔍 [LOGIN] Password recebida:', password ? 'SIM' : 'NÃO');
-    console.log('🔍 [LOGIN] JWT_SECRET está definido:', !!process.env.JWT_SECRET);
-
-    // Validação básica
-    if (!email || !password) {
-      console.log('❌ [LOGIN] Email ou password não fornecidos');
-      return res.status(400).json({ 
-        success: false,
-        message: "Email e password são obrigatórios" 
-      });
-    }
-
-    console.log('🔍 [LOGIN] A procurar utilizador na base de dados...');
-    
-    // Procurar utilizador (sem include do cargo primeiro para testar)
-    let user;
-    try {
-      user = await User.findOne({
-        where: { email }
-      });
-      console.log('🔍 [LOGIN] Utilizador encontrado:', user ? 'SIM' : 'NÃO');
-    } catch (dbError) {
-      console.error('❌ [LOGIN] Erro na consulta à base de dados:', dbError);
-      return res.status(500).json({ 
-        success: false,
-        message: "Erro na consulta à base de dados",
-        error: dbError.message 
-      });
-    }
-
-    if (!user) {
-      console.log('❌ [LOGIN] Utilizador não encontrado para email:', email);
-      return res.status(404).json({ 
-        success: false,
-        message: "Utilizador não encontrado!" 
-      });
-    }
-
-    console.log('🔍 [LOGIN] Dados do utilizador:');
-    console.log('🔍 [LOGIN] - ID:', user.id_utilizador);
-    console.log('🔍 [LOGIN] - Nome:', user.nome);
-    console.log('🔍 [LOGIN] - Email:', user.email);
-    console.log('🔍 [LOGIN] - ID Cargo:', user.id_cargo);
-
-    console.log('🔍 [LOGIN] A verificar password...');
-    let validPassword;
-    try {
-      validPassword = await bcrypt.compare(password, user.password);
-      console.log('🔍 [LOGIN] Password válida:', validPassword);
-    } catch (bcryptError) {
-      console.error('❌ [LOGIN] Erro ao verificar password:', bcryptError);
-      return res.status(500).json({ 
-        success: false,
-        message: "Erro ao verificar credenciais"
-      });
-    }
-
-    if (!validPassword) {
-      console.log('❌ [LOGIN] Password inválida para:', email);
-      return res.status(401).json({ 
-        success: false,
-        message: "Credenciais inválidas!" 
-      });
-    }
-
-    console.log('🔍 [LOGIN] A procurar informações do cargo...');
-    let cargoInfo = null;
-    try {
-      const cargo = await Cargo.findByPk(user.id_cargo);
-      if (cargo) {
-        cargoInfo = {
-          id_cargo: cargo.id_cargo,
-          descricao: cargo.descricao
-        };
-        console.log('🔍 [LOGIN] Cargo encontrado:', cargoInfo);
-      }
-    } catch (cargoError) {
-      console.error('⚠️ [LOGIN] Erro ao procurar cargo:', cargoError);
-    }
-
-    console.log('🔍 [LOGIN] A gerar token JWT...');
-    let token;
-    try {
-      const jwtSecret = process.env.JWT_SECRET || 'desenvolvimento-secreto';
-      
-      token = jwt.sign(
-        {
-          id_utilizador: user.id_utilizador,
-          nome: user.nome,
-          email: user.email,
-          id_cargo: user.id_cargo,
-          cargo: cargoInfo?.descricao || null
-        },
-        jwtSecret,
-        { expiresIn: "24h" }
-      );
-      console.log('🔍 [LOGIN] Token gerado com sucesso');
-    } catch (jwtError) {
-      console.error('❌ [LOGIN] Erro ao gerar token:', jwtError);
-      return res.status(500).json({ 
-        success: false,
-        message: "Erro ao gerar token de autenticação"
-      });
-    }
-
-    console.log('🔍 [LOGIN] A preparar resposta...');
-    const response = {
-      success: true,
-      message: "Login realizado com sucesso",
-      token,
-      user: {
-        id_utilizador: user.id_utilizador,
-        nome: user.nome,
-        email: user.email,
-        id_cargo: user.id_cargo,
-        cargo: cargoInfo?.descricao || null,
-        primeiro_login: user.primeiro_login
-      }
-    };
-
-    console.log('✅ [LOGIN] A enviar resposta de sucesso...');
-    res.status(200).json(response);
-    console.log('✅ [LOGIN] === LOGIN CONCLUÍDO COM SUCESSO ===');
-
-  } catch (error) {
-    console.error('❌ [LOGIN] === ERRO FATAL NO LOGIN ===');
-    console.error('❌ [LOGIN] Mensagem:', error.message);
-    console.error('❌ [LOGIN] Stack:', error.stack);
-    
-    res.status(500).json({ 
-      success: false,
-      message: "Erro interno no servidor",
-      error: error.message
-    });
-  }
-};
- */
 
 const loginUser = async (req, res) => {
   console.log('🔍 [LOGIN] === INICIANDO PROCESSO DE LOGIN ===');
@@ -1213,10 +998,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-
-
-
 const verifyToken = (req, res) => {
   const token = req.body.token || req.headers.authorization?.split(' ')[1];
 
@@ -1232,31 +1013,41 @@ const verifyToken = (req, res) => {
   }
 };
 
-
 const resendConfirmation = async (req, res) => {
   try {
+    console.log('📧 [RESEND] === INICIANDO REENVIO DE CONFIRMAÇÃO ===');
     const { email } = req.body;
 
+    console.log('📧 [RESEND] Email solicitado:', email);
+
     if (!email) {
+      console.log('❌ [RESEND] Email não fornecido');
       return res.status(400).json({ message: "Email não fornecido" });
     }
 
+    console.log('📧 [RESEND] A procurar registo pendente...');
     // Procurar registo pendente
     const pendingUser = await User_Pendente.findOne({ where: { email } });
 
     if (!pendingUser) {
-      return res.status(404).json({ message: "Registo pendente não encontrado para este email" });
+      console.log('❌ [RESEND] Registo pendente não encontrado');
+      return res.status(404).json({ 
+        message: "Registo pendente não encontrado para este email" 
+      });
     }
 
+    console.log('📧 [RESEND] A verificar se utilizador já está registado...');
     // Verificar se o utilizador já está registado
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
+      console.log('⚠️ [RESEND] Utilizador já registado, removendo pendente...');
       await pendingUser.destroy(); // Remover registo pendente obsoleto
       return res.status(400).json({
         message: "Este email já está registado como utilizador ativo. Por favor, faça login ou recupere a sua palavra-passe."
       });
     }
 
+    console.log('📧 [RESEND] A gerar novo token...');
     // Gerar novo token
     const token = jwt.sign(
       { email: pendingUser.email, nome: pendingUser.nome },
@@ -1273,111 +1064,231 @@ const resendConfirmation = async (req, res) => {
       expires_at
     });
 
+    console.log('📧 [RESEND] A preparar dados para email...');
+    // Preparar dados para o email
+    const userForEmail = {
+      id: pendingUser.id,
+      nome: pendingUser.nome,
+      email: pendingUser.email,
+      idade: pendingUser.idade,
+      telefone: pendingUser.telefone,
+      token: token
+    };
+
+    console.log('📧 [RESEND] A enviar email...');
     // Enviar novo email
     try {
-      const userForEmail = {
-        id_utilizador: pendingUser.id,
-        nome: pendingUser.nome,
-        email: pendingUser.email,
-        token: token
-      };
-
       await sendRegistrationEmail(userForEmail);
-      console.log('Email de confirmação reenviado com sucesso!');
+      console.log('✅ [RESEND] Email de confirmação reenviado com sucesso!');
 
-      res.json({ message: "Email de confirmação reenviado com sucesso!" });
+      res.json({ 
+        message: "Email de confirmação reenviado com sucesso! Verifique sua caixa de entrada." 
+      });
     } catch (emailError) {
-      console.error("Erro ao reenviar email:", emailError);
-      res.status(500).json({ message: "Erro ao enviar o email de confirmação." });
+      console.error("❌ [RESEND] Erro ao reenviar email:", emailError);
+      res.status(500).json({ 
+        message: "Erro ao enviar o email de confirmação." 
+      });
     }
   } catch (error) {
-    console.error("Erro ao reenviar confirmação:", error);
-    res.status(500).json({ message: "Erro no servidor ao processar a solicitação." });
+    console.error("❌ [RESEND] Erro ao reenviar confirmação:", error);
+    res.status(500).json({ 
+      message: "Erro no servidor ao processar a solicitação." 
+    });
   }
 };
 
+// NOVA FUNÇÃO: Solicitar recuperação de senha
+const forgotPassword = async (req, res) => {
+  try {
+    console.log('🔑 [FORGOT] === INICIANDO RECUPERAÇÃO DE SENHA ===');
+    const { email } = req.body;
 
+    console.log('🔑 [FORGOT] Email solicitado:', email);
 
+    if (!email) {
+      console.log('❌ [FORGOT] Email não fornecido');
+      return res.status(400).json({ message: "Email é obrigatório" });
+    }
+
+    console.log('🔑 [FORGOT] A procurar utilizador...');
+    // Procurar utilizador ativo
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      console.log('❌ [FORGOT] Utilizador não encontrado');
+      return res.status(404).json({ 
+        message: "Não foi encontrado nenhum utilizador com este email" 
+      });
+    }
+
+    console.log('🔑 [FORGOT] Utilizador encontrado:', user.nome);
+    console.log('🔑 [FORGOT] A gerar token de recuperação...');
+
+    // Gerar token de recuperação (válido por 1 hora)
+    const resetToken = jwt.sign(
+      { 
+        id_utilizador: user.id_utilizador, 
+        email: user.email,
+        tipo: 'password_reset' 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    console.log('🔑 [FORGOT] Token gerado, a enviar email...');
+
+    // Enviar email de recuperação
+    try {
+      await sendPasswordResetEmail(user, resetToken);
+      console.log('✅ [FORGOT] Email de recuperação enviado com sucesso!');
+
+      res.json({ 
+        message: "Email de recuperação enviado com sucesso! Verifique sua caixa de entrada." 
+      });
+    } catch (emailError) {
+      console.error("❌ [FORGOT] Erro ao enviar email:", emailError);
+      res.status(500).json({ 
+        message: "Erro ao enviar email de recuperação. Tente novamente mais tarde." 
+      });
+    }
+  } catch (error) {
+    console.error("❌ [FORGOT] Erro na recuperação de senha:", error);
+    res.status(500).json({ 
+      message: "Erro no servidor ao processar solicitação de recuperação." 
+    });
+  }
+};
+
+// NOVA FUNÇÃO: Redefinir senha com token
+const resetPassword = async (req, res) => {
+  try {
+    console.log('🔄 [RESET] === INICIANDO REDEFINIÇÃO DE SENHA ===');
+    const { token, password } = req.body;
+
+    console.log('🔄 [RESET] Token fornecido:', !!token);
+    console.log('🔄 [RESET] Nova senha fornecida:', !!password);
+
+    if (!token || !password) {
+      console.log('❌ [RESET] Token ou senha não fornecidos');
+      return res.status(400).json({ 
+        message: "Token e nova senha são obrigatórios" 
+      });
+    }
+
+    console.log('🔄 [RESET] A verificar token...');
+    // Verificar e decodificar token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('🔄 [RESET] Token válido para utilizador:', decoded.id_utilizador);
+    } catch (error) {
+      console.error('❌ [RESET] Token inválido:', error.message);
+      return res.status(401).json({ 
+        message: "Token inválido ou expirado" 
+      });
+    }
+
+    // Verificar se é um token de recuperação de senha
+    if (decoded.tipo !== 'password_reset') {
+      console.log('❌ [RESET] Tipo de token inválido');
+      return res.status(401).json({ 
+        message: "Token inválido para recuperação de senha" 
+      });
+    }
+
+    console.log('🔄 [RESET] A procurar utilizador...');
+    // Procurar utilizador
+    const user = await User.findByPk(decoded.id_utilizador);
+    if (!user) {
+      console.log('❌ [RESET] Utilizador não encontrado');
+      return res.status(404).json({ 
+        message: "Utilizador não encontrado" 
+      });
+    }
+
+    console.log('🔄 [RESET] A gerar hash da nova senha...');
+    // Gerar hash da nova senha
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    console.log('🔄 [RESET] A atualizar senha na base de dados...');
+    // Atualizar senha na base de dados
+    await User.update(
+      { 
+        password: hashedPassword,
+        primeiro_login: 0 // Garantir que não é mais primeiro login
+      },
+      { where: { id_utilizador: decoded.id_utilizador } }
+    );
+
+    console.log('✅ [RESET] Senha redefinida com sucesso!');
+    res.json({ 
+      message: "Senha redefinida com sucesso! Pode agora fazer login com a nova senha." 
+    });
+  } catch (error) {
+    console.error("❌ [RESET] Erro ao redefinir senha:", error);
+    res.status(500).json({ 
+      message: "Erro no servidor ao redefinir senha." 
+    });
+  }
+};
 
 /**
  * Apagar um utilizador
 **/
-
 const deleteUser = async (req, res) => {
-  console.log('===== Apagar UTILIZADOR =====');
+  console.log('===== APAGAR UTILIZADOR =====');
   console.log('ID recebido:', req.params.id);
-  console.log('Utilizador autenticado:', req.user);
 
   try {
     const userId = req.params.id;
 
     // Verificar se o utilizador existe
     const user = await User.findByPk(userId);
-    console.log('Utilizador encontrado:', user ? 'Sim' : 'Não');
-
     if (!user) {
       return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
-    console.log('Cargo do utilizador:', user.id_cargo);
+    console.log(`Utilizador encontrado: ${user.nome} (Cargo: ${user.id_cargo})`);
 
-    // Verificar se o utilizador tem inscrições em cursos (qualquer cargo)
-    const inscricoes = await Inscricao_Curso.findAll({
-      where: { id_utilizador: userId }
-    });
-
-    console.log('Inscrições encontradas:', inscricoes.length);
-
-    if (inscricoes.length > 0 || user.id_cargo === 2) {
-      // Se for um formador, verificar cursos ativos que ele leciona
-      if (user.id_cargo === 2) {
-        const cursosAtivos = await Curso.findAll({
-          where: {
-            id_formador: userId,
-            ativo: true
-          }
-        });
-
-        if (cursosAtivos.length > 0) {
-          const cursoInfo = cursosAtivos.map(curso => ({
-            id: curso.id_curso,
-            nome: curso.nome,
-            descricao: curso.descricao,
-            data_inicio: curso.data_inicio,
-            data_fim: curso.data_fim,
-            status: curso.ativo ? 'Ativo' : 'Inativo'
-          }));
-
-          return res.status(400).json({
-            message: "Não é possível eliminar este formador pois possui cursos ativos",
-            cursos: cursoInfo,
-            tipo: "formador_com_cursos"
-          });
-        }
-      }
-
-      // Se tem apenas inscrições (não é formador com cursos ativos)
-      return res.status(400).json({
-        message: "Não é possível eliminar este utilizador pois está inscrito em cursos",
-        inscricoes: inscricoes.length,
-        tipo: "utilizador_com_inscricoes"
+    // ÚNICA VERIFICAÇÃO: Formadores com cursos ativos
+    if (user.id_cargo === 2) {
+      const cursosAtivos = await Curso.findAll({
+        where: { id_formador: userId, ativo: true }
       });
+
+      if (cursosAtivos.length > 0) {
+        const cursoInfo = cursosAtivos.map(curso => ({
+          id: curso.id_curso,
+          nome: curso.nome,
+          descricao: curso.descricao,
+          data_inicio: curso.data_inicio,
+          data_fim: curso.data_fim,
+          status: 'Ativo'
+        }));
+
+        return res.status(400).json({
+          message: "Não é possível eliminar este formador pois possui cursos ativos",
+          cursos: cursoInfo,
+          tipo: "formador_com_cursos"
+        });
+      }
     }
 
-    console.log('A iniciar eliminação do utilizador...');
-    // Proceder com a exclusão (o delete cascade é tratado no modelo)
+    console.log('🗑️ A eliminar utilizador...');
+    
+    // COM CASCADE: Esta linha elimina tudo automaticamente! 🚀
     await user.destroy();
 
-    console.log('Utilizador eliminado com sucesso');
+    console.log('✅ Utilizador eliminado com sucesso!');
     return res.status(200).json({
       message: "Utilizador eliminado com sucesso"
     });
 
   } catch (error) {
-    console.error("===== ERRO AO ELIMINAR UTILIZADOR =====");
-    console.error("Erro completo:", error);
-    console.error("Stack trace:", error.stack);
-
+    console.error('❌ Erro ao eliminar utilizador:', error.message);
+    
     return res.status(500).json({
       message: "Erro ao eliminar utilizador",
       error: error.message
@@ -1387,12 +1298,7 @@ const deleteUser = async (req, res) => {
 
 
 
-
-
-
-
 module.exports = {
-
   getAllUsers,
   getFormadores,
   getFormandos,
@@ -1404,6 +1310,8 @@ module.exports = {
   loginUser,
   confirmAccount,
   resendConfirmation,
+  forgotPassword,        
+  resetPassword,         
   verifyToken,
 
   perfilUser,

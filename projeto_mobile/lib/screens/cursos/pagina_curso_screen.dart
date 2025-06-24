@@ -6,6 +6,8 @@ import 'conteudos_curso.dart';
 import 'presencas_curso.dart';
 import 'avaliacao_curso.dart';
 import '../../services/api_service.dart';
+import '../../components/sidebar_screen.dart';
+import '../../components/navbar_screen.dart';
 
 class PaginaCursoPage extends StatefulWidget {
   final String cursoId;
@@ -24,9 +26,10 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
   String? error;
   bool acessoNegado = false;
   int? userRole;
+  Map<String, dynamic>? currentUser;
 
-  // Estado para controlar a exibição dos detalhes
-  bool _mostrarDetalhes = true;
+  // Estado para controlar a exibição dos detalhes - CORRIGIDO
+  bool _mostrarDetalhes = true; // Por padrão sempre mostrar
 
   late TabController _tabController;
   final ApiService _apiService = ApiService();
@@ -34,7 +37,6 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
   @override
   void initState() {
     super.initState();
-    // Agora com 3 tabs (Presenças, Conteúdos, Avaliação)
     _tabController = TabController(length: 3, vsync: this);
     _fetchCursoDetails();
   }
@@ -51,12 +53,13 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         loading = true;
       });
 
-      // Obter dados do utilizador atual primeiro - ROTA CORRIGIDA
+      // Obter dados do utilizador atual primeiro
       try {
         final userResponse = await _apiService.get('/users/perfil');
         if (userResponse.statusCode == 200) {
           final userData = json.decode(userResponse.body);
           userRole = userData['id_cargo'];
+          currentUser = userData; // ✅ GUARDAR dados do usuário
           print(
               '👤 Utilizador carregado: ${userData['nome']} (Cargo: $userRole)');
         } else {
@@ -74,7 +77,7 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         final cursoData = json.decode(cursoResponse.body);
         print('📚 Curso carregado: ${cursoData['nome']}');
 
-        // Verificar inscrição do usuário ANTES da verificação de acesso
+        // Verificar inscrição do usuário
         bool userInscrito = false;
         try {
           print('🔍 Verificando inscrição para curso ${widget.cursoId}...');
@@ -99,9 +102,7 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         final dataFimCurso = DateTime.parse(cursoData['data_fim']);
         final cursoTerminado = dataFimCurso.isBefore(dataAtual);
 
-        // Verificação de acesso para cursos terminados:
-        // - Cursos assíncronos terminados: apenas administradores
-        // - Cursos síncronos terminados: apenas administradores OU alunos inscritos
+        // Verificação de acesso para cursos terminados
         if (cursoTerminado && userRole != 1) {
           if (cursoData['tipo'] == 'assincrono') {
             // Curso assíncrono terminado: apenas admins
@@ -126,16 +127,16 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
           loading = false;
           error = null;
 
-          // Definir estado inicial de mostrar detalhes e tab inicial baseado no status de inscrição
-          // Se não inscrito: mostrar detalhes e tab 0 (Presenças)
-          // Se inscrito: ocultar detalhes e tab 1 (Conteúdos)
-          _mostrarDetalhes = !inscrito;
+          // CORRIGIDO: Definir estado inicial dos detalhes
+          // Sempre mostrar detalhes por padrão, usuário pode ocultar se quiser
+          _mostrarDetalhes = true;
 
+          // Definir tab inicial baseado no status de inscrição
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (inscrito) {
-              _tabController.animateTo(1); // Conteúdos (agora índice 1)
+              _tabController.animateTo(1); // Conteúdos (índice 1)
             } else {
-              _tabController.animateTo(0); // Presenças (agora índice 0)
+              _tabController.animateTo(0); // Presenças (índice 0)
             }
           });
         });
@@ -218,10 +219,16 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
 
   Widget _buildErrorWidget() {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Erro'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      // ✅ CORRIGIDO: NavbarScreen no erro
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: NavbarScreen(
+          currentUser: currentUser,
+        ),
+      ),
+      drawer: SidebarScreen(
+        currentUser: currentUser,
+        currentRoute: '/cursos',
       ),
       body: Center(
         child: Container(
@@ -285,10 +292,16 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
 
   Widget _buildLoadingWidget() {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Carregando...'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      // ✅ CORRIGIDO: NavbarScreen no loading
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: NavbarScreen(
+          currentUser: currentUser,
+        ),
+      ),
+      drawer: SidebarScreen(
+        currentUser: currentUser,
+        currentRoute: '/cursos',
       ),
       body: Center(
         child: Column(
@@ -346,36 +359,14 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Título e estado do curso
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              curso?['nome'] ?? '',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              status,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                      // Título do curso
+                      Text(
+                        curso?['nome'] ?? '',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 8),
                       Row(
@@ -414,6 +405,24 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
                           ),
                         ],
                       ),
+                      // ✅ Estado do curso por baixo das vagas
+                      SizedBox(height: 4),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -451,14 +460,12 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
     setState(() {
       inscrito = novoEstado;
 
-      // Se acabou de se inscrever, ocultar detalhes e mudar para conteúdos
+      // Se acabou de se inscrever, mudar para conteúdos (manter detalhes visíveis)
       if (novoEstado) {
-        _mostrarDetalhes = false;
-        _tabController.animateTo(1); // Conteúdos (agora índice 1)
+        _tabController.animateTo(1); // Conteúdos (índice 1)
       } else {
-        // Se cancelou inscrição, mostrar detalhes
-        _mostrarDetalhes = true;
-        _tabController.animateTo(0); // Presenças (agora índice 0)
+        // Se cancelou inscrição, ir para presenças
+        _tabController.animateTo(0); // Presenças (índice 0)
       }
     });
   }
@@ -474,6 +481,18 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
     }
 
     return Scaffold(
+      // ✅ NavbarScreen no topo
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: NavbarScreen(
+          currentUser: currentUser,
+        ),
+      ),
+      // ✅ SidebarScreen como drawer
+      drawer: SidebarScreen(
+        currentUser: currentUser,
+        currentRoute: '/cursos',
+      ),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
@@ -483,6 +502,8 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
               pinned: true,
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
+              // ✅ Sem seta de volta
+              automaticallyImplyLeading: false,
               flexibleSpace: FlexibleSpaceBar(
                 background: _buildCourseHeader(),
               ),
@@ -491,19 +512,25 @@ class _PaginaCursoPageState extends State<PaginaCursoPage>
         },
         body: Column(
           children: [
-            // Mostrar detalhes quando solicitado
-            if (_mostrarDetalhes)
-              Container(
-                color: Colors.white,
-                child: DetalhesCurso(
-                  cursoId: widget.cursoId,
-                  curso: curso!,
-                  inscrito: inscrito,
-                  userRole: userRole,
-                  mostrarDetalhes: _mostrarDetalhes,
-                  onInscricaoChanged: _onInscricaoChanged,
-                ),
-              ),
+            // SEMPRE mostrar detalhes quando solicitado
+            AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              height: _mostrarDetalhes ? null : 0,
+              child: _mostrarDetalhes
+                  ? Container(
+                      color: Colors.white,
+                      child: DetalhesCurso(
+                        cursoId: widget.cursoId,
+                        curso: curso!,
+                        inscrito: inscrito,
+                        userRole: userRole,
+                        mostrarDetalhes: _mostrarDetalhes,
+                        onInscricaoChanged: _onInscricaoChanged,
+                        // ✅ REMOVIDO: hideCancel (já não existe)
+                      ),
+                    )
+                  : Container(),
+            ),
 
             Container(
               color: Colors.white,

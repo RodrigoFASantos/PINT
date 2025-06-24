@@ -133,36 +133,366 @@ class _ForumScreenState extends State<ForumScreen> {
     }
   }
 
+  // ✅ IMPLEMENTADO: Diálogo para criar tópico (Admins/Formadores)
   void _showCriarTopicoDialog(Map<String, dynamic> categoria) {
+    final TextEditingController tituloController = TextEditingController();
+    final TextEditingController descricaoController = TextEditingController();
+    bool isLoading = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Criar Tópico'),
-        content:
-            Text('Funcionalidade de criar tópico será implementada em breve.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.add_circle, color: Color(0xFF5181B8)),
+              SizedBox(width: 8),
+              Text('Criar Novo Tópico'),
+            ],
           ),
-        ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Categoria
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.folder, color: Color(0xFF5181B8), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Categoria: ${categoria['nome']}',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Título
+                Text(
+                  'Título do Tópico:',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: tituloController,
+                  decoration: InputDecoration(
+                    hintText: 'Digite o título do tópico',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: Icon(Icons.title, color: Color(0xFF5181B8)),
+                  ),
+                  maxLength: 100,
+                ),
+                SizedBox(height: 16),
+
+                // Descrição
+                Text(
+                  'Descrição (opcional):',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: descricaoController,
+                  decoration: InputDecoration(
+                    hintText: 'Digite uma descrição para o tópico',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon:
+                        Icon(Icons.description, color: Color(0xFF5181B8)),
+                  ),
+                  maxLines: 3,
+                  maxLength: 500,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final titulo = tituloController.text.trim();
+                      if (titulo.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('O título do tópico é obrigatório'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        final result = await _apiService.criarTopico(
+                          idCategoria:
+                              categoria['id_categoria'] ?? categoria['id'],
+                          titulo: titulo,
+                          descricao: descricaoController.text.trim().isNotEmpty
+                              ? descricaoController.text.trim()
+                              : null,
+                        );
+
+                        Navigator.pop(context);
+
+                        if (result != null && result['success'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['message'] ??
+                                  'Tópico criado com sucesso!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          // Recarregar tópicos da categoria
+                          await _carregarTopicosCategoria(
+                              categoria['id_categoria'] ?? categoria['id']);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  result?['message'] ?? 'Erro ao criar tópico'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro ao criar tópico: $error'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF5181B8),
+              ),
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text('Criar Tópico'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // ✅ IMPLEMENTADO: Diálogo para solicitar tópico (Formandos)
   void _showSolicitarTopicoDialog(Map<String, dynamic> categoria) {
+    final TextEditingController tituloController = TextEditingController();
+    final TextEditingController descricaoController = TextEditingController();
+    bool isLoading = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Solicitar Tópico'),
-        content: Text(
-            'Funcionalidade de solicitar tópico será implementada em breve.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.request_page, color: Color(0xFFFF8000)),
+              SizedBox(width: 8),
+              Text('Solicitar Novo Tópico'),
+            ],
           ),
-        ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Info sobre solicitação
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sua solicitação será enviada para o administrador para aprovação.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Categoria
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.folder, color: Color(0xFFFF8000), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Categoria: ${categoria['nome']}',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Título
+                Text(
+                  'Título do Tópico:',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: tituloController,
+                  decoration: InputDecoration(
+                    hintText: 'Digite o título do tópico',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: Icon(Icons.title, color: Color(0xFFFF8000)),
+                  ),
+                  maxLength: 100,
+                ),
+                SizedBox(height: 16),
+
+                // Descrição
+                Text(
+                  'Descrição (opcional):',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: descricaoController,
+                  decoration: InputDecoration(
+                    hintText: 'Descreva brevemente o que gostaria de discutir',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon:
+                        Icon(Icons.description, color: Color(0xFFFF8000)),
+                  ),
+                  maxLines: 3,
+                  maxLength: 500,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final titulo = tituloController.text.trim();
+                      if (titulo.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('O título do tópico é obrigatório'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        final result = await _apiService.solicitarTopico(
+                          idCategoria:
+                              categoria['id_categoria'] ?? categoria['id'],
+                          titulo: titulo,
+                          descricao: descricaoController.text.trim().isNotEmpty
+                              ? descricaoController.text.trim()
+                              : null,
+                        );
+
+                        Navigator.pop(context);
+
+                        if (result != null && result['success'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['message'] ??
+                                  'Solicitação enviada com sucesso!'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 4),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result?['message'] ??
+                                  'Erro ao enviar solicitação'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro ao enviar solicitação: $error'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFFF8000),
+              ),
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text('Enviar Solicitação'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -190,7 +520,7 @@ class _ForumScreenState extends State<ForumScreen> {
     if (loading) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Fórum de Partilha'),
+          title: Text('Fórum'),
           backgroundColor: Color(0xFFFF8000),
         ),
         drawer: SidebarScreen(
@@ -205,7 +535,7 @@ class _ForumScreenState extends State<ForumScreen> {
                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8000)),
               ),
               SizedBox(height: 16),
-              Text('A carregar fórum de partilha...'),
+              Text('A carregar fórum...'),
             ],
           ),
         ),
@@ -215,7 +545,7 @@ class _ForumScreenState extends State<ForumScreen> {
     if (erro != null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Fórum de Partilha'),
+          title: Text('Fórum'),
           backgroundColor: Color(0xFFFF8000),
         ),
         drawer: SidebarScreen(
@@ -261,7 +591,7 @@ class _ForumScreenState extends State<ForumScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Fórum de Partilha'),
+        title: Text('Fórum'),
         backgroundColor: Color(0xFFFF8000),
       ),
       drawer: SidebarScreen(
@@ -272,20 +602,6 @@ class _ForumScreenState extends State<ForumScreen> {
         color: Color(0xFFF5F7FB),
         child: Column(
           children: [
-            // Header
-            Container(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'Fórum de Partilha de Conhecimento',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
             // Lista de categorias
             Expanded(
               child: categorias.isEmpty
@@ -360,23 +676,32 @@ class _ForumScreenState extends State<ForumScreen> {
                                     ),
 
                                     // Botão criar/solicitar tópico
-                                    ElevatedButton(
+                                    ElevatedButton.icon(
                                       onPressed: () =>
                                           _handleCriarTopico(categoria),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color(0xFF5181B8),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
+                                      icon: Icon(
+                                        userRole == 1 || userRole == 2
+                                            ? Icons.add
+                                            : Icons.request_page,
+                                        size: 18,
                                       ),
-                                      child: Text(
+                                      label: Text(
                                         userRole == 1 || userRole == 2
                                             ? 'Criar Tópico'
                                             : 'Solicitar Tópico',
-                                        style: TextStyle(fontSize: 14),
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            userRole == 1 || userRole == 2
+                                                ? Color(0xFF5181B8)
+                                                : Color(0xFFFF8000),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
                                       ),
                                     ),
                                   ],

@@ -20,6 +20,13 @@ function Login() {
   const [resendMessage, setResendMessage] = useState("");
   const [resendError, setResendError] = useState("");
 
+  // Estado para recuperação de senha
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [showForgotForm, setShowForgotForm] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotError, setForgotError] = useState("");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     
@@ -59,7 +66,7 @@ function Login() {
     }
     
     try {
-      const response = await axios.post(`${API_BASE}/users/resend-confirmation`, {
+      const response = await axios.post(`${API_BASE}/auth/resend-confirmation`, {
         email: resendEmail
       });
       
@@ -83,8 +90,69 @@ function Login() {
     }
   };
 
+  // Função para lidar com a recuperação de senha
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotError("");
+    setForgotMessage("");
+    
+    if (!forgotEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail)) {
+      setForgotError("Por favor, forneça um email válido");
+      setForgotLoading(false);
+      return;
+    }
+    
+    try {
+      const response = await axios.post(`${API_BASE}/auth/forgot-password`, {
+        email: forgotEmail
+      });
+      
+      setForgotMessage("Email de recuperação enviado com sucesso! Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.");
+      
+      // Limpar o formulário após 5 segundos e voltar para login
+      setTimeout(() => {
+        setShowForgotForm(false);
+        setForgotEmail("");
+        setForgotMessage("");
+      }, 5000);
+      
+    } catch (err) {
+      console.error("Erro ao enviar recuperação de senha:", err);
+      setForgotError(
+        err.response?.data?.message || 
+        "Erro ao enviar email de recuperação. Verifique se o email está correto e tente novamente."
+      );
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const toggleResendForm = () => {
     setShowResendForm(!showResendForm);
+    setShowForgotForm(false); // Fechar formulário de recuperação se estiver aberto
+    setResendEmail("");
+    setResendMessage("");
+    setResendError("");
+  };
+
+  const toggleForgotForm = () => {
+    setShowForgotForm(!showForgotForm);
+    setShowResendForm(false); // Fechar formulário de reenvio se estiver aberto
+    setForgotEmail("");
+    setForgotMessage("");
+    setForgotError("");
+  };
+
+  const backToLogin = () => {
+    setShowResendForm(false);
+    setShowForgotForm(false);
+    setResendEmail("");
+    setResendMessage("");
+    setResendError("");
+    setForgotEmail("");
+    setForgotMessage("");
+    setForgotError("");
   };
 
   return (
@@ -113,7 +181,7 @@ function Login() {
                 </div>
               )}
 
-              {!showResendForm ? (
+              {!showResendForm && !showForgotForm ? (
                 <>
                   <form onSubmit={handleLogin}>
                     <input
@@ -148,10 +216,12 @@ function Login() {
                     <button className="button" type="submit">Entrar</button>
                   </form>
 
-                  <a className="a" href="/recover">Esqueci a senha!</a>
-                  <button onClick={toggleResendForm} className="a">Não recebeu o email de confirmação?</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '15px' }}>
+                    <button onClick={toggleForgotForm} className="a">Esqueci a senha!</button>
+                    <button onClick={toggleResendForm} className="a">Não recebeu o email de confirmação?</button>
+                  </div>
                 </>
-              ) : (
+              ) : showResendForm ? (
                 <>
                   {resendMessage && (
                     <div 
@@ -201,7 +271,59 @@ function Login() {
                       {resendLoading ? "A enviar..." : "Enviar"}
                     </button>
                   </form>
-                  <button onClick={toggleResendForm} className="a">Voltar para Login</button>
+                  <button onClick={backToLogin} className="a">Voltar para Login</button>
+                </>
+              ) : (
+                <>
+                  {forgotMessage && (
+                    <div 
+                      style={{
+                        color: 'green', 
+                        marginBottom: '10px', 
+                        textAlign: 'center',
+                        padding: '10px',
+                        backgroundColor: '#eeffee',
+                        borderRadius: '5px'
+                      }}
+                    >
+                      {forgotMessage}
+                    </div>
+                  )}
+                  
+                  {forgotError && (
+                    <div 
+                      style={{
+                        color: 'red', 
+                        marginBottom: '10px', 
+                        textAlign: 'center',
+                        padding: '10px',
+                        backgroundColor: '#ffeeee',
+                        borderRadius: '5px'
+                      }}
+                    >
+                      {forgotError}
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleForgotPassword}>
+                    <h3 style={{ textAlign: 'center', marginBottom: '15px' }}>Recuperar senha</h3>
+                    <input
+                      className="input"
+                      type="email"
+                      placeholder="Digite seu email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required
+                    />
+                    <button 
+                      className="button" 
+                      type="submit"
+                      disabled={forgotLoading}
+                    >
+                      {forgotLoading ? "A enviar..." : "Enviar"}
+                    </button>
+                  </form>
+                  <button onClick={backToLogin} className="a">Voltar para Login</button>
                 </>
               )}
             </div>

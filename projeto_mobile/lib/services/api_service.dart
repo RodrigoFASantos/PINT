@@ -1202,4 +1202,344 @@ class ApiService {
         return '📢'; // Ícone padrão de notificação
     }
   }
+
+// Método específico para obter dados do curso com debug melhorado
+  Future<Map<String, dynamic>?> getCursoDetalhado(String cursoId) async {
+    try {
+      debugPrint('🔍 [API] Carregando curso detalhado ID: $cursoId');
+
+      final response = await get('/cursos/$cursoId');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = parseResponseToMap(response);
+        if (data != null) {
+          debugPrint('✅ [API] Curso carregado: ${data['nome']}');
+          debugPrint('📊 [API] Dados do curso: ${data.keys}');
+
+          // Log dos dados importantes
+          debugPrint('👨‍🏫 [API] ID Formador: ${data['id_formador']}');
+          debugPrint('📂 [API] ID Categoria: ${data['id_categoria']}');
+          debugPrint('🎯 [API] ID Área: ${data['id_area']}');
+          debugPrint('🏷️ [API] ID Tópico Área: ${data['id_topico_area']}');
+          debugPrint('🖼️ [API] Imagem Path: ${data['imagem_path']}');
+          debugPrint('📁 [API] Dir Path: ${data['dir_path']}');
+
+          // Verificar se tem dados relacionados já incluídos
+          if (data['formador'] != null) {
+            debugPrint(
+                '👨‍🏫 [API] Dados do formador incluídos: ${data['formador']['nome']}');
+          }
+          if (data['categoria'] != null) {
+            debugPrint(
+                '📂 [API] Dados da categoria incluídos: ${data['categoria']['nome']}');
+          }
+          if (data['area'] != null) {
+            debugPrint(
+                '🎯 [API] Dados da área incluídos: ${data['area']['nome']}');
+          }
+          if (data['Topico_Area'] != null) {
+            debugPrint(
+                '🏷️ [API] Dados do tópico incluídos: ${data['Topico_Area']['titulo']}');
+          }
+
+          return data;
+        }
+        debugPrint('⚠️ [API] Resposta não contém dados válidos');
+        return null;
+      } else {
+        debugPrint('❌ [API] Erro ao carregar curso: ${response.statusCode}');
+        debugPrint('❌ [API] Response body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao carregar curso: $e');
+      return null;
+    }
+  }
+
+// Método para verificar conectividade com logs detalhados
+  Future<bool> verificarConectividade() async {
+    try {
+      debugPrint('🌐 [API] Verificando conectividade com: $_apiBase');
+
+      final response = await get('/').timeout(Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ [API] Conectividade OK');
+        return true;
+      } else {
+        debugPrint('❌ [API] Conectividade falhou: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Erro de conectividade: $e');
+      return false;
+    }
+  }
+
+  // MÉTODOS PARA AUTENTICAÇÃO E RECUPERAÇÃO DE SENHA
+
+  // Reenviar email de confirmação
+  Future<Map<String, dynamic>?> resendConfirmation(String email) async {
+    try {
+      debugPrint('📧 [API] Reenviando confirmação para: $email');
+
+      final response = await post('/auth/resend-confirmation', body: {
+        'email': email,
+      });
+
+      final data = parseResponseToMap(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Email de confirmação reenviado com sucesso');
+        return data ??
+            {
+              'success': true,
+              'message': 'Email de confirmação reenviado com sucesso!'
+            };
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao reenviar confirmação: ${response.statusCode}');
+        return data ??
+            {
+              'success': false,
+              'message': 'Erro ao reenviar email de confirmação'
+            };
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao reenviar confirmação: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Solicitar recuperação de senha
+  Future<Map<String, dynamic>?> forgotPassword(String email) async {
+    try {
+      debugPrint('🔑 [API] Solicitando recuperação de senha para: $email');
+
+      final response = await post('/auth/forgot-password', body: {
+        'email': email,
+      });
+
+      final data = parseResponseToMap(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Email de recuperação enviado com sucesso');
+        return data ??
+            {
+              'success': true,
+              'message': 'Email de recuperação enviado com sucesso!'
+            };
+      } else {
+        debugPrint(
+            '❌ [API] Erro ao enviar recuperação: ${response.statusCode}');
+        return data ??
+            {
+              'success': false,
+              'message': 'Erro ao enviar email de recuperação'
+            };
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao solicitar recuperação: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Redefinir senha com token
+  Future<Map<String, dynamic>?> resetPassword(
+      String token, String newPassword) async {
+    try {
+      debugPrint('🔑 [API] Redefinindo senha com token...');
+
+      final response = await post('/auth/reset-password', body: {
+        'token': token,
+        'password': newPassword,
+      });
+
+      final data = parseResponseToMap(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Senha redefinida com sucesso');
+        return data ??
+            {'success': true, 'message': 'Senha redefinida com sucesso!'};
+      } else {
+        debugPrint('❌ [API] Erro ao redefinir senha: ${response.statusCode}');
+        return data ?? {'success': false, 'message': 'Erro ao redefinir senha'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao redefinir senha: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Confirmar conta com token
+  Future<Map<String, dynamic>?> confirmAccount(String token) async {
+    try {
+      debugPrint('✅ [API] Confirmando conta com token...');
+
+      final response = await post('/users/confirm-account', body: {
+        'token': token,
+      });
+
+      final data = parseResponseToMap(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Conta confirmada com sucesso');
+
+        // Se retornou um token de autenticação, guardar
+        if (data != null && data['token'] != null) {
+          setAuthToken(data['token']);
+        }
+
+        return data ??
+            {'success': true, 'message': 'Conta confirmada com sucesso!'};
+      } else {
+        debugPrint('❌ [API] Erro ao confirmar conta: ${response.statusCode}');
+        return data ?? {'success': false, 'message': 'Erro ao confirmar conta'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao confirmar conta: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Extrair email do token JWT (para permitir reenvio)
+  String? extractEmailFromToken(String token) {
+    try {
+      // Dividir o token em partes
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      // Decodificar a parte payload (índice 1)
+      final payload = parts[1];
+
+      // Adicionar padding se necessário
+      String normalizedPayload = payload;
+      while (normalizedPayload.length % 4 != 0) {
+        normalizedPayload += '=';
+      }
+
+      // Decodificar base64
+      final decoded = utf8.decode(base64Decode(normalizedPayload));
+      final payloadMap = jsonDecode(decoded) as Map<String, dynamic>;
+
+      return payloadMap['email'] as String?;
+    } catch (e) {
+      debugPrint('❌ [API] Erro ao extrair email do token: $e');
+      return null;
+    }
+  }
+
+
+// MÉTODOS PARA TÓPICOS DO FÓRUM
+
+// ✅ NOVO: Método para solicitar criação de tópico (para formandos)
+Future<Map<String, dynamic>?> solicitarTopico({
+  required int idCategoria,
+  required String titulo,
+  String? descricao,
+}) async {
+  try {
+    debugPrint('📝 [API] Solicitando criação de tópico...');
+    debugPrint('📂 [API] Categoria: $idCategoria');
+    debugPrint('📝 [API] Título: "$titulo"');
+    debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
+
+    final response = await post('/topicos-area/solicitar', body: {
+      'id_categoria': idCategoria,
+      'titulo': titulo,
+      if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
+    });
+
+    final data = parseResponseToMap(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      debugPrint('✅ [API] Solicitação de tópico enviada com sucesso');
+      return data ??
+          {
+            'success': true,
+            'message': 'Solicitação enviada com sucesso! Aguarde aprovação do administrador.'
+          };
+    } else {
+      debugPrint('❌ [API] Erro ao solicitar tópico: ${response.statusCode}');
+      return data ??
+          {
+            'success': false,
+            'message': 'Erro ao enviar solicitação de tópico'
+          };
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Exceção ao solicitar tópico: $e');
+    return {
+      'success': false,
+      'message': 'Erro de conexão',
+      'error': e.toString()
+    };
+  }
+}
+
+// ✅ NOVO: Método para criar tópico (para admins/formadores)
+Future<Map<String, dynamic>?> criarTopico({
+  required int idCategoria,
+  required String titulo,
+  String? descricao,
+  int? idArea,
+}) async {
+  try {
+    debugPrint('🔧 [API] Criando novo tópico...');
+    debugPrint('📂 [API] Categoria: $idCategoria');
+    debugPrint('📝 [API] Título: "$titulo"');
+    debugPrint('🎯 [API] Área: ${idArea ?? 'Não especificada'}');
+    debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
+
+    final response = await post('/topicos-area', body: {
+      'id_categoria': idCategoria,
+      'titulo': titulo,
+      if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
+      if (idArea != null) 'id_area': idArea,
+    });
+
+    final data = parseResponseToMap(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      debugPrint('✅ [API] Tópico criado com sucesso');
+      return data ??
+          {
+            'success': true,
+            'message': 'Tópico criado com sucesso!'
+          };
+    } else {
+      debugPrint('❌ [API] Erro ao criar tópico: ${response.statusCode}');
+      return data ??
+          {
+            'success': false,
+            'message': 'Erro ao criar tópico'
+          };
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Exceção ao criar tópico: $e');
+    return {
+      'success': false,
+      'message': 'Erro de conexão',
+      'error': e.toString()
+    };
+  }
+}
+
 }
