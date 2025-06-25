@@ -1,20 +1,22 @@
 .body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9f9f9;
+  background-color: #f9f9f9 !important;
+  height: 100%;
+  z-index: 50 !important;
 }
 
-.p-6 {
+.p-6-lc {
   padding: 1.5rem;
   margin-top: 60px;
 }
 
 /* Espaço extra para rodapé fixo */
-.p-6.min-h-screen {
+.p-6-lc.min-h-screen-lc {
   padding-bottom: 4rem;
 }
 
 /* Paginação fixa no fundo da página */
-.pagination-container {
+.pagination-container-lc {
   position: fixed;
   bottom: 0;
   left: 50%;
@@ -31,7 +33,7 @@
 }
 
 /* Estilo dos botões de paginação */
-.pagination-button {
+.pagination-button-lc {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,23 +43,23 @@
   transition: all 0.3s ease;
 }
 
-.pagination-active {
+.pagination-active-lc {
   color: #3182ce;
   background-color: rgba(49, 130, 206, 0.1);
 }
 
-.pagination-active:hover {
+.pagination-active-lc:hover {
   background-color: rgba(49, 130, 206, 0.2);
   transform: translateY(-2px);
 }
 
-.pagination-disabled {
+.pagination-disabled-lc {
   color: #CBD5E0;
   cursor: not-allowed;
 }
 
 /* Botões de paginação */
-.pagination-button {
+.pagination-button-lc {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,17 +75,17 @@
   padding: 0 12px;
 }
 
-.pagination-active {
+.pagination-active-lc {
   color: #3182ce;
   border-color: #3182ce;
   background-color: white;
 }
 
-.pagination-active:hover {
+.pagination-active-lc:hover {
   background-color: rgba(49, 130, 206, 0.1);
 }
 
-.pagination-disabled {
+.pagination-disabled-lc {
   color: #CBD5E0;
   border-color: #E2E8F0;
   background-color: #F7FAFC;
@@ -91,38 +93,38 @@
 }
 
 /* Informação de página */
-.pagination-info {
+.pagination-info-lc {
   font-size: 1rem;
   font-weight: 500;
   color: #4A5568;
 }
 
 /* Grid de cursos com 3 colunas */
-.grid {
+.grid-lc {
   display: grid;
   gap: 1.5rem;
 }
 
 @media (min-width: 640px) {
-  .grid {
+  .grid-lc {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 768px) {
-  .grid {
+  .grid-lc {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
-  .grid {
+  .grid-lc {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
 /* Cartões dos cursos */
-.grid > div {
+.grid-lc > div {
   position: relative;
   height: 12rem;
   border-radius: 1rem;
@@ -134,13 +136,13 @@
   background-position: center !important;
 }
 
-.grid > div:hover {
+.grid-lc > div:hover {
   transform: translateY(-6px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Overlay escura e centralização de conteúdo */
-.grid > div > div {
+.grid-lc > div > div {
   position: absolute;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.4);
@@ -150,7 +152,7 @@
   justify-content: center;
 }
 
-.grid > div > div h3 {
+.grid-lc > div > div h3 {
   color: #fff;
   font-size: 1.25rem;
   font-weight: 600;
@@ -158,7 +160,7 @@
   padding: 0 1rem;
 }
 
-.grid > div > div p {
+.grid-lc > div > div p {
   color: #fff;
   font-size: 0.875rem;
   margin-top: 0.5rem;
@@ -166,14 +168,14 @@
 }
 
 /* Mensagem de nenhum curso */
-.text-center p {
+.text-center-lc p {
   font-size: 1.125rem;
 }
 
 /* Estilos para a barra de pesquisa e filtros nos cursos */
 
 /* Contêiner da barra de pesquisa */
-.cursos-search-container {
+.cursos-search-container-lc {
   display: flex;
   align-items: center;
   padding: 1rem;
@@ -185,7 +187,7 @@
   margin-bottom: 1rem;
 }
 
-.cursos-search-input-container {
+.cursos-search-input-container-lc {
   flex: 1;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -195,13 +197,13 @@
   background-color: white;
 }
 
-.cursos-search-icon {
+.cursos-search-icon-lc {
   color: #94a3b8;
   font-size: 1rem;
   margin-right: 0.5rem;
 }
 
-.cursos-search-input {
+.cursos-search-input-lc {
   flex: 1;
   border: none;
   outline: none;
@@ -210,7 +212,7 @@
   width: 100%;
 }
 
-.cursos-filter-button {
+.cursos-filter-button-lc {
   background-color: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -225,16 +227,16 @@
   transition: all 0.2s ease;
 }
 
-.cursos-filter-button:hover {
+.cursos-filter-button-lc:hover {
   background-color: #e2e8f0;
 }
 
-.cursos-filter-icon {
+.cursos-filter-icon-lc {
   margin-right: 0.5rem;
 }
 
 /* Área de filtros expandida */
-.cursos-filter-options {
+.cursos-filter-options-lc {
   padding: 1rem;
   background-color: #f8fafc;
   border-radius: 8px;
@@ -254,7 +256,7 @@
   }
 }
 
-.cursos-filter-group {
+.cursos-filter-group-lc {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -262,8 +264,8 @@
 }
 
 /* Botões para filtros de categoria e área */
-.cursos-filter-category-button,
-.cursos-filter-area-button {
+.cursos-filter-category-button-lc,
+.cursos-filter-area-button-lc {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -277,24 +279,24 @@
   transition: all 0.2s ease;
 }
 
-.cursos-filter-category-button:hover,
-.cursos-filter-area-button:hover {
+.cursos-filter-category-button-lc:hover,
+.cursos-filter-area-button-lc:hover {
   background-color: #f1f5f9;
   border-color: #cbd5e1;
 }
 
-.cursos-filter-area-button {
+.cursos-filter-area-button-lc {
   background-color: #eff6ff;
   border-color: #bfdbfe;
 }
 
-.cursos-filter-button-icon {
+.cursos-filter-button-icon-lc {
   font-size: 0.85rem;
   color: #64748b;
 }
 
 /* Botões de tipo de curso */
-.cursos-filter-tipo {
+.cursos-filter-tipo-lc {
   display: flex;
   gap: 0.25rem;
   border-radius: 6px;
@@ -303,7 +305,7 @@
   background-color: #f1f5f9;
 }
 
-.cursos-filter-tipo-button {
+.cursos-filter-tipo-button-lc {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -316,22 +318,22 @@
   transition: all 0.2s ease;
 }
 
-.cursos-filter-tipo-button:hover {
+.cursos-filter-tipo-button-lc:hover {
   background-color: rgba(226, 232, 240, 0.8);
 }
 
-.cursos-filter-tipo-active {
+.cursos-filter-tipo-active-lc {
   background-color: white;
   color: #3b82f6;
   font-weight: 500;
 }
 
-.cursos-filter-tipo-active .cursos-filter-button-icon {
+.cursos-filter-tipo-active-lc .cursos-filter-button-icon-lc {
   color: #3b82f6;
 }
 
 /* Botão limpar filtros */
-.cursos-filter-clear-button {
+.cursos-filter-clear-button-lc {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -346,16 +348,16 @@
   margin-left: auto;
 }
 
-.cursos-filter-clear-button:hover {
+.cursos-filter-clear-button-lc:hover {
   background-color: #fecaca;
 }
 
-.cursos-filter-clear-button .cursos-filter-button-icon {
+.cursos-filter-clear-button-lc .cursos-filter-button-icon-lc {
   color: #ef4444;
 }
 
 /* Estilo para os cards de cursos */
-.curso-card {
+.curso-card-lc {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
@@ -363,24 +365,24 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.curso-card:hover {
+.curso-card-lc:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
-  .cursos-filter-group {
+  .cursos-filter-group-lc {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .cursos-filter-tipo {
+  .cursos-filter-tipo-lc {
     flex-direction: column;
     width: 100%;
   }
   
-  .cursos-filter-clear-button {
+  .cursos-filter-clear-button-lc {
     margin-left: 0;
     width: 100%;
     justify-content: center;
@@ -389,13 +391,13 @@
 
 
 /* Estilos para os selects de categoria e área */
-.custom-select-wrapper {
+.custom-select-wrapper-lc {
   position: relative;
   display: inline-block;
 }
 
 /* Estilo base para os selects estilizados como botões */
-.custom-select-button {
+.custom-select-button-lc {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -414,37 +416,49 @@
 }
 
 /* Estilo específico para o select de categoria */
-.select-categoria {
+.select-categoria-lc {
   background-color: white;
   color: #334155;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
 }
 
-.select-categoria:hover {
+.select-categoria-lc:hover {
   background-color: #f1f5f9;
   border-color: #cbd5e1;
 }
 
 /* Estilo específico para o select de área */
-.select-area {
+.select-area-lc {
   background-color: white;
   color: #334155;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
 }
 
-.select-area:hover {
+.select-area-lc:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Estilo específico para o select de tópico */
+.select-topico-lc {
+  background-color: white;
+  color: #334155;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+}
+
+.select-topico-lc:hover {
   background-color: #f1f5f9;
   border-color: #cbd5e1;
 }
 
 /* Estilo para os selects desativados */
-.custom-select-button:disabled {
+.custom-select-button-lc:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 /* Posicionamento dos ícones dentro dos selects */
-.custom-select-icon {
+.custom-select-icon-lc {
   position: absolute;
   left: 10px;
   top: 50%;
@@ -455,7 +469,7 @@
 }
 
 /* Estilo para o spinner de carregamento */
-.loading-spinner {
+.loading-spinner-lc {
   display: inline-block;
   width: 3rem;
   height: 3rem;
@@ -475,7 +489,7 @@
 }
 
 /* Título da página */
-.page-title {
+.page-title-lc {
   font-size: 24px;
   font-weight: 600;
   color: #333;
@@ -484,7 +498,7 @@
   padding-bottom: 10px;
 }
 
-.page-title:after {
+.page-title-lc:after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -494,14 +508,14 @@
   background-color: #3182ce;
 }
 
-.curso-card-overlay {
+.curso-card-overlay-lc {
   position: absolute;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.4);
 }
 
 /* Título no canto superior esquerdo */
-.curso-overlay-title {
+.curso-overlay-title-lc {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
@@ -511,7 +525,7 @@
 }
 
 /* Datas no canto superior direito */
-.curso-overlay-dates {
+.curso-overlay-dates-lc {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
@@ -520,7 +534,7 @@
 }
 
 /* Vagas logo abaixo do título */
-.curso-overlay-vagas {
+.curso-overlay-vagas-lc {
   position: absolute;
   top: 2.25rem;  /* ajusta conforme o tamanho do título */
   left: 0.5rem;

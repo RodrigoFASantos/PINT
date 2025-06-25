@@ -372,36 +372,36 @@ useEffect(() => {
       : fallbackCurso;
 
   return (
-    <div className="p-6 min-h-screen flex flex-col bg-white">
+    <div className="p-6-lc min-h-screen-lc flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      <h1 className="page-title">Cursos</h1>
+      <h1 className="page-title-lc">Cursos</h1>
 
       {/* Busca e filtros */}
-      <div className="cursos-search-container">
-        <div className="cursos-search-input-container">
-          <i className="fas fa-search cursos-search-icon"></i>
-          <input type="text" placeholder="Pesquisar cursos..." value={searchTerm} onChange={handleSearchChange} className="cursos-search-input" />
+      <div className="cursos-search-container-lc">
+        <div className="cursos-search-input-container-lc">
+          <i className="fas fa-search cursos-search-icon-lc"></i>
+          <input type="text" placeholder="Pesquisar cursos..." value={searchTerm} onChange={handleSearchChange} className="cursos-search-input-lc" />
         </div>
-        <button className="cursos-filter-button" onClick={toggleFilters}>
-          <i className="fas fa-filter cursos-filter-icon"></i><span>Filtros</span>
+        <button className="cursos-filter-button-lc" onClick={toggleFilters}>
+          <i className="fas fa-filter cursos-filter-icon-lc"></i><span>Filtros</span>
         </button>
       </div>
 
       {showFilters && (
-        <div className="cursos-filter-options">
-          <div className="cursos-filter-group">
+        <div className="cursos-filter-options-lc">
+          <div className="cursos-filter-group-lc">
             {/* Categoria - Sempre visível */}
-            <div className="custom-select-wrapper">
-              <select className="custom-select-button select-categoria" value={categoriaId} onChange={handleCategoriaChange}>
+            <div className="custom-select-wrapper-lc">
+              <select className="custom-select-button-lc select-categoria-lc" value={categoriaId} onChange={handleCategoriaChange}>
                 <option value="">Selecionar Categoria</option>
                 {categorias.map(cat => <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nome}</option>)}
               </select>
-              <i className="fas fa-folder custom-select-icon"></i>
+              <i className="fas fa-folder custom-select-icon-lc"></i>
             </div>
 
             {/* Área - Sempre visível */}
-            <div className="custom-select-wrapper">
-              <select className="custom-select-button select-area" value={areaId} onChange={handleAreaChange} disabled={isLoading}>
+            <div className="custom-select-wrapper-lc">
+              <select className="custom-select-button-lc select-area-lc" value={areaId} onChange={handleAreaChange} disabled={isLoading}>
                 <option value="">Selecionar Área</option>
                 {isLoading
                   ? <option disabled>A carregar áreas...</option>
@@ -410,12 +410,12 @@ useEffect(() => {
                     : <option disabled>Selecione uma categoria primeiro</option>
                 }
               </select>
-              <i className="fas fa-bookmark custom-select-icon"></i>
+              <i className="fas fa-bookmark custom-select-icon-lc"></i>
             </div>
 
             {/* Tópico - Sempre visível */}
-            <div className="custom-select-wrapper">
-              <select className="custom-select-button select-topico" value={topicoId} onChange={handleTopicoChange} disabled={isLoading || !areaId}>
+            <div className="custom-select-wrapper-lc">
+              <select className="custom-select-button-lc select-topico-lc" value={topicoId} onChange={handleTopicoChange} disabled={isLoading || !areaId}>
                 <option value="">Selecionar Tópico</option>
                 {isLoading
                   ? <option disabled>A carregar tópicos...</option>
@@ -430,14 +430,14 @@ useEffect(() => {
                       : <option disabled>Nenhum tópico disponível para esta área</option>
                 }
               </select>
-              <i className="fas fa-tag custom-select-icon"></i>
+              <i className="fas fa-tag custom-select-icon-lc"></i>
             </div>
 
             {/* Tipo */}
-            <div className="cursos-filter-tipo">
+            <div className="cursos-filter-tipo-lc">
               {['todos', 'sincrono', 'assincrono'].map(tipo => (
-                <button key={tipo} className={`cursos-filter-tipo-button ${tipoFiltro === tipo ? 'cursos-filter-tipo-active' : ''}`} onClick={() => setTipoFiltro(tipo)}>
-                  <i className={`fas ${tipo === 'sincrono' ? 'fa-users' : tipo === 'assincrono' ? 'fa-book' : 'fa-th-list'} cursos-filter-button-icon`}></i>
+                <button key={tipo} className={`cursos-filter-tipo-button-lc ${tipoFiltro === tipo ? 'cursos-filter-tipo-active-lc' : ''}`} onClick={() => setTipoFiltro(tipo)}>
+                  <i className={`fas ${tipo === 'sincrono' ? 'fa-users' : tipo === 'assincrono' ? 'fa-book' : 'fa-th-list'} cursos-filter-button-icon-lc`}></i>
                   <span>{tipo === 'todos' ? 'Todos' : tipo === 'sincrono' ? 'Síncronos' : 'Assíncronos'}</span>
                 </button>
               ))}
@@ -445,8 +445,8 @@ useEffect(() => {
 
             {/* Limpar */}
             {(searchTerm || categoriaId || areaId || topicoId || tipoFiltro !== 'todos') && (
-              <button className="cursos-filter-clear-button" onClick={clearFilters}>
-                <i className="fas fa-times cursos-filter-button-icon"></i><span>Limpar Filtros</span>
+              <button className="cursos-filter-clear-button-lc" onClick={clearFilters}>
+                <i className="fas fa-times cursos-filter-button-icon-lc"></i><span>Limpar Filtros</span>
               </button>
             )}
           </div>
@@ -454,19 +454,19 @@ useEffect(() => {
       )}
 
       {/* Carregamento */}
-      {isLoading && <div className="text-center py-8"><div className="loading-spinner"></div><p className="text-gray-600 mt-4">A carregar cursos...</p></div>}
+      {isLoading && <div className="text-center-lc py-8"><div className="loading-spinner-lc"></div><p className="text-gray-600 mt-4">A carregar cursos...</p></div>}
 
       {/* Lista de cursos */}
-      {!isLoading && <div className="grid">{cursos.map(curso => <div key={curso.id_curso} onClick={() => handleCursoClick(curso.id_curso)} className="curso-card cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105" style={{ backgroundImage: `url(${getImageUrl(curso)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}><div className="curso-card-overlay"><span className="curso-overlay-title">{curso.nome}</span><span className="curso-overlay-dates">{new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}</span><span className="curso-overlay-vagas">{curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}</span></div></div>)}</div>}
+      {!isLoading && <div className="grid-lc">{cursos.map(curso => <div key={curso.id_curso} onClick={() => handleCursoClick(curso.id_curso)} className="curso-card-lc cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105" style={{ backgroundImage: `url(${getImageUrl(curso)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}><div className="curso-card-overlay-lc"><span className="curso-overlay-title-lc">{curso.nome}</span><span className="curso-overlay-dates-lc">{new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}</span><span className="curso-overlay-vagas-lc">{curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}</span></div></div>)}</div>}
 
       {/* Sem resultados */}
-      {!isLoading && cursos.length === 0 && <div className="text-center py-10"><p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p></div>}
+      {!isLoading && cursos.length === 0 && <div className="text-center-lc py-10"><p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p></div>}
 
       {/* Paginação */}
-      <div className="flex justify-center items-center my-6 pagination-container">
-        <button onClick={goToPreviousPage} disabled={currentPage === 1} className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`} aria-label="Página anterior"><span className="pagination-icon">&#10094;</span></button>
-        <span className="mx-4 text-lg font-medium pagination-info">{currentPage}/{totalPages}</span>
-        <button onClick={goToNextPage} disabled={currentPage === totalPages} className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`} aria-label="Próxima página"><span className="pagination-icon">&#10095;</span></button>
+      <div className="flex justify-center items-center my-6 pagination-container-lc">
+        <button onClick={goToPreviousPage} disabled={currentPage === 1} className={`px-4 py-2 pagination-button-lc ${currentPage === 1 ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} aria-label="Página anterior"><span className="pagination-icon">&#10094;</span></button>
+        <span className="mx-4 text-lg font-medium pagination-info-lc">{currentPage}/{totalPages}</span>
+        <button onClick={goToNextPage} disabled={currentPage === totalPages} className={`px-4 py-2 pagination-button-lc ${currentPage === totalPages ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} aria-label="Próxima página"><span className="pagination-icon">&#10095;</span></button>
       </div>
     </div>
   );

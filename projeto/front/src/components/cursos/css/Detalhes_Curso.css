@@ -1,6 +1,4 @@
-/* ==========================================
-   CONTAINER PRINCIPAL
-   ========================================== */
+/* CONTAINER PRINCIPAL */
 .curso-detalhes-wrapper {
   width: 100%;
   background-color: #fff;
@@ -11,9 +9,7 @@
   position: relative;
 }
 
-/* ==========================================
-   CAPA DO CURSO
-   ========================================== */
+/* CAPA DO CURSO */
 .curso-cabecalho {
   position: relative;
   padding: 2rem;
@@ -102,9 +98,7 @@
   color: #b91c1c;
 }
 
-/* ==========================================
-   BOTÃO DE INFORMAÇÃO
-   ========================================== */
+/* BOTÃO DE INFORMAÇÃO */
 .icones-acao-container {
   position: absolute;
   bottom: 15px;
@@ -137,9 +131,7 @@
   font-size: 1.25rem;
 }
 
-/* ==========================================
-   DETALHES DO CURSO (ÁREA EXPANSÍVEL)
-   ========================================== */
+/* DETALHES DO CURSO (ÁREA EXPANSÍVEL) */
 .curso-detalhes {
   padding: 0;
   animation: fadeIn 0.3s ease-in-out;
@@ -157,9 +149,7 @@
   width: 100%;
 }
 
-/* ==========================================
-   CAMPOS DE INFORMAÇÃO
-   ========================================== */
+/* CAMPOS DE INFORMAÇÃO */
 .campo-container {
   display: flex;
   margin-bottom: 10px;
@@ -239,9 +229,7 @@
   transition: background-color 0.3s ease;
 }
 
-/* ==========================================
-   ÁREA DE BOTÕES ADMIN
-   ========================================== */
+/* ÁREA DE BOTÕES ADMIN */
 .botoes-admin {
   margin-top: 20px;
   display: flex;
@@ -250,7 +238,7 @@
 
 .botoes-admin > div {
   display: flex;
-  flex-wrap: nowrap; /* Força os botões a ficarem na mesma linha */
+  flex-wrap: nowrap;
   gap: 10px;
   width: 100%;
   justify-content: center;
@@ -270,9 +258,9 @@
   color: white;
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  flex: 1; /* Distribuir espaço igualmente */
-  max-width: 200px; /* Limitar largura máxima */
-  height: 45px; /* Altura fixa para todos os botões */
+  flex: 1;
+  max-width: 200px;
+  height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,9 +311,7 @@
   transform: translateY(-2px);
 }
 
-/* ==========================================
-   MODAIS
-   ========================================== */
+/* MODAIS */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -398,9 +384,7 @@
   transform: translateY(-2px);
 }
 
-/* ==========================================
-   COMPONENTES DE FEEDBACK
-   ========================================== */
+/* COMPONENTES DE FEEDBACK */
 /* Indicador de carregamento */
 .carregamento-spinner {
   border: 3px solid rgba(0, 0, 0, 0.1);
@@ -419,9 +403,7 @@
   padding: 2rem;
 }
 
-/* ==========================================
-   ANIMAÇÕES
-   ========================================== */
+/* ANIMAÇÕES */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -437,9 +419,7 @@
   100% { transform: rotate(360deg); }
 }
 
-/* ==========================================
-   RESPONSIVIDADE
-   ========================================== */
+/* RESPONSIVIDADE */
 @media screen and (max-width: 768px) {
   .campo-container {
     flex-direction: column;
@@ -467,15 +447,16 @@
   .botao-apagar-admin,
   .botao-inscricoes,
   .botao-avaliacoes {
-    width: calc(50% - 5px); /* 2 botões por linha com gap de 10px */
+    width: calc(50% - 5px);
     max-width: none;
     flex: none;
     margin-bottom: 10px;
   }
 }
+
 .campos-grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* Três colunas com o mesmo tamanho */
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 10px;
   width: 100%;
@@ -509,95 +490,42 @@
 
 @media screen and (max-width: 768px) {
   .campos-grid-3 {
-    grid-template-columns: 1fr; /* Uma coluna em telas pequenas */
+    grid-template-columns: 1fr;
   }
 }
 
-/* ==========================================
-   CURSOS ASSOCIADOS
-   ========================================== */
+/* CURSOS RELACIONADOS - Apenas exibição de nomes */
 
-/* Estilos para a secção de cursos associados */
+/* Estilos para a secção de cursos relacionados */
 .campo-cursos-associados {
   width: 100%;
 }
 
-.cursos-associados-lista {
+.cursos-relacionados-lista {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: 300px;
+  gap: 8px;
+  max-height: 200px;
   overflow-y: auto;
   padding: 8px 0;
 }
 
-.curso-associado-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
+.curso-relacionado-item {
+  padding: 8px 12px;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 6px;
   background-color: #f9f9f9;
-  transition: all 0.3s ease;
-  cursor: pointer;
 }
 
-.curso-associado-item:hover {
-  background-color: #f0f0f0;
-  border-color: #007bff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.curso-associado-info {
-  flex: 1;
-  margin-right: 12px;
-}
-
-.curso-associado-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  line-height: 1.3;
-}
-
-.curso-associado-descricao {
-  margin: 0;
+.curso-relacionado-nome {
   font-size: 14px;
-  color: #666;
+  font-weight: 500;
+  color: #333;
   line-height: 1.4;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
-.curso-associado-imagem {
-  flex-shrink: 0;
-  width: 60px;
-  height: 40px;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid #ddd;
-}
-
-.curso-associado-imagem img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.curso-associado-item:hover .curso-associado-imagem img {
-  transform: scale(1.05);
-}
-
-/* Estados de carregamento para cursos associados */
-.cursos-associados-loading {
+/* Estados de carregamento para cursos relacionados */
+.loading-associados {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -606,8 +534,7 @@
   font-style: italic;
 }
 
-.cursos-associados-loading::before {
-  content: '';
+.spinner-pequeno {
   width: 16px;
   height: 16px;
   border: 2px solid #ddd;
@@ -617,8 +544,8 @@
   margin-right: 8px;
 }
 
-/* Estilo quando não há cursos associados */
-.sem-cursos-associados {
+/* Estilo quando não há cursos relacionados */
+.sem-cursos-relacionados {
   padding: 16px;
   text-align: center;
   color: #888;
@@ -628,31 +555,14 @@
   border: 1px dashed #ddd;
 }
 
-/* Animação suave para quando os cursos associados aparecem */
-.cursos-associados-lista {
+/* Animação suave para quando os cursos relacionados aparecem */
+.cursos-relacionados-lista {
   animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Responsividade para dispositivos móveis */
 @media (max-width: 768px) {
-  .curso-associado-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .curso-associado-info {
-    margin-right: 0;
-    width: 100%;
-  }
-  
-  .curso-associado-imagem {
-    width: 80px;
-    height: 50px;
-    align-self: center;
-  }
-  
-  .cursos-associados-lista {
-    max-height: 250px;
+  .cursos-relacionados-lista {
+    max-height: 150px;
   }
 }

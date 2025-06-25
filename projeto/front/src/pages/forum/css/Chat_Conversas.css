@@ -4,6 +4,8 @@
   height: 100%;
   width: 100%;
   position: relative;
+  margin-top: 60px;
+  background-color: #f0f2f5 !important;
 }
 
 .main-content {

@@ -13,13 +13,6 @@ function Login() {
   const [lembrar, setLembrar] = useState(false);
   const navigate = useNavigate();
   
-  // Estado para reenvio de confirmação
-  const [resendEmail, setResendEmail] = useState("");
-  const [showResendForm, setShowResendForm] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendMessage, setResendMessage] = useState("");
-  const [resendError, setResendError] = useState("");
-
   // Estado para recuperação de senha
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgotForm, setShowForgotForm] = useState(false);
@@ -49,44 +42,6 @@ function Login() {
       sessionStorage.removeItem('homeVisited');
       // Usar window.location.href em vez de navigate para garantir um refresh completo
       window.location.href = "/home";
-    }
-  };
-
-  // Função para lidar com o reenvio de confirmação
-  const handleResendConfirmation = async (e) => {
-    e.preventDefault();
-    setResendLoading(true);
-    setResendError("");
-    setResendMessage("");
-    
-    if (!resendEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resendEmail)) {
-      setResendError("Por favor, forneça um email válido");
-      setResendLoading(false);
-      return;
-    }
-    
-    try {
-      const response = await axios.post(`${API_BASE}/auth/resend-confirmation`, {
-        email: resendEmail
-      });
-      
-      setResendMessage("Email de confirmação reenviado com sucesso! Verifique sua caixa de entrada.");
-      
-      // Limpar o formulário após 5 segundos e voltar para login
-      setTimeout(() => {
-        setShowResendForm(false);
-        setResendEmail("");
-        setResendMessage("");
-      }, 5000);
-      
-    } catch (err) {
-      console.error("Erro ao reenviar confirmação:", err);
-      setResendError(
-        err.response?.data?.message || 
-        "Erro ao reenviar confirmação. Este email pode não estar registrado ou já foi confirmado."
-      );
-    } finally {
-      setResendLoading(false);
     }
   };
 
@@ -128,28 +83,15 @@ function Login() {
     }
   };
 
-  const toggleResendForm = () => {
-    setShowResendForm(!showResendForm);
-    setShowForgotForm(false); // Fechar formulário de recuperação se estiver aberto
-    setResendEmail("");
-    setResendMessage("");
-    setResendError("");
-  };
-
   const toggleForgotForm = () => {
     setShowForgotForm(!showForgotForm);
-    setShowResendForm(false); // Fechar formulário de reenvio se estiver aberto
     setForgotEmail("");
     setForgotMessage("");
     setForgotError("");
   };
 
   const backToLogin = () => {
-    setShowResendForm(false);
     setShowForgotForm(false);
-    setResendEmail("");
-    setResendMessage("");
-    setResendError("");
     setForgotEmail("");
     setForgotMessage("");
     setForgotError("");
@@ -181,7 +123,7 @@ function Login() {
                 </div>
               )}
 
-              {!showResendForm && !showForgotForm ? (
+              {!showForgotForm ? (
                 <>
                   <form onSubmit={handleLogin}>
                     <input
@@ -218,60 +160,7 @@ function Login() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '15px' }}>
                     <button onClick={toggleForgotForm} className="a">Esqueci a senha!</button>
-                    <button onClick={toggleResendForm} className="a">Não recebeu o email de confirmação?</button>
                   </div>
-                </>
-              ) : showResendForm ? (
-                <>
-                  {resendMessage && (
-                    <div 
-                      style={{
-                        color: 'green', 
-                        marginBottom: '10px', 
-                        textAlign: 'center',
-                        padding: '10px',
-                        backgroundColor: '#eeffee',
-                        borderRadius: '5px'
-                      }}
-                    >
-                      {resendMessage}
-                    </div>
-                  )}
-                  
-                  {resendError && (
-                    <div 
-                      style={{
-                        color: 'red', 
-                        marginBottom: '10px', 
-                        textAlign: 'center',
-                        padding: '10px',
-                        backgroundColor: '#ffeeee',
-                        borderRadius: '5px'
-                      }}
-                    >
-                      {resendError}
-                    </div>
-                  )}
-                  
-                  <form onSubmit={handleResendConfirmation}>
-                    <h3 style={{ textAlign: 'center', marginBottom: '15px' }}>Reenviar email de confirmação</h3>
-                    <input
-                      className="input"
-                      type="email"
-                      placeholder="Digite seu email"
-                      value={resendEmail}
-                      onChange={(e) => setResendEmail(e.target.value)}
-                      required
-                    />
-                    <button 
-                      className="button" 
-                      type="submit"
-                      disabled={resendLoading}
-                    >
-                      {resendLoading ? "A enviar..." : "Enviar"}
-                    </button>
-                  </form>
-                  <button onClick={backToLogin} className="a">Voltar para Login</button>
                 </>
               ) : (
                 <>

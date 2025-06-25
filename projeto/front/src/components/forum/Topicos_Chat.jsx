@@ -6,9 +6,11 @@ import './css/Topicos_Chat.css';
 import API_BASE, { IMAGES } from '../../api';
 import Sidebar from '../Sidebar';
 
+// Componente para renderização de imagens com fallback para avatar padrão
 const ImageComponent = ({ src, alt = 'Imagem', className = '', onClick, apiBase }) => {
   const [hasError, setHasError] = useState(false);
 
+  // Função para normalizar URLs de imagens
   const normalizeUrl = (url) => {
     if (!url) return IMAGES.DEFAULT_AVATAR;
     if (url.startsWith('http')) return url;
@@ -35,13 +37,13 @@ const Topicos_Chat = () => {
   const [topico, setTopico] = useState(null);
   const [tema, setTema] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [anexoTipo, setAnexoTipo] = useState(null); // 'imagem', 'video', 'file'
+  const [anexoTipo, setAnexoTipo] = useState(null); // Tipos: 'imagem', 'video', 'file'
   const [anexoFile, setAnexoFile] = useState(null);
   const [anexoPreview, setAnexoPreview] = useState('');
   const [usuario, setUsuario] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [erro, setErro] = useState(null);
-  const [avaliacoes, setAvaliacoes] = useState({});
+  const [avaliacoes, setAvaliacoes] = useState({}); // Estado para controlar avaliações do utilizador
 
   const comentariosContainerRef = useRef(null);
   const socketRef = useRef();
@@ -49,12 +51,12 @@ const Topicos_Chat = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Função de debug para log consistente
+  // Função de debug para log consistente e organizado
   const logInfo = (message, data) => {
     console.log(`[TopicosChat] ${message}`, data || '');
   };
 
-  // Verificando e imprimindo a URL base para depuração
+  // Log inicial para verificação de parâmetros e configuração
   useEffect(() => {
     console.log("URL base da API:", API_BASE);
     console.log("ID do tópico:", topicoId);
@@ -62,27 +64,27 @@ const Topicos_Chat = () => {
     console.log("URL completa para tema:", `${API_BASE}/forum/tema/${temaId}`);
   }, [topicoId, temaId]);
 
-  // Inicializar socket.io e carregar dados
+  // Inicialização do componente: socket, carregamento de dados do utilizador, tópico, tema e comentários
   useEffect(() => {
     const token = localStorage.getItem('token');
 
     logInfo(`Iniciando carregamento para tópico ID: ${topicoId}, tema ID: ${temaId}`);
 
-    // Obter dados do usuário atual
+    // Buscar dados do utilizador autenticado
     const fetchUsuario = async () => {
       try {
-        logInfo('Buscando dados do usuário');
+        logInfo('Buscando dados do utilizador');
         const response = await axios.get(`${API_BASE}/users/perfil`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsuario(response.data);
-        logInfo('Dados do usuário obtidos com sucesso', response.data);
+        logInfo('Dados do utilizador obtidos com sucesso', response.data);
       } catch (error) {
-        logInfo('Erro ao carregar dados do usuário:', error.message);
+        logInfo('Erro ao carregar dados do utilizador:', error.message);
       }
     };
 
-    // Obter dados do tópico
+    // Buscar informações do tópico específico
     const fetchTopico = async () => {
       try {
         logInfo(`Buscando dados do tópico ID: ${topicoId}`);
@@ -104,7 +106,7 @@ const Topicos_Chat = () => {
       }
     };
 
-    // Obter dados do tema
+    // Buscar informações do tema do fórum
     const fetchTema = async () => {
       try {
         logInfo(`Buscando dados do tema ID: ${temaId}`);
@@ -126,7 +128,7 @@ const Topicos_Chat = () => {
       }
     };
 
-    // Obter comentários existentes
+    // Buscar todos os comentários existentes do tema
     const fetchComentarios = async () => {
       try {
         logInfo(`Buscando comentários para o tema ID: ${temaId}`);
@@ -150,7 +152,7 @@ const Topicos_Chat = () => {
       }
     };
 
-    // Inicializar socket
+    // Configurar conexão socket.io para atualizações em tempo real
     try {
       logInfo('Inicializando socket.io');
       socketRef.current = io(`${API_BASE.split('/api')[0]}`, {
@@ -159,17 +161,17 @@ const Topicos_Chat = () => {
         transports: ['websocket', 'polling']
       });
 
-      // Registrar tema atual para receber atualizações
+      // Registrar no canal do tema para receber atualizações
       socketRef.current.emit('joinTema', temaId);
       logInfo(`Registrado no canal do tema: ${temaId}`);
 
-      // Ouvir novos comentários
+      // Listener para novos comentários em tempo real
       socketRef.current.on('novoComentario', (comentario) => {
         logInfo('Novo comentário recebido via socket:', comentario);
         setComentarios(prev => [...prev, comentario]);
       });
 
-      // Lidar com erros de conexão
+      // Listener para erros de conexão
       socketRef.current.on('connect_error', (error) => {
         logInfo('Erro na conexão socket:', error.message);
       });
@@ -177,13 +179,13 @@ const Topicos_Chat = () => {
       logInfo('Erro ao inicializar socket:', error.message);
     }
 
-    // Executar funções para buscar dados
+    // Executar todas as funções de carregamento
     fetchUsuario();
     fetchTopico();
     fetchTema();
     fetchComentarios();
 
-    // Limpeza ao desmontar componente
+    // Cleanup: desconectar socket ao desmontar componente
     return () => {
       if (socketRef.current) {
         logInfo('Desconectando socket');
@@ -193,21 +195,21 @@ const Topicos_Chat = () => {
     };
   }, [topicoId, temaId, navigate]);
 
-  // Rolar para o final da conversa ao receber novos comentários
+  // Auto-scroll para o final da conversa quando novos comentários são adicionados
   useEffect(() => {
     if (comentariosContainerRef.current) {
       comentariosContainerRef.current.scrollTop = comentariosContainerRef.current.scrollHeight;
     }
   }, [comentarios]);
 
-  // Funções para lidar com anexos
+  // Processar ficheiro selecionado para anexo
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    logInfo('Arquivo selecionado:', file.name);
+    logInfo('Ficheiro selecionado:', file.name);
 
-    // Verificar tipo de arquivo
+    // Determinar tipo de ficheiro para renderização apropriada
     const fileType = file.type.split('/')[0];
     setAnexoFile(file);
 
@@ -227,6 +229,7 @@ const Topicos_Chat = () => {
     }
   };
 
+  // Cancelar anexo selecionado
   const cancelarAnexo = () => {
     logInfo('Cancelando anexo');
     setAnexoTipo(null);
@@ -237,10 +240,10 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Enviar comentário
+  // Enviar novo comentário para o tema
   const enviarComentario = async () => {
     if ((!novoComentario.trim() && !anexoFile) || !usuario) {
-      logInfo('Tentativa de enviar comentário vazio ou sem usuário');
+      logInfo('Tentativa de enviar comentário vazio ou sem utilizador');
       alert('É necessário fornecer texto ou anexo para o comentário');
       return;
     }
@@ -255,7 +258,7 @@ const Topicos_Chat = () => {
         formData.append('anexo', anexoFile);
       }
 
-      // Adicionar logs para depuração
+      // Log para debug do conteúdo enviado
       logInfo('Conteúdo do FormData', {
         texto: novoComentario,
         anexo: anexoFile ? {
@@ -265,7 +268,7 @@ const Topicos_Chat = () => {
         } : 'nenhum'
       });
 
-      // Usar o endpoint correto para comentários de tema
+      // Enviar comentário usando endpoint correto
       const response = await axios.post(`${API_BASE}/forum-tema/tema/${temaId}/comentario`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -275,7 +278,7 @@ const Topicos_Chat = () => {
 
       logInfo('Resposta do servidor:', response.data);
 
-      // Se o socket não estiver funcionando, adicionar o comentário manualmente
+      // Fallback para adicionar comentário manualmente se socket não estiver funcionando
       if (!socketRef.current || !socketRef.current.connected) {
         logInfo('Socket não está conectado, atualizando comentários manualmente');
         if (response.data && response.data.data) {
@@ -283,7 +286,7 @@ const Topicos_Chat = () => {
         }
       }
 
-      // Limpar campos após envio
+      // Limpar campos após envio bem-sucedido
       setNovoComentario('');
       cancelarAnexo();
     } catch (error) {
@@ -296,23 +299,23 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Avaliar comentário (curtir ou descurtir)
+  // Avaliar comentário com like ou dislike usando estrutura de rotas original
   const avaliarComentario = async (idComentario, tipo) => {
     try {
       logInfo(`Avaliando comentário ${idComentario} como ${tipo}`);
       const token = localStorage.getItem('token');
 
-      // Atualizar o estado local para feedback imediato
+      // Atualização imediata do estado local para feedback visual rápido
       setComentarios(prev => prev.map(comentario => {
         if (comentario.id_comentario === idComentario) {
-          // Verificar se o usuário já avaliou este comentário (toggle)
+          // Verificar se utilizador já avaliou com o mesmo tipo (toggle)
           const jaAvaliado = avaliacoes[idComentario] === tipo;
 
-          // Atualizar o estado de avaliações
+          // Atualizar estado das avaliações do utilizador
           const novasAvaliacoes = { ...avaliacoes };
 
           if (jaAvaliado) {
-            // Remover avaliação (toggle off)
+            // Remover avaliação existente (toggle off)
             delete novasAvaliacoes[idComentario];
             setAvaliacoes(novasAvaliacoes);
 
@@ -322,7 +325,7 @@ const Topicos_Chat = () => {
               dislikes: tipo === 'dislike' ? Math.max(0, comentario.dislikes - 1) : comentario.dislikes
             };
           } else {
-            // Adicionar nova avaliação ou trocar tipo
+            // Adicionar nova avaliação ou alterar tipo existente
             const tipoAnterior = avaliacoes[idComentario];
             novasAvaliacoes[idComentario] = tipo;
             setAvaliacoes(novasAvaliacoes);
@@ -341,16 +344,16 @@ const Topicos_Chat = () => {
         return comentario;
       }));
 
-      // Fazer a requisição para o servidor
+      // Enviar avaliação para o servidor usando estrutura de rotas original
       const response = await axios.post(
-        `${API_BASE}/forum/comentario/${idComentario}/avaliar`,
+        `${API_BASE}/comentarios/${idComentario}/avaliar`,
         { tipo },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       logInfo('Avaliação enviada com sucesso', response.data);
 
-      // Atualizar os contadores com valores reais do servidor
+      // Sincronizar contadores com valores reais do servidor
       if (response.data && response.data.data) {
         const { id_comentario, likes, dislikes } = response.data.data;
 
@@ -368,7 +371,7 @@ const Topicos_Chat = () => {
     } catch (error) {
       logInfo('Erro ao avaliar comentário:', error.message);
 
-      // Exibir mensagem de erro com mais detalhes
+      // Mostrar mensagem de erro detalhada
       if (error.response) {
         const mensagemErro = error.response.data.message || 'Erro desconhecido';
         alert(`Erro ao avaliar comentário: ${mensagemErro}`);
@@ -378,7 +381,7 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Denunciar comentário
+  // Denunciar comentário por conteúdo inadequado usando estrutura de rotas original
   const denunciarComentario = async (idComentario) => {
     const motivo = prompt('Por favor, informe o motivo da denúncia:');
     if (!motivo) return;
@@ -387,16 +390,16 @@ const Topicos_Chat = () => {
       logInfo(`Denunciando comentário ${idComentario}`);
       const token = localStorage.getItem('token');
 
-      // Usar o endpoint correto
+      // Enviar denúncia usando estrutura de rotas original
       const response = await axios.post(
-        `${API_BASE}/forum/comentario/${idComentario}/denunciar`,
+        `${API_BASE}/comentarios/${idComentario}/denunciar`,
         { motivo },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       logInfo('Denúncia enviada com sucesso', response.data);
 
-      // Marcar o comentário como denunciado localmente
+      // Marcar comentário como denunciado localmente
       setComentarios(prev => prev.map(comentario => {
         if (comentario.id_comentario === idComentario) {
           return {
@@ -421,7 +424,7 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Formatar data para exibição
+  // Formatar data para exibição em formato português
   const formatarData = (dataString) => {
     if (!dataString) return 'Data indisponível';
 
@@ -440,11 +443,11 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Exibir conteúdo do anexo
+  // Renderizar anexo baseado no tipo (imagem, vídeo ou ficheiro)
   const renderAnexo = (item) => {
     if (!item.anexo_url) return null;
 
-    // Normalizar URL do anexo
+    // Normalizar URL do anexo para acesso correto
     let anexoUrl = item.anexo_url;
     if (!anexoUrl.startsWith('http') && !anexoUrl.startsWith('/')) {
       anexoUrl = `/${anexoUrl}`;
@@ -454,7 +457,7 @@ const Topicos_Chat = () => {
       anexoUrl = `${API_BASE.split('/api')[0]}${anexoUrl}`;
     }
 
-    // Adiciona key ao elemento pai, independente do tipo
+    // Chave única para cada anexo
     const anexoKey = `anexo-${item.id_comentario || item.id || 'unknown'}`;
 
     if (item.tipo_anexo === 'imagem') {
@@ -488,7 +491,7 @@ const Topicos_Chat = () => {
     }
   };
 
-  // Renderizar estado de erro
+  // Renderizar tela de erro se houver falha no carregamento
   if (erro && !loading) {
     return (
       <div className="chat-container">
@@ -503,7 +506,7 @@ const Topicos_Chat = () => {
     );
   }
 
-  // Renderizar estado de carregamento
+  // Renderizar tela de carregamento
   if (loading) {
     return (
       <div className="chat-container">
@@ -559,11 +562,11 @@ const Topicos_Chat = () => {
                     <div className="comentario-header">
                       <ImageComponent
                         src={comentario.utilizador?.foto_perfil}
-                        alt={comentario.utilizador?.nome || 'Usuário'}
+                        alt={comentario.utilizador?.nome || 'Utilizador'}
                         className="avatar"
                         apiBase={API_BASE}
                       />
-                      <span className="nome-usuario">{comentario.utilizador?.nome || 'Usuário'}</span>
+                      <span className="nome-usuario">{comentario.utilizador?.nome || 'Utilizador'}</span>
                       <span className="data-comentario">{formatarData(comentario.data_criacao)}</span>
                     </div>
 
@@ -633,7 +636,7 @@ const Topicos_Chat = () => {
               />
 
               <div className="chat-actions">
-                <button className="btn-anexo" onClick={() => fileInputRef.current.click()} title="Anexar arquivo">
+                <button className="btn-anexo" onClick={() => fileInputRef.current.click()} title="Anexar ficheiro">
                   <i className="fas fa-paperclip"></i>
                 </button>
                 <input

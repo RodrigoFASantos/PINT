@@ -77,7 +77,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   };
 
-  // Função para buscar cursos associados com melhoria na gestão de erros
+  // Função para buscar cursos associados
   const getCursosAssociados = async (cursoId) => {
     try {
       setLoadingCursosAssociados(true);
@@ -97,7 +97,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       }
     } catch (error) {
       console.error(`Erro a buscar cursos associados para o curso ${cursoId}:`, error);
-      // Não mostrar erro ao utilizador pois é uma funcionalidade secundária
       setCursosAssociados([]);
     } finally {
       setLoadingCursosAssociados(false);
@@ -141,7 +140,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
             await getTopicoArea(cursoData.id_topico_area);
           }
 
-          // Carregar cursos associados sempre
+          // Carregar cursos associados
           await getCursosAssociados(cursoData.id_curso);
 
           // Verificar inscrição se não fornecida
@@ -270,21 +269,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
     if (curso.dir_path) return `${API_BASE}/${curso.dir_path}/capa.png`;
     return '/placeholder-curso.jpg';
-  };
-
-  // Função para navegar para um curso associado
-  const navegarParaCursoAssociado = (cursoAssociado) => {
-    // Determinar qual curso mostrar baseado no curso actual
-    const cursoParaMostrar = cursoAssociado.id_curso_origem === curso.id_curso 
-      ? cursoAssociado.cursoDestino 
-      : cursoAssociado.cursoOrigem;
-    
-    if (cursoParaMostrar && cursoParaMostrar.id_curso) {
-      console.log('A navegar para curso associado:', cursoParaMostrar.nome);
-      navigate(`/cursos/${cursoParaMostrar.id_curso}`);
-    } else {
-      console.error('Curso associado inválido:', cursoAssociado);
-    }
   };
 
   // Manipuladores de eventos
@@ -517,7 +501,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Cursos Associados com melhor apresentação */}
+            {/* Cursos Relacionados - apenas nomes para visualização */}
             {cursosAssociados.length > 0 && (
               <div className="campo-container">
                 <div className="campo campo-cursos-associados">
@@ -529,7 +513,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                         <span>A carregar cursos relacionados...</span>
                       </div>
                     ) : (
-                      <div className="cursos-associados-lista">
+                      <div className="cursos-relacionados-lista">
                         {cursosAssociados.map((associacao) => {
                           // Determinar qual curso mostrar origem ou destino
                           const cursoParaMostrar = associacao.id_curso_origem === curso.id_curso 
@@ -544,36 +528,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                           return (
                             <div 
                               key={associacao.id_associacao} 
-                              className="curso-associado-item"
-                              onClick={() => navegarParaCursoAssociado(associacao)}
-                              title={`Clica para ver o curso ${cursoParaMostrar.nome}`}
+                              className="curso-relacionado-item"
                             >
-                              <div className="curso-associado-info">
-                                <h4 className="curso-associado-nome">{cursoParaMostrar.nome}</h4>
-                                <div className="curso-associado-meta">
-                                  <span className={`curso-estado ${formatarEstadoParaCSS(cursoParaMostrar.estado)}`}>
-                                    {formatarEstadoParaExibicao(cursoParaMostrar.estado)}
-                                  </span>
-                                  <span className="curso-tipo">
-                                    {cursoParaMostrar.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
-                                  </span>
-                                </div>
-                                {associacao.descricao && (
-                                  <p className="curso-associado-descricao">{associacao.descricao}</p>
-                                )}
-                              </div>
-                              <div className="curso-associado-imagem">
-                                <img 
-                                  src={getImageUrl(cursoParaMostrar)} 
-                                  alt={cursoParaMostrar.nome}
-                                  onError={(e) => {
-                                    e.target.src = '/placeholder-curso.jpg';
-                                  }}
-                                />
-                              </div>
-                              <div className="curso-associado-seta">
-                                <i className="fas fa-arrow-right"></i>
-                              </div>
+                              <span className="curso-relacionado-nome">{cursoParaMostrar.nome}</span>
                             </div>
                           );
                         })}

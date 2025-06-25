@@ -42,7 +42,7 @@ body {
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  background-color: var(--background-color); /* ADICIONADO: fundo no body também */
+  background-color: var(--background-color);
 }
 
 /* FORÇA ALTURA TOTAL NOS CONTAINERS REACT */
@@ -60,7 +60,7 @@ body {
 }
 
 /* Container principal do dashboard - OCUPAÇÃO TOTAL FORÇADA */
-.dashboard-container-tras {
+.dashboard-container-tras-dash {
   position: absolute;
   top: 60px;
   left: 0;
@@ -75,7 +75,7 @@ body {
 }
 
 /* Container de loading */
-.loading-container {
+.loading-container-dash {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -90,7 +90,7 @@ body {
 }
 
 /* Spinner de loading */
-.loading-spinner {
+.loading-spinner-dash {
   width: 40px;
   height: 40px;
   border: 4px solid var(--border-color);
@@ -105,19 +105,19 @@ body {
 }
 
 /* Área principal do conteúdo */
-.main-content {
+.main-content-dash {
   padding: 2rem;
   width: 100%;
   height: 100%;
 }
 
 /* Cabeçalho da página */
-.dashboard-header {
+.dashboard-header-dash {
   margin-bottom: 2rem;
 }
 
 /* Ações rápidas */
-.quick-actions {
+.quick-actions-dash {
   display: flex;
   justify-content: center;
   gap: 1rem;
@@ -126,7 +126,7 @@ body {
 }
 
 /* Botões de ação */
-.action-btn {
+.action-btn-dash {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,40 +145,40 @@ body {
   height: 48px;
 }
 
-.action-btn:hover {
+.action-btn-dash:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
-.action-btn.primary {
+.action-btn-dash.primary {
   background-color: var(--primary-color);
   color: white;
 }
 
-.action-btn.primary:hover {
+.action-btn-dash.primary:hover {
   background-color: #2563EB;
 }
 
-.action-btn.success {
+.action-btn-dash.success {
   background-color: var(--success-color);
   color: white;
 }
 
-.action-btn.success:hover {
+.action-btn-dash.success:hover {
   background-color: #059669;
 }
 
-.action-btn.aviso {
+.action-btn-dash.aviso {
   background-color: var(--warning-color);
   color: white;
 }
 
-.action-btn.aviso:hover {
+.action-btn-dash.aviso:hover {
   background-color: #D97706;
 }
 
 /* Grid das estatísticas */
-.stats-grid {
+.stats-grid-dash {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
@@ -186,7 +186,7 @@ body {
 }
 
 /* Card de estatística */
-.stat-card {
+.stat-card-dash {
   background: var(--surface-color);
   padding: 1.5rem;
   border-radius: var(--border-radius-lg);
@@ -198,33 +198,33 @@ body {
   border-left: 4px solid transparent;
 }
 
-.stat-card:hover {
+.stat-card-dash:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
 
-.stat-card.primary {
+.stat-card-dash.primary {
   border-left-color: var(--primary-color);
 }
 
-.stat-card.success {
+.stat-card-dash.success {
   border-left-color: var(--success-color);
 }
 
-.stat-card.warning {
+.stat-card-dash.warning {
   border-left-color: var(--warning-color);
 }
 
-.stat-card.info {
+.stat-card-dash.info {
   border-left-color: var(--info-color);
 }
 
-.stat-card.purple {
+.stat-card-dash.purple {
   border-left-color: var(--purple-color);
 }
 
 /* Ícone do card */
-.stat-icon {
+.stat-icon-dash {
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -236,32 +236,32 @@ body {
   flex-shrink: 0;
 }
 
-.stat-card.primary .stat-icon {
+.stat-card-dash.primary .stat-icon-dash {
   background: linear-gradient(135deg, var(--primary-color), #2563EB);
 }
 
-.stat-card.success .stat-icon {
+.stat-card-dash.success .stat-icon-dash {
   background: linear-gradient(135deg, var(--success-color), #059669);
 }
 
-.stat-card.warning .stat-icon {
+.stat-card-dash.warning .stat-icon-dash {
   background: linear-gradient(135deg, var(--warning-color), #D97706);
 }
 
-.stat-card.info .stat-icon {
+.stat-card-dash.info .stat-icon-dash {
   background: linear-gradient(135deg, var(--info-color), #0891B2);
 }
 
-.stat-card.purple .stat-icon {
+.stat-card-dash.purple .stat-icon-dash {
   background: linear-gradient(135deg, var(--purple-color), #7C3AED);
 }
 
 /* Informações do card */
-.stat-info {
+.stat-info-dash {
   flex: 1;
 }
 
-.stat-info h3 {
+.stat-info-dash h3 {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin: 0 0 0.25rem 0;
@@ -270,7 +270,7 @@ body {
   letter-spacing: 0.05em;
 }
 
-.stat-value {
+.stat-value-dash {
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
@@ -278,7 +278,7 @@ body {
 }
 
 /* Grid dos gráficos */
-.charts-grid {
+.charts-grid-dash {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 1.5rem;
@@ -286,7 +286,7 @@ body {
 }
 
 /* Container dos gráficos */
-.chart-container {
+.chart-container-dash {
   background: var(--surface-color);
   padding: 1.5rem;
   border-radius: var(--border-radius-lg);
@@ -295,140 +295,111 @@ body {
   min-height: 300px;
 }
 
-.chart-container.small {
+.chart-container-dash.small {
   grid-column: span 12;
   min-height: 250px;
 }
 
-.chart-container.medium {
+.chart-container-dash.medium {
   grid-column: span 12;
   min-height: 350px;
 }
 
-.chart-container.large {
+.chart-container-dash.large {
   grid-column: span 12;
   min-height: 400px;
 }
 
 /* Responsivo tablet */
 @media (min-width: 768px) {
-  .chart-container.small {
+  .chart-container-dash.small {
     grid-column: span 6;
   }
   
-  .chart-container.medium {
+  .chart-container-dash.medium {
     grid-column: span 6;
   }
   
-  .chart-container.large {
+  .chart-container-dash.large {
     grid-column: span 12;
   }
 
-  .stats-grid {
+  .stats-grid-dash {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 /* Responsivo desktop */
 @media (min-width: 1024px) {
-  .chart-container.small {
+  .chart-container-dash.small {
     grid-column: span 4;
   }
   
-  .chart-container.medium {
+  .chart-container-dash.medium {
     grid-column: span 4;
   }
   
-  .chart-container.large {
+  .chart-container-dash.large {
     grid-column: span 12;
   }
 
-  .stats-grid {
+  .stats-grid-dash {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
 /* Mobile */
 @media (max-width: 768px) {
-  .main-content {
+  .main-content-dash {
     padding: 1rem;
   }
   
-  .quick-actions {
+  .quick-actions-dash {
     flex-direction: column;
     align-items: center;
   }
   
-  .action-btn {
+  .action-btn-dash {
     min-width: 250px;
   }
   
-  .stats-grid {
+  .stats-grid-dash {
     grid-template-columns: 1fr;
   }
   
-  .chart-container {
+  .chart-container-dash {
     min-height: 250px;
   }
 }
 
 /* Mobile pequeno */
 @media (max-width: 480px) {
-  .main-content {
+  .main-content-dash {
     padding: 0.5rem;
   }
   
-  .stat-card {
+  .stat-card-dash {
     flex-direction: column;
     text-align: center;
     gap: 0.75rem;
   }
   
-  .stat-value {
+  .stat-value-dash {
     font-size: 1.5rem;
   }
   
-  .chart-container {
+  .chart-container-dash {
     padding: 1rem;
     min-height: 200px;
   }
   
-  .action-btn {
+  .action-btn-dash {
     min-width: 200px;
   }
 }
 
 /* Estados de foco */
-.action-btn:focus {
+.action-btn-dash:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
-}
-
-/* Modo escuro */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-color: #0F172A;
-    --surface-color: #1E293B;
-    --border-color: #334155;
-    --text-primary: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --text-muted: #64748B;
-  }
-}
-
-
-/* Para garantir que qualquer container pai tenha fundo */
-div[id*="root"], 
-div[class*="app"], 
-div[class*="App"],
-.router-container,
-.route-container {
-  background-color: var(--background-color) !important;
-  min-height: 100vh !important;
-}
-
-/* Força o fundo em todos os containers principais */
-body > div:first-child {
-  background-color: var(--background-color) !important;
-  min-height: 100vh !important;
 }

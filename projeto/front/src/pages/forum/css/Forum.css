@@ -1,7 +1,9 @@
 .forum-partilha-container {
+  margin-top: 60px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #f5f7fb !important;
 }
 
 .main-content {
@@ -12,7 +14,7 @@
 .forum-content {
   flex: 1;
   padding: 20px;
-  background-color: #f5f7fb;
+  background-color: #f5f7fb !important;
   border-radius: 8px;
   margin: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);

@@ -295,9 +295,9 @@ const AdminDashboard = () => {
   // Mostrar loading enquanto os dados são carregados
   if (loading) {
     return (
-      <div className="dashboard-container-tras">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
+      <div className="dashboard-container-tras-dash">
+        <div className="loading-container-dash">
+          <div className="loading-spinner-dash"></div>
           <p>A carregar painel de administração...</p>
         </div>
       </div>
@@ -305,26 +305,26 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="dashboard-container-tras">
+    <div className="dashboard-container-tras-dash">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      <div className="main-content">
-        <div className="dashboard-header">
+      <div className="main-content-dash">
+        <div className="dashboard-header-dash">
           {/* Botões de ações rápidas */}
-          <div className="quick-actions">
-            <button className="action-btn primary" onClick={() => navegarPara('/admin/criar-curso')}>
+          <div className="quick-actions-dash">
+            <button className="action-btn-dash primary" onClick={() => navegarPara('/admin/criar-curso')}>
               <i className="fas fa-plus"></i>
               Criar Curso
             </button>
-            <button className="action-btn primary" onClick={() => navegarPara('/admin/criar-usuario')}>
+            <button className="action-btn-dash primary" onClick={() => navegarPara('/admin/criar-usuario')}>
               <i className="fas fa-user-plus"></i>
               Adicionar Utilizador
             </button>
-            <button className="action-btn success" onClick={() => navegarPara('/admin/cursos')}>
+            <button className="action-btn-dash success" onClick={() => navegarPara('/admin/cursos')}>
               <i className="fas fa-book"></i>
               Gerir Cursos
             </button>
-            <button className="action-btn aviso" onClick={() => navegarPara('/admin/denuncias')}>
+            <button className="action-btn-dash aviso" onClick={() => navegarPara('/admin/denuncias')}>
               <i className="fas fa-flag"></i>
               Ver Denúncias
             </button>
@@ -332,103 +332,103 @@ const AdminDashboard = () => {
         </div>
 
         {/* Grid com as estatísticas principais */}
-        <div className="stats-grid">
-          <div className="stat-card primary">
-            <div className="stat-icon">
+        <div className="stats-grid-dash">
+          <div className="stat-card-dash primary">
+            <div className="stat-icon-dash">
               <i className="fas fa-users"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Total de Utilizadores</h3>
-              <p className="stat-value">{stats.totalUtilizadores}</p>
+              <p className="stat-value-dash">{stats.totalUtilizadores}</p>
             </div>
           </div>
 
-          <div className="stat-card primary">
-            <div className="stat-icon">
+          <div className="stat-card-dash primary">
+            <div className="stat-icon-dash">
               <i className="fas fa-user"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Total de Formandos</h3>
-              <p className="stat-value">{stats.totalFormandos}</p>
+              <p className="stat-value-dash">{stats.totalFormandos}</p>
             </div>
           </div>
 
-          <div className="stat-card primary">
-            <div className="stat-icon">
+          <div className="stat-card-dash primary">
+            <div className="stat-icon-dash">
               <i className="fas fa-user"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Total de Formadores</h3>
-              <p className="stat-value">{stats.totalFormadores}</p>
+              <p className="stat-value-dash">{stats.totalFormadores}</p>
             </div>
           </div>
 
-          <div className="stat-card primary">
-            <div className="stat-icon">
+          <div className="stat-card-dash primary">
+            <div className="stat-icon-dash">
               <i className="fas fa-user"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Total de Administradores</h3>
-              <p className="stat-value">{stats.totalAdministradores}</p>
+              <p className="stat-value-dash">{stats.totalAdministradores}</p>
             </div>
           </div>
 
-          <div className="stat-card success">
-            <div className="stat-icon">
+          <div className="stat-card-dash success">
+            <div className="stat-icon-dash">
               <i className="fas fa-book"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Total de Cursos</h3>
-              <p className="stat-value">{stats.totalCursos}</p>
+              <p className="stat-value-dash">{stats.totalCursos}</p>
             </div>
           </div>
 
-          <div className="stat-card warning">
-            <div className="stat-icon">
+          <div className="stat-card-dash warning">
+            <div className="stat-icon-dash">
               <i className="fas fa-play-circle"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Cursos Ativos</h3>
-              <p className="stat-value">{stats.cursosAtivos}</p>
+              <p className="stat-value-dash">{stats.cursosAtivos}</p>
             </div>
           </div>
 
-          <div className="stat-card purple">
-            <div className="stat-icon">
+          <div className="stat-card-dash purple">
+            <div className="stat-icon-dash">
               <i className="fas fa-calendar-check"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Cursos Terminados</h3>
-              <p className="stat-value">{stats.cursosTerminados}</p>
+              <p className="stat-value-dash">{stats.cursosTerminados}</p>
             </div>
           </div>
 
-          <div className="stat-card info">
-            <div className="stat-icon">
+          <div className="stat-card-dash info">
+            <div className="stat-icon-dash">
               <i className="fas fa-user-graduate"></i>
             </div>
-            <div className="stat-info">
+            <div className="stat-info-dash">
               <h3>Inscrições (30d)</h3>
-              <p className="stat-value">{stats.inscricoesUltimos30Dias}</p>
+              <p className="stat-value-dash">{stats.inscricoesUltimos30Dias}</p>
             </div>
           </div>
         </div>
 
         {/* Grid com os gráficos principais */}
-        <div className="charts-grid">
-          <div className="chart-container large">
+        <div className="charts-grid-dash">
+          <div className="chart-container-dash large">
             <canvas id="grafico-inscricoes"></canvas>
           </div>
 
-          <div className="chart-container medium">
+          <div className="chart-container-dash medium">
             <canvas id="grafico-categorias"></canvas>
           </div>
 
-          <div className="chart-container medium">
+          <div className="chart-container-dash medium">
             <canvas id="grafico-utilizadores"></canvas>
           </div>
 
-          <div className="chart-container medium">
+          <div className="chart-container-dash medium">
             <canvas id="grafico-cursos-populares"></canvas>
           </div>
         </div>

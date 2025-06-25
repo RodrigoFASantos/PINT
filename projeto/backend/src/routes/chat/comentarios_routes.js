@@ -1,19 +1,17 @@
 const express = require("express");
-const router = express.Router({ mergeParams: true });
+const router = express.Router();
 const authMiddleware = require("../../middleware/auth");
-const { getAllComentarios, createComentario, avaliarComentario, denunciarComentario } = require("../../controllers/chat/comentarios_ctrl");
-const { upload } = require("../../middleware/upload"); 
+const { avaliarComentario, denunciarComentario } = require("../../controllers/chat/comentarios_ctrl");
 
-// Rotas para comentários
-
+// Aplicar middleware de autenticação a todas as rotas
 router.use(authMiddleware);
-router.get("/", getAllComentarios);
-router.post("/", upload.single('anexo'), createComentario);
 
-// Rota para avaliar comentários (likes/dislikes)
+// Rota para avaliar comentários com like ou dislike
+// POST /api/comentarios/:idComentario/avaliar
 router.post("/:idComentario/avaliar", avaliarComentario);
 
-// Rota para denunciar comentários
+// Rota para denunciar comentários por conteúdo inadequado
+// POST /api/comentarios/:idComentario/denunciar
 router.post("/:idComentario/denunciar", denunciarComentario);
 
 module.exports = router;
