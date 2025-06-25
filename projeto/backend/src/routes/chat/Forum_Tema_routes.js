@@ -26,7 +26,7 @@ router.get("/topico/:topicoId/temas", getTemasByTopico);
 router.get("/tema/:temaId", getTemaById);
 router.post("/topico/:topicoId/tema", uploadChatFile, createTema);
 router.put("/tema/:temaId", updateTema); // Editar tema
-router.delete("/tema/:temaId", deleteTema); // ESTA LINHA ESTAVA EM FALTA!
+router.delete("/tema/:temaId", deleteTema); 
 router.post("/tema/:temaId/avaliar", avaliarTema);
 router.post("/tema/:temaId/denunciar", denunciarTema);
 

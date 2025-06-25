@@ -245,7 +245,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // ✅ ATUALIZADA: Determinar a cor do status (incluindo "Aguardar")
+  // Determinar a cor do status (incluindo "Aguardar")
   Color _getCorStatus(String status) {
     switch (status) {
       case 'Presente':

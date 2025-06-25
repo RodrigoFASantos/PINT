@@ -122,7 +122,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // 🚩 NOVA FUNÇÃO: Carregar temas denunciados usando ApiService
+  // Carregar temas denunciados usando ApiService
   Future<void> _loadTemasDenunciados() async {
     try {
       final temasDenunciadosData = await _apiService.getTemasDenunciados();
@@ -134,7 +134,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         debugPrint(
             '✅ [CHAT_CONVERSAS] ${temasDenunciados.length} temas denunciados pelo usuário');
       } else {
-        // ✅ CORRIGIDO: Se a rota não existir, inicializar lista vazia
+        // Se a rota não existir, inicializar lista vazia
         setState(() {
           temasDenunciados = [];
         });

@@ -497,7 +497,7 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
-  // ✅ ALTERADO: Navegar diretamente para as conversas do tópico
+  // Navegar diretamente para as conversas do tópico
   void _handleVerTopico(int topicoId) {
     debugPrint(
         '🔧 [FORUM] Navegando diretamente para conversas do tópico: $topicoId');
