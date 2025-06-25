@@ -5,6 +5,7 @@
 }
 
 .main-content {
+  margin-top: 60px !important;
   flex: 1;
   padding: 20px;
   transition: margin-left 0.3s;
