@@ -752,7 +752,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                 </div>
             )}
 
-            {/* NOVO: Modal para listar formandos */}
+            {/* Modal para listar formandos */}
             {showListaFormandosModal && presencaSelecionada && (
                 <div className="modal-overlay">
                     <div className="presenca-modal lista-formandos-modal">

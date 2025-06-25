@@ -333,7 +333,7 @@ class ApiService {
 
   Map<String, dynamic>? parseResponseToMap(http.Response response) {
     try {
-      // ✅ NOVO: Sempre tentar fazer parse, independente do status code
+      // Sempre tentar fazer parse, independente do status code
       final responseBody = response.body;
       if (responseBody.isEmpty) {
         debugPrint('⚠️ [API] Response body vazio');
@@ -342,7 +342,7 @@ class ApiService {
 
       final parsed = jsonDecode(responseBody) as Map<String, dynamic>;
 
-      // ✅ DEBUG: Log da resposta parseada
+      // Log da resposta parseada
       if (kDebugMode && response.statusCode >= 400) {
         debugPrint('📋 [API] Response parseada (erro): $parsed');
       }
@@ -410,14 +410,14 @@ class ApiService {
     return null;
   }
 
-  // ✅ CORRIGIDO: MÉTODOS PARA COMENTÁRIOS DO FÓRUM
+  // MÉTODOS PARA COMENTÁRIOS DO FÓRUM
 
-  // ✅ MÉTODO CORRIGIDO: Obter comentários de um tema específico - RETORNA LISTA DIRETAMENTE
+  // MÉTODO PARA Obter comentários de um tema específico - RETORNA LISTA DIRETAMENTE
   Future<List<dynamic>?> getComentariosTema(String temaId) async {
     try {
       debugPrint('🔧 [API] Carregando comentários para tema: $temaId');
 
-      // ✅ USAR O ENDPOINT CORRETO QUE FUNCIONA NA WEB
+      //  USAR O ENDPOINT CORRETO QUE FUNCIONA NA WEB
       final response = await get('/forum-tema/tema/$temaId/comentarios');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -426,7 +426,7 @@ class ApiService {
           debugPrint('✅ [API] Comentários carregados com sucesso');
           debugPrint('✅ [API] Estrutura dos dados: ${data.keys}');
 
-          // ✅ RETORNAR DIRETAMENTE A LISTA DE COMENTÁRIOS
+          //  RETORNAR DIRETAMENTE A LISTA DE COMENTÁRIOS
           if (data['success'] == true && data['data'] != null) {
             final comentarios = data['data'] as List<dynamic>;
             debugPrint('✅ [API] ${comentarios.length} comentários encontrados');
@@ -456,7 +456,7 @@ class ApiService {
     }
   }
 
-  // ✅ NOVO: Método para criar comentário no tema
+  // Método para criar comentário no tema
   Future<Map<String, dynamic>?> criarComentarioTema({
     required String temaId,
     required String texto,
@@ -569,7 +569,7 @@ class ApiService {
 
   // MÉTODOS PARA PRESENÇAS
 
-  // ✅ CORRIGIDO: Marcar presença com melhor tratamento de timezone
+  // Marcar presença com melhor tratamento de timezone
   Future<Map<String, dynamic>?> marcarPresenca({
     required String idCurso,
     required int idUtilizador,
@@ -581,7 +581,7 @@ class ApiService {
       debugPrint('🔧 [API] Utilizador: $idUtilizador');
       debugPrint('🔧 [API] Código: "$codigo"');
 
-      // ✅ NOVO: Incluir informação de timezone do cliente
+      // Incluir informação de timezone do cliente
       final agora = DateTime.now();
       final agoraUtc = agora.toUtc();
       final timezoneOffset = agora.timeZoneOffset.inMinutes;
@@ -594,7 +594,7 @@ class ApiService {
         'id_curso': idCurso,
         'id_utilizador': idUtilizador,
         'codigo': codigo,
-        // ✅ ENVIAR INFO DE TIMEZONE PARA O BACKEND
+        // ENVIAR INFO DE TIMEZONE PARA O BACKEND
         'client_time': agora.toIso8601String(),
         'client_time_utc': agoraUtc.toIso8601String(),
         'timezone_offset_minutes': timezoneOffset,
@@ -605,11 +605,11 @@ class ApiService {
       debugPrint('✅ [API] Status da resposta: ${response.statusCode}');
       debugPrint('✅ [API] Body da resposta: ${response.body}');
 
-      // ✅ CORRIGIDO: Verificar se é sucesso (200-299)
+      // Verificar se é sucesso (200-299)
       if (response.statusCode >= 200 && response.statusCode < 300) {
         debugPrint('✅ [API] Presença marcada com sucesso!');
 
-        // ✅ IMPORTANTE: Para sucesso, sempre retornar success: true
+        // Para sucesso, sempre retornar success: true
         Map<String, dynamic>? responseData;
         try {
           responseData = parseResponseToMap(response);
@@ -617,7 +617,7 @@ class ApiService {
           debugPrint('⚠️ [API] Erro ao fazer parse (mas foi sucesso): $e');
         }
 
-        // ✅ GARANTIR que sempre retorna success: true para códigos de sucesso
+        // GARANTIR que sempre retorna success: true para códigos de sucesso
         return {
           'success': true,
           'message': 'Presença marcada com sucesso!',
@@ -625,7 +625,7 @@ class ApiService {
           'status_code': response.statusCode,
         };
       } else {
-        // ✅ ERRO: Extrair mensagem específica
+        // Extrair mensagem específica
         debugPrint('❌ [API] Erro ao marcar presença: ${response.statusCode}');
 
         Map<String, dynamic>? responseData;
@@ -652,13 +652,13 @@ class ApiService {
             debugPrint('📋 [API] Detalhes: $detalhes');
           }
         } else {
-          // ✅ FALLBACK: Tentar parse manual da resposta
+          // Tentar parse manual da resposta
           try {
             final Map<String, dynamic> errorData = jsonDecode(response.body);
             errorMessage = errorData['message'] ?? errorMessage;
             detalhes = errorData['detalhes'];
           } catch (e) {
-            // ✅ ÚLTIMO RECURSO: Mensagem baseada no status
+            // Mensagem baseada no status
             switch (response.statusCode) {
               case 400:
                 errorMessage = 'Dados inválidos ou código incorreto';
@@ -698,7 +698,7 @@ class ApiService {
     }
   }
 
-  // ✅ NOVO: Função auxiliar para normalizar data/hora recebida do servidor
+  // Função auxiliar para normalizar data/hora recebida do servidor
   DateTime? parseServerDateTime(String? dateString, String? timeString) {
     if (dateString == null || timeString == null) return null;
 
@@ -1203,7 +1203,7 @@ class ApiService {
     }
   }
 
-// Método específico para obter dados do curso com debug melhorado
+// Método específico para obter dados do curso com debug
   Future<Map<String, dynamic>?> getCursoDetalhado(String cursoId) async {
     try {
       debugPrint('🔍 [API] Carregando curso detalhado ID: $cursoId');
@@ -1446,100 +1446,92 @@ class ApiService {
     }
   }
 
-
 // MÉTODOS PARA TÓPICOS DO FÓRUM
 
-// ✅ NOVO: Método para solicitar criação de tópico (para formandos)
-Future<Map<String, dynamic>?> solicitarTopico({
-  required int idCategoria,
-  required String titulo,
-  String? descricao,
-}) async {
-  try {
-    debugPrint('📝 [API] Solicitando criação de tópico...');
-    debugPrint('📂 [API] Categoria: $idCategoria');
-    debugPrint('📝 [API] Título: "$titulo"');
-    debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
+// Método para solicitar criação de tópico (para formandos)
+  Future<Map<String, dynamic>?> solicitarTopico({
+    required int idCategoria,
+    required String titulo,
+    String? descricao,
+  }) async {
+    try {
+      debugPrint('📝 [API] Solicitando criação de tópico...');
+      debugPrint('📂 [API] Categoria: $idCategoria');
+      debugPrint('📝 [API] Título: "$titulo"');
+      debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
 
-    final response = await post('/topicos-area/solicitar', body: {
-      'id_categoria': idCategoria,
-      'titulo': titulo,
-      if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
-    });
+      final response = await post('/topicos-area/solicitar', body: {
+        'id_categoria': idCategoria,
+        'titulo': titulo,
+        if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
+      });
 
-    final data = parseResponseToMap(response);
+      final data = parseResponseToMap(response);
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      debugPrint('✅ [API] Solicitação de tópico enviada com sucesso');
-      return data ??
-          {
-            'success': true,
-            'message': 'Solicitação enviada com sucesso! Aguarde aprovação do administrador.'
-          };
-    } else {
-      debugPrint('❌ [API] Erro ao solicitar tópico: ${response.statusCode}');
-      return data ??
-          {
-            'success': false,
-            'message': 'Erro ao enviar solicitação de tópico'
-          };
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Solicitação de tópico enviada com sucesso');
+        return data ??
+            {
+              'success': true,
+              'message':
+                  'Solicitação enviada com sucesso! Aguarde aprovação do administrador.'
+            };
+      } else {
+        debugPrint('❌ [API] Erro ao solicitar tópico: ${response.statusCode}');
+        return data ??
+            {
+              'success': false,
+              'message': 'Erro ao enviar solicitação de tópico'
+            };
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao solicitar tópico: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
     }
-  } catch (e) {
-    debugPrint('❌ [API] Exceção ao solicitar tópico: $e');
-    return {
-      'success': false,
-      'message': 'Erro de conexão',
-      'error': e.toString()
-    };
   }
-}
 
-// ✅ NOVO: Método para criar tópico (para admins/formadores)
-Future<Map<String, dynamic>?> criarTopico({
-  required int idCategoria,
-  required String titulo,
-  String? descricao,
-  int? idArea,
-}) async {
-  try {
-    debugPrint('🔧 [API] Criando novo tópico...');
-    debugPrint('📂 [API] Categoria: $idCategoria');
-    debugPrint('📝 [API] Título: "$titulo"');
-    debugPrint('🎯 [API] Área: ${idArea ?? 'Não especificada'}');
-    debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
+// Método para criar tópico (para admins/formadores)
+  Future<Map<String, dynamic>?> criarTopico({
+    required int idCategoria,
+    required String titulo,
+    String? descricao,
+    int? idArea,
+  }) async {
+    try {
+      debugPrint('🔧 [API] Criando novo tópico...');
+      debugPrint('📂 [API] Categoria: $idCategoria');
+      debugPrint('📝 [API] Título: "$titulo"');
+      debugPrint('🎯 [API] Área: ${idArea ?? 'Não especificada'}');
+      debugPrint('📄 [API] Descrição: "${descricao ?? 'Não fornecida'}"');
 
-    final response = await post('/topicos-area', body: {
-      'id_categoria': idCategoria,
-      'titulo': titulo,
-      if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
-      if (idArea != null) 'id_area': idArea,
-    });
+      final response = await post('/topicos-area', body: {
+        'id_categoria': idCategoria,
+        'titulo': titulo,
+        if (descricao != null && descricao.isNotEmpty) 'descricao': descricao,
+        if (idArea != null) 'id_area': idArea,
+      });
 
-    final data = parseResponseToMap(response);
+      final data = parseResponseToMap(response);
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      debugPrint('✅ [API] Tópico criado com sucesso');
-      return data ??
-          {
-            'success': true,
-            'message': 'Tópico criado com sucesso!'
-          };
-    } else {
-      debugPrint('❌ [API] Erro ao criar tópico: ${response.statusCode}');
-      return data ??
-          {
-            'success': false,
-            'message': 'Erro ao criar tópico'
-          };
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('✅ [API] Tópico criado com sucesso');
+        return data ??
+            {'success': true, 'message': 'Tópico criado com sucesso!'};
+      } else {
+        debugPrint('❌ [API] Erro ao criar tópico: ${response.statusCode}');
+        return data ?? {'success': false, 'message': 'Erro ao criar tópico'};
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Exceção ao criar tópico: $e');
+      return {
+        'success': false,
+        'message': 'Erro de conexão',
+        'error': e.toString()
+      };
     }
-  } catch (e) {
-    debugPrint('❌ [API] Exceção ao criar tópico: $e');
-    return {
-      'success': false,
-      'message': 'Erro de conexão',
-      'error': e.toString()
-    };
   }
-}
-
 }

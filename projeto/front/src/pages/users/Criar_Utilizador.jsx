@@ -209,7 +209,7 @@ function CriarUser() {
           formadorData.curso = cursoSelecionado;
         }
 
-        // Importante: enviar como application/json, não como multipart/form-data
+        // Enviar como application/json, não como multipart/form-data
         response = await axios.post(`${API_BASE}/formadores/register`, formadorData, {
           headers: {
             'Content-Type': 'application/json'

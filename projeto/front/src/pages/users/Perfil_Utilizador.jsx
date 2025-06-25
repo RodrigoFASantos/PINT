@@ -20,7 +20,7 @@ const PerfilUser = () => {
     idade: ''
   });
 
-  // Novos estados para categorias, áreas e cursos
+  // estados para categorias, áreas e cursos
   const [formadorData, setFormadorData] = useState({
     categorias: [],
     cursosInscritos: [],
@@ -36,7 +36,7 @@ const PerfilUser = () => {
   const [capaPreview, setCapaPreview] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // Novo estado para controlar a aba ativa
+  // estado para controlar a aba ativa
   const [activeTab, setActiveTab] = useState('ministrados');
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);

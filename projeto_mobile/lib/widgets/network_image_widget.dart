@@ -160,7 +160,7 @@ class CustomNetworkImage extends StatelessWidget {
   }
 }
 
-// Widget específico para avatar - MELHORADO
+// Widget específico para avatar
 class AvatarImage extends StatelessWidget {
   final String imageUrl;
   final String? fallbackUrl;
@@ -243,7 +243,7 @@ class AvatarImage extends StatelessWidget {
   }
 }
 
-// Widget específico para imagens de curso - MUITO MELHORADO
+// Widget específico para imagens de curso
 class CursoImage extends StatelessWidget {
   final String imageUrl;
   final String? fallbackUrl;

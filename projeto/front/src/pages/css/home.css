@@ -68,7 +68,7 @@
   clear: both;
 }
 
-/* NOVO: Header da seção com filtro */
+/* Header da seção com filtro */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -96,7 +96,7 @@
   background-color: #ff8000;
 }
 
-/* NOVO: Filtro de cursos */
+/* Filtro de cursos */
 .filtro-cursos {
   display: flex;
   gap: 10px;

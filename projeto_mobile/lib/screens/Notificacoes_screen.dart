@@ -56,7 +56,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
         result['message'] ?? 'Todas as notificações foram marcadas como lidas');
   }
 
-  // ✅ CORRIGIDO: Navegação para as páginas corretas
+  // Navegação para as páginas corretas
   void _navegarParaItem(Map<String, dynamic> notificacao) {
     if (notificacao['notificacao'] == null) {
       debugPrint('Dados de notificação inválidos: $notificacao');
@@ -79,7 +79,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       case 'curso_adicionado':
       case 'formador_alterado':
       case 'data_curso_alterada':
-        // ✅ CORRIGIDO: Usar rota '/curso' (singular) com arguments
+        // Usar rota '/curso' (singular) com arguments
         Navigator.pushNamed(
           context,
           '/curso',
@@ -125,14 +125,14 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      // ✅ ADICIONADO: Navbar sempre visível
+      // Navbar sempre visível
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: NavbarScreen(
           currentUser: null, // Você pode passar dados do usuário se disponível
         ),
       ),
-      // ✅ ADICIONADO: Sidebar sem navbar integrada
+      // ADICIONADO: Sidebar sem navbar integrada
       drawer: const SidebarScreen(
         currentRoute: '/notificacoes',
       ),

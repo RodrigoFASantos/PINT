@@ -216,7 +216,7 @@ const getMinhasInscricoes = async (req, res) => {
           dataFim: curso.data_fim,
           cargaHoraria: curso.duracao,
           horasPresenca: horasPresenca,
-          notaFinal: avaliacao?.nota || null, // IMPORTANTE: Esta é a nota!
+          notaFinal: avaliacao?.nota || null, // Esta é a nota!
           status: status,
           imagem_path: curso.imagem_path
         };

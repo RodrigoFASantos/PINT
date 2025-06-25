@@ -34,12 +34,12 @@ exports.getPresencasByCurso = async (req, res) => {
           where: { id_curso: id }
         });
 
-        // ✅ ADICIONAR DEBUG INFO SOBRE TIMEZONE
+        // DEBUG INFO SOBRE TIMEZONE
         console.log(`🕒 [BACKEND] Presença ${presenca.id_curso_presenca}:`);
         console.log(`📅 Data fim: ${presencaObj.data_fim}`);
         console.log(`⏰ Hora fim: ${presencaObj.hora_fim}`);
         
-        // ✅ VERIFICAR SE A PRESENÇA AINDA ESTÁ ATIVA
+        // VERIFICAR SE A PRESENÇA AINDA ESTÁ ATIVA
         const agora = new Date();
         console.log(`🌍 [BACKEND] Hora atual servidor: ${agora.toISOString()}`);
         
@@ -48,7 +48,7 @@ exports.getPresencasByCurso = async (req, res) => {
           console.log(`🔚 [BACKEND] Data/hora fim presença: ${dataHoraFim.toISOString()}`);
           console.log(`✅ [BACKEND] Ainda ativa? ${dataHoraFim > agora ? 'SIM' : 'NÃO'}`);
           
-          // ✅ ADICIONAR CAMPO PARA FACILITAR VERIFICAÇÃO NO MOBILE
+          // ADICIONAR CAMPO PARA FACILITAR VERIFICAÇÃO NO MOBILE
           presencaObj.ainda_ativa = dataHoraFim > agora;
           presencaObj.minutos_restantes = Math.max(0, Math.floor((dataHoraFim - agora) / (1000 * 60)));
         } catch (e) {
@@ -303,7 +303,7 @@ exports.criarPresenca = async (req, res) => {
   }
 };
 
-// ✅ CORRIGIDO: Marcar presença com melhor tratamento de timezone
+// Marcar presença com melhor tratamento de timezone
 exports.marcarPresenca = async (req, res) => {
   try {
     const { id_curso, id_utilizador, codigo, client_time, client_time_utc, timezone_offset_minutes } = req.body;
@@ -311,7 +311,7 @@ exports.marcarPresenca = async (req, res) => {
     console.log('=== MARCAÇÃO DE PRESENÇA COM TIMEZONE ===');
     console.log('Dados recebidos:', { id_curso, id_utilizador, codigo });
     
-    // ✅ NOVO: Log das informações de timezone do cliente
+    // Log das informações de timezone do cliente
     if (client_time) {
       console.log('🌍 Hora do cliente (local):', client_time);
       console.log('🌍 Hora do cliente (UTC):', client_time_utc);
@@ -397,7 +397,7 @@ exports.marcarPresenca = async (req, res) => {
       });
     }
 
-    // ✅ MELHORADA: Busca com critérios mais robustos considerando timezone
+    // Busca com critérios mais robustos considerando timezone
     const presencaAtiva = await Curso_Presenca.findOne({
       where: {
         id_curso,
@@ -412,7 +412,7 @@ exports.marcarPresenca = async (req, res) => {
       });
     }
 
-    // ✅ NOVA VERIFICAÇÃO: Usar a hora do servidor para verificar se ainda está válida
+    // Usar a hora do servidor para verificar se ainda está válida
     const dataHoraFim = new Date(`${presencaAtiva.data_fim}T${presencaAtiva.hora_fim}`);
     console.log('🔚 Data/hora fim da presença:', dataHoraFim.toISOString());
     console.log('🕐 Hora atual do servidor:', agoraServidor.toISOString());

@@ -101,7 +101,7 @@ const updateSubmissaoNota = async (req, res) => {
       return res.status(404).json({ message: "Submissão não encontrada" });
     }
     
-    // IMPORTANTE: Atualizar tanto a coluna 'nota' quanto 'avaliacao'
+    // Atualizar tanto a coluna 'nota' quanto 'avaliacao'
     // para garantir compatibilidade com diferentes partes do sistema
     const notaValue = nota !== '' ? nota : null;
     
@@ -113,7 +113,7 @@ const updateSubmissaoNota = async (req, res) => {
       estado_atual: submissao.estado
     });
     
-    // Atualizar no banco de dados usando uma query SQL direta 
+    // Atualizar na base de dados usando uma query SQL direta 
     // para garantir que os campos corretos sejam atualizados
     const result = await sequelize.query(
       `UPDATE trabalho_entregue 

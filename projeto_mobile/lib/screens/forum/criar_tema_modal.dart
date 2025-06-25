@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; // ✅ ADICIONADO: Importação para MediaType
+import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mime/mime.dart'; // ✅ ADICIONAR ESTA DEPENDÊNCIA
+import 'package:mime/mime.dart';
 import '../../services/api_service.dart';
 import '../../main.dart';
 
@@ -42,7 +42,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
     super.dispose();
   }
 
-  // ✅ NOVA FUNÇÃO: Detectar Content-Type baseado na extensão
+  // Detectar Content-Type baseado na extensão
   String _detectContentType(String filePath, String? originalMimeType) {
     // Primeiro, tentar usar o MIME type original se disponível e válido
     if (originalMimeType != null &&
@@ -159,7 +159,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
           tipo = 'video';
         }
 
-        // ✅ USAR O MIME TYPE DO FILE PICKER SE DISPONÍVEL
+        // USAR O MIME TYPE DO FILE PICKER SE DISPONÍVEL
         final mimeType =
             lookupMimeType(file.path) ?? _detectContentType(file.path, null);
 
@@ -179,7 +179,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
         'nome': nome,
         'path': file.path,
         'mimeType': mimeType ??
-            _detectContentType(file.path, null), // ✅ GUARDAR MIME TYPE
+            _detectContentType(file.path, null), // GUARDAR MIME TYPE
       };
     });
 
@@ -326,12 +326,12 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
       request.fields['titulo'] = _tituloController.text;
       request.fields['texto'] = _textoController.text;
 
-      // ✅ CORRIGIDO: Adicionar Content-Type correto ao anexo
+      // Adicionar Content-Type correto ao anexo
       if (_anexo != null && _anexoInfo != null) {
         var stream = http.ByteStream(_anexo!.openRead());
         var length = await _anexo!.length();
 
-        // ✅ DETECTAR E DEFINIR CONTENT-TYPE CORRETO
+        // DETECTAR E DEFINIR CONTENT-TYPE CORRETO
         final contentType =
             _detectContentType(_anexo!.path, _anexoInfo!['mimeType']);
 
@@ -345,7 +345,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
           length,
           filename: _anexoInfo!['nome'],
           contentType:
-              MediaType.parse(contentType), // ✅ CONTENT-TYPE ADICIONADO
+              MediaType.parse(contentType),
         );
 
         request.files.add(multipartFile);
@@ -635,7 +635,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
                     color: Colors.grey[600],
                   ),
                 ),
-                // ✅ MOSTRAR MIME TYPE PARA DEBUG
+                // MOSTRAR MIME TYPE PARA DEBUG
                 if (_anexoInfo!['mimeType'] != null) ...[
                   SizedBox(height: 2),
                   Text(

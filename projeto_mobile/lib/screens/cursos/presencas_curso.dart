@@ -148,7 +148,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // ✅ CORRIGIDO: Determinar o status da presença para formandos
+  // Determinar o status da presença para formandos
   String _getStatusPresenca(Map<String, dynamic> presenca) {
     final presencaId = presenca['id_curso_presenca'].toString();
     final jaPresente = minhasPresencas[presencaId] ?? false;
@@ -157,11 +157,11 @@ class _PresencasCursoState extends State<PresencasCurso> {
       return 'Presente';
     }
 
-    // ✅ MELHORADA: Verificação da validade com logs detalhados
+    // Verificação da validade com logs detalhados
     try {
       final agora = DateTime.now();
 
-      // ✅ DEBUG: Logs detalhados dos dados recebidos
+      // Logs detalhados dos dados recebidos
       debugPrint('🔍 [MOBILE] === VERIFICANDO PRESENÇA ===');
       debugPrint('🔍 [MOBILE] ID: $presencaId');
       debugPrint('🔍 [MOBILE] Data fim: ${presenca['data_fim']}');
@@ -170,7 +170,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
       debugPrint('🔍 [MOBILE] Hora início: ${presenca['hora_inicio']}');
       debugPrint('🔍 [MOBILE] Agora: $agora');
 
-      // ✅ CORRIGIDO: Parsing mais robusto das datas
+      // Parsing mais robusto das datas
       String dataFim = presenca['data_fim']?.toString() ?? '';
       String horaFim = presenca['hora_fim']?.toString() ?? '';
       String dataInicio = presenca['data_inicio']?.toString() ?? '';
@@ -184,7 +184,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
         return 'Ausente';
       }
 
-      // ✅ PARSING MAIS ROBUSTO: Tentar múltiplos formatos
+      // PARSING MAIS ROBUSTO: Tentar múltiplos formatos
       DateTime? dataHoraFim;
       DateTime? dataHoraInicio;
 
@@ -221,13 +221,13 @@ class _PresencasCursoState extends State<PresencasCurso> {
       debugPrint('🔍 [MOBILE] Data/hora início parseada: $dataHoraInicio');
       debugPrint('🔍 [MOBILE] Data/hora fim parseada: $dataHoraFim');
 
-      // ✅ VERIFICAÇÃO ADICIONAL: Se a presença ainda não começou
+      //  VERIFICAÇÃO ADICIONAL: Se a presença ainda não começou
       if (dataHoraInicio != null && dataHoraInicio.isAfter(agora)) {
         debugPrint('⏰ [MOBILE] Presença ainda não começou');
         return 'Aguardar';
       }
 
-      // ✅ VERIFICAÇÃO PRINCIPAL: Se ainda está dentro da validade
+      //  VERIFICAÇÃO PRINCIPAL: Se ainda está dentro da validade
       if (dataHoraFim != null && dataHoraFim.isAfter(agora)) {
         final diferencaMinutos = dataHoraFim.difference(agora).inMinutes;
         debugPrint(
@@ -245,7 +245,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // Determinar a cor do status (incluindo "Aguardar")
+  //  Determinar a cor do status (incluindo "Aguardar")
   Color _getCorStatus(String status) {
     switch (status) {
       case 'Presente':
@@ -275,7 +275,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     });
   }
 
-  // ✅ CORRIGIDO: Marcar presença com tratamento adequado dos erros
+  // Marcar presença com tratamento adequado dos erros
   Future<void> _marcarPresenca() async {
     if (_codigoMarcarController.text.isEmpty) {
       _showError('Por favor, introduza um código');
@@ -292,7 +292,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
         loading = true;
       });
 
-      // ✅ DEBUG: Logs detalhados
+      // Logs detalhados
       debugPrint('🔧 [MOBILE] === MARCANDO PRESENÇA ===');
       debugPrint('🔧 [MOBILE] Curso: ${widget.cursoId}');
       debugPrint('🔧 [MOBILE] Utilizador: ${currentUser!['id_utilizador']}');
@@ -305,16 +305,14 @@ class _PresencasCursoState extends State<PresencasCurso> {
         codigo: _codigoMarcarController.text,
       );
 
-      // ✅ LOG da resposta completa
+      // LOG da resposta completa
       debugPrint('📱 [MOBILE] Resposta recebida: $response');
 
-      // ✅ VERIFICAÇÃO ROBUSTA da resposta
       if (response != null) {
         final isSuccess = response['success'] == true;
         debugPrint('📱 [MOBILE] É sucesso? $isSuccess');
 
         if (isSuccess) {
-          // ✅ SUCESSO
           debugPrint('🎉 [MOBILE] Presença marcada com sucesso!');
 
           // Fechar modal primeiro
@@ -332,7 +330,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
           // Atualizar dados completos
           await _refreshData();
         } else {
-          // ✅ ERRO: Extrair mensagem específica
+          // Extrair mensagem específica
           debugPrint('❌ [MOBILE] Erro na marcação de presença');
 
           String errorMessage = 'Código inválido';
@@ -344,7 +342,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
             errorMessage = response['detalhes'];
           }
 
-          // ✅ Se tem ambos message e detalhes, combinar
+          // Se tem ambos message e detalhes, combinar
           if (response['message'] != null && response['detalhes'] != null) {
             errorMessage = '${response['message']}\n${response['detalhes']}';
           }
@@ -353,7 +351,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
           _showError(errorMessage);
         }
       } else {
-        // ✅ Resposta nula
+        //Resposta nula
         debugPrint('❌ [MOBILE] Resposta nula do servidor');
         _showError('Erro de comunicação com o servidor');
       }
@@ -398,7 +396,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // ✅ MELHORADO: Formatação de data mais robusta
+  // Formatação de data mais robusta
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return '';
     try {
@@ -416,7 +414,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  // ✅ NOVA FUNÇÃO: Formatação de hora mais robusta
+  //Formatação de hora mais robusta
   String _formatTime(String? timeString) {
     if (timeString == null || timeString.isEmpty) return '';
     try {
@@ -444,7 +442,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     );
   }
 
-  // ✅ MELHORADO: Mostrar erro com mais espaço para mensagens longas
+  // Mostrar erro com mais espaço para mensagens longas
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -453,8 +451,8 @@ class _PresencasCursoState extends State<PresencasCurso> {
           style: TextStyle(fontSize: 14),
         ),
         backgroundColor: Colors.red,
-        duration: Duration(seconds: 5), // ✅ Mais tempo para ler
-        behavior: SnackBarBehavior.floating, // ✅ Melhor visualização
+        duration: Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -784,7 +782,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    // ✅ NOVO: Mostrar curso atual para debug
+                    // Mostrar curso atual para debug
                     SizedBox(height: 4),
                     Text(
                       'Curso: ${widget.cursoId}',

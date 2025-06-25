@@ -242,9 +242,9 @@ class ForumConstants {
   static const String routeTema = '/tema';
 
   // Limites
-  static const int maxAnexosPorTema = 1; // ✅ Corrigido: apenas 1 anexo por tema
+  static const int maxAnexosPorTema = 1; // apenas 1 anexo por tema
   static const int maxAnexosPorComentario =
-      1; // ✅ Corrigido: apenas 1 anexo por comentário
+      1; // apenas 1 anexo por comentário
   static const int maxTamanhoArquivo = 10 * 1024 * 1024; // 10MB
 
   // Tipos de arquivo permitidos

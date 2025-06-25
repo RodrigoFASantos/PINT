@@ -217,12 +217,11 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     }
   }
 
-  // ✅ REMOVIDO COMPLETAMENTE: Toda a lógica de cancelar inscrição foi removida
   // Agora só permite INSCREVER (nunca cancelar)
   Future<void> _handleInscricao() async {
     if (_isLoading) return;
 
-    // ✅ NOVO: Se já está inscrito, não fazer nada
+    // Se já está inscrito, não fazer nada
     if (widget.inscrito) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -238,7 +237,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     });
 
     try {
-      // ✅ APENAS INSCREVER (nunca cancelar)
+      // APENAS INSCREVER (nunca cancelar)
       print('📝 Criando nova inscrição...');
 
       final userResponse = await _apiService.get('/users/perfil');
@@ -260,7 +259,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       print('📡 Status da resposta: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // ✅ SUCESSO: Chamar callback para atualizar o estado
+        // Chamar callback para atualizar o estado
         widget.onInscricaoChanged?.call(true);
 
         if (mounted) {
@@ -340,7 +339,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
   bool _canEnroll() {
     if (widget.inscrito)
-      return false; // ✅ Já inscrito, não pode inscrever novamente
+      return false; // Já inscrito, não pode inscrever novamente
 
     try {
       final now = DateTime.now();
@@ -411,56 +410,57 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         'Não definido';
   }
 
-  // ✅ CORRIGIDO: Widget de card ultra-compacto
+  // Widget de card
   Widget _buildInfoCard(
       IconData icon, String label, String value, String subtitle) {
-    return Flexible( // ✅ CORREÇÃO: Expanded para Flexible
+    return Flexible(
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(6), // ✅ MAIS REDUZIDO: de 8 para 6
+        padding: EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO: Controla altura
+          mainAxisSize: MainAxisSize.min, //   Controla altura
           children: [
             Row(
               children: [
-                Icon(icon, color: Colors.grey[600], size: 12), // ✅ MAIS REDUZIDO: de 14 para 12
-                SizedBox(width: 3), // ✅ MAIS REDUZIDO: de 4 para 3
-                Expanded( // ✅ ADICIONADO: Expanded no texto
+                Icon(icon, color: Colors.grey[600], size: 12),
+                SizedBox(width: 3),
+                Expanded(
+                  // Expanded no texto
                   child: Text(
                     label,
                     style: TextStyle(
-                      fontSize: 10, // ✅ MAIS REDUZIDO: de 11 para 10
+                      fontSize: 10,
                       fontWeight: FontWeight.w500,
                       color: Colors.grey[600],
                     ),
-                    overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
-                    maxLines: 1, // ✅ ADICIONADO: Limitar linhas
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 3), // ✅ MAIS REDUZIDO: de 4 para 3
+            SizedBox(height: 3),
             Text(
               value,
               style: TextStyle(
-                fontSize: 11, // ✅ MAIS REDUZIDO: de 12 para 11
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
-              maxLines: 1, // ✅ REDUZIDO: de 2 para 1
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             if (subtitle.isNotEmpty) ...[
-              SizedBox(height: 1), // ✅ MAIS REDUZIDO: de 2 para 1
+              SizedBox(height: 1),
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontSize: 9, // ✅ MAIS REDUZIDO: de 10 para 9
+                  fontSize: 9,
                   color: Colors.grey[600],
                 ),
                 maxLines: 1,
@@ -473,7 +473,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     );
   }
 
-  // ✅ COMPLETAMENTE REFORMULADO: Botão sem opção de cancelar
+  // Botão sem opção de cancelar
   Widget _buildActionButton() {
     final canEnroll = _canEnroll();
 
@@ -482,42 +482,42 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       final dataFim = DateTime.parse(widget.curso['data_fim']);
       final cursoTerminado = dataFim.isBefore(now);
 
-      // ✅ Se já está inscrito, mostrar indicador de sucesso (SEM botão de cancelar) - COMPACTO
+      // Se já está inscrito, mostrar indicador de sucesso (SEM botão de cancelar) - COMPACTO
       if (widget.inscrito) {
         return Container(
           width: double.infinity,
-          padding: EdgeInsets.all(8), // ✅ REDUZIDO: de 12 para 8
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.green[50],
-            borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Colors.green[200]!),
           ),
           child: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 20), // ✅ REDUZIDO: de 24 para 20
-              SizedBox(width: 8), // ✅ REDUZIDO: de 12 para 8
+              Icon(Icons.check_circle, color: Colors.green, size: 20),
+              SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Inscrito neste curso',
                       style: TextStyle(
-                        fontSize: 14, // ✅ REDUZIDO: de 16 para 14
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.green[700],
                       ),
-                      overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 1), // ✅ REDUZIDO: de 2 para 1
+                    SizedBox(height: 1),
                     Text(
                       'Acesso garantido aos conteúdos',
                       style: TextStyle(
-                        fontSize: 11, // ✅ REDUZIDO: de 12 para 11
+                        fontSize: 11,
                         color: Colors.green[600],
                       ),
-                      overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -527,28 +527,28 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         );
       }
 
-      // Se o curso terminou e não está inscrito - COMPACTO
+      // Se o curso terminou e não está inscrito
       if (cursoTerminado) {
         return Container(
           width: double.infinity,
-          padding: EdgeInsets.all(8), // ✅ REDUZIDO: de 12 para 8
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Colors.grey[300]!),
           ),
           child: Row(
             children: [
-              Icon(Icons.event_busy, color: Colors.grey, size: 18), // ✅ REDUZIDO: de 20 para 18
-              SizedBox(width: 8), // ✅ REDUZIDO: de 10 para 8
+              Icon(Icons.event_busy, color: Colors.grey, size: 18),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Este curso já terminou',
                   style: TextStyle(
-                    fontSize: 13, // ✅ REDUZIDO: de 14 para 13
+                    fontSize: 13,
                     color: Colors.grey[600],
                   ),
-                  overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -556,28 +556,28 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         );
       }
 
-      // Se não há vagas - COMPACTO
+      // Se não há vagas
       if (widget.curso['tipo'] == 'sincrono' && !canEnroll) {
         return Container(
           width: double.infinity,
-          padding: EdgeInsets.all(8), // ✅ REDUZIDO: de 12 para 8
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Colors.orange[200]!),
           ),
           child: Row(
             children: [
-              Icon(Icons.people, color: Colors.orange, size: 18), // ✅ REDUZIDO: de 20 para 18
-              SizedBox(width: 8), // ✅ REDUZIDO: de 10 para 8
+              Icon(Icons.people, color: Colors.orange, size: 18),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Não há vagas disponíveis',
                   style: TextStyle(
-                    fontSize: 13, // ✅ REDUZIDO: de 14 para 13
+                    fontSize: 13,
                     color: Colors.orange[700],
                   ),
-                  overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -585,23 +585,23 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         );
       }
 
-      // ✅ APENAS botão de INSCREVER (nunca cancelar) - MAIS COMPACTO
+      // Botão de INSCREVER
       return SizedBox(
         width: double.infinity,
-        height: 44, // ✅ REDUZIDO: de 48 para 44
+        height: 44,
         child: ElevatedButton(
           onPressed: _isLoading ? null : _handleInscricao,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+              borderRadius: BorderRadius.circular(6),
             ),
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8), // ✅ ADICIONADO: padding menor
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           ),
           child: _isLoading
               ? SizedBox(
-                  height: 18, // ✅ REDUZIDO: de 20 para 18
-                  width: 18, // ✅ REDUZIDO: de 20 para 18
+                  height: 18,
+                  width: 18,
                   child: CircularProgressIndicator(
                     color: Colors.white,
                     strokeWidth: 2,
@@ -609,23 +609,23 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.add_circle,
                       color: Colors.white,
-                      size: 18, // ✅ REDUZIDO: de 20 para 18
+                      size: 18,
                     ),
-                    SizedBox(width: 6), // ✅ REDUZIDO: de 8 para 6
-                    Flexible( // ✅ ADICIONADO: Flexible
+                    SizedBox(width: 6),
+                    Flexible(
                       child: Text(
                         'Inscrever-se',
                         style: TextStyle(
-                          fontSize: 14, // ✅ REDUZIDO: de 16 para 14
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
-                        overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -636,24 +636,24 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
       print('❌ Erro ao construir botão de ação: $e');
       return Container(
         width: double.infinity,
-        padding: EdgeInsets.all(8), // ✅ REDUZIDO: de 12 para 8
+        padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.red[50],
-          borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO: de 8 para 6
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.red[200]!),
         ),
         child: Row(
           children: [
-            Icon(Icons.error, color: Colors.red, size: 18), // ✅ REDUZIDO: de 20 para 18
-            SizedBox(width: 8), // ✅ REDUZIDO: de 10 para 8
+            Icon(Icons.error, color: Colors.red, size: 18),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Erro ao carregar informações do curso',
                 style: TextStyle(
-                  fontSize: 13, // ✅ REDUZIDO: de 14 para 13
+                  fontSize: 13,
                   color: Colors.red[700],
                 ),
-                overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -662,25 +662,23 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
     }
   }
 
-  // ✅ CORRIGIDO: Layout ultra-compacto com Wrap
   Widget _buildDetalhesExpandidos() {
     return Container(
-      padding: EdgeInsets.all(8), // ✅ MAIS REDUZIDO: de 12 para 8
+      padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // ✅ USANDO WRAP AO INVÉS DE ROW para evitar overflow
           // Primeira linha: Formador, Vagas, Duração
           Wrap(
-            spacing: 4, // ✅ MAIS REDUZIDO: de 6 para 4
-            runSpacing: 4, // ✅ ADICIONADO: Espaçamento vertical
+            spacing: 4,
+            runSpacing: 4,
             children: [
               SizedBox(
-                width: (MediaQuery.of(context).size.width - 32) / 3 - 4, // ✅ CALCULO DINÂMICO
+                width: (MediaQuery.of(context).size.width - 32) / 3 - 4,
                 child: _buildInfoCard(
                   Icons.person,
                   'Formador',
@@ -689,7 +687,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 ),
               ),
               SizedBox(
-                width: (MediaQuery.of(context).size.width - 32) / 3 - 4, // ✅ CALCULO DINÂMICO
+                width: (MediaQuery.of(context).size.width - 32) / 3 - 4,
                 child: _buildInfoCard(
                   Icons.people,
                   'Vagas',
@@ -703,7 +701,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
                 ),
               ),
               SizedBox(
-                width: (MediaQuery.of(context).size.width - 32) / 3 - 4, // ✅ CALCULO DINÂMICO
+                width: (MediaQuery.of(context).size.width - 32) / 3 - 4,
                 child: _buildInfoCard(
                   Icons.schedule,
                   'Duração',
@@ -713,7 +711,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               ),
             ],
           ),
-          SizedBox(height: 6), // ✅ MAIS REDUZIDO: de 8 para 6
+          SizedBox(height: 6),
 
           // Segunda linha: Categoria, Área, Tópico
           Wrap(
@@ -780,47 +778,45 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
               widget.curso['descricao'].toString().isNotEmpty)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(8), // ✅ MAIS REDUZIDO: de 12 para 8
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(6), // ✅ REDUZIDO
+                borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: Colors.grey[300]!),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.description,
-                          color: Colors.grey[600], size: 12), // ✅ MAIS REDUZIDO
-                      SizedBox(width: 3), // ✅ MAIS REDUZIDO
+                          color: Colors.grey[600], size: 12),
+                      SizedBox(width: 3),
                       Text(
                         'Descrição',
                         style: TextStyle(
-                          fontSize: 10, // ✅ MAIS REDUZIDO
+                          fontSize: 10,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey[600],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 3), // ✅ MAIS REDUZIDO
+                  SizedBox(height: 3),
                   Text(
                     widget.curso['descricao'].toString(),
                     style: TextStyle(
-                      fontSize: 11, // ✅ MAIS REDUZIDO
-                      height: 1.3, // ✅ REDUZIDO: de 1.4 para 1.3
+                      fontSize: 11,
+                      height: 1.3,
                     ),
-                    maxLines: 3, // ✅ ADICIONADO: Limitar linhas
-                    overflow: TextOverflow.ellipsis, // ✅ ADICIONADO
+                    maxLines: 3, // Limitar linhas
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          SizedBox(height: 8), // ✅ REDUZIDO: de 12 para 8
-
-          // ✅ Botão de ação (SEM cancelar inscrição)
+          SizedBox(height: 8),
           _buildActionButton(),
         ],
       ),
@@ -834,7 +830,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
 
     // SEMPRE mostrar algum conteúdo
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 4, vertical: 2), // ✅ MAIS REDUZIDO: de 8,4 para 4,2
+      margin: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -848,7 +844,7 @@ class _DetalhesCursoState extends State<DetalhesCurso> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // ✅ ADICIONADO
+        mainAxisSize: MainAxisSize.min,
         children: [
           // SEMPRE mostrar os detalhes expandidos
           _buildDetalhesExpandidos(),

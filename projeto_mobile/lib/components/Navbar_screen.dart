@@ -19,7 +19,7 @@ class NavbarScreen extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: const Color(0xFFFF8000),
       elevation: 2,
-      // ✅ CORRIGIDO: Usar Builder para garantir contexto correto
+      // Usar Builder para garantir contexto correto
       leading: Builder(
         builder: (context) => IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
@@ -34,7 +34,7 @@ class NavbarScreen extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      // ✅ Garantir que a navbar ocupa toda a largura
+      // Garantir que a navbar ocupa toda a largura
       titleSpacing: 0,
       centerTitle: true,
       actions: [

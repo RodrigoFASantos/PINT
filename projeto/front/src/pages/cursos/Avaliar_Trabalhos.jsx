@@ -163,7 +163,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
               id_utilizador: inscricao.utilizador.id_utilizador,
               nome: inscricao.utilizador.nome,
               email: inscricao.utilizador.email,
-              id_inscricao: inscricao.id_inscricao // IMPORTANTE: Guardar o ID da inscrição
+              id_inscricao: inscricao.id_inscricao // Guardar o ID da inscrição
             });
           }
         });
@@ -309,7 +309,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
         // Mapear notas corretamente, verificando os diferentes formatos possíveis
         const initial = {};
         response.data.forEach(item => {
-          // Importante: Obter o ID correto independente do formato
+          // Obter o ID correto independente do formato
           const id = item.id || item.id_trabalho;
 
           // Verificar todos os lugares possíveis onde a nota pode estar
@@ -319,14 +319,14 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
           if (item.nota !== undefined && item.nota !== null) {
             nota = item.nota.toString();
           } else if (item.avaliacao !== undefined && item.avaliacao !== null) {
-            // IMPORTANTE: Verifica também o campo 'avaliacao'
+            //  Verifica também o campo 'avaliacao'
             nota = item.avaliacao.toString();
           }
           // Verificar no objeto trabalho (se existir)
           else if (item.trabalho && item.trabalho.nota !== undefined && item.trabalho.nota !== null) {
             nota = item.trabalho.nota.toString();
           } else if (item.trabalho && item.trabalho.avaliacao !== undefined && item.trabalho.avaliacao !== null) {
-            // IMPORTANTE: Verifica também o campo 'avaliacao' no objeto trabalho
+            //  Verifica também o campo 'avaliacao' no objeto trabalho
             nota = item.trabalho.avaliacao.toString();
           }
 
@@ -338,7 +338,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
           console.log(`Inicializando nota para trabalho ID ${id}: ${nota}`);
           initial[id] = nota;
 
-          // Correção do estado baseado na nota
+          // Estado baseado na nota
           if (nota && nota !== '' && item.estado !== 'Avaliado') {
             // Se temos nota mas o estado não é 'Avaliado', corrigimos o estado
             console.log(`Corrigindo estado para item ${id} de "${item.estado}" para "Avaliado"`);
@@ -409,7 +409,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
             console.log(`Inicializando nota para trabalho ID ${id}: ${nota}`);
             initial[id] = nota;
 
-            // Correção do estado baseado na nota
+            // Estado baseado na nota
             if (nota && nota !== '' && item.estado !== 'Avaliado') {
               console.log(`Corrigindo estado para item ${id} de "${item.estado}" para "Avaliado"`);
               item.estado = 'Avaliado';
@@ -512,7 +512,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
     }
   };
 
-  // Salvar nota de uma submissão - Simplificado e melhorado (APENAS PARA CURSOS SÍNCRONOS)
+  // Salvar nota de uma submissão (APENAS PARA CURSOS SÍNCRONOS)
   const handleSave = async (id) => {
     // Verificar se a nota está no intervalo válido
     const notaValue = notas[id];
@@ -957,7 +957,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
 
         console.log("Certificado gerado com sucesso:", certificadoUrlGerado);
 
-        // IMPORTANTE: Agora vamos criar/atualizar a entrada na tabela avaliacoes
+        //  Agora vamos criar/atualizar a entrada na tabela avaliacoes
         try {
           // Primeiro, buscar o ID da inscrição
           let inscricaoId = formandoSelecionado.id_inscricao;
@@ -1062,7 +1062,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
         return;
       }
 
-      // Importante: usar o email do FORMANDO, não do formador logado
+      //  usar o email do FORMANDO, não do formador logado
       const emailFormatado = formando.email.replace(/@/g, '_at_').replace(/\./g, '_');
 
       // Obter o nome do curso formatado

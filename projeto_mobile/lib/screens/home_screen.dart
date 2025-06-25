@@ -460,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ Navbar sempre visível no topo
+      // Navbar sempre visível no topo
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: NavbarScreen(
@@ -468,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // ✅ SidebarScreen como Drawer (sem NavbarScreen integrada)
+      // SidebarScreen como Drawer (sem NavbarScreen integrada)
       drawer: SidebarScreen(
         currentUser: _currentUser,
         currentRoute: '/home',
@@ -580,7 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
 
-                              // Botão "Ver todos" com design melhorado
+                              // Botão "Ver todos" com design
                               if (_cursosSugeridos != null &&
                                   _cursosSugeridos!.isNotEmpty)
                                 Container(

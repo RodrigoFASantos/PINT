@@ -398,7 +398,7 @@ class ForumActionButton extends StatelessWidget {
   }
 }
 
-// Widget melhorado para botão de denúncia
+// Widget para botão de denúncia
 class ForumDenunciaButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool foiDenunciado;
@@ -641,7 +641,7 @@ class ForumEmptyState extends StatelessWidget {
   }
 }
 
-// Widget para modal de denúncia melhorado
+// Widget para modal de denúncia
 class ForumDenunciaModal extends StatefulWidget {
   final String tipo; // 'tema' ou 'comentario'
   final Function(String motivo) onDenunciar;

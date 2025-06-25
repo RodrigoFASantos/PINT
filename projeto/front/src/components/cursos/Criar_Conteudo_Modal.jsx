@@ -287,7 +287,7 @@ const ArquivoModal = ({ pasta, onClose, onVoltar, onSuccess, API_BASE, tipo, isA
 
       const formData = new FormData();
       
-      // CORREÇÃO: Enviar o tipo correto baseado na seleção do usuário
+      // Enviar o tipo correto baseado na seleção do usuário
       if (isVideo) {
         formData.append('tipo', 'video');
       } else {

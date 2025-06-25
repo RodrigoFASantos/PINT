@@ -105,7 +105,7 @@ const verificarHorasFormador = async (req, res) => {
 
 
 
-// Procurar certificado existente - Melhorado com informações de datas
+// Procurar certificado existente
 const getCertificado = async (req, res) => {
   try {
     const { id_avaliacao } = req.params;
@@ -383,7 +383,7 @@ const criarDiretorio = async (req, res) => {
   }
 };
 
-// Função para gerar certificado pelo ID do utilizador e curso - Melhorada com datas
+// Função para gerar certificado pelo ID do utilizador e curso
 const registarCertificado = async (req, res) => {
   try {
     const { userId, cursoId } = req.body;

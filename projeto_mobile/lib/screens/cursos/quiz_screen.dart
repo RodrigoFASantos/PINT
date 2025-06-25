@@ -240,7 +240,7 @@ class _QuizScreenState extends State<QuizScreen> {
       print('🎯 Submetendo quiz: ${widget.quizId}');
       print('📝 Respostas originais: $respostas');
 
-      // CORREÇÃO: Converter chaves de int para String para serialização JSON
+      // Converter chaves de int para String para serialização JSON
       final respostasParaEnvio = <String, List<int>>{};
       respostas.forEach((perguntaId, opcoesSelecionadas) {
         respostasParaEnvio[perguntaId.toString()] = opcoesSelecionadas;

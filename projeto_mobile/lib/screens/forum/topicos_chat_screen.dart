@@ -105,19 +105,19 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
-  // ✅ CORRIGIDO: Usar o método correto para carregar comentários de tema
+  // Usar o método correto para carregar comentários de tema
   Future<void> _loadComentarios() async {
     try {
       debugPrint(
           '🔧 [TOPICOS_CHAT] Carregando comentários para tema: ${widget.temaId}');
 
-      // ✅ USAR O MÉTODO CORRETO DO API_SERVICE - AGORA RETORNA List<dynamic>? DIRETAMENTE
+      //USAR O MÉTODO CORRETO DO API_SERVICE - AGORA RETORNA List<dynamic>? DIRETAMENTE
       final comentariosData =
           await _apiService.getComentariosTema(widget.temaId);
 
       if (comentariosData != null) {
         setState(() {
-          comentarios = comentariosData; // ✅ Agora é diretamente uma lista
+          comentarios = comentariosData; // Agora é diretamente uma lista
           loading = false;
         });
 
@@ -140,7 +140,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     }
   }
 
-  // ✅ CORRIGIDO: Função melhorada para adicionar novo comentário
+  // Adicionar novo comentário
   void _onNovoComentario(Map<String, dynamic> novoComentario) {
     setState(() {
       // Adicionar o novo comentário no final da lista (mais recente)

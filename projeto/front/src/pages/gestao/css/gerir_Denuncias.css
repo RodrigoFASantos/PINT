@@ -303,7 +303,7 @@
   text-align: center;
 }
 
-/* CORREÇÃO: Ajuste do modal-conteudo para ocupar a largura total */
+/*  Ajuste do modal-conteudo para ocupar a largura total */
 .modal-conteudo {
   box-sizing: border-box;
   width: 100%;
@@ -316,7 +316,7 @@
   max-width: none; /* Remove qualquer limitação de largura */
 }
 
-/* CORREÇÃO: Remoção de qualquer layout em grid que esteja dividindo o conteúdo */
+/*  Remoção de qualquer layout em grid que esteja dividindo o conteúdo */
 .denuncia-detalhes,
 .denuncia-motivo,
 .denuncia-conteudo,
@@ -325,7 +325,7 @@
   margin-bottom: 15px;
 }
 
-/* CORREÇÃO: Ajuste para os parágrafos não centralizados */
+/*  Ajuste para os parágrafos não centralizados */
 .modal-conteudo p {
   margin: 4px 0 12px;
   line-height: 1.5;
@@ -372,7 +372,7 @@
   color: #eee;
 }
 
-/* CORREÇÃO: Remove grid columns que podem estar causando o problema */
+/*  Remove grid columns que podem estar causando o problema */
 .denuncia-motivo,
 .denuncia-denunciante,
 .modal-acoes {
@@ -454,7 +454,7 @@
   background-color: #c0392b;
 }
 
-/* CORREÇÃO: Remove elementos com cores de fundo que aparecem nas imagens */
+/*  Remove elementos com cores de fundo que aparecem nas imagens */
 [id^="div.modal"] {
   background-color: transparent !important;
   border: none !important;
@@ -496,12 +496,12 @@
     width: 100%;
   }
   
-  /* CORREÇÃO: Remove qualquer grid layout em telas menores */
+  /*  Remove qualquer grid layout em telas menores */
   .modal-conteudo {
     padding: 16px;
   }
   
-  /* CORREÇÃO: Ajusta para que em dispositivos móveis, todos os elementos ocupem a largura total */
+  /*  Ajusta para que em dispositivos móveis, todos os elementos ocupem a largura total */
   .denuncia-motivo,
   .denuncia-denunciante,
   .modal-acoes {
@@ -533,7 +533,7 @@
     font-size: 0.8rem;
   }
   
-  /* Oculta colunas menos importantes em telas muito pequenas */
+  /* Oculta colunas menos importantes em ecras muito pequenas */
   .tabela-denuncias th:nth-child(1),
   .tabela-denuncias td:nth-child(1),
   .tabela-denuncias th:nth-child(4),

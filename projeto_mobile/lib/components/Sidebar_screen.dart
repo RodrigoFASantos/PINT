@@ -163,7 +163,7 @@ class _SidebarScreenState extends State<SidebarScreen> {
     String? route, {
     VoidCallback? onTap,
   }) {
-    // Lógica melhorada para detectar rota ativa
+    // Detectar rota ativa
     bool isActive = false;
 
     if (route != null) {

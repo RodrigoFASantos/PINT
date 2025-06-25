@@ -670,7 +670,7 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
             ),
           ),
 
-          // Botão de ação - CORRIGIDO: Mostrar para formandos sempre que puderem iniciar
+          // Botão de ação -Mostrar para formandos sempre que puderem iniciar
           if (canStart && isFormando)
             Container(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 16),

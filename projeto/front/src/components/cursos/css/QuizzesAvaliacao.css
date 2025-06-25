@@ -455,7 +455,7 @@
   margin: 20px 0;
 }
 
-/* Estados de loading melhorados */
+/* Estados de loading */
 .qa-loading {
   display: flex;
   flex-direction: column;

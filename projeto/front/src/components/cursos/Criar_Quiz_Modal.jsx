@@ -16,7 +16,7 @@ const CriarQuizModal = ({ isOpen, onClose, cursoId, onSuccess }) => {
         {
             pergunta: '',
             tipo: 'multipla_escolha',
-            pontos: 4, // CORREÇÃO: Padrão 4 pontos
+            pontos: 4, // Padrão 4 pontos
             opcoes: [
                 { texto: '', correta: false },
                 { texto: '', correta: false },
@@ -101,7 +101,7 @@ const CriarQuizModal = ({ isOpen, onClose, cursoId, onSuccess }) => {
             {
                 pergunta: '',
                 tipo: 'multipla_escolha',
-                pontos: 4, // CORREÇÃO: Padrão 4 pontos
+                pontos: 4, // Padrão 4 pontos
                 opcoes: [
                     { texto: '', correta: false },
                     { texto: '', correta: false },
@@ -223,7 +223,7 @@ const CriarQuizModal = ({ isOpen, onClose, cursoId, onSuccess }) => {
                 setPerguntas([{
                     pergunta: '',
                     tipo: 'multipla_escolha',
-                    pontos: 4, // CORREÇÃO: Padrão 4 pontos
+                    pontos: 4, // Padrão 4 pontos
                     opcoes: [
                         { texto: '', correta: false },
                         { texto: '', correta: false },

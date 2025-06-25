@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config();
 
-// createTransport() em vez de createTransporter()
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -175,7 +174,7 @@ const sendPasswordResetEmail = async (user, token) => {
           </div>
           
           <div style="margin: 30px 0; background-color: #fef2f2; padding: 15px; border-radius: 5px; border-left: 4px solid #ef4444;">
-            <p style="margin: 0; color: #dc2626;"><strong>⚠️ Importante:</strong></p>
+            <p style="margin: 0; color: #dc2626;"><strong> Importante:</strong></p>
             <ul style="margin: 10px 0; color: #dc2626;">
               <li>Este link é válido por apenas <strong>1 hora</strong></li>
               <li>Após clicar no link, você será redirecionado para criar uma nova senha</li>

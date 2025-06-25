@@ -115,7 +115,7 @@ const PercursoFormandos = () => {
         area: curso.area,
         dataInicio: curso.dataInicio,
         dataFim: curso.dataFim,
-        cargaHoraria: curso.cargaHorariaReal, // CORREÇÃO: Usar horas reais do formando
+        cargaHoraria: curso.cargaHorariaReal, //  Usar horas reais do formando
         cargaHorariaCurso: curso.cargaHorariaCurso, // Manter para referência
         status: curso.status,
         dataInscricao: curso.dataInscricao,
