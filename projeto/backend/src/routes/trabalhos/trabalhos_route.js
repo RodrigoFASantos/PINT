@@ -209,7 +209,7 @@ router.post("/avaliacao", verificarToken, (req, res, next) => {
 router.get("/", verificarToken, getAllTrabalhos);
 router.post("/", verificarToken, uploadTrabalho, createTrabalho);
 
-// NOVA ROTA: Atualizar nota de um trabalho
+// Atualizar nota de um trabalho
 router.put("/:id", verificarToken, updateTrabalhoNota);
 
 module.exports = router;

@@ -460,7 +460,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // NOVA FUNÇÃO: Voltar para o fórum
+  // Voltar para o fórum
   void _voltarParaForum() {
     debugPrint('🔧 [CHAT_CONVERSAS] Voltando para o fórum');
     Navigator.pushReplacementNamed(context, '/forum');

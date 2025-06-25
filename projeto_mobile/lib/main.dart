@@ -210,7 +210,7 @@ class MyApp extends StatelessWidget {
                 settings: settings,
               );
 
-            // NOVA ROTA: Notificações
+            // Rota Notificações
             case '/notificacoes':
               return MaterialPageRoute(
                 builder: (context) => NotificacoesScreen(),

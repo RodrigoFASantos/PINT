@@ -170,7 +170,7 @@ class _CriarTemaModalState extends State<CriarTemaModal> {
     }
   }
 
-  // ATUALIZADA: Incluir mimeType
+  // Incluir mimeType
   void _adicionarAnexo(File file, String tipo, String nome, String? mimeType) {
     setState(() {
       _anexo = file;

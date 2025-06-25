@@ -266,7 +266,7 @@ useEffect(() => {
     return "Não tem permissão para aceder a este curso.";
   };
 
-  // Ação ao clicar no curso - FUNÇÃO ATUALIZADA
+  // Ação ao clicar no curso 
   const handleCursoClick = async (cursoId) => {
     try {
       const token = localStorage.getItem('token');

@@ -1098,7 +1098,7 @@ const resendConfirmation = async (req, res) => {
   }
 };
 
-// NOVA FUNÇÃO: Solicitar recuperação de senha
+// Solicitar recuperação de senha
 const forgotPassword = async (req, res) => {
   try {
     console.log('🔑 [FORGOT] === INICIANDO RECUPERAÇÃO DE SENHA ===');
@@ -1160,7 +1160,7 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// NOVA FUNÇÃO: Redefinir senha com token
+// Redefinir senha com token
 const resetPassword = async (req, res) => {
   try {
     console.log('🔄 [RESET] === INICIANDO REDEFINIÇÃO DE SENHA ===');

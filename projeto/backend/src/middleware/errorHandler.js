@@ -372,9 +372,8 @@ const auditLogger = (action) => {
 
 module.exports = auditLogger;
 
-// ==========================================
-// 5. ROTAS ATUALIZADAS COM MELHORIAS
-// ==========================================
+
+// Arquivo: routes/quiz_route_melhorado.js
 
 const express = require("express");
 const router = express.Router();

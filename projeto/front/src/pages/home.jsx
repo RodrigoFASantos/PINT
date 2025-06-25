@@ -166,7 +166,7 @@ export default function Home() {
     return fallbackCurso;
   };
 
-  // Função atualizada para buscar inscrições com paginação
+  // Função para buscar inscrições com paginação
   const buscarInscricoes = async () => {
     try {
       console.log(`Buscando inscrições (página: ${currentPage}, contagem: ${refreshCount})`);
