@@ -494,7 +494,7 @@ exports.atualizarPresenca = async (req, res) => {
       return res.status(404).json({ message: "Presença não encontrada" });
     }
 
-    // Nova validação: verificar se data/hora_fim > data/hora_inicio
+    // verificar se data/hora_fim > data/hora_inicio
     const inicioTime = new Date(`${data_inicio}T${hora_inicio}`);
     const fimTime = new Date(`${data_fim}T${hora_fim}`);
 

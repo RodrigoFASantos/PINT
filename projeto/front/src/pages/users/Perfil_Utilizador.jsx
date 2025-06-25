@@ -191,7 +191,7 @@ const PerfilUser = () => {
     }
   };
 
-  // Nova função para buscar dados específicos de formador
+  // função para buscar dados específicos de formador
   const fetchFormadorData = async () => {
     try {
       console.log('🔄 FORMADOR: A iniciar busca de dados específicos do formador');
@@ -684,7 +684,7 @@ const PerfilUser = () => {
 
 
 
-            {/* Nova seção para exibir categorias e áreas (apenas para formadores) */}
+            {/* seção para exibir categorias e áreas (apenas para formadores) */}
             {isFormador && (
               <div className="formador-categorias-areas">
                 <h3>Especializações</h3>
@@ -714,7 +714,7 @@ const PerfilUser = () => {
           </div>
         </div>
 
-        {/* Nova seção para exibir cursos do formador */}
+        {/* seção para exibir cursos do formador */}
         {isFormador && (
           <div className="formador-cursos-section">
             <div className="cursos-tabs">

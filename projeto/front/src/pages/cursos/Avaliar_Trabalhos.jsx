@@ -886,7 +886,7 @@ const Avaliar_Trabalhos = ({ hideSidebar = false }) => {
       const notaMaxima = tipoCurso === 'assincrono' ? 10 : 20;
       doc.text(`Nota Final: ${notaFinal || 0}/${notaMaxima}`, doc.internal.pageSize.getWidth() / 2, startY + 80, { align: 'center' });
 
-      // === NOVA SECÇÃO: Datas do certificado ===
+      // Datas do certificado 
       // Data de fim do curso
       let dataFimCurso = 'N/A';
       if (courseResponse.data.data_fim) {

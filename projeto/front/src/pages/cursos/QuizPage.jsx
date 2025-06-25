@@ -79,7 +79,7 @@ const QuizPage = () => {
     }
   }, [quizIniciado, quiz]);
 
-  //  Nova função para lidar com múltiplas seleções
+  // Nova função para lidar com múltiplas seleções
   const handleRespostaChange = (perguntaId, opcaoIndex, checked) => {
     setRespostas(prevRespostas => {
       const respostasAtuais = prevRespostas[perguntaId] || [];

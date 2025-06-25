@@ -94,7 +94,7 @@ const App = () => {
                   <ConfirmAccount />
                 </RouteWrapper>
               } />
-              {/* NOVA ROTA PARA REDEFINIR SENHA */}
+              {/* ROTA PARA REDEFINIR SENHA */}
               <Route path="/reset-password" element={
                 <RouteWrapper path="/reset-password">
                   <RedefinirSenha />
@@ -190,7 +190,7 @@ const App = () => {
                 }
               />
 
-              {/* Nova estrutura de 3 níveis para o fórum */}
+              {/* estrutura de 3 níveis para o fórum */}
               <Route
                 path="/forum/topico/:topicoId"
                 element={

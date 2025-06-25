@@ -414,7 +414,7 @@ class _PresencasCursoState extends State<PresencasCurso> {
     }
   }
 
-  //Formatação de hora mais robusta
+  //  Formatação de hora mais robusta
   String _formatTime(String? timeString) {
     if (timeString == null || timeString.isEmpty) return '';
     try {

@@ -24,7 +24,7 @@ router.use(authMiddleware);
 
 // Rotas gerais para tópicos
 router.get("/", getAllTopicosCategoria);  // Mantém a rota original para compatibilidade
-router.get("/todos", getAllTopicos);      // Nova rota para listar todos os tópicos com formato alternativo
+router.get("/todos", getAllTopicos);      // rota para listar todos os tópicos com formato alternativo
 
 // Rotas para manipulação de tópicos específicos
 router.get("/:id", getTopicoById);

@@ -713,7 +713,7 @@ const EditarCurso = () => {
             rows="4"
           ></textarea>
 
-          {/* Nova secção para gestão de associações */}
+          {/* gestão de associações */}
           <div className="associacoes-container">
             <h3 className="associacoes-titulo">Cursos Associados</h3>
 

@@ -22,7 +22,7 @@ router.delete("/eliminar-ficheiro", verificarToken, eliminarFicheiro);
 // Verificar horas do formador
 router.get('/verificar-horas-formador/:cursoId', verificarHorasFormador);
 
-// Nova rota para obter informações completas do certificado incluindo datas
+// rota para obter informações completas do certificado incluindo datas
 router.get('/informacoes/:cursoId/:utilizadorId', verificarToken, obterInformacoesCertificado);
 
 // Rota existente para certificado por avaliação

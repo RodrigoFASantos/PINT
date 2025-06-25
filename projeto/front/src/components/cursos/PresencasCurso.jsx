@@ -99,7 +99,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
         }
     };
 
-    // NOVA FUNÇÃO: Buscar lista de formandos para uma presença específica
+    // Buscar lista de formandos para uma presença específica
     const fetchFormandosPresenca = async (presencaId) => {
         try {
             setLoadingFormandos(true);
@@ -118,7 +118,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
         }
     };
 
-    // NOVA FUNÇÃO: Abrir modal com lista de formandos
+    // Abrir modal com lista de formandos
     const abrirModalListaFormandos = (presenca) => {
         setPresencaSelecionada(presenca);
         fetchFormandosPresenca(presenca.id_curso_presenca);

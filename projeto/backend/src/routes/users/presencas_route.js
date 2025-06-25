@@ -30,7 +30,7 @@ router.get("/horas-disponiveis/:id", verificarToken, getHorasDisponiveisCurso);
 // Rota para atualizar presença (admin)
 router.put("/atualizar/:id", verificarToken, autorizar([1]), atualizarPresenca);
 
-// NOVA ROTA: Obter lista de formandos para uma presença específica (apenas formadores)
+// Obter lista de formandos para uma presença específica (apenas formadores)
 router.get("/formandos/:presencaId", verificarToken, autorizar([1, 2]), getFormandosPresenca);
                                                                       
 module.exports = router;

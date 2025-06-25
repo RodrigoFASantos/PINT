@@ -63,7 +63,7 @@ const criarRespostaAutomatica = async (quiz, inscricao, transaction = null) => {
   }
 };
 
-// NOVA FUNÇÃO: Obter notas de quizzes por curso para avaliação
+// Obter notas de quizzes por curso para avaliação
 const getNotasQuizzesPorCurso = async (req, res) => {
   try {
     const { cursoId } = req.params;
