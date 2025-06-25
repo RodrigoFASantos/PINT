@@ -6,9 +6,9 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FormadorModal from '../../components/users/Formador_Modal';
+import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 import API_BASE, { IMAGES } from "../../api";
 import './css/Criar_Curso.css';
-
 
 const ToastContainerConfig = {
   position: "top-right",
@@ -27,24 +27,36 @@ const ToastContainerConfig = {
 const EditarCurso = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Estados para controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Estados para controlo de modais
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
+
+  // Estados para dados carregados do servidor
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
+  const [topicos, setTopicos] = useState([]);
+  const [topicosFiltrados, setTopicosFiltrados] = useState([]);
+
+  // Estados para funcionalidades
   const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [formadorNome, setFormadorNome] = useState('');
   const [dataInicioUltrapassada, setDataInicioUltrapassada] = useState(false);
-  const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
-  const [topicos, setTopicos] = useState([]);
-  const [topicosFiltrados, setTopicosFiltrados] = useState([]);
   const [erroDataFim, setErroDataFim] = useState('');
 
+  // Novos estados para gestão de associações
+  const [cursosAssociados, setCursosAssociados] = useState([]);
+  const [loadingAssociacoes, setLoadingAssociacoes] = useState(false);
+
+  // Estado do formulário principal
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -59,9 +71,92 @@ const EditarCurso = () => {
     duracao: '',
     imagem: null,
   });
-  
+
+  // Função para carregar cursos associados
+  const carregarCursosAssociados = async () => {
+    try {
+      setLoadingAssociacoes(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE}/associar-cursos/curso/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        setCursosAssociados(response.data);
+        console.log('Cursos associados carregados:', response.data.length);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar cursos associados:', error);
+      setCursosAssociados([]);
+    } finally {
+      setLoadingAssociacoes(false);
+    }
+  };
+
+  // Função para adicionar nova associação
+  const handleAssociarCurso = async (cursoSelecionado) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Verificar se já existe associação
+      const jaAssociado = cursosAssociados.some(assoc => {
+        return (assoc.id_curso_origem === parseInt(id) && assoc.id_curso_destino === cursoSelecionado.id_curso) ||
+               (assoc.id_curso_destino === parseInt(id) && assoc.id_curso_origem === cursoSelecionado.id_curso);
+      });
+
+      if (jaAssociado) {
+        toast.info(`O curso "${cursoSelecionado.nome}" já está associado a este curso`);
+        return;
+      }
+
+      // Criar a associação
+      await axios.post(`${API_BASE}/associar-cursos`, {
+        id_curso_origem: parseInt(id),
+        id_curso_destino: cursoSelecionado.id_curso,
+        descricao: `Associação criada durante a edição`
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      toast.success(`Curso "${cursoSelecionado.nome}" associado com sucesso!`);
+      
+      // Recarregar associações
+      await carregarCursosAssociados();
+    } catch (error) {
+      console.error('Erro ao associar curso:', error);
+      toast.error(`Erro ao associar curso: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  // Função para remover associação
+  const removerAssociacao = async (idAssociacao, nomeCurso) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      await axios.delete(`${API_BASE}/associar-cursos/${idAssociacao}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      toast.success(`Associação com "${nomeCurso}" removida com sucesso!`);
+      
+      // Recarregar associações
+      await carregarCursosAssociados();
+    } catch (error) {
+      console.error('Erro ao remover associação:', error);
+      toast.error(`Erro ao remover associação: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  // Obter nome do curso associado para apresentação
+  const obterCursoAssociado = (associacao) => {
+    return associacao.id_curso_origem === parseInt(id) 
+      ? associacao.cursoDestino 
+      : associacao.cursoOrigem;
+  };
+
+  // Carregar dados do curso e recursos quando o componente é montado
   useEffect(() => {
-    // Carregar dados do curso
+    // Carregar detalhes do curso
     const fetchCursoDetails = async () => {
       try {
         setLoading(true);
@@ -125,7 +220,7 @@ const EditarCurso = () => {
         setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar dados do curso:', error);
-        toast.error('Erro ao carregar dados do curso. Tente novamente mais tarde.', {
+        toast.error('Erro ao carregar dados do curso. Tenta novamente mais tarde.', {
           containerId: "editar-curso-toast"
         });
         navigate('/admin/cursos');
@@ -171,12 +266,12 @@ const EditarCurso = () => {
         if (Array.isArray(topicoData)) {
           setTopicos(topicoData);
         } else if (topicoData && typeof topicoData === 'object') {
-          // Se for um objeto com uma propriedade que é array (comum em APIs)
+          // Se for um objeto com uma propriedade que é array comum em APIs
           // Tentar encontrar uma propriedade que seja array
           const possibleArrayProps = ['data', 'items', 'results', 'topicos'];
           for (const prop of possibleArrayProps) {
             if (Array.isArray(topicoData[prop])) {
-              console.log(`Usando propriedade '${prop}' como array de tópicos`);
+              console.log(`A usar propriedade '${prop}' como array de tópicos`);
               setTopicos(topicoData[prop]);
               break;
             }
@@ -187,7 +282,7 @@ const EditarCurso = () => {
         }
       } catch (error) {
         console.error('Erro ao carregar recursos:', error);
-        toast.error('Erro ao carregar dados. Verifique sua conexão.', {
+        toast.error('Erro ao carregar dados. Verifica a tua ligação.', {
           containerId: "editar-curso-toast"
         });
       } finally {
@@ -197,6 +292,7 @@ const EditarCurso = () => {
 
     fetchCursoDetails();
     fetchResources();
+    carregarCursosAssociados(); // Carregar associações também
   }, [id, navigate]);
 
   // Função para validar as datas
@@ -213,7 +309,7 @@ const EditarCurso = () => {
   useEffect(() => {
     if (formData.id_area && Array.isArray(topicos)) {
       const areId = String(formData.id_area);
-      // Use o campo correto conforme definido no modelo Topico_Area
+      // Usar o campo correto conforme definido no modelo Topico_Area
       const topicosFiltered = topicos.filter(topico => {
         return topico.id_area && String(topico.id_area) === areId;
       });
@@ -244,6 +340,7 @@ const EditarCurso = () => {
     }
   }, [formData.id_categoria, areas]);
 
+  // Manipular mudanças nos campos do formulário
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
@@ -304,106 +401,107 @@ const EditarCurso = () => {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  // Manipular submissão do formulário
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  console.log("🔍 DEBUG: Iniciando submit do formulário");
-  console.log("🔍 DEBUG: FormData atual:", formData);
-  console.log("🔍 DEBUG: Imagem selecionada:", formData.imagem);
+    console.log("Início da submissão do formulário");
+    console.log("FormData atual:", formData);
+    console.log("Imagem selecionada:", formData.imagem);
 
-  // Validar formador para cursos síncronos
-  if (formData.tipo === 'sincrono' && !formData.id_formador) {
-    toast.error('É necessário selecionar um formador para cursos síncronos', {
-      containerId: "editar-curso-toast"
-    });
-    return;
-  }
+    // Validar formador para cursos síncronos
+    if (formData.tipo === 'sincrono' && !formData.id_formador) {
+      toast.error('É necessário selecionar um formador para cursos síncronos', {
+        containerId: "editar-curso-toast"
+      });
+      return;
+    }
 
-  // Validar datas
-  if (!validarDatas(formData.data_inicio, formData.data_fim)) {
-    toast.error('A data de fim deve ser posterior à data de início', {
-      containerId: "editar-curso-toast"
-    });
-    setErroDataFim('A data de fim deve ser posterior à data de início');
-    return;
-  }
+    // Validar datas
+    if (!validarDatas(formData.data_inicio, formData.data_fim)) {
+      toast.error('A data de fim deve ser posterior à data de início', {
+        containerId: "editar-curso-toast"
+      });
+      setErroDataFim('A data de fim deve ser posterior à data de início');
+      return;
+    }
 
-  // Validação adicional: verificar se as datas não estão no passado
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const dataInicio = new Date(formData.data_inicio);
+    // Validação adicional: verificar se as datas não estão no passado
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dataInicio = new Date(formData.data_inicio);
 
-  if (dataInicio < hoje && !dataInicioUltrapassada) {
-    toast.error('A data de início não pode ser no passado', {
-      containerId: "editar-curso-toast"
-    });
-    return;
-  }
+    if (dataInicio < hoje && !dataInicioUltrapassada) {
+      toast.error('A data de início não pode ser no passado', {
+        containerId: "editar-curso-toast"
+      });
+      return;
+    }
 
-  // 🔧 CORREÇÃO: Criar FormData corretamente
-  const data = new FormData();
-  
-  // Adicionar todos os campos (exceto imagem_path que não deve ser enviado)
-  for (let key in formData) {
-    if (key !== 'imagem_path' && formData[key] !== null && formData[key] !== '') {
-      // 🔧 CORREÇÃO: Verificar se é o campo de imagem
-      if (key === 'imagem' && formData[key]) {
-        console.log("📷 DEBUG: Adicionando imagem ao FormData:", formData[key]);
-        console.log("📷 DEBUG: Tipo de ficheiro:", formData[key].type);
-        console.log("📷 DEBUG: Tamanho:", formData[key].size);
-        data.append(key, formData[key]);
-      } else if (key !== 'imagem') {
-        // Para outros campos, adicionar normalmente
-        data.append(key, formData[key]);
+    // Criar FormData corretamente
+    const data = new FormData();
+    
+    // Adicionar todos os campos exceto imagem_path que não deve ser enviado
+    for (let key in formData) {
+      if (key !== 'imagem_path' && formData[key] !== null && formData[key] !== '') {
+        // Verificar se é o campo de imagem
+        if (key === 'imagem' && formData[key]) {
+          console.log("A adicionar imagem ao FormData:", formData[key]);
+          console.log("Tipo de ficheiro:", formData[key].type);
+          console.log("Tamanho:", formData[key].size);
+          data.append(key, formData[key]);
+        } else if (key !== 'imagem') {
+          // Para outros campos, adicionar normalmente
+          data.append(key, formData[key]);
+        }
       }
     }
-  }
 
-  // 🔍 DEBUG: Verificar o que está no FormData
-  console.log("🔍 DEBUG: Conteúdo do FormData:");
-  for (let pair of data.entries()) {
-    if (pair[1] instanceof File) {
-      console.log(`📷 ${pair[0]}:`, pair[1].name, pair[1].type, pair[1].size + " bytes");
-    } else {
-      console.log(`📝 ${pair[0]}:`, pair[1]);
-    }
-  }
-
-  try {
-    console.log("🚀 DEBUG: Enviando requisição PUT...");
-    
-    // Atualizar o curso
-    const response = await axios.put(`${API_BASE}/cursos/${id}`, data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-    });
-
-    console.log("✅ DEBUG: Resposta do servidor:", response.data);
-
-    toast.success('Curso atualizado com sucesso!', {
-      containerId: "editar-curso-toast"
-    });
-
-    // 🔧 CORREÇÃO: Verificar se a imagem foi atualizada na resposta
-    if (response.data.imagemAtualizada) {
-      console.log("📷 DEBUG: Imagem foi atualizada com sucesso");
+    // Verificar o que está no FormData
+    console.log("Conteúdo do FormData:");
+    for (let pair of data.entries()) {
+      if (pair[1] instanceof File) {
+        console.log(`${pair[0]}:`, pair[1].name, pair[1].type, pair[1].size + " bytes");
+      } else {
+        console.log(`${pair[0]}:`, pair[1]);
+      }
     }
 
-    // Redirecionar para a página de detalhes depois de 2 segundos
-    setTimeout(() => {
-      navigate(`/cursos/${id}`);
-    }, 2000);
-  } catch (error) {
-    console.error('❌ DEBUG: Erro ao atualizar curso:', error);
-    console.error('❌ DEBUG: Response data:', error.response?.data);
-    
-    toast.error('Erro ao atualizar curso: ' + (error.response?.data?.message || 'Erro desconhecido'), {
-      containerId: "editar-curso-toast"
-    });
-  }
-};
+    try {
+      console.log("A enviar requisição PUT...");
+      
+      // Atualizar o curso
+      const response = await axios.put(`${API_BASE}/cursos/${id}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+      });
+
+      console.log("Resposta do servidor:", response.data);
+
+      toast.success('Curso atualizado com sucesso!', {
+        containerId: "editar-curso-toast"
+      });
+
+      // Verificar se a imagem foi atualizada na resposta
+      if (response.data.imagemAtualizada) {
+        console.log("Imagem foi atualizada com sucesso");
+      }
+
+      // Redirecionar para a página de detalhes depois de 2 segundos
+      setTimeout(() => {
+        navigate(`/cursos/${id}`);
+      }, 2000);
+    } catch (error) {
+      console.error('Erro ao atualizar curso:', error);
+      console.error('Response data:', error.response?.data);
+      
+      toast.error('Erro ao atualizar curso: ' + (error.response?.data?.message || 'Erro desconhecido'), {
+        containerId: "editar-curso-toast"
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -463,7 +561,7 @@ const handleSubmit = async (e) => {
               onChange={handleChange}
               required
             >
-              <option value="">Selecione o Tipo</option>
+              <option value="">Seleciona o Tipo</option>
               <option value="sincrono">Síncrono</option>
               <option value="assincrono">Assíncrono</option>
             </select>
@@ -476,7 +574,7 @@ const handleSubmit = async (e) => {
               onChange={handleChange}
               required
             >
-              <option value="">Selecione a Categoria</option>
+              <option value="">Seleciona a Categoria</option>
               {categorias.map(categoria => (
                 <option key={categoria.id_categoria} value={categoria.id_categoria}>
                   {categoria.nome}
@@ -491,7 +589,7 @@ const handleSubmit = async (e) => {
               required
               disabled={!formData.id_categoria || isLoadingFilters}
             >
-              <option value="">Selecione a Área</option>
+              <option value="">Seleciona a Área</option>
               {isLoadingFilters
                 ? <option disabled>A carregar áreas...</option>
                 : areasFiltradas.length
@@ -500,7 +598,7 @@ const handleSubmit = async (e) => {
                       {area.nome}
                     </option>
                   ))
-                  : <option disabled>Selecione uma categoria primeiro</option>
+                  : <option disabled>Seleciona uma categoria primeiro</option>
               }
             </select>
 
@@ -511,11 +609,11 @@ const handleSubmit = async (e) => {
               required
               disabled={!formData.id_area || isLoadingFilters}
             >
-              <option value="">Selecione o Tópico</option>
+              <option value="">Seleciona o Tópico</option>
               {isLoadingFilters
                 ? <option disabled>A carregar tópicos...</option>
                 : !formData.id_area
-                  ? <option disabled>Selecione uma área primeiro</option>
+                  ? <option disabled>Seleciona uma área primeiro</option>
                   : topicosFiltrados.length
                     ? topicosFiltrados.map(topico => {
                       const id = topico.id_topico;
@@ -563,7 +661,6 @@ const handleSubmit = async (e) => {
                 A data limite de inscrição já passou. As vagas não podem ser alteradas.
               </div>
             )}
-
           </div>
 
           <div className="row">
@@ -616,6 +713,53 @@ const handleSubmit = async (e) => {
             rows="4"
           ></textarea>
 
+          {/* Nova secção para gestão de associações */}
+          <div className="associacoes-container">
+            <h3 className="associacoes-titulo">Cursos Associados</h3>
+
+            <button
+              type="button"
+              className="associar-curso-button"
+              onClick={() => setModalAssociacaoAberto(true)}
+            >
+              <i className="fas fa-link"></i> Associar Novo Curso
+            </button>
+
+            {loadingAssociacoes ? (
+              <div className="loading-associacoes">
+                <div className="spinner-pequeno"></div>
+                <span>A carregar associações...</span>
+              </div>
+            ) : cursosAssociados.length > 0 ? (
+              <div className="lista-cursos-associados">
+                {cursosAssociados.map(associacao => {
+                  const cursoAssociado = obterCursoAssociado(associacao);
+                  
+                  if (!cursoAssociado) return null;
+                  
+                  return (
+                    <div key={associacao.id_associacao} className="curso-associado-item">
+                      <div className="curso-associado-info">
+                        <span className="curso-nome">{cursoAssociado.nome}</span>
+                        <span className="curso-tipo">{cursoAssociado.tipo}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="remover-associacao"
+                        onClick={() => removerAssociacao(associacao.id_associacao, cursoAssociado.nome)}
+                        title="Remover associação"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="sem-associacoes">Nenhum curso associado</p>
+            )}
+          </div>
+
           <div className="buttons-row">
             <button
               type="button"
@@ -624,7 +768,7 @@ const handleSubmit = async (e) => {
             >
               Cancelar
             </button>
-            <button type="submit" className="submit-button">Salvar Alterações</button>
+            <button type="submit" className="submit-button">Guardar Alterações</button>
           </div>
         </div>
       </form>
@@ -637,6 +781,14 @@ const handleSubmit = async (e) => {
           setFormadorNome(nome);
         }}
         users={formadores}
+      />
+
+      {/* Modal de associação de cursos */}
+      <CursoAssociacaoModal
+        isOpen={modalAssociacaoAberto}
+        onClose={() => setModalAssociacaoAberto(false)}
+        onSelectCurso={handleAssociarCurso}
+        cursoAtualId={parseInt(id)}
       />
 
       <ToastContainer 

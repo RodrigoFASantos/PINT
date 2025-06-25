@@ -11,11 +11,12 @@ import './css/Criar_Curso.css';
 import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 
 const CriarCurso = () => {
+  // Estados para controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
 
-  // Estado do formulário com adição de id_topico
+  // Estado do formulário principal incluindo campo de tópico
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -27,30 +28,35 @@ const CriarCurso = () => {
     id_formador: '',
     id_area: '',
     id_categoria: '',
-    id_topico: '', // Adicionado id_topico ao formData
+    id_topico: '', // Campo para associar curso a um tópico específico
     imagem: null,
   });
 
+  // Estados para controlo de modais
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
+
+  // Estados para dados carregados do servidor
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
+  const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
+
+  // Estados para funcionalidades adicionais
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
   const [cursosAssociados, setCursosAssociados] = useState([]);
-
-  // Estado para tópicos disponíveis
-  const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
   const [topicosFetched, setTopicosFetched] = useState(false);
 
+  // Função para abrir modal de associação de cursos
   const abrirModalAssociacao = () => {
     setModalAssociacaoAberto(true);
   };
 
+  // Manipular selecção de curso para associação
   const handleAssociarCurso = (cursoSelecionado) => {
-    // Verificar se o curso já está na lista
+    // Verificar se o curso já está na lista de associações
     if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
       setCursosAssociados([...cursosAssociados, cursoSelecionado]);
       toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
@@ -59,20 +65,21 @@ const CriarCurso = () => {
     }
   };
 
+  // Remover curso da lista de associações
   const removerAssociacao = (cursoId) => {
     setCursosAssociados(cursosAssociados.filter(c => c.id_curso !== cursoId));
     toast.info("Curso removido da lista de associações");
   };
 
-  // Carregar tópicos quando a categoria E a área são selecionadas
+  // Carregar tópicos quando categoria E área são selecionadas
   useEffect(() => {
     if (formData.id_categoria && formData.id_area) {
       setIsLoading(true);
       setTopicosFetched(false);
 
-      console.log(`Buscando tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
+      console.log(`A procurar tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
 
-      // Usar a rota topicos-area (a rota correta com base nas definições do servidor)
+      // Usar a rota correta para obter tópicos
       axios.get(`${API_BASE}/topicos-area/todos`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -81,11 +88,11 @@ const CriarCurso = () => {
         .then(res => {
           console.log("Tópicos gerais carregados:", res.data);
 
-          // Dados podem vir em diferentes formatos, então lidamos com todos
+          // Lidar com diferentes formatos de resposta
           let topicos = Array.isArray(res.data) ? res.data :
             (res.data.data ? res.data.data : []);
 
-          // Filtrar os tópicos pela categoria e área selecionadas
+          // Filtrar tópicos pela categoria e área selecionadas
           const topicosFiltrados = topicos.filter(topico => {
             const categoriaMatch = topico.id_categoria == formData.id_categoria;
             const areaMatch = topico.id_area == formData.id_area;
@@ -97,7 +104,7 @@ const CriarCurso = () => {
           if (topicosFiltrados.length > 0) {
             setTopicosDisponiveis(topicosFiltrados);
           } else {
-            // Tentar buscar especificamente por categoria
+            // Tentar procurar especificamente por categoria
             buscarTopicosCategoria();
           }
 
@@ -106,7 +113,7 @@ const CriarCurso = () => {
         })
         .catch(err => {
           console.error("Erro ao carregar tópicos gerais:", err);
-          // Tentar buscar especificamente por categoria
+          // Tentar procurar especificamente por categoria
           buscarTopicosCategoria();
         });
     } else {
@@ -118,9 +125,9 @@ const CriarCurso = () => {
     }
   }, [formData.id_categoria, formData.id_area]);
 
-  // Buscar tópicos por categoria
+  // Procurar tópicos por categoria específica
   const buscarTopicosCategoria = () => {
-    console.log(`Buscando tópicos para categoria específica: ${formData.id_categoria}`);
+    console.log(`A procurar tópicos para categoria específica: ${formData.id_categoria}`);
 
     axios.get(`${API_BASE}/topicos-area/categoria/${formData.id_categoria}`, {
       headers: {
@@ -145,15 +152,15 @@ const CriarCurso = () => {
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao buscar tópicos por categoria:", err);
-        // Última tentativa: buscar do fórum
+        console.error("Erro ao procurar tópicos por categoria:", err);
+        // Última tentativa: procurar no fórum
         buscarTopicosForum();
       });
   };
 
-  // Buscar tópicos do fórum como último recurso
+  // Procurar tópicos do fórum como último recurso
   const buscarTopicosForum = () => {
-    console.log("Buscando tópicos do fórum como último recurso");
+    console.log("A procurar tópicos do fórum como último recurso");
 
     axios.get(`${API_BASE}/forum`, {
       headers: {
@@ -184,19 +191,20 @@ const CriarCurso = () => {
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao buscar tópicos do fórum:", err);
-        toast.error("Não foi possível carregar os tópicos. Verifique sua conexão ou tente novamente mais tarde.");
+        console.error("Erro ao procurar tópicos do fórum:", err);
+        toast.error("Não foi possível carregar os tópicos. Verifica a tua ligação ou tenta novamente mais tarde.");
         setTopicosDisponiveis([]);
         setTopicosFetched(true);
         setIsLoading(false);
       });
   };
 
+  // Carregar dados iniciais quando o componente é montado
   useEffect(() => {
-    // Definir loading state
+    // Definir estado de carregamento
     setIsLoading(true);
 
-    // Carregar formadores
+    // Carregar lista de formadores
     axios.get(`${API_BASE}/users/formadores`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -208,10 +216,10 @@ const CriarCurso = () => {
       })
       .catch(err => {
         console.error("Erro ao carregar formadores:", err);
-        toast.error("Erro ao carregar formadores. Verifique o console para mais detalhes.");
+        toast.error("Erro ao carregar formadores. Verifica a consola para mais detalhes.");
       });
 
-    // Carregar categorias
+    // Carregar lista de categorias
     axios.get(`${API_BASE}/categorias`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -226,7 +234,7 @@ const CriarCurso = () => {
         toast.error("Erro ao carregar categorias");
       });
 
-    // Carregar todas as áreas
+    // Carregar todas as áreas disponíveis
     axios.get(`${API_BASE}/areas`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -244,7 +252,7 @@ const CriarCurso = () => {
       });
   }, []);
 
-  // Função para verificar os diferentes campos possíveis de id_categoria
+  // Função para obter ID da categoria de uma área de forma flexível
   const getCategoriaId = (area) => {
     // Tentar diferentes formatos de propriedade
     if (area.id_categoria !== undefined) return area.id_categoria;
@@ -260,13 +268,13 @@ const CriarCurso = () => {
     return categoriaKey ? area[categoriaKey] : null;
   };
 
-  // Filtrar áreas com base na categoria selecionada
+  // Filtrar áreas baseado na categoria selecionada
   useEffect(() => {
     if (formData.id_categoria) {
       // Converter para string para garantir comparação consistente
       const categoriaId = String(formData.id_categoria);
 
-      // Filtragem mais flexível para lidar com diferentes estruturas de dados
+      // Filtragem flexível para lidar com diferentes estruturas de dados
       const areasFiltered = areas.filter(area => {
         const areaCategoriaId = getCategoriaId(area);
         return areaCategoriaId !== null && String(areaCategoriaId) === categoriaId;
@@ -283,6 +291,7 @@ const CriarCurso = () => {
     }
   }, [formData.id_categoria, areas]);
 
+  // Manipular mudanças nos campos do formulário
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
@@ -335,12 +344,14 @@ const CriarCurso = () => {
     }
   };
 
+  // Manipular seleção de formador
   const handleFormadorSelection = (formadorId) => {
-    // Se formadorId estiver vazio, isso significa que o usuário removeu a seleção
+    // Se formadorId estiver vazio, isso significa que o utilizador removeu a seleção
     setFormData({ ...formData, id_formador: formadorId });
     console.log(`Formador ${formadorId ? 'selecionado' : 'removido'}: ${formadorId}`);
   };
 
+  // Validar formulário antes de submeter
   const validateForm = () => {
     // Validar datas
     const dataInicio = new Date(formData.data_inicio);
@@ -359,11 +370,11 @@ const CriarCurso = () => {
 
     // Validar formador para cursos síncronos
     if (formData.tipo === 'sincrono' && !formData.id_formador) {
-      toast.error("Selecione um formador para o curso síncrono");
+      toast.error("Seleciona um formador para o curso síncrono");
       return false;
     }
 
-    // Validar formador para cursos assíncronos (deve ser administrador)
+    // Validar formador para cursos assíncronos deve ser administrador
     if (formData.tipo === 'assincrono') {
       if (!formData.id_formador) {
         toast.error("É obrigatório selecionar um formador administrador para cursos assíncronos");
@@ -387,7 +398,7 @@ const CriarCurso = () => {
 
     // Validar número de vagas para cursos síncronos
     if (formData.tipo === 'sincrono' && (!formData.vagas || parseInt(formData.vagas) <= 0)) {
-      toast.error("Defina um número válido de vagas para o curso síncrono");
+      toast.error("Define um número válido de vagas para o curso síncrono");
       return false;
     }
 
@@ -399,13 +410,14 @@ const CriarCurso = () => {
 
     // Validar duração
     if (!formData.duracao || parseInt(formData.duracao) <= 0) {
-      toast.error("Defina uma duração válida para o curso em horas");
+      toast.error("Define uma duração válida para o curso em horas");
       return false;
     }
 
     return true;
   };
 
+  // Manipular submissão do formulário
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -445,7 +457,8 @@ const CriarCurso = () => {
           try {
             await axios.post(`${API_BASE}/associar-cursos`, {
               id_curso_origem: novoCursoId,
-              id_curso_destino: cursoAssociado.id_curso
+              id_curso_destino: cursoAssociado.id_curso,
+              descricao: `Curso associado durante a criação de ${formData.nome}`
             }, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -507,7 +520,7 @@ const CriarCurso = () => {
 
   const formadorNome = getFormadorNome();
 
-  // Determinar a data mínima para os campos de data (hoje)
+  // Determinar a data mínima para os campos de data hoje
   const getMinDate = () => {
     const hoje = new Date();
     return hoje.toISOString().split('T')[0]; // Formato YYYY-MM-DD
@@ -525,7 +538,7 @@ const CriarCurso = () => {
               style={{ backgroundImage: previewImage ? `url('${previewImage}')` : 'none' }}
               onClick={() => document.querySelector('input[type="file"][name="imagem"]').click()}
             >
-              {!previewImage && <div className="upload-placeholder">Clique para adicionar imagem do curso</div>}
+              {!previewImage && <div className="upload-placeholder">Clica para adicionar imagem do curso</div>}
               <input
                 type="file"
                 name="imagem"
@@ -554,7 +567,7 @@ const CriarCurso = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="">Selecione o Tipo</option>
+                <option value="">Seleciona o Tipo</option>
                 <option value="sincrono">Síncrono</option>
                 <option value="assincrono">Assíncrono</option>
               </select>
@@ -568,7 +581,7 @@ const CriarCurso = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="">Selecione a Categoria</option>
+                <option value="">Seleciona a Categoria</option>
                 {categorias.map(categoria => (
                   <option key={categoria.id_categoria} value={categoria.id_categoria}>
                     {categoria.nome}
@@ -594,7 +607,7 @@ const CriarCurso = () => {
                 }}
                 required
               >
-                <option value="">Selecione a Área</option>
+                <option value="">Seleciona a Área</option>
                 {isLoading ? (
                   <option value="" disabled>A carregar áreas...</option>
                 ) : areasFiltradas.length > 0 ? (
@@ -633,7 +646,7 @@ const CriarCurso = () => {
                 }}
                 required
               >
-                <option value="">Selecione o Tópico</option>
+                <option value="">Seleciona o Tópico</option>
                 {isLoading && !topicosFetched ? (
                   <option value="" disabled>A carregar tópicos...</option>
                 ) : topicosDisponiveis.length > 0 ? (
@@ -652,7 +665,7 @@ const CriarCurso = () => {
                 ) : (
                   <option value="" disabled>
                     {!formData.id_area
-                      ? "Selecione uma área primeiro"
+                      ? "Seleciona uma área primeiro"
                       : (topicosFetched
                         ? "Nenhum tópico disponível para esta área"
                         : "A carregar tópicos...")}
@@ -671,7 +684,7 @@ const CriarCurso = () => {
                   >
                     <i className="fas fa-user-plus"></i>
                     {formData.id_formador
-                      ? `Formador: ${formadorNome} (Clique para alterar)`
+                      ? `Formador: ${formadorNome} (Clica para alterar)`
                       : "Selecionar Formador"}
                   </button>
                   <input
@@ -684,7 +697,8 @@ const CriarCurso = () => {
                     required
                   />
                 </>
-              )}<input
+              )}
+              <input
                 type="number"
                 name="duracao"
                 placeholder="Duração (horas)"
@@ -694,7 +708,6 @@ const CriarCurso = () => {
                 required
               />
             </div>
-
 
             <div className="row">
               <div className="input-group">
@@ -752,6 +765,7 @@ const CriarCurso = () => {
                         type="button"
                         className="remover-associacao"
                         onClick={() => removerAssociacao(curso.id_curso)}
+                        title="Remover associação"
                       >
                         <i className="fas fa-times"></i>
                       </button>
@@ -768,7 +782,7 @@ const CriarCurso = () => {
               className="submit-button"
               disabled={isLoading}
             >
-              {isLoading ? 'Criando...' : 'Criar'}
+              {isLoading ? 'A criar...' : 'Criar Curso'}
             </button>
           </div>
         </form>

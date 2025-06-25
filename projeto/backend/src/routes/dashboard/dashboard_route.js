@@ -3,51 +3,32 @@ const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
 
-// Importar todas as funções do controller
+// Importar apenas as funções necessárias do controller
 const { 
   getEstatisticas,
   getCursosPorCategoria,
   getInscricoesPorMes,
   getUtilizadoresPorPerfil,
-  getDenunciasPorTopico,
-  getCursosMaisInscritos,
-  getEvolucaoUtilizadores,
-  getTopFormadores,
-  getTaxaConclusaoCursos,
-  getAtividadeRecente,
-  getInscritucoesRecentesPorCurso,
-  getPresencasHoje,
-  getCursosTerminandoEmBreve
+  getCursosMaisInscritos
 } = require("../../controllers/dashboard/dashboard_ctrl");
 
-console.log('[DEBUG] A carregar rotas do dashboard...');
-
-// ==== ROTAS PRINCIPAIS ====
-
-// Rota principal de estatísticas gerais
+// Rota principal de estatísticas gerais do dashboard
 router.get("/estatisticas", verificarToken, autorizar([1]), getEstatisticas);
 
-// Rotas específicas para gráficos e dados
+// Rota para dados de cursos agrupados por categoria
 router.get("/cursos-categoria", verificarToken, autorizar([1]), getCursosPorCategoria);
+
+// Rota para dados de inscrições mensais
 router.get("/inscricoes-mes", verificarToken, autorizar([1]), getInscricoesPorMes);
+
+// Rota para dados de utilizadores agrupados por perfil
 router.get("/utilizadores-perfil", verificarToken, autorizar([1]), getUtilizadoresPorPerfil);
-router.get("/denuncias-topico", verificarToken, autorizar([1]), getDenunciasPorTopico);
+
+// Rota para dados dos cursos mais populares
 router.get("/cursos-populares", verificarToken, autorizar([1]), getCursosMaisInscritos);
-router.get("/evolucao-utilizadores", verificarToken, autorizar([1]), getEvolucaoUtilizadores);
-router.get("/top-formadores", verificarToken, autorizar([1]), getTopFormadores);
-router.get("/taxa-conclusao", verificarToken, autorizar([1]), getTaxaConclusaoCursos);
-router.get("/atividade-recente", verificarToken, autorizar([1]), getAtividadeRecente);
 
-// Rotas para dados específicos
-router.get("/inscricoes-recentes", verificarToken, autorizar([1]), getInscritucoesRecentesPorCurso);
-router.get("/presencas-hoje", verificarToken, autorizar([1]), getPresencasHoje);
-router.get("/cursos-terminando", verificarToken, autorizar([1]), getCursosTerminandoEmBreve);
-
-// ==== ROTA DE TESTE ====
-
-// Rota de teste (sem autenticação para debug)
+// Rota de teste para verificar se a API está funcionando
 router.get("/teste", (req, res) => {
-  console.log('[DEBUG] Rota de teste do dashboard chamada');
   res.json({ 
     message: "Dashboard API está funcionando!", 
     timestamp: new Date().toISOString(),
@@ -56,16 +37,9 @@ router.get("/teste", (req, res) => {
       '/cursos-categoria', 
       '/inscricoes-mes',
       '/utilizadores-perfil',
-      '/denuncias-topico',
-      '/cursos-populares',
-      '/evolucao-utilizadores',
-      '/top-formadores',
-      '/taxa-conclusao',
-      '/atividade-recente'
+      '/cursos-populares'
     ]
   });
 });
-
-console.log('[DEBUG] Rotas do dashboard carregadas com sucesso');
 
 module.exports = router;

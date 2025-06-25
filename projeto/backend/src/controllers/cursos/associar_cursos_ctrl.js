@@ -10,7 +10,7 @@ const associarCursos = async (req, res) => {
     console.log("Dados recebidos para associação:", { id_curso_origem, id_curso_destino, descricao });
 
     if (!id_curso_origem || !id_curso_destino) {
-      console.log("❌ Erro: IDs dos cursos são obrigatórios");
+      console.log("Erro: IDs dos cursos são obrigatórios");
       return res.status(400).json({ message: "IDs dos cursos são obrigatórios", error: "IDS_MISSING" });
     }
 
@@ -22,7 +22,7 @@ const associarCursos = async (req, res) => {
     console.log("Curso destino encontrado:", !!cursoDestino, cursoDestino ? cursoDestino.nome : "N/A");
 
     if (!cursoOrigem || !cursoDestino) {
-      console.log("❌ Erro: Um ou ambos os cursos não foram encontrados");
+      console.log("Erro: Um ou ambos os cursos não foram encontrados");
       return res.status(404).json({ 
         message: "Um ou ambos os cursos não foram encontrados",
         error: "CURSO_NOT_FOUND",
@@ -31,7 +31,7 @@ const associarCursos = async (req, res) => {
       });
     }
 
-    // Verificar se a associação já existe
+    // Verificar se a associação já existe em qualquer direção
     const associacaoExistente = await AssociarCursos.findOne({
       where: {
         [Op.or]: [
@@ -50,7 +50,7 @@ const associarCursos = async (req, res) => {
     console.log("Associação já existe:", !!associacaoExistente);
 
     if (associacaoExistente) {
-      console.log("❌ Erro: Associação já existe entre estes cursos");
+      console.log("Erro: Associação já existe entre estes cursos");
       return res.status(400).json({ 
         message: "Associação já existe entre estes cursos",
         error: "ASSOCIATION_EXISTS"
@@ -64,6 +64,8 @@ const associarCursos = async (req, res) => {
       descricao
     });
 
+    console.log("Associação criada com sucesso:", novaAssociacao.id_associacao);
+
     res.status(201).json({
       message: "Cursos associados com sucesso",
       associacao: novaAssociacao
@@ -74,15 +76,12 @@ const associarCursos = async (req, res) => {
   }
 };
 
-
-
-
-
-
-// Obter associações de um curso
+// Obter associações de um curso específico
 const getAssociacoesCurso = async (req, res) => {
   try {
     const { id_curso } = req.params;
+
+    console.log("A procurar associações para o curso:", id_curso);
 
     // Curso pode ser origem ou destino na associação
     const associacoes = await AssociarCursos.findAll({
@@ -96,15 +95,17 @@ const getAssociacoesCurso = async (req, res) => {
         {
           model: Curso,
           as: 'cursoOrigem',
-          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path']
+          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
         },
         {
           model: Curso,
           as: 'cursoDestino',
-          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path']
+          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
         }
       ]
     });
+
+    console.log("Encontradas", associacoes.length, "associações para o curso", id_curso);
 
     res.json(associacoes);
   } catch (error) {
@@ -113,17 +114,24 @@ const getAssociacoesCurso = async (req, res) => {
   }
 };
 
-// Remover uma associação
+// Remover uma associação específica
 const removerAssociacao = async (req, res) => {
   try {
     const { id_associacao } = req.params;
 
+    console.log("A tentar remover associação:", id_associacao);
+
     const associacao = await AssociarCursos.findByPk(id_associacao);
+    
     if (!associacao) {
+      console.log("Associação não encontrada:", id_associacao);
       return res.status(404).json({ message: "Associação não encontrada" });
     }
 
     await associacao.destroy();
+    
+    console.log("Associação removida com sucesso:", id_associacao);
+    
     res.json({ message: "Associação removida com sucesso" });
   } catch (error) {
     console.error("Erro ao remover associação:", error);
@@ -131,8 +139,46 @@ const removerAssociacao = async (req, res) => {
   }
 };
 
+// Obter todas as associações do sistema para administração
+const getAllAssociacoes = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await AssociarCursos.findAndCountAll({
+      include: [
+        {
+          model: Curso,
+          as: 'cursoOrigem',
+          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
+        },
+        {
+          model: Curso,
+          as: 'cursoDestino',
+          attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      offset,
+      limit
+    });
+
+    res.json({
+      associacoes: rows,
+      total: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Erro ao listar todas as associações:", error);
+    res.status(500).json({ message: "Erro ao listar associações", error: error.message });
+  }
+};
+
 module.exports = {
   associarCursos,
   getAssociacoesCurso,
-  removerAssociacao
+  removerAssociacao,
+  getAllAssociacoes
 };

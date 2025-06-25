@@ -15,6 +15,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
   final ApiService _apiService = ApiService();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Listas de dados dos filtros
   List<Map<String, dynamic>> cursos = [];
   List<Map<String, dynamic>> categorias = [];
   List<Map<String, dynamic>> areas = [];
@@ -22,25 +23,28 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
   List<Map<String, dynamic>> topicos = [];
   List<Map<String, dynamic>> topicosFiltrados = [];
 
+  // Controlo de paginação
   int currentPage = 1;
   int totalPages = 1;
   int totalCursos = 0;
   final int cursosPerPage = 12;
 
+  // Estados dos filtros
   String searchTerm = '';
   bool showFilters = false;
   bool isLoading = false;
-
   String categoriaId = '';
   String areaId = '';
   String topicoId = '';
   String tipoFiltro = 'todos';
 
-  // Para sidebar e navbar
+  // Estados do utilizador e conectividade
   Map<String, dynamic>? currentUser;
   bool isLoadingUser = true;
   bool hasConnectionError = false;
+  int? userRole;
 
+  // Controladores
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -48,6 +52,8 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
   void initState() {
     super.initState();
     _initializeScreen();
+
+    // Listener para o campo de pesquisa
     _searchController.addListener(() {
       if (searchTerm != _searchController.text) {
         setState(() {
@@ -58,15 +64,16 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     });
   }
 
+  // Inicialização completa da tela
   Future<void> _initializeScreen() async {
-    // Verificar se a API está conectada
+    // Verificar conectividade da API
     final isConnected = await _apiService.testConnection();
     if (!isConnected) {
-      debugPrint('⚠️ API não conectada, tentando reconectar...');
+      debugPrint('API não conectada, a tentar reconectar...');
       await _apiService.reconnect();
     }
 
-    // Carregar dados do usuário e iniciais
+    // Carregar dados do utilizador e iniciais em paralelo
     await Future.wait([
       _loadUserData(),
       _loadInitialData(),
@@ -80,29 +87,32 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     super.dispose();
   }
 
+  // Carregamento dos dados do utilizador atual
   Future<void> _loadUserData() async {
     try {
       setState(() {
         hasConnectionError = false;
       });
 
-      // Verificar se há token
+      // Verificar se existe token de autenticação
       final token = _apiService.authToken;
       if (token != null) {
-        // Buscar dados completos do usuário usando o método correto
+        // Buscar dados completos do utilizador
         final userData = await _apiService.getCurrentUser();
         if (userData != null) {
           setState(() {
             currentUser = userData;
+            userRole = userData['id_cargo'];
             isLoadingUser = false;
           });
         } else {
-          // Se falhar ao obter dados, tentar método alternativo
+          // Método alternativo se o primeiro falhar
           final response = await _apiService.get('/users/perfil');
           if (response.statusCode == 200) {
             final responseData = json.decode(response.body);
             setState(() {
               currentUser = responseData;
+              userRole = responseData['id_cargo'];
               isLoadingUser = false;
             });
           } else {
@@ -118,7 +128,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
         });
       }
     } catch (error) {
-      debugPrint('Erro ao carregar dados do usuário: $error');
+      debugPrint('Erro ao carregar dados do utilizador: $error');
       setState(() {
         isLoadingUser = false;
         hasConnectionError = true;
@@ -126,6 +136,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Tentar nova ligação em caso de erro
   Future<void> _retryConnection() async {
     setState(() {
       isLoadingUser = true;
@@ -136,6 +147,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     await _initializeScreen();
   }
 
+  // Alternar visibilidade da sidebar
   void _toggleSidebar() {
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       _scaffoldKey.currentState?.closeDrawer();
@@ -144,6 +156,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Carregar todos os dados iniciais necessários
   Future<void> _loadInitialData() async {
     await Future.wait([
       _fetchCategorias(),
@@ -153,6 +166,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     ]);
   }
 
+  // Buscar categorias disponíveis
   Future<void> _fetchCategorias() async {
     try {
       final response = await _apiService.get('/categorias');
@@ -170,6 +184,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Buscar áreas disponíveis
   Future<void> _fetchAreas() async {
     try {
       final response = await _apiService.get('/areas');
@@ -187,6 +202,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Buscar todos os tópicos disponíveis
   Future<void> _fetchTopicos() async {
     try {
       final response = await _apiService.get('/topicos-area');
@@ -197,6 +213,11 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           setState(() {
             topicos = data.cast<Map<String, dynamic>>();
           });
+          debugPrint('Tópicos carregados: ${topicos.length}');
+          // Refilter tópicos se já temos uma área selecionada
+          if (areaId.isNotEmpty) {
+            _filterTopicos();
+          }
         }
       }
     } catch (error) {
@@ -204,6 +225,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Buscar cursos com filtros aplicados
   Future<void> _fetchCursos() async {
     setState(() {
       isLoading = true;
@@ -215,13 +237,14 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
         'limit': cursosPerPage.toString(),
       };
 
+      // Aplicar filtros se existirem
       if (searchTerm.isNotEmpty) queryParams['search'] = searchTerm;
       if (categoriaId.isNotEmpty) queryParams['categoria'] = categoriaId;
       if (areaId.isNotEmpty) queryParams['area'] = areaId;
       if (topicoId.isNotEmpty) queryParams['topico'] = topicoId;
       if (tipoFiltro != 'todos') queryParams['tipo'] = tipoFiltro;
 
-      // Construir endpoint com query parameters
+      // Construir endpoint com parâmetros de pesquisa
       String endpoint = '/cursos';
       if (queryParams.isNotEmpty) {
         final queryString = queryParams.entries
@@ -255,6 +278,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Filtrar áreas baseado na categoria selecionada
   void _filterAreas() {
     if (categoriaId.isNotEmpty) {
       setState(() {
@@ -264,24 +288,38 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
               '';
           return areaCategoriaId == categoriaId;
         }).toList();
+
+        // Limpar seleções dependentes
         areaId = '';
         topicoId = '';
+        topicosFiltrados = [];
       });
     } else {
       setState(() {
         areasFiltradas = [];
         areaId = '';
         topicoId = '';
+        topicosFiltrados = [];
       });
     }
   }
 
+  // Filtrar tópicos baseado na área selecionada
   void _filterTopicos() {
-    if (areaId.isNotEmpty) {
+    if (areaId.isNotEmpty && topicos.isNotEmpty) {
       setState(() {
         topicosFiltrados = topicos.where((topico) {
-          return topico['id_area']?.toString() == areaId;
+          final topicoAreaId = topico['id_area']?.toString() ?? '';
+          return topicoAreaId == areaId;
         }).toList();
+
+        debugPrint('Área selecionada: $areaId');
+        debugPrint('Tópicos filtrados: ${topicosFiltrados.length}');
+        topicosFiltrados.forEach((topico) {
+          debugPrint('- ${topico['titulo']} (ID: ${topico['id_topico']})');
+        });
+
+        // Limpar seleção de tópico
         topicoId = '';
       });
     } else {
@@ -292,6 +330,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Limpar todos os filtros aplicados
   void _clearFilters() {
     setState(() {
       searchTerm = '';
@@ -307,6 +346,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     _fetchCursos();
   }
 
+  // Navegar para página de detalhes do curso
   void _navigateToCurso(Map<String, dynamic> curso) {
     final cursoId = curso['id_curso']?.toString() ?? curso['id']?.toString();
 
@@ -321,33 +361,62 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Verificar se o utilizador pode aceder ao curso
+  bool _podeAcederCurso(Map<String, dynamic> curso, bool inscrito) {
+    // Administradores sempre podem aceder
+    if (userRole == 1) return true;
+
+    // Verificar se o curso terminou
+    final dataAtual = DateTime.now();
+    final dataFimCurso = DateTime.parse(curso['data_fim']);
+    final cursoTerminado = dataFimCurso.isBefore(dataAtual);
+
+    // Se não terminou, acesso normal
+    if (!cursoTerminado) return true;
+
+    // Se terminou e é assíncrono, apenas admins
+    if (curso['tipo'] == 'assincrono') return false;
+
+    // Se terminou e é síncrono, apenas se estava inscrito
+    if (curso['tipo'] == 'sincrono' && inscrito) return true;
+
+    return false;
+  }
+
+  // Obter URL da imagem do curso com fallbacks apropriados
   String _getImageUrl(Map<String, dynamic> curso) {
-    // Primeiro: verificar se tem imagem_path
+    // Primeiro: verificar se tem caminho de imagem específico
     final imagePath = curso['imagem_path'] as String?;
     if (imagePath != null && imagePath.isNotEmpty) {
-      return _apiService.getCursoImageUrl(imagePath);
+      // Se o caminho já começa com http, usar diretamente
+      if (imagePath.startsWith('http')) {
+        return imagePath;
+      }
+      // Caso contrário, construir URL completa
+      return '${_apiService.apiBase.replaceAll('/api', '')}/$imagePath';
     }
 
-    // Segundo: tentar usar nome do curso como fallback
+    // Segundo: usar nome do curso para gerar caminho
     final nomeCurso = curso['nome'] as String?;
     if (nomeCurso != null && nomeCurso.isNotEmpty) {
-      final nomeCursoSlug = nomeCurso
+      final nomeLimpo = nomeCurso
           .toLowerCase()
           .replaceAll(' ', '-')
           .replaceAll(RegExp(r'[^\w-]+'), '');
-      return _apiService.getCursoCapaUrl(nomeCursoSlug);
+      return '${_apiService.apiBase.replaceAll('/api', '')}/uploads/cursos/$nomeLimpo/capa.png';
     }
 
     // Terceiro: usar dir_path se disponível
     final dirPath = curso['dir_path'] as String?;
     if (dirPath != null && dirPath.isNotEmpty) {
-      return _apiService.getCursoImageUrl('$dirPath/capa.png');
+      return '${_apiService.apiBase.replaceAll('/api', '')}/uploads/$dirPath/capa.png';
     }
 
     // Fallback final: imagem padrão
-    return _apiService.getCursoImageUrl(null);
+    return '${_apiService.apiBase.replaceAll('/api', '')}/uploads/default_course.png';
   }
 
+  // Construir barra de pesquisa
   Widget _buildSearchBar() {
     return Container(
       padding: EdgeInsets.all(16),
@@ -385,6 +454,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     );
   }
 
+  // Construir secção de filtros
   Widget _buildFilters() {
     if (!showFilters) return SizedBox.shrink();
 
@@ -399,7 +469,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Categoria
+          // Dropdown de Categoria
           DropdownButtonFormField<String>(
             value: categoriaId.isEmpty ? null : categoriaId,
             decoration: InputDecoration(
@@ -425,7 +495,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           ),
           SizedBox(height: 12),
 
-          // Área
+          // Dropdown de Área
           DropdownButtonFormField<String>(
             value: areaId.isEmpty ? null : areaId,
             decoration: InputDecoration(
@@ -453,7 +523,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           ),
           SizedBox(height: 12),
 
-          // Tópico
+          // Dropdown de Tópico
           DropdownButtonFormField<String>(
             value: topicoId.isEmpty ? null : topicoId,
             decoration: InputDecoration(
@@ -480,7 +550,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           ),
           SizedBox(height: 12),
 
-          // Tipo de curso
+          // Filtros de tipo de curso
           Text('Tipo de Curso', style: TextStyle(fontWeight: FontWeight.w500)),
           SizedBox(height: 8),
           Row(
@@ -494,7 +564,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           ),
           SizedBox(height: 12),
 
-          // Botão limpar filtros
+          // Botão para limpar filtros
           if (searchTerm.isNotEmpty ||
               categoriaId.isNotEmpty ||
               areaId.isNotEmpty ||
@@ -516,6 +586,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     );
   }
 
+  // Construir chip de filtro para tipos de curso
   Widget _buildFilterChip(String label, String value, IconData icon) {
     final isSelected = tipoFiltro == value;
     return FilterChip(
@@ -539,6 +610,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     );
   }
 
+  // Construir cartão individual de curso
   Widget _buildCursoCard(Map<String, dynamic> curso) {
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -548,20 +620,56 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
           height: 200,
           child: Stack(
             children: [
-              // Imagem usando CursoImage
+              // Imagem de fundo do curso
               Positioned.fill(
-                child: CursoImage(
-                  imageUrl: _getImageUrl(curso),
-                  fallbackUrl: _apiService.getCursoImageUrl(null),
+                child: Image.network(
+                  _getImageUrl(curso),
                   width: double.infinity,
                   height: 200,
                   fit: BoxFit.cover,
-                  borderRadius: BorderRadius.circular(8),
-                  cursoNome: curso['nome'],
-                  showLoadingText: false,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('Erro ao carregar imagem: $error');
+                    return Container(
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.school,
+                                size: 48, color: Colors.grey[600]),
+                            SizedBox(height: 8),
+                            Text(
+                              curso['nome'] ?? 'Curso',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-              // Overlay com informações
+              // Sobreposição com informações do curso
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -616,6 +724,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     );
   }
 
+  // Formatar data para exibição
   String _formatDate(String? dateString) {
     if (dateString == null) return '';
     try {
@@ -626,6 +735,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
     }
   }
 
+  // Construir controles de paginação
   Widget _buildPagination() {
     return Container(
       padding: EdgeInsets.all(16),
@@ -681,7 +791,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Mostrar loading enquanto carrega os dados do usuário
+    // Exibir loading enquanto carrega dados do utilizador
     if (isLoadingUser) {
       return Scaffold(
         body: Center(
@@ -702,7 +812,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
       );
     }
 
-    // Mostrar erro de conectividade se existir
+    // Exibir erro de conectividade se existir
     if (hasConnectionError) {
       return Scaffold(
         appBar: AppBar(
@@ -732,7 +842,7 @@ class _ListaCursosPageState extends State<ListaCursosPage> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Não foi possível conectar ao servidor.\nVerifique sua conexão e tente novamente.',
+                  'Não foi possível conectar ao servidor.\nVerifique a ligação e tente novamente.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,

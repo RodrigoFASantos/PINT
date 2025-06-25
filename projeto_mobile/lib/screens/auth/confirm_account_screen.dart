@@ -14,7 +14,8 @@ class ConfirmAccountScreen extends StatefulWidget {
 class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
   final _apiService = ApiService();
 
-  String _status = 'loading'; // loading, success, error
+  // Estados possíveis: loading, success, error
+  String _status = 'loading';
   String _message = '';
   String? _email;
   bool _isResending = false;
@@ -23,6 +24,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
   void initState() {
     super.initState();
 
+    // Verificar se o token foi fornecido
     if (widget.token == null || widget.token!.isEmpty) {
       setState(() {
         _status = 'error';
@@ -31,21 +33,22 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
       return;
     }
 
-    // Confirmar a conta
+    // Iniciar o processo de confirmação da conta
     _confirmAccount(widget.token!);
   }
 
+  // Processar confirmação da conta com o token fornecido
   Future<void> _confirmAccount(String token) async {
     try {
       setState(() => _status = 'loading');
 
-      debugPrint('✅ [CONFIRM] Confirmando conta com token...');
+      debugPrint('A confirmar conta com token...');
 
       final result = await _apiService.confirmAccount(token);
 
-      debugPrint('✅ [CONFIRM] Resultado: $result');
+      debugPrint('Resultado da confirmação: $result');
 
-      // Extrair o email do token para permitir reenvio
+      // Extrair o email do token para permitir reenvio se necessário
       _email = _apiService.extractEmailFromToken(token);
 
       if (result != null && result['success'] == true) {
@@ -54,7 +57,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
           _message = result['message'] ?? 'Conta confirmada com sucesso!';
         });
 
-        // Se recebeu um token de autenticação, salvar
+        // Se recebeu um token de autenticação, guardar os dados
         if (result['token'] != null) {
           final userData = result['user'] as Map<String, dynamic>?;
 
@@ -67,7 +70,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
             );
           }
 
-          // Redirecionar para home após 3 segundos
+          // Redirecionar para a página inicial após 3 segundos
           Future.delayed(const Duration(seconds: 3), () {
             if (mounted) {
               Navigator.pushReplacementNamed(context, '/home');
@@ -78,19 +81,20 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
         setState(() {
           _status = 'error';
           _message = result?['message'] ??
-              'Erro ao confirmar sua conta. O link pode ter expirado ou ser inválido.';
+              'Erro ao confirmar a conta. O link pode ter expirado ou ser inválido.';
         });
       }
     } catch (e) {
-      debugPrint('❌ [CONFIRM] Erro ao confirmar conta: $e');
+      debugPrint('Erro ao confirmar conta: $e');
       setState(() {
         _status = 'error';
         _message =
-            'Erro ao confirmar sua conta. O link pode ter expirado ou ser inválido.';
+            'Erro ao confirmar a conta. O link pode ter expirado ou ser inválido.';
       });
     }
   }
 
+  // Processar reenvio do email de confirmação
   Future<void> _handleResendConfirmation() async {
     if (_email == null || _email!.isEmpty || _isResending) return;
 
@@ -116,6 +120,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
     }
   }
 
+  // Construir conteúdo baseado no estado atual
   Widget _buildContent() {
     switch (_status) {
       case 'loading':
@@ -127,7 +132,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Confirmando sua conta...',
+              'A confirmar a conta...',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -141,6 +146,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Ícone de sucesso
             Container(
               width: 80,
               height: 80,
@@ -172,7 +178,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Você será redirecionado para a página inicial em alguns segundos...',
+              'Será redirecionado para a página inicial em alguns segundos...',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
@@ -190,6 +196,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Ícone de erro
             Container(
               width: 80,
               height: 80,
@@ -221,7 +228,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Botão para reenviar confirmação (se tivermos email)
+            // Botão para reenviar confirmação se tivermos email
             if (_email != null && _email!.isNotEmpty) ...[
               SizedBox(
                 width: double.infinity,
@@ -272,7 +279,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
                   ),
                 ),
                 child: const Text(
-                  'Voltar para Login',
+                  'Voltar para o Login',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -299,7 +306,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
             children: [
               const SizedBox(height: 60),
 
-              // Logo
+              // Logo da aplicação
               Container(
                 width: 120,
                 height: 120,
@@ -323,6 +330,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
 
               const SizedBox(height: 32),
 
+              // Nome da aplicação
               const Text(
                 'SoftSkills',
                 style: TextStyle(
@@ -335,6 +343,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
 
               const SizedBox(height: 8),
 
+              // Subtítulo
               const Text(
                 'Confirmação de Conta',
                 style: TextStyle(
@@ -346,7 +355,7 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
 
               const SizedBox(height: 48),
 
-              // Card principal
+              // Cartão principal com o conteúdo
               Expanded(
                 child: Card(
                   elevation: 8,
@@ -363,10 +372,10 @@ class _ConfirmAccountScreenState extends State<ConfirmAccountScreen> {
 
               const SizedBox(height: 16),
 
-              // Info de conexão
+              // Informação da ligação
               Center(
                 child: Text(
-                  'Conectando a: ${_apiService.apiBase}',
+                  'A conectar a: ${_apiService.apiBase}',
                   style: const TextStyle(
                     color: Colors.white60,
                     fontSize: 12,

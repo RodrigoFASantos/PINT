@@ -11,11 +11,13 @@ class ResetPasswordScreen extends StatefulWidget {
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  // Controladores dos campos de texto
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _apiService = ApiService();
 
+  // Estados do componente
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -25,10 +27,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    
+
+    // Verificar se o token foi fornecido
     if (widget.token == null || widget.token!.isEmpty) {
       setState(() {
-        _error = 'Token de recuperação não encontrado. Por favor, solicite uma nova recuperação de senha.';
+        _error =
+            'Token de recuperação não encontrado. Por favor, solicite uma nova recuperação de senha.';
       });
     }
   }
@@ -40,6 +44,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
+  // Processar submissão do formulário
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -66,18 +71,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      debugPrint('🔑 [RESET] Redefinindo senha...');
-      
+      debugPrint('A redefinir senha...');
+
       final result = await _apiService.resetPassword(
         widget.token!,
         _passwordController.text,
       );
 
-      debugPrint('🔑 [RESET] Resultado: $result');
+      debugPrint('Resultado da redefinição: $result');
 
       if (result != null && result['success'] == true) {
         setState(() {
-          _message = 'Senha redefinida com sucesso! Redirecionando para o login...';
+          _message =
+              'Senha redefinida com sucesso! A redirecionar para o login...';
         });
 
         // Redirecionar para login após 3 segundos
@@ -88,11 +94,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         });
       } else {
         setState(() {
-          _error = result?['message'] ?? 'Erro ao redefinir senha. Tente novamente.';
+          _error =
+              result?['message'] ?? 'Erro ao redefinir senha. Tente novamente.';
         });
       }
     } catch (e) {
-      debugPrint('❌ [RESET] Erro ao redefinir senha: $e');
+      debugPrint('Erro ao redefinir senha: $e');
       setState(() {
         _error = 'Erro ao redefinir senha. Tente novamente.';
       });
@@ -103,6 +110,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
   }
 
+  // Voltar para a página de login
   void _voltarLogin() {
     Navigator.pushReplacementNamed(context, '/login');
   }
@@ -121,7 +129,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               children: [
                 const SizedBox(height: 60),
 
-                // Logo
+                // Logo da aplicação
                 Container(
                   width: 120,
                   height: 120,
@@ -145,6 +153,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 const SizedBox(height: 32),
 
+                // Nome da aplicação
                 const Text(
                   'SoftSkills',
                   style: TextStyle(
@@ -157,6 +166,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 const SizedBox(height: 8),
 
+                // Subtítulo
                 const Text(
                   'Redefinir Senha',
                   style: TextStyle(
@@ -168,7 +178,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 const SizedBox(height: 48),
 
-                // Card principal
+                // Cartão principal com o formulário
                 Card(
                   elevation: 8,
                   shape: RoundedRectangleBorder(
@@ -179,6 +189,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
                       children: [
+                        // Título do formulário
                         const Text(
                           'Redefinir Senha',
                           style: TextStyle(
@@ -227,12 +238,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                           ),
 
-                        // Conteúdo do formulário apenas se não há mensagem de sucesso
+                        // Formulário apenas se não há mensagem de sucesso
                         if (_message.isEmpty) ...[
                           const Padding(
                             padding: EdgeInsets.only(bottom: 20),
                             child: Text(
-                              'Digite sua nova senha abaixo:',
+                              'Digite a sua nova senha em baixo:',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey,
@@ -241,7 +252,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                           ),
 
-                          // Campo Nova Senha
+                          // Campo da nova senha
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
@@ -257,7 +268,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     () => _obscurePassword = !_obscurePassword),
                               ),
                               border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(5)),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5)),
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
@@ -276,7 +288,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                           const SizedBox(height: 16),
 
-                          // Campo Confirmar Senha
+                          // Campo de confirmação da senha
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
@@ -289,10 +301,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     ? Icons.visibility
                                     : Icons.visibility_off),
                                 onPressed: () => setState(() =>
-                                    _obscureConfirmPassword = !_obscureConfirmPassword),
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword),
                               ),
                               border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(5)),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5)),
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
@@ -331,16 +345,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  '• A senha deve ter pelo menos 6 caracteres',
-                                  style: TextStyle(fontSize: 14, color: Colors.blue),
+                                  'A senha deve ter pelo menos 6 caracteres',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.blue),
                                 ),
                                 Text(
-                                  '• Use uma combinação de letras, números e símbolos',
-                                  style: TextStyle(fontSize: 14, color: Colors.blue),
+                                  'Use uma combinação de letras, números e símbolos',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.blue),
                                 ),
                                 Text(
-                                  '• Evite informações pessoais óbvias',
-                                  style: TextStyle(fontSize: 14, color: Colors.blue),
+                                  'Evite informações pessoais óbvias',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.blue),
                                 ),
                               ],
                             ),
@@ -348,7 +365,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                           const SizedBox(height: 24),
 
-                          // Botão Redefinir Senha
+                          // Botão para redefinir senha
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -368,8 +385,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
                                       ),
                                     )
                                   : const Text(
@@ -386,11 +404,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           const SizedBox(height: 16),
                         ],
 
-                        // Botão Voltar para Login (sempre visível)
+                        // Botão para voltar ao login (sempre visível)
                         TextButton(
                           onPressed: _voltarLogin,
                           child: const Text(
-                            'Voltar para Login',
+                            'Voltar para o Login',
                             style: TextStyle(color: Color(0xFFFF8000)),
                           ),
                         ),
@@ -428,10 +446,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 const SizedBox(height: 32),
 
-                // Info de conexão
+                // Informação de ligação
                 Center(
                   child: Text(
-                    'Conectando a: ${_apiService.apiBase}',
+                    'A conectar a: ${_apiService.apiBase}',
                     style: const TextStyle(
                       color: Colors.white60,
                       fontSize: 12,

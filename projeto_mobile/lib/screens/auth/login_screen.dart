@@ -8,6 +8,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Controladores e chaves do formulário
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -15,10 +16,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _forgotEmailController = TextEditingController();
   final _apiService = ApiService();
 
+  // Estados principais
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // Estados para diferentes formulários
+  // Estados para controlo de diferentes formulários
   bool _showResendForm = false;
   bool _showForgotForm = false;
 
@@ -34,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    // Limpar controladores quando o widget é destruído
     _emailController.dispose();
     _passwordController.dispose();
     _resendEmailController.dispose();
@@ -41,29 +44,31 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Processar tentativa de login
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      debugPrint('🔐 [LOGIN] Iniciando login...');
+      debugPrint('A iniciar login...');
 
       final result = await _apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      debugPrint('🔐 [LOGIN] Resultado recebido: $result');
+      debugPrint('Resultado do login recebido: $result');
 
       if (result != null) {
         if (result['success'] == true) {
-          debugPrint('🔐 [LOGIN] Login bem-sucedido!');
+          debugPrint('Login bem-sucedido!');
 
           final userData = result['user'] as Map<String, dynamic>?;
           final token = result['token'] as String?;
 
           if (token != null && userData != null) {
+            // Guardar dados de autenticação
             await AuthManager.saveAuthData(
               token: token,
               email: userData['email'] ?? _emailController.text.trim(),
@@ -84,8 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
         AppUtils.showError(context, 'Erro de comunicação com o servidor');
       }
     } catch (e) {
-      debugPrint('❌ [LOGIN] Erro de exceção: $e');
-      AppUtils.showError(context, 'Erro de conexão: $e');
+      debugPrint('Erro de exceção no login: $e');
+      AppUtils.showError(context, 'Erro de ligação: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -93,6 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Processar reenvio de email de confirmação
   Future<void> _handleResendConfirmation() async {
     if (_resendEmailController.text.trim().isEmpty) {
       setState(() => _resendError = 'Por favor, insira um email válido');
@@ -117,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result != null && result['success'] == true) {
         setState(() {
           _resendMessage =
-              'Email de confirmação reenviado com sucesso! Verifique sua caixa de entrada.';
+              'Email de confirmação reenviado com sucesso! Verifique a caixa de entrada.';
         });
 
         // Voltar para login após 5 segundos
@@ -129,12 +135,12 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         setState(() {
           _resendError = result?['message'] ??
-              'Erro ao reenviar confirmação. Este email pode não estar registrado ou já foi confirmado.';
+              'Erro ao reenviar confirmação. Este email pode não estar registado ou já foi confirmado.';
         });
       }
     } catch (e) {
       setState(() {
-        _resendError = 'Erro de conexão. Tente novamente.';
+        _resendError = 'Erro de ligação. Tente novamente.';
       });
     } finally {
       if (mounted) {
@@ -143,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Processar pedido de recuperação de senha
   Future<void> _handleForgotPassword() async {
     if (_forgotEmailController.text.trim().isEmpty) {
       setState(() => _forgotError = 'Por favor, insira um email válido');
@@ -167,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result != null && result['success'] == true) {
         setState(() {
           _forgotMessage =
-              'Email de recuperação enviado com sucesso! Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.';
+              'Email de recuperação enviado com sucesso! Verifique a caixa de entrada e siga as instruções para redefinir a senha.';
         });
 
         // Voltar para login após 5 segundos
@@ -184,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       setState(() {
-        _forgotError = 'Erro de conexão. Tente novamente.';
+        _forgotError = 'Erro de ligação. Tente novamente.';
       });
     } finally {
       if (mounted) {
@@ -193,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Alternar para formulário de reenvio
   void _toggleResendForm() {
     setState(() {
       _showResendForm = !_showResendForm;
@@ -203,6 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  // Alternar para formulário de recuperação de senha
   void _toggleForgotForm() {
     setState(() {
       _showForgotForm = !_showForgotForm;
@@ -213,6 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  // Voltar para o formulário de login principal
   void _backToLogin() {
     setState(() {
       _showResendForm = false;
@@ -226,6 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  // Construir formulário principal de login
   Widget _buildLoginForm() {
     return Column(
       children: [
@@ -238,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Campo Email
+        // Campo de Email
         TextFormField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
@@ -264,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Campo Password
+        // Campo de Password
         TextFormField(
           controller: _passwordController,
           obscureText: _obscurePassword,
@@ -296,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Botão Login
+        // Botão de Login
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -352,6 +363,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Construir formulário de reenvio de confirmação
   Widget _buildResendForm() {
     return Column(
       children: [
@@ -364,6 +376,8 @@ class _LoginScreenState extends State<LoginScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
+
+        // Mensagem de sucesso
         if (_resendMessage.isNotEmpty)
           Container(
             width: double.infinity,
@@ -380,6 +394,8 @@ class _LoginScreenState extends State<LoginScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+        // Mensagem de erro
         if (_resendError.isNotEmpty)
           Container(
             width: double.infinity,
@@ -396,11 +412,13 @@ class _LoginScreenState extends State<LoginScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+        // Campo de email
         TextFormField(
           controller: _resendEmailController,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
-            labelText: 'Digite seu email',
+            labelText: 'Digite o seu email',
             prefixIcon: Icon(Icons.email),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(5)),
@@ -411,6 +429,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Botão de envio
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -442,10 +462,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Botão para voltar
         TextButton(
           onPressed: _backToLogin,
           child: const Text(
-            'Voltar para Login',
+            'Voltar para o Login',
             style: TextStyle(color: Color(0xFFFF8000)),
           ),
         ),
@@ -453,6 +475,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Construir formulário de recuperação de senha
   Widget _buildForgotForm() {
     return Column(
       children: [
@@ -465,6 +488,8 @@ class _LoginScreenState extends State<LoginScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
+
+        // Mensagem de sucesso
         if (_forgotMessage.isNotEmpty)
           Container(
             width: double.infinity,
@@ -481,6 +506,8 @@ class _LoginScreenState extends State<LoginScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+        // Mensagem de erro
         if (_forgotError.isNotEmpty)
           Container(
             width: double.infinity,
@@ -497,11 +524,13 @@ class _LoginScreenState extends State<LoginScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+        // Campo de email
         TextFormField(
           controller: _forgotEmailController,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
-            labelText: 'Digite seu email',
+            labelText: 'Digite o seu email',
             prefixIcon: Icon(Icons.email),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(5)),
@@ -512,6 +541,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Botão de envio
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -543,10 +574,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Botão para voltar
         TextButton(
           onPressed: _backToLogin,
           child: const Text(
-            'Voltar para Login',
+            'Voltar para o Login',
             style: TextStyle(color: Color(0xFFFF8000)),
           ),
         ),
@@ -568,7 +601,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 60),
 
-                // Logo
+                // Logo da aplicação
                 Container(
                   width: 120,
                   height: 120,
@@ -592,6 +625,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 32),
 
+                // Nome da aplicação
                 const Text(
                   'SoftSkills',
                   style: TextStyle(
@@ -604,6 +638,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 8),
 
+                // Slogan da aplicação
                 const Text(
                   'Formação e partilha de conhecimento',
                   style: TextStyle(
@@ -615,7 +650,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 48),
 
-                // Card principal
+                // Cartão principal com formulários
                 Card(
                   elevation: 8,
                   shape: RoundedRectangleBorder(
@@ -634,10 +669,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 32),
 
-                // Info de conexão
+                // Informação da ligação
                 Center(
                   child: Text(
-                    'Conectando a: ${_apiService.apiBase}',
+                    'A conectar a: ${_apiService.apiBase}',
                     style: const TextStyle(
                       color: Colors.white60,
                       fontSize: 12,

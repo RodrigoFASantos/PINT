@@ -512,3 +512,147 @@
     grid-template-columns: 1fr; /* Uma coluna em telas pequenas */
   }
 }
+
+/* ==========================================
+   CURSOS ASSOCIADOS
+   ========================================== */
+
+/* Estilos para a secção de cursos associados */
+.campo-cursos-associados {
+  width: 100%;
+}
+
+.cursos-associados-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.curso-associado-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.curso-associado-item:hover {
+  background-color: #f0f0f0;
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.curso-associado-info {
+  flex: 1;
+  margin-right: 12px;
+}
+
+.curso-associado-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.3;
+}
+
+.curso-associado-descricao {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.curso-associado-imagem {
+  flex-shrink: 0;
+  width: 60px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.curso-associado-imagem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.curso-associado-item:hover .curso-associado-imagem img {
+  transform: scale(1.05);
+}
+
+/* Estados de carregamento para cursos associados */
+.cursos-associados-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.cursos-associados-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+/* Estilo quando não há cursos associados */
+.sem-cursos-associados {
+  padding: 16px;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #ddd;
+}
+
+/* Animação suave para quando os cursos associados aparecem */
+.cursos-associados-lista {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+  .curso-associado-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .curso-associado-info {
+    margin-right: 0;
+    width: 100%;
+  }
+  
+  .curso-associado-imagem {
+    width: 80px;
+    height: 50px;
+    align-self: center;
+  }
+  
+  .cursos-associados-lista {
+    max-height: 250px;
+  }
+}

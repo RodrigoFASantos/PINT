@@ -5,12 +5,12 @@ import API_BASE, { IMAGES } from "../../api";
 import './css/Detalhes_Curso.css';
 
 const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, userRole: userRoleProp }) => {
-  // Usando props ou parâmetros de URL
+  // Usar propriedades ou parâmetros da URL
   const { id } = useParams();
   const navigate = useNavigate();
   const courseId = cursoId || id;
 
-  // Estados existentes...
+  // Estados principais do componente
   const [curso, setCurso] = useState(cursoProp || null);
   const [loading, setLoading] = useState(!cursoProp);
   const [error, setError] = useState('');
@@ -22,7 +22,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estados para os tópicos - consolidados em um único estado
+  // Estados para os tópicos do curso
   const [topicos, setTopicos] = useState([]);
   const [loadingTopicos, setLoadingTopicos] = useState(false);
 
@@ -30,16 +30,20 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [topicoArea, setTopicoArea] = useState(null);
   const [loadingTopicoArea, setLoadingTopicoArea] = useState(false);
 
-  // Se o user estiver inscrito (!inscritoProp é false), os detalhes não aparecem
-  // Se o user não estiver inscrito (!inscritoProp é true), os detalhes aparecem
+  // Estados para cursos associados
+  const [cursosAssociados, setCursosAssociados] = useState([]);
+  const [loadingCursosAssociados, setLoadingCursosAssociados] = useState(false);
+
+  // Se o utilizador estiver inscrito, os detalhes não aparecem por defeito
+  // Se o utilizador não estiver inscrito, os detalhes aparecem por defeito
   const [mostrarDetalhes, setMostrarDetalhes] = useState(!inscritoProp);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
 
-  // DEBUG: Log básico dos estados importantes
+  // Registo de depuração dos estados importantes
   useEffect(() => {
-    console.log('🔍 Estados atuais:', {
+    console.log('Estados actuais:', {
       courseId,
       cursoTipo: curso?.tipo,
       userRole,
@@ -48,7 +52,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     });
   }, [courseId, curso?.tipo, userRole, inscrito, mostrarDetalhes]);
 
-  // Função para buscar tópico de área
+  // Função para buscar tópico de área específico
   const getTopicoArea = async (topicoAreaId) => {
     try {
       setLoadingTopicoArea(true);
@@ -67,13 +71,40 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }));
       }
     } catch (error) {
-      console.error(`Erro ao buscar tópico de área ${topicoAreaId}:`, error);
+      console.error(`Erro a buscar tópico de área ${topicoAreaId}:`, error);
     } finally {
       setLoadingTopicoArea(false);
     }
   };
 
-  // Carregar curso se não for fornecido via props
+  // Função para buscar cursos associados com melhoria na gestão de erros
+  const getCursosAssociados = async (cursoId) => {
+    try {
+      setLoadingCursosAssociados(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(`${API_BASE}/associar-cursos/curso/${cursoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log(`Cursos associados carregados para curso ${cursoId}:`, response.data);
+
+      if (response.data && Array.isArray(response.data)) {
+        setCursosAssociados(response.data);
+      } else {
+        console.warn('Resposta não é um array:', response.data);
+        setCursosAssociados([]);
+      }
+    } catch (error) {
+      console.error(`Erro a buscar cursos associados para o curso ${cursoId}:`, error);
+      // Não mostrar erro ao utilizador pois é uma funcionalidade secundária
+      setCursosAssociados([]);
+    } finally {
+      setLoadingCursosAssociados(false);
+    }
+  };
+
+  // Carregar dados do curso se não fornecido através de propriedades
   useEffect(() => {
     let isMounted = true;
 
@@ -87,7 +118,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           return;
         }
 
-        console.log(`🏗️ Carregando curso ID: ${courseId}`);
+        console.log(`A carregar curso com ID: ${courseId}`);
         const response = await axios.get(
           `${API_BASE}/cursos/${courseId}?include=topicos,categoria,area,formador`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -95,19 +126,25 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
         if (isMounted) {
           const cursoData = response.data;
-          console.log("🏗️ Curso carregado:", cursoData.nome, "| Tipo:", cursoData.tipo);
+          console.log("Curso carregado:", cursoData.nome, "| Tipo:", cursoData.tipo);
           setCurso(cursoData);
 
+          // Carregar tópicos do curso
           if (cursoData.topicos && Array.isArray(cursoData.topicos) && cursoData.topicos.length > 0) {
             setTopicos(cursoData.topicos);
           } else if (cursoData.id_curso) {
             await getTopicosByCurso(cursoData.id_curso);
           }
 
+          // Carregar tópico de área se necessário
           if (cursoData.id_topico_area && (!cursoData.topico_area || !cursoData.topico_area.titulo)) {
             await getTopicoArea(cursoData.id_topico_area);
           }
 
+          // Carregar cursos associados sempre
+          await getCursosAssociados(cursoData.id_curso);
+
+          // Verificar inscrição se não fornecida
           if (!inscritoProp) {
             await verificarInscricao();
           }
@@ -116,8 +153,8 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
       } catch (error) {
         if (isMounted) {
-          console.error("🏗️ Erro ao carregar curso:", error);
-          setError("Não foi possível carregar o curso. Tente novamente mais tarde.");
+          console.error("Erro a carregar curso:", error);
+          setError("Não foi possível carregar o curso. Tenta novamente mais tarde.");
           setLoading(false);
         }
       }
@@ -126,8 +163,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     if (!cursoProp && courseId) {
       carregarCurso();
     } else if (cursoProp) {
-      console.log('🏗️📦 Usando curso das props:', cursoProp.nome, '| Tipo:', cursoProp.tipo);
+      console.log('A usar curso das propriedades:', cursoProp.nome, '| Tipo:', cursoProp.tipo);
       
+      // Carregar dados adicionais mesmo quando usar propriedades
       if (cursoProp.topicos && Array.isArray(cursoProp.topicos) && cursoProp.topicos.length > 0) {
         setTopicos(cursoProp.topicos);
       } else if (cursoProp.id_curso) {
@@ -137,6 +175,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       if (cursoProp.id_topico_area && (!cursoProp.topico_area || !cursoProp.topico_area.titulo)) {
         getTopicoArea(cursoProp.id_topico_area);
       }
+
+      // Carregar cursos associados mesmo quando usar propriedades
+      getCursosAssociados(cursoProp.id_curso);
     }
 
     return () => {
@@ -166,14 +207,14 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         setTopicos(topicosDados);
       }
     } catch (error) {
-      console.error(`Erro ao buscar tópicos do curso ${cursoId}:`, error);
+      console.error(`Erro a buscar tópicos do curso ${cursoId}:`, error);
       setTopicos([]);
     } finally {
       setLoadingTopicos(false);
     }
   };
 
-  // Verificar se o user já está inscrito no curso
+  // Verificar se o utilizador já está inscrito no curso
   const verificarInscricao = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -190,11 +231,11 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         setMostrarDetalhes(false);
       }
     } catch (error) {
-      console.error('Erro ao verificar inscrição:', error);
+      console.error('Erro a verificar inscrição:', error);
     }
   }, [courseId]);
 
-  // Funções de formatação
+  // Funções para formatação do estado do curso
   const formatarEstadoParaExibicao = (estado) => {
     if (!estado) return 'Indisponível';
     const estadosMap = {
@@ -219,7 +260,34 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     return cssMap[estadoNormalizado] || estadoNormalizado.replace('_', '-');
   };
 
-  // Handlers
+  // Função para obter a URL da imagem do curso
+  const getImageUrl = (curso) => {
+    if (!curso) return '/placeholder-curso.jpg';
+    if (curso.imagem_path) return `${API_BASE}/${curso.imagem_path}`;
+    if (curso.nome) {
+      const nomeCursoSlug = curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
+      return IMAGES.CURSO(nomeCursoSlug);
+    }
+    if (curso.dir_path) return `${API_BASE}/${curso.dir_path}/capa.png`;
+    return '/placeholder-curso.jpg';
+  };
+
+  // Função para navegar para um curso associado
+  const navegarParaCursoAssociado = (cursoAssociado) => {
+    // Determinar qual curso mostrar baseado no curso actual
+    const cursoParaMostrar = cursoAssociado.id_curso_origem === curso.id_curso 
+      ? cursoAssociado.cursoDestino 
+      : cursoAssociado.cursoOrigem;
+    
+    if (cursoParaMostrar && cursoParaMostrar.id_curso) {
+      console.log('A navegar para curso associado:', cursoParaMostrar.nome);
+      navigate(`/cursos/${cursoParaMostrar.id_curso}`);
+    } else {
+      console.error('Curso associado inválido:', cursoAssociado);
+    }
+  };
+
+  // Manipuladores de eventos
   const handleInscricao = () => setShowInscricaoForm(true);
 
   const handleInscricaoConfirm = async () => {
@@ -273,28 +341,17 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   };
 
-  const getImageUrl = (curso) => {
-    if (!curso) return '/placeholder-curso.jpg';
-    if (curso.imagem_path) return `${API_BASE}/${curso.imagem_path}`;
-    if (curso.nome) {
-      const nomeCursoSlug = curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
-      return IMAGES.CURSO(nomeCursoSlug);
-    }
-    if (curso.dir_path) return `${API_BASE}/${curso.dir_path}/capa.png`;
-    return '/placeholder-curso.jpg';
-  };
-
   const handleGerenciarInscricoes = () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Sessão expirada. Faça login novamente.');
+      alert('Sessão expirada. Faz login novamente.');
       navigate('/login');
       return;
     }
     navigate(`/cursos/${courseId}/inscricoes`);
   };
 
-  // Loading states
+  // Estados de carregamento
   if (loading) {
     return (
       <div className="detalhes-loading">
@@ -334,14 +391,14 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           <div className="modal-conteudo">
             <h2 className="modal-titulo">Confirmar</h2>
             <p className="modal-texto">
-              Tem certeza que deseja excluir este curso? Esta ação irá remover o curso e todas as inscrições associadas.
+              Tens a certeza que desejas excluir este curso? Esta acção irá remover o curso e todas as inscrições associadas.
             </p>
             <div className="modal-botoes">
               <button onClick={() => setShowDeleteConfirmation(false)} className="botao-cancelar" disabled={isDeleting}>
                 Cancelar
               </button>
               <button onClick={handleDeleteCurso} className="botao-confirmar" disabled={isDeleting}>
-                {isDeleting ? 'Excluindo...' : 'Excluir Curso'}
+                {isDeleting ? 'A excluir...' : 'Excluir Curso'}
               </button>
             </div>
           </div>
@@ -460,6 +517,73 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
+            {/* Cursos Associados com melhor apresentação */}
+            {cursosAssociados.length > 0 && (
+              <div className="campo-container">
+                <div className="campo campo-cursos-associados">
+                  <label>Cursos Relacionados ({cursosAssociados.length})</label>
+                  <div className="campo-valor">
+                    {loadingCursosAssociados ? (
+                      <div className="loading-associados">
+                        <div className="spinner-pequeno"></div>
+                        <span>A carregar cursos relacionados...</span>
+                      </div>
+                    ) : (
+                      <div className="cursos-associados-lista">
+                        {cursosAssociados.map((associacao) => {
+                          // Determinar qual curso mostrar origem ou destino
+                          const cursoParaMostrar = associacao.id_curso_origem === curso.id_curso 
+                            ? associacao.cursoDestino 
+                            : associacao.cursoOrigem;
+                          
+                          if (!cursoParaMostrar) {
+                            console.warn('Curso associado inválido:', associacao);
+                            return null;
+                          }
+                          
+                          return (
+                            <div 
+                              key={associacao.id_associacao} 
+                              className="curso-associado-item"
+                              onClick={() => navegarParaCursoAssociado(associacao)}
+                              title={`Clica para ver o curso ${cursoParaMostrar.nome}`}
+                            >
+                              <div className="curso-associado-info">
+                                <h4 className="curso-associado-nome">{cursoParaMostrar.nome}</h4>
+                                <div className="curso-associado-meta">
+                                  <span className={`curso-estado ${formatarEstadoParaCSS(cursoParaMostrar.estado)}`}>
+                                    {formatarEstadoParaExibicao(cursoParaMostrar.estado)}
+                                  </span>
+                                  <span className="curso-tipo">
+                                    {cursoParaMostrar.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}
+                                  </span>
+                                </div>
+                                {associacao.descricao && (
+                                  <p className="curso-associado-descricao">{associacao.descricao}</p>
+                                )}
+                              </div>
+                              <div className="curso-associado-imagem">
+                                <img 
+                                  src={getImageUrl(cursoParaMostrar)} 
+                                  alt={cursoParaMostrar.nome}
+                                  onError={(e) => {
+                                    e.target.src = '/placeholder-curso.jpg';
+                                  }}
+                                />
+                              </div>
+                              <div className="curso-associado-seta">
+                                <i className="fas fa-arrow-right"></i>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Botões de administrador */}
             {userRole === 1 && (
               <div className="botoes-admin">
@@ -472,7 +596,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                     className="botao-apagar-admin"
                     disabled={isDeleting}
                   >
-                    {isDeleting ? 'Excluindo...' : 'Excluir Curso'}
+                    {isDeleting ? 'A excluir...' : 'Excluir Curso'}
                   </button>
                   <button onClick={handleGerenciarInscricoes} className="botao-inscricoes">
                     Inscrições
@@ -492,13 +616,13 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         <div className="modal-overlay">
           <div className="modal-conteudo">
             <h3 className="modal-titulo">Confirmar Inscrição</h3>
-            <p className="modal-texto">Tem certeza que deseja se inscrever no curso "{curso.nome}"?</p>
+            <p className="modal-texto">Tens a certeza que desejas inscrever-te no curso "{curso.nome}"?</p>
             <div className="modal-botoes">
               <button onClick={() => setShowInscricaoForm(false)} className="botao-cancelar" disabled={inscrevendo}>
                 Cancelar
               </button>
               <button onClick={handleInscricaoConfirm} className="botao-confirmar" disabled={inscrevendo}>
-                {inscrevendo ? 'Processando...' : 'Confirmar'}
+                {inscrevendo ? 'A processar...' : 'Confirmar'}
               </button>
             </div>
           </div>

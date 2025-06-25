@@ -7,17 +7,17 @@ const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const Curso_Topicos = require("../../database/models/Curso_Topicos");
 const PastaCurso = require("../../database/models/PastaCurso");
 const ConteudoCurso = require("../../database/models/ConteudoCurso");
+const AssociarCursos = require("../../database/models/AssociarCurso");
 const uploadUtils = require('../../middleware/upload');
 const { sequelize } = require("../../config/db");
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
 
-// Importando o controller de notificações diretamente
+// Importar o controller de notificações diretamente
 const notificacaoController = require('../notificacoes/notificacoes_ctrl');
-const { get } = require("http");
 
-// Obter todos os cursos com paginação
+// Obter todos os cursos com paginação e filtros
 const getAllCursos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -64,10 +64,10 @@ const getAllCursos = async (req, res) => {
 
     if (topico) {
       where.id_topico_area = parseInt(topico, 10);
-      console.log(`Filtrando cursos por tópico id: ${parseInt(topico, 10)}`);
+      console.log(`A filtrar cursos por tópico id: ${parseInt(topico, 10)}`);
     }
 
-    // Definir os modelos a incluir
+    // Definir os modelos a incluir nas consultas
     const includeModels = [
       {
         model: User,
@@ -84,7 +84,7 @@ const getAllCursos = async (req, res) => {
       }
     ];
 
-    // Adicionar Topico_Area se ele existir e estiver sendo usado
+    // Adicionar Topico_Area se ele existir e estiver a ser usado
     try {
       if (Topico_Area) {
         includeModels.push({
@@ -107,7 +107,7 @@ const getAllCursos = async (req, res) => {
     // Se não houver cursos e não há filtros, tentar buscar todos os cursos
     if (rows.length === 0 && 
         !categoria && !area && !formador && !search && !tipo && !estado && !topico && ativo === undefined) {
-      console.log("Não foram encontrados cursos com os filtros. Tentando sem filtros...");
+      console.log("Não foram encontrados cursos com os filtros. A tentar sem filtros...");
       const todosOsCursos = await Curso.findAndCountAll({
         limit,
         offset,
@@ -137,7 +137,8 @@ const getAllCursos = async (req, res) => {
     });
   }
 };
-// Função para obter cursos filtrados por categorias (para associação com formador)
+
+// Função para obter cursos filtrados por categorias para associação com formador
 const getCursosByCategoria = async (req, res) => {
   try {
     const { categorias } = req.query;
@@ -184,13 +185,13 @@ const getCursosByCategoria = async (req, res) => {
   }
 };
 
-// Procurar curso por ID com detalhes
+// Procurar curso por ID com detalhes incluindo associações
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
     const userId = req.user?.id_utilizador;
 
-    // Procurar o curso com todas as relações
+    // Procurar o curso com todas as relações incluindo associações
     const curso = await Curso.findByPk(id, {
       include: [
         {
@@ -212,6 +213,11 @@ const getCursoById = async (req, res) => {
           where: { ativo: true },
           required: false,
           order: [['ordem', 'ASC']]
+        },
+        {
+          model: Topico_Area,
+          as: "Topico_Area",
+          required: false
         }
       ]
     });
@@ -220,8 +226,8 @@ const getCursoById = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    // Crie uma cópia do curso para modificar
-    const cursoComInscritos = curso.toJSON();
+    // Criar uma cópia do curso para modificar
+    const cursoComDetalhes = curso.toJSON();
 
     // Verificar se o curso já terminou
     const dataAtual = new Date();
@@ -229,7 +235,7 @@ const getCursoById = async (req, res) => {
     const cursoTerminado = dataFimCurso < dataAtual;
 
     // Adicionar estado de acesso para cursos terminados
-    cursoComInscritos.terminado = cursoTerminado;
+    cursoComDetalhes.terminado = cursoTerminado;
 
     // Se o curso terminou e um utilizador está a tentar aceder, verificar se está inscrito
     if (cursoTerminado && userId) {
@@ -248,22 +254,22 @@ const getCursoById = async (req, res) => {
         console.log(`Resultado da procura de inscrição:`, inscricao);
 
         // Indicar se o utilizador tem acesso ao curso
-        cursoComInscritos.acessoPermitido = !!inscricao;
-        console.log(`Acesso permitido: ${cursoComInscritos.acessoPermitido}`);
+        cursoComDetalhes.acessoPermitido = !!inscricao;
+        console.log(`Acesso permitido: ${cursoComDetalhes.acessoPermitido}`);
       } catch (error) {
         console.error("Erro ao verificar inscrição:", error);
         // Em caso de erro, vamos considerar que o utilizador não tem acesso
-        cursoComInscritos.acessoPermitido = false;
+        cursoComDetalhes.acessoPermitido = false;
       }
     } else if (cursoTerminado) {
       // Se não há utilizador autenticado e o curso terminou, não permitir acesso
-      cursoComInscritos.acessoPermitido = false;
+      cursoComDetalhes.acessoPermitido = false;
     } else {
       // Se o curso não terminou, permitir acesso
-      cursoComInscritos.acessoPermitido = true;
+      cursoComDetalhes.acessoPermitido = true;
     }
 
-    // Adicionar contagem de inscrições ativas (código existente)
+    // Adicionar contagem de inscrições ativas código existente
     try {
       if (curso.tipo === 'sincrono' && curso.vagas) {
         let where = { id_curso: id };
@@ -282,14 +288,44 @@ const getCursoById = async (req, res) => {
         }
 
         const inscricoesAtivas = await Inscricao_Curso.count({ where });
-        cursoComInscritos.inscricoesAtivas = inscricoesAtivas;
+        cursoComDetalhes.inscricoesAtivas = inscricoesAtivas;
       }
     } catch (inscricoesError) {
-      console.error("Erro ao contar inscrições (não fatal):", inscricoesError);
-      cursoComInscritos.inscricoesAtivas = 0;
+      console.error("Erro ao contar inscrições não fatal:", inscricoesError);
+      cursoComDetalhes.inscricoesAtivas = 0;
     }
 
-    res.json(cursoComInscritos);
+    // Procurar cursos associados
+    try {
+      const associacoes = await AssociarCursos.findAll({
+        where: {
+          [Op.or]: [
+            { id_curso_origem: id },
+            { id_curso_destino: id }
+          ]
+        },
+        include: [
+          {
+            model: Curso,
+            as: 'cursoOrigem',
+            attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
+          },
+          {
+            model: Curso,
+            as: 'cursoDestino',
+            attributes: ['id_curso', 'nome', 'descricao', 'imagem_path', 'tipo', 'estado']
+          }
+        ]
+      });
+
+      cursoComDetalhes.cursosAssociados = associacoes;
+      console.log(`Encontradas ${associacoes.length} associações para o curso ${id}`);
+    } catch (associacoesError) {
+      console.error("Erro ao carregar associações não fatal:", associacoesError);
+      cursoComDetalhes.cursosAssociados = [];
+    }
+
+    res.json(cursoComDetalhes);
   } catch (error) {
     console.error("Erro ao procurar curso:", error);
     res.status(500).json({ message: "Erro ao procurar curso", error: error.message });
@@ -300,9 +336,6 @@ const getCursoById = async (req, res) => {
 const getTopicoArea = async (req, res) => {
   try {
     const id = req.params.id;
-
-    // Importar o modelo Topico_Area
-    const Topico_Area = require("../../database/models/Topico_Area");
 
     // Buscar o tópico pelo ID
     const topico = await Topico_Area.findByPk(id);
@@ -318,7 +351,6 @@ const getTopicoArea = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar tópico de área", error: error.message });
   }
 };
-
 
 // Função para criar um novo curso
 const createCurso = async (req, res) => {
@@ -345,7 +377,7 @@ const createCurso = async (req, res) => {
     const cursoExistente = await Curso.findOne({ where: { nome } });
     if (cursoExistente) {
       return res.status(400).json({
-        message: "Já existe um curso com este nome. Por favor, escolha um nome diferente.",
+        message: "Já existe um curso com este nome. Por favor, escolhe um nome diferente.",
         error: "NOME_DUPLICADO"
       });
     }
@@ -364,11 +396,11 @@ const createCurso = async (req, res) => {
       console.log(`Caminho da imagem guardado na BD: ${imagemPath}`);
     }
 
-    // Iniciar uma transação
+    // Iniciar uma transação para garantir consistência
     const t = await sequelize.transaction();
 
     try {
-      // CORREÇÃO: Mapear id_topico_categoria para id_topico_area que é o nome correto no modelo
+      // Mapear id_topico_categoria para id_topico_area que é o nome correto no modelo
       const novoCurso = await Curso.create({
         nome,
         descricao,
@@ -406,7 +438,7 @@ const createCurso = async (req, res) => {
       // Auto-inscrever o formador se for um curso síncrono com um formador
       if (tipo === "sincrono" && id_formador) {
         try {
-          console.log(`A inscrever formador automaticamente (ID: ${id_formador}) no curso ${novoCurso.id_curso}`);
+          console.log(`A inscrever formador automaticamente ID: ${id_formador} no curso ${novoCurso.id_curso}`);
 
           // Criar inscrição para o formador
           await Inscricao_Curso.create({
@@ -455,13 +487,13 @@ const createCurso = async (req, res) => {
   }
 };
 
-// 🔧 FUNÇÃO UPDATECURSO CORRIGIDA COM RENOMEAÇÃO DE PASTA
+// Função updateCurso corrigida com renomeação de pasta
 const updateCurso = async (req, res) => {
   try {
-    console.log("Update course request received:");
-    console.log("Request params:", req.params);
-    console.log("Request body:", req.body);
-    console.log("Request file:", req.file);
+    console.log("Pedido de atualização de curso recebido:");
+    console.log("Parâmetros do pedido:", req.params);
+    console.log("Corpo do pedido:", req.body);
+    console.log("Ficheiro do pedido:", req.file);
 
     const id = req.params.id;
     const { 
@@ -475,20 +507,20 @@ const updateCurso = async (req, res) => {
     });
 
     if (!cursoAtual) {
-      console.log(`Course with ID ${id} not found`);
+      console.log(`Curso com ID ${id} não encontrado`);
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    console.log(`Course found: ${cursoAtual.nome} (ID: ${id})`);
+    console.log(`Curso encontrado: ${cursoAtual.nome} ID: ${id}`);
 
-    // 🔧 NOVA LÓGICA: Verificar se o nome do curso mudou
+    // Verificar se o nome do curso mudou
     const nomeAtual = cursoAtual.nome;
     const novoNome = nome || nomeAtual;
     const nomeMudou = novoNome !== nomeAtual;
 
-    console.log(`📝 Nome atual: "${nomeAtual}"`);
-    console.log(`📝 Novo nome: "${novoNome}"`);
-    console.log(`📝 Nome mudou? ${nomeMudou ? 'SIM' : 'NÃO'}`);
+    console.log(`Nome atual: "${nomeAtual}"`);
+    console.log(`Novo nome: "${novoNome}"`);
+    console.log(`Nome mudou? ${nomeMudou ? 'SIM' : 'NÃO'}`);
 
     // Determinar caminhos de pastas
     const cursoSlugAtual = uploadUtils.normalizarNome(nomeAtual);
@@ -500,18 +532,18 @@ const updateCurso = async (req, res) => {
     const dirPathAtual = cursoAtual.dir_path || `uploads/cursos/${cursoSlugAtual}`;
     const novoDirPath = `uploads/cursos/${novoCursoSlug}`;
 
-    console.log(`📁 Pasta atual: ${pastaAtual}`);
-    console.log(`📁 Nova pasta: ${novaPasta}`);
+    console.log(`Pasta atual: ${pastaAtual}`);
+    console.log(`Nova pasta: ${novaPasta}`);
 
-    // 🔧 PROCESSAR RENOMEAÇÃO DE PASTA SE NECESSÁRIO
+    // Processar renomeação de pasta se necessário
     let pastaRenomeada = false;
     if (nomeMudou && fs.existsSync(pastaAtual)) {
       try {
-        console.log(`🔄 Renomeando pasta de "${pastaAtual}" para "${novaPasta}"`);
+        console.log(`A renomear pasta de "${pastaAtual}" para "${novaPasta}"`);
         
         // Verificar se a nova pasta já existe
         if (fs.existsSync(novaPasta)) {
-          console.log(`⚠️ Pasta de destino já existe: ${novaPasta}`);
+          console.log(`Pasta de destino já existe: ${novaPasta}`);
           // Se já existe, vamos criar um nome único
           let contador = 1;
           let novaPastaUnica = `${novaPasta}_${contador}`;
@@ -519,7 +551,7 @@ const updateCurso = async (req, res) => {
             contador++;
             novaPastaUnica = `${novaPasta}_${contador}`;
           }
-          console.log(`📁 Usando nome único: ${novaPastaUnica}`);
+          console.log(`A usar nome único: ${novaPastaUnica}`);
           fs.renameSync(pastaAtual, novaPastaUnica);
           
           // Atualizar caminhos para o nome único
@@ -531,31 +563,31 @@ const updateCurso = async (req, res) => {
         }
         
         pastaRenomeada = true;
-        console.log(`✅ Pasta renomeada com sucesso!`);
+        console.log(`Pasta renomeada com sucesso!`);
       } catch (renameError) {
-        console.error(`❌ Erro ao renomear pasta:`, renameError);
+        console.error(`Erro ao renomear pasta:`, renameError);
         // Continuar sem falhar, mas registar o erro
         pastaRenomeada = false;
       }
     }
 
-    // 🔧 PROCESSAR NOVA IMAGEM
+    // Processar nova imagem
     let novaImagemPath = cursoAtual.imagem_path; // Manter imagem atual por defeito
     
     if (req.file) {
-      // Usar o novo caminho de diretório (após possível renomeação)
+      // Usar o novo caminho de diretório após possível renomeação
       novaImagemPath = `${novoDirPath}/capa.png`;
       
-      console.log(`📷 Nova imagem recebida. Caminho: ${novaImagemPath}`);
-      console.log(`📷 Ficheiro original: ${req.file.originalname}`);
-      console.log(`📷 Tamanho: ${req.file.size} bytes`);
+      console.log(`Nova imagem recebida. Caminho: ${novaImagemPath}`);
+      console.log(`Ficheiro original: ${req.file.originalname}`);
+      console.log(`Tamanho: ${req.file.size} bytes`);
     } else if (nomeMudou && cursoAtual.imagem_path) {
       // Se não há nova imagem mas o nome mudou, atualizar o caminho da imagem existente
       novaImagemPath = `${novoDirPath}/capa.png`;
-      console.log(`📷 Atualizando caminho da imagem existente: ${novaImagemPath}`);
+      console.log(`A atualizar caminho da imagem existente: ${novaImagemPath}`);
     }
 
-    // Guardar os dados antigos para comparação (notificações)
+    // Guardar os dados antigos para comparação notificações
     const dataInicioAntiga = cursoAtual.data_inicio;
     const dataFimAntiga = cursoAtual.data_fim;
     const formadorAntigo = cursoAtual.formador ? {
@@ -582,7 +614,7 @@ const updateCurso = async (req, res) => {
       console.log(`Estado do curso determinado automaticamente: ${novoEstado}`);
     }
 
-    // 🔧 ATUALIZAR CURSO NA BASE DE DADOS
+    // Atualizar curso na base de dados
     await cursoAtual.update({
       nome: novoNome,
       descricao: descricao || cursoAtual.descricao,
@@ -597,21 +629,21 @@ const updateCurso = async (req, res) => {
       duracao: duracao !== undefined ? parseInt(duracao, 10) : cursoAtual.duracao,
       ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
       estado: novoEstado,
-      imagem_path: novaImagemPath, // ✅ Caminho da imagem atualizado
-      dir_path: novoDirPath // ✅ Caminho do diretório atualizado
+      imagem_path: novaImagemPath, // Caminho da imagem atualizado
+      dir_path: novoDirPath // Caminho do diretório atualizado
     });
 
-    console.log(`✅ Curso atualizado com sucesso!`);
-    console.log(`📝 Nome mudou: ${nomeMudou ? 'SIM' : 'NÃO'}`);
-    console.log(`📁 Pasta renomeada: ${pastaRenomeada ? 'SIM' : 'NÃO'}`);
-    console.log(`📷 Nova imagem: ${req.file ? 'SIM' : 'NÃO'}`);
+    console.log(`Curso atualizado com sucesso!`);
+    console.log(`Nome mudou: ${nomeMudou ? 'SIM' : 'NÃO'}`);
+    console.log(`Pasta renomeada: ${pastaRenomeada ? 'SIM' : 'NÃO'}`);
+    console.log(`Nova imagem: ${req.file ? 'SIM' : 'NÃO'}`);
 
     // Recarregar o curso atualizado com as suas relações
     const cursoAtualizado = await Curso.findByPk(id, {
       include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
     });
 
-    // NOTIFICAÇÕES (código existente)
+    // Notificações
     
     // Verificar se o formador foi alterado
     if (id_formador && id_formador !== cursoAtual.id_formador) {
@@ -663,8 +695,7 @@ const updateCurso = async (req, res) => {
   }
 };
 
-
-// Nova função: Associar formador a um curso
+// Função para associar formador a um curso
 const associarFormadorCurso = async (req, res) => {
   try {
     const { id_curso, id_formador } = req.body;
@@ -770,10 +801,10 @@ const deleteCurso = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verificar permissão (id_cargo === 1 para administrador)
+    // Verificar permissão id_cargo === 1 para administrador
     if (req.user.id_cargo !== 1) {
       return res.status(403).json({
-        message: "Não tem permissão para eliminar cursos"
+        message: "Não tens permissão para eliminar cursos"
       });
     }
 
@@ -790,6 +821,18 @@ const deleteCurso = async (req, res) => {
     const cursoDirAbs = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
 
     try {
+      // Eliminar associações de cursos primeiro
+      const numAssociacaoRemovidas = await AssociarCursos.destroy({
+        where: {
+          [Op.or]: [
+            { id_curso_origem: id },
+            { id_curso_destino: id }
+          ]
+        }
+      });
+
+      console.log(`Removidas ${numAssociacaoRemovidas} associações do curso ${id}`);
+
       // Eliminar diretamente as inscrições
       const numInscricoesRemovidas = await Inscricao_Curso.destroy({
         where: { id_curso: id }
@@ -873,6 +916,7 @@ const deleteCurso = async (req, res) => {
       return res.json({
         message: "Curso eliminado com sucesso!",
         inscricoesRemovidas: numInscricoesRemovidas,
+        associacoesRemovidas: numAssociacaoRemovidas,
         diretorioRemovido: true
       });
     } catch (error) {
@@ -928,7 +972,7 @@ const getCursosSugeridos = async (req, res) => {
       });
     }
 
-    // Se não houver cursos sugeridos (ou utilizador sem inscrições), mostrar cursos aleatórios
+    // Se não houver cursos sugeridos ou utilizador sem inscrições, mostrar cursos aleatórios
     if (cursosSugeridos.length === 0) {
       cursosSugeridos = await Curso.findAll({
         where: {
@@ -948,7 +992,6 @@ const getCursosSugeridos = async (req, res) => {
   }
 };
 
-/*TÓPICOS*/
 // Obter tópicos de um curso
 const getTopicosCurso = async (req, res) => {
   try {
