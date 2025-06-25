@@ -400,7 +400,7 @@ class _FormadoresScreenState extends State<FormadoresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ CORRIGIDO: Usar NavbarScreen em vez de AppBar
+      // Usar NavbarScreen em vez de AppBar
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: NavbarScreen(

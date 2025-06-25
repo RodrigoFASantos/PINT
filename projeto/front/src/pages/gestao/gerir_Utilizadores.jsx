@@ -121,7 +121,7 @@ const GerenciarUtilizadores = () => {
     fetchInitialData();
   }, [navigate]);
 
-  // Handler para mudança de filtros - atualizado para filtrar em tempo real
+  // Handler para mudança de filtros para filtrar em tempo real
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({
@@ -486,7 +486,7 @@ const GerenciarUtilizadores = () => {
         </div>
       )}
 
-      {/* Novo Modal de cursos do formador */}
+      {/* Modal de cursos do formador */}
       {showCursosModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-cursos">

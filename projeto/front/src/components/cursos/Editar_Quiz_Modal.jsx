@@ -60,7 +60,7 @@ const EditarQuizModal = ({ isOpen, onClose, quizId, onSuccess }) => {
                     id_pergunta: pergunta.id || pergunta.id_pergunta,
                     pergunta: pergunta.texto || pergunta.pergunta,
                     tipo: pergunta.tipo || 'multipla_escolha',
-                    pontos: pergunta.pontos || 4, // CORREÇÃO: Padrão 4 pontos
+                    pontos: pergunta.pontos || 4, // Padrão 4 pontos
                     ordem: pergunta.ordem || index + 1,
                     opcoes: []
                 };
@@ -174,7 +174,7 @@ const EditarQuizModal = ({ isOpen, onClose, quizId, onSuccess }) => {
             {
                 pergunta: '',
                 tipo: 'multipla_escolha',
-                pontos: 4, // CORREÇÃO: Padrão 4 pontos
+                pontos: 4, // Padrão 4 pontos
                 ordem: prev.length + 1,
                 opcoes: [
                     { texto: '', correta: false },
@@ -269,7 +269,7 @@ const EditarQuizModal = ({ isOpen, onClose, quizId, onSuccess }) => {
                     id_pergunta: pergunta.id_pergunta || null,
                     pergunta: pergunta.pergunta.trim(),
                     tipo: pergunta.tipo,
-                    pontos: pergunta.pontos || 4, // CORREÇÃO: Garantir 4 pontos padrão
+                    pontos: pergunta.pontos || 4, // Garantir 4 pontos padrão
                     ordem: index + 1,
                     opcoes: pergunta.opcoes.filter(op => {
                         return op.texto && op.texto.trim();

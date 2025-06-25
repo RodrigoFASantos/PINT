@@ -139,7 +139,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
     });
   }
 
-  /// Método corrigido para gerar URL do certificado (alinhado com React)
+  /// Método para gerar URL do certificado (alinhado com React)
   String? _getCertificadoUrl(String email, String nomeCurso) {
     try {
       debugPrint('🔍 [CERTIFICADO] === DEBUG CERTIFICADO ===');
@@ -176,7 +176,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
     }
   }
 
-  /// Método corrigido para obter email do usuário (com múltiplas fontes)
+  /// Método para obter email do usuário (com múltiplas fontes)
   String? _getUserEmail() {
     try {
       // 1. Tentar obter do currentUser
@@ -209,13 +209,13 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
     }
   }
 
-  /// Método corrigido para ver certificado
+  /// Método para ver certificado
   Future<void> _verCertificado(Map<String, dynamic> curso) async {
     try {
       debugPrint(
           '🎯 [CERTIFICADO] Iniciando visualização para: ${curso['titulo']}');
 
-      // Obter email usando método melhorado
+      // Obter email usando método
       final email = _getUserEmail();
       if (email == null) {
         _showCertificadoError(
@@ -286,7 +286,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
     }
   }
 
-  /// WebView melhorada para certificados
+  /// WebView para certificados
   void _abrirComWebViewInterna(String url, String nomeCurso) {
     debugPrint('🌐 [CERTIFICADO] Abrindo com WebView interna: $url');
 
@@ -310,7 +310,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
     );
   }
 
-  /// Dialog de erro melhorado
+  /// Dialog de erro
   void _showCertificadoError(String title, String message) {
     showDialog(
       context: context,
@@ -848,7 +848,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
   }
 }
 
-// WebView Screen melhorada para certificados
+// WebView Screen para certificados
 class _CertificadoWebViewScreen extends StatefulWidget {
   final String url;
   final String titulo;

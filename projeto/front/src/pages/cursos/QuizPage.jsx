@@ -29,7 +29,7 @@ const QuizPage = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        // CORREÇÃO: Verificar se a resposta tem a estrutura correta
+        //  Verificar se a resposta tem a estrutura correta
         let quizData = response.data;
         if (response.data && response.data.data) {
           quizData = response.data.data;
@@ -37,12 +37,12 @@ const QuizPage = () => {
         
         setQuiz(quizData);
         
-        // CORREÇÃO: Verificar se perguntas existe antes de tentar iterar
+        //  Verificar se perguntas existe antes de tentar iterar
         if (quizData && quizData.perguntas && Array.isArray(quizData.perguntas)) {
           // Inicializar objeto de respostas
           const respostasIniciais = {};
           quizData.perguntas.forEach(pergunta => {
-            // CORREÇÃO: Todas as perguntas agora permitem múltiplas respostas
+            //  Todas as perguntas agora permitem múltiplas respostas
             respostasIniciais[pergunta.id] = [];
           });
           
@@ -79,7 +79,7 @@ const QuizPage = () => {
     }
   }, [quizIniciado, quiz]);
 
-  // CORREÇÃO: Nova função para lidar com múltiplas seleções
+  //  Nova função para lidar com múltiplas seleções
   const handleRespostaChange = (perguntaId, opcaoIndex, checked) => {
     setRespostas(prevRespostas => {
       const respostasAtuais = prevRespostas[perguntaId] || [];
@@ -111,7 +111,7 @@ const QuizPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // CORREÇÃO: Verificar estrutura da resposta
+      //  Verificar estrutura da resposta
       let responseData = response.data;
       if (response.data && response.data.data) {
         responseData = response.data.data;
@@ -141,7 +141,7 @@ const QuizPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // CORREÇÃO: Verificar estrutura da resposta
+      //  Verificar estrutura da resposta
       let resultadoData = response.data;
       if (response.data && response.data.data) {
         resultadoData = response.data.data;
@@ -402,7 +402,7 @@ const QuizPage = () => {
                     
                     <p className="pergunta-texto">{pergunta.texto}</p>
                     
-                    {/* CORREÇÃO: Usar sempre checkboxes para permitir múltiplas seleções */}
+                    {/*  Usar sempre checkboxes para permitir múltiplas seleções */}
                     <div className="opcoes">
                       {pergunta.opcoes.map((opcao, i) => (
                         <div key={i} className="opcao">

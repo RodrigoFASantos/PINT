@@ -86,7 +86,7 @@ const Gerir_Cursos = () => {
         params.formador = filtrosAtuais.idFormador;
       }
 
-      // CORREÇÃO FILTRO DE ESTADO
+      // FILTRO DE ESTADO
       if (filtrosAtuais.estado) {
         // Log específico para debug do estado
         console.log('[DEBUG] Gerir_Cursos: Estado original do filtro:', filtrosAtuais.estado);
@@ -375,7 +375,7 @@ const Gerir_Cursos = () => {
     }
   }, [filtros.idCategoria, formadores]);
 
-  // Handler para mudança de filtros com debounce melhorado
+  // Handler para mudança de filtros
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     console.log(`[DEBUG] Gerir_Cursos: Filtro alterado: ${name} = ${value}`);

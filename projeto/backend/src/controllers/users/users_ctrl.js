@@ -690,7 +690,7 @@ const confirmAccount = async (req, res) => {
       foto_capa: "CAPA.png"
     });
 
-    // NOVO: Procurar e processar associações pendentes
+    // Procurar e processar associações pendentes
     try {
       const associacoesPendentes = await FormadorAssociacoesPendentes.findOne({
         where: { id_pendente: pendingUser.id }
@@ -948,7 +948,7 @@ const loginUser = async (req, res) => {
 
     console.log('🔍 [LOGIN] A preparar resposta...');
     
-    // CORRIGIDO: Enviar dados diretamente no nível raiz para compatibilidade com AuthContext
+    // Enviar dados diretamente no nível raiz para compatibilidade com AuthContext
     const response = {
       success: true,
       message: "Login realizado com sucesso",

@@ -133,7 +133,7 @@ class _ForumScreenState extends State<ForumScreen> {
     }
   }
 
-  // ✅ IMPLEMENTADO: Diálogo para criar tópico (Admins/Formadores)
+  // Diálogo para criar tópico (Admins/Formadores)
   void _showCriarTopicoDialog(Map<String, dynamic> categoria) {
     final TextEditingController tituloController = TextEditingController();
     final TextEditingController descricaoController = TextEditingController();
@@ -303,7 +303,7 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
-  // ✅ IMPLEMENTADO: Diálogo para solicitar tópico (Formandos)
+  // Diálogo para solicitar tópico (Formandos)
   void _showSolicitarTopicoDialog(Map<String, dynamic> categoria) {
     final TextEditingController tituloController = TextEditingController();
     final TextEditingController descricaoController = TextEditingController();
@@ -497,7 +497,7 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
-  // ✅ ALTERADO: Navegar diretamente para as conversas do tópico
+  // Navegar diretamente para as conversas do tópico
   void _handleVerTopico(int topicoId) {
     debugPrint(
         '🔧 [FORUM] Navegando diretamente para conversas do tópico: $topicoId');
@@ -762,7 +762,7 @@ class _ForumScreenState extends State<ForumScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ MELHORADO: Visual mais claro para indicar que vai direto para chat
+                  // Visual mais claro para indicar que vai direto para chat
                   Row(
                     children: [
                       Expanded(

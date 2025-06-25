@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // <===== IMPORTANTE
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE from '../api';
 import fallbackCurso from '../images/default_image.png';

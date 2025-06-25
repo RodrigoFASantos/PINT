@@ -101,7 +101,7 @@ const updateTrabalhoNota = async (req, res) => {
       return res.status(404).json({ message: "Trabalho não encontrado" });
     }
     
-    // IMPORTANTE: Atualizar tanto a coluna 'nota' quanto 'avaliacao'
+    // Atualizar tanto a coluna 'nota' quanto 'avaliacao'
     // para garantir compatibilidade com diferentes partes do sistema
     await trabalho.update({
       nota: nota !== '' ? nota : null,

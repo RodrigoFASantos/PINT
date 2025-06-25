@@ -350,7 +350,7 @@ if (fs.existsSync(clienteBuildPath)) {
 
 // Iniciar servidor
 const PORT = process.env.PORT || 4000;
-const HOST = '0.0.0.0'; // Importante: Aceitar conexões de qualquer IP
+const HOST = '0.0.0.0'; // Aceitar conexões de qualquer IP
 server.listen(PORT, HOST, () => {
   console.log(`
 🚀===========================================

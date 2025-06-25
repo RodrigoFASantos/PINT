@@ -51,7 +51,7 @@ const GerirInscricoes = () => {
         return;
       }
 
-      // Obter detalhes do curso com tratamento de erros melhorado
+      // Obter detalhes do curso com tratamento de erros
       try {
         console.log(`Buscando dados do curso ${id}...`);
         const responseCurso = await fetch(`${API_BASE}/cursos/${id}`, {
@@ -74,7 +74,7 @@ const GerirInscricoes = () => {
         return;
       }
 
-      // Obter inscrições do curso com tratamento de erros melhorado
+      // Obter inscrições do curso com tratamento de erros
       try {
         console.log(`Buscando inscrições do curso ${id}...`);
         const responseInscricoes = await fetch(`${API_BASE}/inscricoes/curso/${id}`, {
@@ -150,7 +150,6 @@ const GerirInscricoes = () => {
       setMotivoError(''); // Limpar mensagem de erro
       const token = localStorage.getItem('token');
 
-      // URL e método corrigidos para corresponder ao backend
       const response = await fetch(`${API_BASE}/inscricoes/cancelar-inscricao/${selectedInscricao.id_inscricao}`, {
         method: 'PATCH', // Método correto
         headers: {

@@ -48,7 +48,6 @@ const User = sequelize.define("utilizadores", {
     allowNull: false,
     defaultValue: 1, // Começa sempre como 1, para forçar a troca da password no 1º login
   },
-  // Novos campos adicionados
   morada: {
     type: DataTypes.STRING(255),
     allowNull: true,

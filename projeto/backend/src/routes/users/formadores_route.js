@@ -37,7 +37,7 @@ const verificarCargo = (cargosPermitidos) => {
 // Rotas públicas (sem autenticação)
 router.get('/', formadorController.getAllFormadores);
 
-// Adicionadas novas rotas de registo com confirmação 
+// Novas rotas de registo com confirmação 
 router.post('/register', formadorController.registerFormador);
 
 router.get("/profile", verificarToken, formadorController.getFormadorProfile);

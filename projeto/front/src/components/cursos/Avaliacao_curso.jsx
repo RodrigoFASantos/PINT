@@ -466,7 +466,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       // Fechar modal
       setEnviarSubmissaoModal({ show: false, pastaId: null });
 
-      // Importante: recarregar submissões APÓS o envio bem-sucedido
+      // recarregar submissões APÓS o envio bem-sucedido
       await recarregarSubmissoes();
 
       alert('Trabalho submetido com sucesso!');

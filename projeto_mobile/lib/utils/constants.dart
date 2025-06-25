@@ -14,7 +14,7 @@ class AppColors {
   static const Color warning = Color(0xFFFF8000);
   static const Color info = Color(0xFF2196F3);
 
-  // Cores de status de curso (ADICIONADAS - eram estas que estavam em falta)
+  // Cores de status de curso
   static const Color statusDisponivel = Color(0xFF4CAF50); // Verde
   static const Color statusEmCurso = Color(0xFF2196F3); // Azul
   static const Color statusTerminado = Color(0xFF9E9E9E); // Cinza

@@ -26,7 +26,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
   int pagina = 1;
   int totalPaginas = 1;
   Map<int, String> avaliacoes = {}; // Para controlar likes/dislikes do usuário
-  List<int> temasDenunciados = []; // 🚩 Para controlar temas denunciados
+  List<int> temasDenunciados = []; // Para controlar temas denunciados
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
       await _loadUserData();
       await _loadTopico();
       await _loadTemas();
-      await _loadTemasDenunciados(); // 🚩 CARREGAR TEMAS DENUNCIADOS
+      await _loadTemasDenunciados(); // CARREGAR TEMAS DENUNCIADOS
     } catch (error) {
       setState(() {
         erro = 'Erro ao carregar dados: $error';
@@ -122,7 +122,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // 🚩 NOVA FUNÇÃO: Carregar temas denunciados usando ApiService
+  // Carregar temas denunciados usando ApiService
   Future<void> _loadTemasDenunciados() async {
     try {
       final temasDenunciadosData = await _apiService.getTemasDenunciados();
@@ -134,7 +134,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         debugPrint(
             '✅ [CHAT_CONVERSAS] ${temasDenunciados.length} temas denunciados pelo usuário');
       } else {
-        // ✅ CORRIGIDO: Se a rota não existir, inicializar lista vazia
+        // Se a rota não existir, inicializar lista vazia
         setState(() {
           temasDenunciados = [];
         });
@@ -142,7 +142,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
             'ℹ️ [CHAT_CONVERSAS] Nenhum tema denunciado encontrado (rota pode não existir)');
       }
     } catch (error) {
-      // ✅ CORRIGIDO: Em caso de erro, inicializar lista vazia para não travar
+      // Em caso de erro, inicializar lista vazia para não travar
       setState(() {
         temasDenunciados = [];
       });
@@ -151,7 +151,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // ✅ NOVA FUNÇÃO: Extrai ID do tema de forma robusta
+  // Extrai ID do tema de forma robusta
   int _extrairIdTema(Map<String, dynamic> tema) {
     // Tentar várias chaves possíveis e converter para int
     final possiveisIds = [
@@ -210,7 +210,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // ✅ CORRIGIDO: Avaliar tema com tratamento robusto de IDs
+  // Avaliar tema com tratamento robusto de IDs
   Future<void> _avaliarTema(int temaId, String tipo) async {
     // Verificar ID válido
     if (temaId <= 0) {
@@ -282,7 +282,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // 🚩 FUNÇÃO MELHORADA: Denunciar tema usando ApiService com tratamento robusto
+  // Denunciar tema usando ApiService
   Future<void> _denunciarTema(int temaId) async {
     // Verificar ID válido
     if (temaId <= 0) {
@@ -314,7 +314,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
         }
       });
 
-      // ✅ USAR O MÉTODO DO ApiService
+      // USAR O MÉTODO DO ApiService
       final result = await _apiService.denunciarTema(
         idTema: temaId,
         motivo: motivo,
@@ -338,7 +338,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // 🚩 FUNÇÃO AUXILIAR: Reverter denúncia em caso de erro
+  // Reverter denúncia em caso de erro
   void _revertDenunciaTema(int temaId) {
     setState(() {
       temasDenunciados.remove(temaId);
@@ -435,7 +435,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ CORRIGIDO: Navegação com tratamento robusto de ID
+  // Navegação com tratamento robusto de ID
   void _navegarParaTema(int temaId) {
     if (temaId <= 0) {
       AppUtils.showError(context, 'ID do tema inválido.');
@@ -460,7 +460,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ NOVA FUNÇÃO: Voltar para o fórum
+  // NOVA FUNÇÃO: Voltar para o fórum
   void _voltarParaForum() {
     debugPrint('🔧 [CHAT_CONVERSAS] Voltando para o fórum');
     Navigator.pushReplacementNamed(context, '/forum');
@@ -586,7 +586,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
           onPressed: _voltarParaForum,
           tooltip: 'Voltar ao Fórum',
         ),
-        // ✅ REMOVIDO: Botão de detalhes do tópico já não existe mais
+        // REMOVIDO: Botão de detalhes do tópico já não existe mais
       ),
       drawer: SidebarScreen(
         currentUser: currentUser,
@@ -615,7 +615,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ NOVO: Header mais compacto do tópico
+  // Header mais compacto do tópico
   Widget _buildTopicoHeaderCompacto() {
     return Container(
       margin: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -819,12 +819,12 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ CORRIGIDO: Card de tema com tratamento robusto de IDs
+  // Card de tema com tratamento robusto de IDs
   Widget _buildTemaCard(Map<String, dynamic> tema) {
     final temaId = _extrairIdTema(tema);
     final foiDenunciado = tema['foi_denunciado'] == true;
 
-    // ✅ CORRIGIDO: Verificar se existe anexo único (não lista de anexos)
+    // Verificar se existe anexo único (não lista de anexos)
     final anexoUrl = tema['anexo_url'];
     final anexoNome = tema['anexo_nome'];
     final tipoAnexo = tema['tipo_anexo'];
@@ -881,7 +881,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                       ],
                     ),
                   ),
-                  // ✅ NOVO: Indicador visual para entrar no chat
+                  // Indicador visual para entrar no chat
                   if (temaId > 0)
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -936,14 +936,14 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                 SizedBox(height: 8),
               ],
 
-              // ✅ ANEXO ÚNICO DO TEMA - CORRIGIDO PARA MOSTRAR IMAGENS
+              // ANEXO ÚNICO DO TEMA PARA MOSTRAR IMAGENS
               if (temAnexo) ...[
                 _buildAnexoTema(
                     anexoUrl!, anexoNome ?? 'Anexo', tipoAnexo ?? 'arquivo'),
                 SizedBox(height: 8),
               ],
 
-              // 🚩 INDICADOR DE DENÚNCIA (SE DENUNCIADO)
+              // INDICADOR DE DENÚNCIA (SE DENUNCIADO)
               if (foiDenunciado) ...[
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1021,7 +1021,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
                           ),
                         ),
                       SizedBox(width: 8),
-                      // 🚩 BOTÃO DE DENÚNCIA MELHORADO
+                      //  BOTÃO DE DENÚNCIA
                       Container(
                         decoration: BoxDecoration(
                           color: foiDenunciado
@@ -1055,7 +1055,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ NOVO WIDGET PARA MOSTRAR ANEXO DO TEMA
+  //  WIDGET PARA MOSTRAR ANEXO DO TEMA
   Widget _buildAnexoTema(String anexoUrl, String anexoNome, String tipoAnexo) {
     // Construir URL completa
     final fullUrl = anexoUrl.startsWith('http')
@@ -1150,7 +1150,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     }
   }
 
-  // ✅ FUNÇÃO PARA MOSTRAR IMAGEM EM FULLSCREEN
+  // FUNÇÃO PARA MOSTRAR IMAGEM EM FULLSCREEN
   void _showImageDialog(String imageUrl, String imageName) {
     showDialog(
       context: context,
@@ -1196,7 +1196,7 @@ class _ChatConversasScreenState extends State<ChatConversasScreen> {
     );
   }
 
-  // ✅ FUNÇÃO AUXILIAR PARA OBTER ÍCONE DO TIPO DE ANEXO
+  // FUNÇÃO AUXILIAR PARA OBTER ÍCONE DO TIPO DE ANEXO
   IconData _getIconForType(String? tipo) {
     switch (tipo?.toLowerCase()) {
       case 'imagem':

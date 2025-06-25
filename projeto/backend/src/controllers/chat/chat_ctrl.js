@@ -106,7 +106,7 @@ const criarMensagem = async (req, res) => {
       }]
     });
 
-    // Emitir evento para socket.io (será implementado no server.js)
+    // Emitir evento para socket.io
     if (req.io) {
       req.io.to(`topico_${topicoId}`).emit('novaMensagem', mensagemCompleta);
     }

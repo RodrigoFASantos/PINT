@@ -211,7 +211,7 @@ const TopicoModal = ({ isOpen, onClose, topico, categorias, areas, onSave }) => 
                         </div>
                     </div>
 
-                    {/* CORREÇÃO: Modificado o estilo do footer e garantindo que os botões sejam exibidos */}
+                    {/* Modificado o estilo do footer e garantindo que os botões sejam exibidos */}
                     <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '15px', gap: '10px' }}>
                         <button
                             type="button"
