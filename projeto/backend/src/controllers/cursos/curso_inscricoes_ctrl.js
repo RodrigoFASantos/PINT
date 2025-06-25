@@ -98,11 +98,11 @@ const getInscricoesPorCurso = async (req, res) => {
   }
 };
 
-//Obter as inscrições do user logado
+// Obter as inscrições do user logado
 const getMinhasInscricoes = async (req, res) => {
   try {
     const id_utilizador = req.user.id_utilizador;
-    console.log(`🔍 [MINHAS INSCRIÇÕES] Buscando para utilizador: ${id_utilizador}`);
+    console.log(`Buscando inscrições para utilizador: ${id_utilizador}`);
 
     const inscricoes = await Inscricao_Curso.findAll({
       where: { id_utilizador },
@@ -134,12 +134,12 @@ const getMinhasInscricoes = async (req, res) => {
       order: [['data_inscricao', 'DESC']]
     });
 
-    console.log(`✅ [MINHAS INSCRIÇÕES] Encontradas ${inscricoes.length} inscrições`);
+    console.log(`Encontradas ${inscricoes.length} inscrições`);
 
     // Debug: Log da primeira inscrição
     if (inscricoes.length > 0) {
       const primeira = inscricoes[0];
-      console.log("📋 [DEBUG] Primeira inscrição:");
+      console.log("Primeira inscrição:");
       console.log("- ID:", primeira.id_inscricao);
       console.log("- Curso:", primeira.curso?.nome);
       console.log("- Avaliação exists:", !!primeira.avaliacao);
@@ -155,12 +155,12 @@ const getMinhasInscricoes = async (req, res) => {
         const curso = inscricao.curso;
         const avaliacao = inscricao.avaliacao;
 
-        console.log(`📚 [PROCESSANDO] Curso: ${curso.nome}`);
-        console.log(`📊 [AVALIACAO] Existe: ${avaliacao ? 'SIM' : 'NÃO'}`);
+        console.log(`Processando curso: ${curso.nome}`);
+        console.log(`Avaliação existe: ${avaliacao ? 'SIM' : 'NÃO'}`);
         
         if (avaliacao) {
-          console.log(`📝 [NOTA] Valor: ${avaliacao.nota}`);
-          console.log(`⏰ [HORAS] Presença: ${avaliacao.horas_presenca}`);
+          console.log(`Nota: ${avaliacao.nota}`);
+          console.log(`Horas presença: ${avaliacao.horas_presenca}`);
         }
 
         // Calcular horas de presença se não estiver na avaliação
@@ -168,7 +168,7 @@ const getMinhasInscricoes = async (req, res) => {
         
         if (!horasPresenca || horasPresenca === 0) {
           try {
-            console.log(`⏰ [CALCULANDO] Horas de presença para curso ${curso.id_curso}`);
+            console.log(`Calculando horas de presença para curso ${curso.id_curso}`);
             
             // Buscar presenças do curso
             const presencasCurso = await Curso_Presenca.findAll({
@@ -190,11 +190,11 @@ const getMinhasInscricoes = async (req, res) => {
 
               if (resultado && resultado[0]) {
                 horasPresenca = Number(resultado[0].total) || 0;
-                console.log(`✅ [CALCULADO] Horas de presença: ${horasPresenca}`);
+                console.log(`Horas de presença calculadas: ${horasPresenca}`);
               }
             }
           } catch (presencaError) {
-            console.error("❌ [ERRO] Calcular horas de presença:", presencaError);
+            console.error("Erro ao calcular horas de presença:", presencaError);
             horasPresenca = 0;
           }
         }
@@ -216,12 +216,12 @@ const getMinhasInscricoes = async (req, res) => {
           dataFim: curso.data_fim,
           cargaHoraria: curso.duracao,
           horasPresenca: horasPresenca,
-          notaFinal: avaliacao?.nota || null, // Esta é a nota!
+          notaFinal: avaliacao?.nota || null, // Esta é a nota
           status: status,
           imagem_path: curso.imagem_path
         };
 
-        console.log(`✨ [RESULTADO] ${cursoFormatado.nomeCurso}:`, {
+        console.log(`Resultado ${cursoFormatado.nomeCurso}:`, {
           nota: cursoFormatado.notaFinal,
           horas: cursoFormatado.horasPresenca,
           status: cursoFormatado.status
@@ -233,14 +233,14 @@ const getMinhasInscricoes = async (req, res) => {
 
     // Log final das notas encontradas
     const cursosComNota = inscricoesFormatadas.filter(c => c.notaFinal !== null);
-    console.log(`🎯 [FINAL] Cursos com nota: ${cursosComNota.length}/${inscricoesFormatadas.length}`);
+    console.log(`Cursos com nota: ${cursosComNota.length}/${inscricoesFormatadas.length}`);
     cursosComNota.forEach(c => console.log(`   - ${c.nomeCurso}: ${c.notaFinal}/20`));
 
-    console.log(`🎉 [SUCESSO] Retornando ${inscricoesFormatadas.length} inscrições`);
+    console.log(`Retornando ${inscricoesFormatadas.length} inscrições`);
     res.json(inscricoesFormatadas);
     
   } catch (error) {
-    console.error("❌ [ERRO GERAL] Buscar minhas inscrições:", error);
+    console.error("Erro ao buscar minhas inscrições:", error);
     console.error("Stack trace:", error.stack);
     res.status(500).json({ 
       message: "Erro ao buscar inscrições", 
@@ -249,47 +249,91 @@ const getMinhasInscricoes = async (req, res) => {
   }
 };
 
-// Criar uma nova inscrição
+// Criar uma nova inscrição - CORRIGIDO para formandos
 const createInscricao = async (req, res) => {
   try {
+    console.log('=== INÍCIO DA CRIAÇÃO DE INSCRIÇÃO ===');
+    console.log('Dados da requisição:', {
+      body: req.body,
+      user: req.user,
+      headers: req.headers.authorization ? 'TOKEN PRESENTE' : 'SEM TOKEN'
+    });
+
     const { id_utilizador, id_curso, motivacao, expectativas } = req.body;
 
-    // Verificações de permissão e dados
-    if (req.user.id_utilizador != id_utilizador && req.user.id_cargo !== 1) {
+    // Log dos IDs para debug
+    console.log('IDs da requisição:', {
+      id_utilizador_body: id_utilizador,
+      id_curso_body: id_curso,
+      id_utilizador_token: req.user.id_utilizador,
+      cargo_utilizador: req.user.id_cargo
+    });
+
+    // CORREÇÃO: Se não foi fornecido id_utilizador no body, usar o do token
+    const utilizadorParaInscrever = id_utilizador || req.user.id_utilizador;
+
+    console.log('Utilizador a inscrever:', utilizadorParaInscrever);
+
+    // Verificações de permissão corrigidas
+    // Admins (cargo 1) podem inscrever qualquer utilizador
+    // Outros utilizadores só podem inscrever-se a si mesmos
+    if (req.user.id_cargo !== 1 && utilizadorParaInscrever != req.user.id_utilizador) {
+      console.log('Erro de permissão:', {
+        cargo: req.user.id_cargo,
+        utilizador_token: req.user.id_utilizador,
+        utilizador_para_inscrever: utilizadorParaInscrever
+      });
       return res.status(403).json({
         message: "Não pode inscrever outros utilizadores em cursos"
       });
     }
 
-    if (!id_utilizador || !id_curso) {
+    if (!utilizadorParaInscrever || !id_curso) {
+      console.log('Campos obrigatórios em falta:', {
+        utilizadorParaInscrever,
+        id_curso
+      });
       return res.status(400).json({
         message: "ID do utilizador e ID do curso são obrigatórios"
       });
     }
 
     // Verificar se já está inscrito
+    console.log('Verificando inscrição existente...');
     const inscricaoExistente = await Inscricao_Curso.findOne({
       where: {
-        id_utilizador,
+        id_utilizador: utilizadorParaInscrever,
         id_curso,
         estado: "inscrito"
       }
     });
 
     if (inscricaoExistente) {
+      console.log('Utilizador já está inscrito');
       return res.status(400).json({
         message: "Já está inscrito neste curso"
       });
     }
 
     // Obter detalhes do curso e atualizar vagas
+    console.log('Buscando detalhes do curso...');
     const curso = await Curso.findByPk(id_curso);
     if (!curso) {
+      console.log('Curso não encontrado');
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
+    console.log('Curso encontrado:', {
+      id: curso.id_curso,
+      nome: curso.nome,
+      ativo: curso.ativo,
+      vagas: curso.vagas,
+      tipo: curso.tipo
+    });
+
     // Verificações do curso
     if (!curso.ativo) {
+      console.log('Curso não está ativo');
       return res.status(400).json({
         message: "Este curso não está disponível para inscrições"
       });
@@ -298,6 +342,7 @@ const createInscricao = async (req, res) => {
     // Verificar data
     const dataAtual = new Date();
     if (dataAtual > new Date(curso.data_inicio)) {
+      console.log('Período de inscrição encerrado');
       return res.status(400).json({
         message: "O período de inscrição deste curso já encerrou"
       });
@@ -306,19 +351,25 @@ const createInscricao = async (req, res) => {
     // Atualizar vagas se necessário
     if (curso.tipo === "sincrono" && curso.vagas) {
       if (curso.vagas <= 0) {
+        console.log('Sem vagas disponíveis');
         return res.status(400).json({
           message: "Não há vagas disponíveis para este curso"
         });
       }
 
       // Atualizar vagas
+      console.log('Atualizando vagas:', {
+        vagas_antes: curso.vagas,
+        vagas_depois: curso.vagas - 1
+      });
       curso.vagas = curso.vagas - 1;
       await curso.save();
     }
 
     // Criar inscrição
+    console.log('Criando inscrição...');
     const novaInscricao = await Inscricao_Curso.create({
-      id_utilizador,
+      id_utilizador: utilizadorParaInscrever,
       id_curso,
       motivacao: motivacao || null,
       expectativas: expectativas || null,
@@ -326,8 +377,14 @@ const createInscricao = async (req, res) => {
       estado: "inscrito"
     });
 
+    console.log('Inscrição criada com sucesso:', {
+      id_inscricao: novaInscricao.id_inscricao,
+      id_utilizador: novaInscricao.id_utilizador,
+      id_curso: novaInscricao.id_curso
+    });
+
     // Buscar dados completos do utilizador e do curso para o email
-    const utilizador = await User.findByPk(id_utilizador);
+    const utilizador = await User.findByPk(utilizadorParaInscrever);
 
     // Buscar curso com informações do formador
     const cursoCompleto = await Curso.findByPk(id_curso, {
@@ -346,6 +403,7 @@ const createInscricao = async (req, res) => {
     }
 
     // Resposta
+    console.log('=== INSCRIÇÃO CONCLUÍDA COM SUCESSO ===');
     res.status(201).json({
       message: "Inscrição realizada com sucesso!",
       inscricao: novaInscricao,
@@ -354,6 +412,7 @@ const createInscricao = async (req, res) => {
 
   } catch (error) {
     console.error("Erro ao criar inscrição:", error);
+    console.error("Stack trace:", error.stack);
 
     // Verificar erro de conexão
     if (error.name?.includes('SequelizeConnection')) {

@@ -12,7 +12,6 @@ export default function PresencasCurso({ cursoId, userRole }) {
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [codigo, setCodigo] = useState("");
-    // Novos estados para datas completas
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim, setDataFim] = useState("");
     const [horaInicio, setHoraInicio] = useState("");
@@ -20,26 +19,23 @@ export default function PresencasCurso({ cursoId, userRole }) {
     const [minhasPresencas, setMinhasPresencas] = useState({});
     const [lastRefresh, setLastRefresh] = useState(new Date());
     const [temPresencaAtiva, setTemPresencaAtiva] = useState(false);
-    // Novos estados para horas disponíveis
     const [horasDisponiveis, setHorasDisponiveis] = useState(0);
     const [duracaoCurso, setDuracaoCurso] = useState(0);
     const [horasUtilizadas, setHorasUtilizadas] = useState(0);
-    // Estado para a nova presença
     const [horasNovaPresenca, setHorasNovaPresenca] = useState(0);
-    // Novos estados para edição
     const [editandoPresenca, setEditandoPresenca] = useState(null);
     const [editandoCodigo, setEditandoCodigo] = useState("");
     const [editandoDataInicio, setEditandoDataInicio] = useState("");
     const [editandoHoraInicio, setEditandoHoraInicio] = useState("");
     const [editandoDataFim, setEditandoDataFim] = useState("");
     const [editandoHoraFim, setEditandoHoraFim] = useState("");
-    // Estado para o erro de validação
     const [validationError, setValidationError] = useState(null);
-    // Novo estado para o modal de lista de formandos
     const [showListaFormandosModal, setShowListaFormandosModal] = useState(false);
     const [formandosLista, setFormandosLista] = useState([]);
     const [presencaSelecionada, setPresencaSelecionada] = useState(null);
     const [loadingFormandos, setLoadingFormandos] = useState(false);
+    // Novo estado para marcar presença individual
+    const [presencaParaMarcar, setPresencaParaMarcar] = useState(null);
 
     // Verificar se é formador (cargos 1=admin ou 2=formador) ou formando (cargo 3)
     const isFormador = userRole === 1 || userRole === 2;
@@ -99,7 +95,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
         }
     };
 
-    // NOVA FUNÇÃO: Buscar lista de formandos para uma presença específica
+    // Buscar lista de formandos para uma presença específica
     const fetchFormandosPresenca = async (presencaId) => {
         try {
             setLoadingFormandos(true);
@@ -118,7 +114,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
         }
     };
 
-    // NOVA FUNÇÃO: Abrir modal com lista de formandos
+    // Abrir modal com lista de formandos
     const abrirModalListaFormandos = (presenca) => {
         setPresencaSelecionada(presenca);
         fetchFormandosPresenca(presenca.id_curso_presenca);
@@ -136,6 +132,16 @@ export default function PresencasCurso({ cursoId, userRole }) {
         setShowModal(true);
         setError(null);
         setValidationError(null);
+    };
+
+    // Função para abrir modal de marcar presença individual
+    const abrirModalMarcarPresenca = (presenca) => {
+        setPresencaParaMarcar(presenca);
+        setShowModal(true);
+        setEditandoPresenca(null);
+        setError(null);
+        setValidationError(null);
+        setCodigo("");
     };
 
     // Função para validar horários
@@ -297,7 +303,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
 
     // Definir data e hora atual como padrão ao abrir o modal
     useEffect(() => {
-        if (showModal && isFormador && !editandoPresenca) {
+        if (showModal && isFormador && !editandoPresenca && !presencaParaMarcar) {
             // Buscar horas disponíveis ao abrir o modal
             fetchHorasDisponiveis();
 
@@ -327,7 +333,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
             gerarCodigo();
             setValidationError(null);
         }
-    }, [showModal, isFormador, editandoPresenca]);
+    }, [showModal, isFormador, editandoPresenca, presencaParaMarcar]);
 
     // Criar nova presença (formador)
     const criarPresenca = async () => {
@@ -404,13 +410,18 @@ export default function PresencasCurso({ cursoId, userRole }) {
 
             // Fechar modal primeiro
             setShowModal(false);
+            setPresencaParaMarcar(null);
 
             // Atualizar dados completos
             await refreshData();
 
         } catch (error) {
             console.error("Erro ao marcar presença:", error);
-            setError("Código de presença inválido ou expirado");
+            if (error.response && error.response.data && error.response.data.message) {
+                setError(error.response.data.message);
+            } else {
+                setError("Código de presença inválido ou expirado");
+            }
             setLoading(false);
         }
     };
@@ -426,7 +437,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
             <div className="presencas-header" onClick={toggleExpand}>
                 <h2>Presenças</h2>
                 <div className="presencas-actions">
-                    {/* Botão de atualização manual adicionado */}
+                    {/* Botão de atualização manual */}
                     <button
                         className="btn-refresh-presencas"
                         onClick={(e) => {
@@ -445,6 +456,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                 e.stopPropagation();
                                 setShowModal(true);
                                 setEditandoPresenca(null);
+                                setPresencaParaMarcar(null);
                                 setError(null);
                                 setValidationError(null);
                             }}
@@ -452,21 +464,6 @@ export default function PresencasCurso({ cursoId, userRole }) {
                             title={temPresencaAtiva ? "Já existe uma presença ativa" : "Criar nova presença"}
                         >
                             Criar presença
-                        </button>
-                    )}
-                    {isFormando && (
-                        <button
-                            className="btn-marcar-presenca"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowModal(true);
-                                setEditandoPresenca(null);
-                                setError(null);
-                                setValidationError(null);
-                                setCodigo("");
-                            }}
-                        >
-                            Marcar presença
                         </button>
                     )}
                     <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
@@ -494,7 +491,9 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         <th>Hora Fim</th>
                                         {isFormador && <th>Código</th>}
                                         <th>Status</th>
-                                        {/* Nova coluna para ações, agora para todos os formadores */}
+                                        {/* Nova coluna para ações dos formandos */}
+                                        {isFormando && <th>Ação</th>}
+                                        {/* Coluna para ações dos formadores */}
                                         {isFormador && <th>Presenças</th>}
                                     </tr>
                                 </thead>
@@ -523,6 +522,32 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                                     `${presenca.presentes || 0} presentes / ${presenca.total || 0} inscritos`
                                                 )}
                                             </td>
+                                            {/* Nova coluna de ação para formandos */}
+                                            {isFormando && (
+                                                <td className="acoes-column">
+                                                    {/* Só mostrar botão se a presença estiver disponível e o formando ainda não marcou */}
+                                                    {presenca.disponivel && !minhasPresencas[presenca.id_curso_presenca] && (
+                                                        <button
+                                                            className="btn-marcar-presenca-inline"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                abrirModalMarcarPresenca(presenca);
+                                                            }}
+                                                            title="Marcar presença"
+                                                        >
+                                                            Marcar
+                                                        </button>
+                                                    )}
+                                                    {/* Mostrar indicador se já marcou */}
+                                                    {minhasPresencas[presenca.id_curso_presenca] && (
+                                                        <span className="presenca-marcada-indicator">✓ Marcada</span>
+                                                    )}
+                                                    {/* Mostrar indicador se expirou */}
+                                                    {!presenca.disponivel && !minhasPresencas[presenca.id_curso_presenca] && (
+                                                        <span className="presenca-expirada-indicator">Expirou</span>
+                                                    )}
+                                                </td>
+                                            )}
                                             {isFormador && (
                                                 <td className="acoes-column">
                                                     {/* Botão para ver lista de formandos (todos os formadores) */}
@@ -569,11 +594,14 @@ export default function PresencasCurso({ cursoId, userRole }) {
                             <h3>
                                 {editandoPresenca
                                     ? "Editar Presença"
+                                    : presencaParaMarcar
+                                    ? "Marcar Presença"
                                     : (isFormador ? "Criar Nova Presença" : "Marcar Presença")}
                             </h3>
                             <button className="close-modal" onClick={() => {
                                 setShowModal(false);
                                 setEditandoPresenca(null);
+                                setPresencaParaMarcar(null);
                                 setValidationError(null);
                             }}>×</button>
                         </div>
@@ -582,7 +610,16 @@ export default function PresencasCurso({ cursoId, userRole }) {
                             {error && <div className="error-message">{error}</div>}
                             {validationError && <div className="error-message validation-error">{validationError}</div>}
 
-                            {isFormador && !editandoPresenca && (
+                            {/* Informações da presença selecionada para marcar */}
+                            {presencaParaMarcar && (
+                                <div className="presenca-info">
+                                    <h4>Presença selecionada:</h4>
+                                    <p><strong>Data:</strong> {formatarData(presencaParaMarcar.data_inicio)} às {presencaParaMarcar.hora_inicio} - {formatarData(presencaParaMarcar.data_fim)} às {presencaParaMarcar.hora_fim}</p>
+                                    <p><strong>Tempo restante:</strong> {presencaParaMarcar.minutos_restantes || 0} minutos</p>
+                                </div>
+                            )}
+
+                            {isFormador && !editandoPresenca && !presencaParaMarcar && (
                                 <>
                                     {/* Mostrar informações de horas disponíveis */}
                                     <div className="horas-info">
@@ -621,7 +658,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         </div>
                                     </div>
 
-                                    {/* Novos campos para data de início */}
+                                    {/* Campos para data de início */}
                                     <div className="form-group">
                                         <label>Data de Início:</label>
                                         <input
@@ -640,7 +677,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         />
                                     </div>
 
-                                    {/* Novos campos para data de fim */}
+                                    {/* Campos para data de fim */}
                                     <div className="form-group">
                                         <label>Data de Fim:</label>
                                         <input
@@ -661,7 +698,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                 </>
                             )}
 
-                            {isFormando && !editandoPresenca && (
+                            {(isFormando || presencaParaMarcar) && !editandoPresenca && (
                                 <div className="form-group">
                                     <label>Código:</label>
                                     <input
@@ -669,6 +706,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         value={codigo}
                                         onChange={(e) => setCodigo(e.target.value)}
                                         maxLength="20"
+                                        placeholder="Digite o código da presença"
                                     />
                                 </div>
                             )}
@@ -688,7 +726,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         </div>
                                     </div>
 
-                                    {/* Novos campos para edição de data de início */}
+                                    {/* Campos para edição de data de início */}
                                     <div className="form-group">
                                         <label>Data de Início:</label>
                                         <input
@@ -707,7 +745,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                         />
                                     </div>
 
-                                    {/* Novos campos para edição de data de fim */}
+                                    {/* Campos para edição de data de fim */}
                                     <div className="form-group">
                                         <label>Data de Fim:</label>
                                         <input
@@ -735,6 +773,7 @@ export default function PresencasCurso({ cursoId, userRole }) {
                                 onClick={() => {
                                     setShowModal(false);
                                     setEditandoPresenca(null);
+                                    setPresencaParaMarcar(null);
                                     setValidationError(null);
                                 }}
                             >
@@ -742,10 +781,10 @@ export default function PresencasCurso({ cursoId, userRole }) {
                             </button>
                             <button
                                 className="btn-submit"
-                                onClick={editandoPresenca ? atualizarPresenca : (isFormador ? criarPresenca : marcarPresenca)}
-                                disabled={loading || validationError || (isFormador && !editandoPresenca && horasNovaPresenca > horasDisponiveis)}
+                                onClick={editandoPresenca ? atualizarPresenca : (presencaParaMarcar ? marcarPresenca : (isFormador ? criarPresenca : marcarPresenca))}
+                                disabled={loading || validationError || (isFormador && !editandoPresenca && !presencaParaMarcar && horasNovaPresenca > horasDisponiveis)}
                             >
-                                {loading ? "Processando..." : (editandoPresenca ? "Atualizar" : (isFormador ? "Criar" : "Marcar"))}
+                                {loading ? "Processando..." : (editandoPresenca ? "Atualizar" : (presencaParaMarcar ? "Marcar" : (isFormador ? "Criar" : "Marcar")))}
                             </button>
                         </div>
                     </div>

@@ -41,6 +41,40 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
 
+  // Função segura para decodificar token JWT
+  const decodeTokenSafely = (token) => {
+    try {
+      if (!token) {
+        console.warn('Token não encontrado');
+        return null;
+      }
+      
+      // Verificar se o token tem o formato correto (3 partes separadas por .)
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.error('Token mal formado - não tem 3 partes');
+        return null;
+      }
+      
+      // Tentar decodificar a payload (segunda parte)
+      const payload = parts[1];
+      
+      // Adicionar padding se necessário
+      let paddedPayload = payload;
+      while (paddedPayload.length % 4) {
+        paddedPayload += '=';
+      }
+      
+      const decodedPayload = atob(paddedPayload);
+      return JSON.parse(decodedPayload);
+    } catch (error) {
+      console.error('Erro ao descodificar token:', error);
+      // Limpar token corrompido
+      localStorage.removeItem('token');
+      return null;
+    }
+  };
+
   // Registo de depuração dos estados importantes
   useEffect(() => {
     console.log('Estados actuais:', {
@@ -274,29 +308,83 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   // Manipuladores de eventos
   const handleInscricao = () => setShowInscricaoForm(true);
 
+  // Função de inscrição corrigida com decodificação segura do token
   const handleInscricaoConfirm = async () => {
     try {
       setInscrevendo(true);
       const token = localStorage.getItem('token');
+      
       if (!token) {
+        console.log('Token não encontrado, redirecionando para login');
         navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
         return;
       }
 
-      const userId = JSON.parse(atob(token.split('.')[1])).id_utilizador;
+      console.log('Iniciando processo de inscrição...');
+      console.log('Token encontrado:', token ? 'SIM' : 'NÃO');
 
-      await axios.post(`${API_BASE}/inscricoes`, 
-        { id_utilizador: userId, id_curso: courseId },
-        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      // Usar decodificação segura do token
+      const decodedToken = decodeTokenSafely(token);
+      
+      if (!decodedToken) {
+        console.error('Erro ao decodificar token, redirecionando para login');
+        alert('Sessão expirada. Por favor, faz login novamente.');
+        localStorage.removeItem('token');
+        navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
+        return;
+      }
+
+      console.log('Token decodificado com sucesso:', decodedToken);
+
+      const userId = decodedToken.id_utilizador;
+      
+      if (!userId) {
+        console.error('ID do utilizador não encontrado no token');
+        alert('Erro na sessão. Por favor, faz login novamente.');
+        navigate('/login');
+        return;
+      }
+
+      console.log('ID do utilizador:', userId);
+      console.log('ID do curso:', courseId);
+
+      // Fazer pedido de inscrição
+      const response = await axios.post(`${API_BASE}/inscricoes`, 
+        { 
+          id_utilizador: userId, 
+          id_curso: courseId 
+        },
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
+
+      console.log('Resposta da inscrição:', response.data);
 
       setInscrito(true);
       setMostrarDetalhes(false);
       setShowInscricaoForm(false);
       alert('Inscrição realizada com sucesso!');
+      
     } catch (error) {
       console.error('Erro ao realizar inscrição:', error);
-      alert(`Erro: ${error.response?.data?.message || error.message}`);
+      console.error('Detalhes do erro:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Verificar se é erro de token
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        alert('Sessão expirada. Por favor, faz login novamente.');
+        localStorage.removeItem('token');
+        navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
+      } else {
+        alert(`Erro: ${error.response?.data?.message || error.message}`);
+      }
     } finally {
       setInscrevendo(false);
     }
