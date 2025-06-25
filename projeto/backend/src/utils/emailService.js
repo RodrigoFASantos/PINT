@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config();
 
-// CORREÇÃO: createTransport() em vez de createTransporter()
+// createTransport() em vez de createTransporter()
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT || '587'),

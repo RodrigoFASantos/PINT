@@ -32,7 +32,7 @@ const QuizPergunta = sequelize.define("quiz_perguntas", {
   pontos: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 4, // CORREÇÃO: Padrão de 4 pontos por pergunta
+    defaultValue: 4, // 4 pontos por pergunta
   },
   ordem: {
     type: DataTypes.INTEGER,

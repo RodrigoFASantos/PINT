@@ -14,7 +14,7 @@ const ForumTemaDenuncia = sequelize.define('forum_tema_denuncia', {
     references: {
       model: 'forum_tema',
       key: 'id_tema'
-    }
+   }
   },
   id_denunciante: {
     type: DataTypes.INTEGER,

@@ -504,7 +504,7 @@ const createConteudo = async (req, res) => {
 
     console.log(`Tópico "${topico.nome}" ${isAvaliacaoTopico ? 'identificado como avaliação' : 'não é de avaliação'}`);
 
-    // CORREÇÃO: Aceitar os tipos corretos incluindo 'video'
+    // Aceitar os tipos corretos incluindo 'video'
     if (!['file', 'link', 'video'].includes(tipo)) {
       return res.status(400).json({ message: 'Tipo de conteúdo inválido. Use: file, link ou video' });
     }
@@ -539,7 +539,7 @@ const createConteudo = async (req, res) => {
     let conteudoData = {
       titulo,
       descricao: descricao || '',
-      tipo, // CORREÇÃO: Usar o tipo recebido diretamente
+      tipo, // Usar o tipo recebido diretamente
       id_pasta,
       id_curso,
       ativo: true,
@@ -550,7 +550,7 @@ const createConteudo = async (req, res) => {
     // Usar a função uploadUtils.normalizarNome para normalização consistente
     const tituloBase = uploadUtils.normalizarNome(titulo);
 
-    // CORREÇÃO: Tratar 'video' e 'file' como tipos de arquivo
+    // Tratar 'video' e 'file' como tipos de arquivo
     if (tipo === 'file' || tipo === 'video') {
       if (!req.file) return res.status(400).json({ message: 'Ficheiro não enviado' });
 
@@ -742,7 +742,7 @@ const updateConteudo = async (req, res) => {
 
       // Se estiver a mudar o tipo, verificar os campos necessários
       if (tipo !== undefined && tipo !== conteudo.tipo) {
-        // CORREÇÃO: Aceitar os tipos corretos incluindo 'video'
+        // Aceitar os tipos corretos incluindo 'video'
         if (!['file', 'link', 'video'].includes(tipo)) {
           return res.status(400).json({
             message: 'Tipo de conteúdo inválido. Use: file, link ou video'
@@ -755,7 +755,7 @@ const updateConteudo = async (req, res) => {
         const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
         const timestamp = Date.now();
 
-        // CORREÇÃO: Tratar 'video' e 'file' como tipos de arquivo
+        // Tratar 'video' e 'file' como tipos de arquivo
         if (tipo === 'file' || tipo === 'video') {
           if (!req.file && !conteudo.arquivo_path) {
             return res.status(400).json({
@@ -854,7 +854,7 @@ const updateConteudo = async (req, res) => {
       // Mesmo local, mas ficheiro atualizado
       console.log('A atualizar ficheiro no mesmo local');
 
-      // CORREÇÃO: Aceitar tanto 'file' quanto 'video' para upload de arquivo
+      // Aceitar tanto 'file' quanto 'video' para upload de arquivo
       if (conteudo.tipo === 'file' || conteudo.tipo === 'video') {
         // Se já existe um ficheiro, remover o antigo
         if (conteudo.arquivo_path) {
@@ -983,7 +983,7 @@ const updateConteudo = async (req, res) => {
 
 // Middleware de upload
 const uploadMiddleware = (req, res, next) => {
-  // Rapaz, este middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
+  // Middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
   next();
 };
 

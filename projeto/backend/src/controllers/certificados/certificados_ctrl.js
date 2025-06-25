@@ -250,7 +250,7 @@ const salvarCertificado = async (req, res) => {
   }
 };
 
-// Nova função para eliminar o ficheiro físico do certificado
+// Eliminar o ficheiro físico do certificado
 const eliminarFicheiro = async (req, res) => {
   try {
     const { id_utilizador, nome_ficheiro } = req.body;
@@ -311,7 +311,7 @@ const eliminarFicheiro = async (req, res) => {
   }
 };
 
-// Nova função para criar diretório para certificados
+// Criar diretório para certificados
 const criarDiretorio = async (req, res) => {
   try {
     const { id_utilizador } = req.body;
@@ -533,7 +533,7 @@ const SalvarCertificado = async (req, res) => {
 
 
 
-// Nova função para obter informações completas do certificado incluindo datas
+// Obter informações completas do certificado incluindo datas
 const obterInformacoesCertificado = async (req, res) => {
   try {
     const { cursoId, utilizadorId } = req.params;

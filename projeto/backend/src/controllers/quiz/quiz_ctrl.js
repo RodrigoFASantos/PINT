@@ -963,8 +963,7 @@ const iniciarQuiz = async (req, res) => {
     return res.status(500).json(createResponse(false, 'Erro ao iniciar quiz', null, [error.message]));
   }
 };
-
-// CORREÇÃO: Nova lógica de pontuação parcial
+// Função para calcular a pontuação de uma pergunta
 const calcularPontuacaoPergunta = (pergunta, respostaUtilizador) => {
   const opcoesCorretas = pergunta.opcoes
     .map((opcao, index) => opcao.correta ? index : -1)
@@ -1085,7 +1084,7 @@ const submeterQuiz = async (req, res) => {
     let pontuacaoTotal = 0;
     let acertosTotais = 0;
 
-    // CORREÇÃO: Processar cada resposta com nova lógica de pontuação
+    // Processar cada resposta com nova lógica de pontuação
     for (const [perguntaId, respostaUtilizador] of Object.entries(respostas)) {
       const pergunta = quiz.perguntas.find(p => p.id_pergunta == perguntaId);
       if (!pergunta) {

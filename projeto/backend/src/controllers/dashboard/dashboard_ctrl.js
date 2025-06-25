@@ -1,4 +1,3 @@
-// Importação dos modelos principais da base de dados
 const User = require("../../database/models/User");
 const Curso = require("../../database/models/Curso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");

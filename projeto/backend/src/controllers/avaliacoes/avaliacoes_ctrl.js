@@ -89,7 +89,7 @@ const createAvaliacao = async (req, res) => {
       horas_totais,
       horas_presenca,
       data_limite: data_limite || null,
-      url_certificado: url_certificado || null, // Novo campo adicionado
+      url_certificado: url_certificado || null,
     });
 
     // Carregar informações completas com relacionamentos
@@ -214,7 +214,7 @@ const updateAvaliacao = async (req, res) => {
     if (horas_totais !== undefined) dadosAtualizacao.horas_totais = horas_totais;
     if (horas_presenca !== undefined) dadosAtualizacao.horas_presenca = horas_presenca;
     if (data_limite !== undefined) dadosAtualizacao.data_limite = data_limite;
-    if (url_certificado !== undefined) dadosAtualizacao.url_certificado = url_certificado; // Novo campo adicionado
+    if (url_certificado !== undefined) dadosAtualizacao.url_certificado = url_certificado;
 
     // Aplicar atualização
     await avaliacao.update(dadosAtualizacao);
