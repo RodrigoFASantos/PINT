@@ -355,7 +355,7 @@ class AppTheme {
         elevation: AppElevation.medium,
         centerTitle: true,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: AppCardConfig.defaultElevation,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppCardConfig.defaultRadius),
@@ -417,7 +417,7 @@ class AppTheme {
         surface: AppColors.darkBackground,
       ),
       scaffoldBackgroundColor: AppColors.darkBackground,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.darkBackground,
         elevation: 12,
         shape: RoundedRectangleBorder(
