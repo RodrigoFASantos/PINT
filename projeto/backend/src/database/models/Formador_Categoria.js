@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: CATEGORIAS DOS FORMADORES
+// =============================================================================
+// Define as categorias de formação nas quais cada formador está habilitado
+// Permite controlar quais cursos cada formador pode lecionar
+
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -14,6 +20,7 @@ const FormadorCategoria = sequelize.define("formador_categoria", {
       model: "utilizadores",
       key: "id_utilizador",
     },
+    comment: "Formador a quem a categoria é atribuída"
   },
   id_categoria: {
     type: DataTypes.INTEGER,
@@ -22,11 +29,13 @@ const FormadorCategoria = sequelize.define("formador_categoria", {
       model: "categorias",
       key: "id_categoria",
     },
+    comment: "Categoria na qual o formador está habilitado"
   },
   data_associacao: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW,
+    comment: "Data em que a habilitação foi atribuída"
   }
 }, {
   tableName: "formador_categoria",
@@ -34,7 +43,8 @@ const FormadorCategoria = sequelize.define("formador_categoria", {
   indexes: [
     {
       unique: true,
-      fields: ['id_formador', 'id_categoria']
+      fields: ['id_formador', 'id_categoria'],
+      name: 'unique_formador_categoria'
     }
   ]
 });

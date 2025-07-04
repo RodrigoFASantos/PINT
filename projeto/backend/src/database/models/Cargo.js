@@ -1,3 +1,8 @@
+// =============================================================================
+// MODELO: CARGOS DOS UTILIZADORES
+// =============================================================================
+// Define os diferentes cargos/funções no sistema (Admin, Formador, Formando, etc.)
+
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -9,8 +14,12 @@ const Cargo = sequelize.define("cargos", {
   },
   descricao: {
     type: DataTypes.STRING(255),
-    allowNull: false
+    allowNull: false,
+    comment: "Descrição do cargo (ex: Administrador, Formador, Formando)"
   },
-}, { timestamps: false });
+}, { 
+  tableName: "cargos",
+  timestamps: false 
+});
 
 module.exports = Cargo;

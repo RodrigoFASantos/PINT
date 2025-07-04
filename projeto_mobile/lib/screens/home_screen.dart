@@ -4,25 +4,39 @@ import '../main.dart';
 import '../components/sidebar_screen.dart';
 import '../components/navbar_screen.dart';
 
+/// Ecrã Principal (Home)
+/// Este é o ecrã inicial da aplicação que mostra:
+/// - Cursos em que o utilizador está inscrito
+/// - Cursos sugeridos disponíveis para inscrição
+/// - Navegação rápida para outras secções
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Serviço para comunicação com a API
   final _apiService = ApiService();
-  List<dynamic>? _inscricoes;
-  List<dynamic>? _cursosSugeridos;
-  Map<String, dynamic>? _currentUser;
-  bool _isLoading = true;
-  String? _error;
+
+  // Variáveis de estado para armazenar dados
+  List<dynamic>?
+      _inscricoes; // Lista de cursos em que o utilizador está inscrito
+  List<dynamic>? _cursosSugeridos; // Lista de cursos disponíveis para inscrição
+  Map<String, dynamic>? _currentUser; // Dados do utilizador atual
+
+  // Variáveis de controlo de estado
+  bool _isLoading = true; // Indica se os dados estão a ser carregados
+  String? _error; // Mensagem de erro, se existir
 
   @override
   void initState() {
     super.initState();
+    // Carrega os dados quando o widget é inicializado
     _loadHomeData();
   }
 
+  /// Carrega todos os dados necessários para o ecrã inicial
+  /// Faz chamadas à API para obter dados do utilizador, inscrições e cursos
   Future<void> _loadHomeData() async {
     setState(() {
       _isLoading = true;
@@ -30,15 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Carregar dados do utilizador atual
+      // Carrega dados do utilizador atual
       final userData = await _apiService.getCurrentUser();
 
-      // Carregar inscrições do utilizador
+      // Carrega inscrições do utilizador (cursos em que está inscrito)
       final inscricoes = await _apiService.getMinhasInscricoes();
 
-      // Carregar cursos sugeridos (todos os cursos disponíveis)
+      // Carrega cursos sugeridos (todos os cursos disponíveis)
       final cursosSugeridos = await _apiService.getCursos();
 
+      // Atualiza o estado apenas se o widget ainda estiver montado
       if (mounted) {
         setState(() {
           _currentUser = userData;
@@ -48,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
+      // Trata erros no carregamento dos dados
       if (mounted) {
         setState(() {
           _error = 'Erro ao carregar dados: $e';
@@ -57,10 +73,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Constrói um cartão para mostrar um curso inscrito
+  /// Exibe informações do curso como nome, categoria, área e estado
   Widget _buildCursoCard(Map<String, dynamic> curso) {
+    // Extrai o nome do curso com fallback para valores padrão
     final nomeCurso = curso['nomeCurso'] ?? curso['nome'] ?? 'Curso sem nome';
 
-    // Extrair apenas o nome da categoria (caso seja objeto)
+    // Extrai a categoria - pode ser string ou objeto
     String categoria = 'Não especificada';
     if (curso['categoria'] != null) {
       if (curso['categoria'] is String) {
@@ -71,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Extrair apenas o nome da área (caso seja objeto)
+    // Extrai a área - pode ser string ou objeto
     String area = 'Não especificada';
     if (curso['area'] != null) {
       if (curso['area'] is String) {
@@ -83,29 +102,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final status = curso['status'] ?? 'Inscrito';
 
-    // Determinar cor do status
+    // Define a cor do estado baseada no seu valor
     Color statusColor;
     switch (status.toLowerCase()) {
       case 'concluído':
-        statusColor = Colors.green;
+        statusColor = Colors.green; // Verde para concluído
         break;
       case 'em andamento':
-        statusColor = Colors.orange;
+        statusColor = Colors.orange; // Laranja para em andamento
         break;
       case 'agendado':
-        statusColor = Colors.blue;
+        statusColor = Colors.blue; // Azul para agendado
         break;
       default:
-        statusColor = Colors.grey;
+        statusColor = Colors.grey; // Cinzento para outros estados
     }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
+      elevation: 3, // Sombra do cartão
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
+        // Permite clicar no cartão para navegar para o curso
         onTap: () => _navigateToCurso(curso),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -120,16 +140,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF8000),
+                      color: const Color(0xFFFF8000), // Cor laranja da marca
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      Icons.school,
+                      Icons.school, // Ícone de escola
                       color: Colors.white,
                       size: 26,
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // Informações textuais do curso
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,8 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2, // Máximo 2 linhas
+                          overflow: TextOverflow.ellipsis, // Corta com ...
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -164,14 +185,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              // Status badge
+              // Badge do estado do curso
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color:
+                      statusColor.withOpacity(0.1), // Fundo com transparência
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: statusColor.withOpacity(0.3)),
                 ),
@@ -191,10 +213,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Constrói um cartão para mostrar um curso sugerido
+  /// Similar ao cartão de curso inscrito mas com algumas diferenças visuais
   Widget _buildCursoSugeridoCard(Map<String, dynamic> curso) {
     final nomeCurso = curso['nome'] ?? 'Curso sem nome';
 
-    // Extrair apenas o nome da categoria (caso seja objeto)
+    // Extrai categoria (igual ao método anterior)
     String categoria = 'Não especificada';
     if (curso['categoria'] != null) {
       if (curso['categoria'] is String) {
@@ -205,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Extrair apenas o nome da área (caso seja objeto)
+    // Extrai área (igual ao método anterior)
     String area = 'Não especificada';
     if (curso['area'] != null) {
       if (curso['area'] is String) {
@@ -231,16 +255,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  // Ícone do curso
+                  // Ícone do curso (cinzento para diferenciá-lo dos inscritos)
                   Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
+                      color: Colors
+                          .grey.shade400, // Cinzento para cursos sugeridos
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      Icons.school_outlined,
+                      Icons.school_outlined, // Ícone outline
                       color: Colors.white,
                       size: 26,
                     ),
@@ -307,26 +332,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Navegar para página individual do curso
+  /// Navega para a página individual do curso
+  /// Tenta obter o ID do curso de diferentes campos possíveis
   void _navigateToCurso(Map<String, dynamic> curso) {
-    // Tentar obter o ID do curso de diferentes campos possíveis
+    // Procura o ID do curso em diferentes campos
     final cursoId = curso['id_curso']?.toString() ??
         curso['id']?.toString() ??
         curso['cursoId']?.toString();
 
     if (cursoId != null && cursoId.isNotEmpty) {
+      // Navega para o ecrã do curso com o ID como argumento
       Navigator.pushNamed(
         context,
         '/curso',
         arguments: cursoId,
       );
     } else {
+      // Mostra erro se não conseguir encontrar o ID
       AppUtils.showError(context, 'ID do curso não encontrado');
     }
   }
 
+  /// Mostra um diálogo com detalhes do curso inscrito
+  /// Útil para mostrar informações rápidas sem sair do ecrã
   void _showCursoDetails(Map<String, dynamic> curso) {
-    // Extrair apenas o nome da categoria (caso seja objeto)
+    // Processa categoria (igual aos métodos anteriores)
     String categoria = 'N/A';
     if (curso['categoria'] != null) {
       if (curso['categoria'] is String) {
@@ -337,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Extrair apenas o nome da área (caso seja objeto)
+    // Processa área (igual aos métodos anteriores)
     String area = 'N/A';
     if (curso['area'] != null) {
       if (curso['area'] is String) {
@@ -347,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
+    // Mostra diálogo com informações detalhadas
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -359,7 +390,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Text('Área: $area'),
             const SizedBox(height: 8),
-            Text('Status: ${curso['status'] ?? 'N/A'}'),
+            Text('Estado: ${curso['status'] ?? 'N/A'}'),
+            // Mostra datas se disponíveis
             if (curso['dataInicio'] != null) ...[
               const SizedBox(height: 8),
               Text('Data Início: ${_formatDate(curso['dataInicio'])}'),
@@ -387,8 +419,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Mostra um diálogo com detalhes do curso sugerido
+  /// Similar ao anterior mas com informações específicas de cursos não inscritos
   void _showCursoSugeridoDetails(Map<String, dynamic> curso) {
-    // Extrair apenas o nome da categoria (caso seja objeto)
+    // Processa categoria e área (igual aos métodos anteriores)
     String categoria = 'N/A';
     if (curso['categoria'] != null) {
       if (curso['categoria'] is String) {
@@ -399,7 +433,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Extrair apenas o nome da área (caso seja objeto)
     String area = 'N/A';
     if (curso['area'] != null) {
       if (curso['area'] is String) {
@@ -420,6 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('Categoria: $categoria'),
             const SizedBox(height: 8),
             Text('Área: $area'),
+            // Informações específicas de cursos sugeridos
             if (curso['descricao'] != null) ...[
               const SizedBox(height: 8),
               Text('Descrição: ${curso['descricao']}'),
@@ -447,20 +481,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Formata uma data para o formato português (dd/mm/yyyy)
+  /// Trata erros de parsing e retorna a string original se falhar
   String _formatDate(String? dateString) {
     if (dateString == null) return '';
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
     } catch (e) {
-      return dateString;
+      return dateString; // Retorna a string original se não conseguir fazer parse
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Navbar sempre visível no topo
+      // Barra de navegação sempre visível no topo
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: NavbarScreen(
@@ -468,20 +504,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // SidebarScreen como Drawer (sem NavbarScreen integrada)
+      // Menu lateral (SidebarScreen) como Drawer
       drawer: SidebarScreen(
         currentUser: _currentUser,
-        currentRoute: '/home',
+        currentRoute: '/home', // Indica que estamos no ecrã inicial
       ),
 
+      // Corpo principal do ecrã
       body: _isLoading
-          ? const Center(
+          ? // Estado de carregamento
+          const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8000)),
               ),
             )
           : _error != null
-              ? Center(
+              ? // Estado de erro
+              Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -500,19 +539,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : RefreshIndicator(
+              : // Estado normal - mostra o conteúdo
+              RefreshIndicator(
+                  // Permite atualizar puxando para baixo
                   onRefresh: _loadHomeData,
                   color: const Color(0xFFFF8000),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
                       children: [
-                        // Seção de Cursos Inscritos
+                        // Conteúdo principal
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Secção de Cursos Inscritos
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -529,7 +571,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 16),
 
+                              // Verifica se há cursos inscritos
                               if (_inscricoes == null || _inscricoes!.isEmpty)
+                                // Mostra mensagem quando não há cursos inscritos
                                 Container(
                                   padding: const EdgeInsets.all(24),
                                   decoration: BoxDecoration(
@@ -545,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
-                                        'Você não está inscrito em nenhum curso.',
+                                        'Não está inscrito em nenhum curso.',
                                         style: TextStyle(
                                           color: Colors.grey.shade600,
                                           fontSize: 16,
@@ -562,6 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 )
                               else
+                                // Mostra lista de cursos inscritos
                                 ...(_inscricoes!
                                     .map((curso) => _buildCursoCard(
                                         curso as Map<String, dynamic>))
@@ -569,9 +614,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               const SizedBox(height: 32),
 
-                              // Seção de Cursos Sugeridos
+                              // Secção de Cursos Sugeridos
                               Text(
-                                'Cursos Sugeridos para Você',
+                                'Cursos Sugeridos',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -580,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
 
-                              // Botão "Ver todos" com design
+                              // Botão "Ver todos" com design atrativo
                               if (_cursosSugeridos != null &&
                                   _cursosSugeridos!.isNotEmpty)
                                 Container(
@@ -617,8 +662,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
 
+                              // Verifica se há cursos sugeridos
                               if (_cursosSugeridos == null ||
                                   _cursosSugeridos!.isEmpty)
+                                // Mostra mensagem quando não há cursos disponíveis
                                 Container(
                                   padding: const EdgeInsets.all(24),
                                   decoration: BoxDecoration(
@@ -645,6 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 )
                               else
+                                // Mostra apenas os primeiros 5 cursos sugeridos
                                 ..._cursosSugeridos!
                                     .take(5)
                                     .map((curso) => _buildCursoSugeridoCard(

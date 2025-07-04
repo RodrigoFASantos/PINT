@@ -122,7 +122,7 @@ const GerirInscricoes = () => {
       const isFormadorDoCurso = userInfo.id_cargo === 2 && userInfo.id_utilizador === curso.id_formador;
 
       if (!isAdmin && !isFormadorDoCurso) {
-        setError("Você não tem permissão para gerir inscrições neste curso.");
+        setError("Não tem permissão para gerir inscrições neste curso.");
       }
     }
   }, [curso, userInfo]);

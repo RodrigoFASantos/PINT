@@ -6,6 +6,10 @@ import fallbackCurso from '../../images/default_image.png';
 import { toast } from 'react-toastify';
 import "../users/css/Detalhes_Formadores.css";
 
+/**
+ * Componente para exibir detalhes de um formador específico
+ * Mostra informações pessoais e cursos associados
+ */
 const DetalhesFormadores = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -14,10 +18,13 @@ const DetalhesFormadores = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('todos'); // 'todos' ou 'ativos'
+  const [activeTab, setActiveTab] = useState('todos');
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  /**
+   * Carregar dados do formador e seus cursos
+   */
   const fetchFormador = useCallback(async () => {
     try {
       setLoading(true);
@@ -35,11 +42,11 @@ const DetalhesFormadores = () => {
       const formadorData = await formadorResponse.json();
       setFormador(formadorData);
       
-      // Se o formador já tem cursos ministrados na resposta, usá-los
+      // Buscar cursos ministrados
       if (formadorData.cursos_ministrados && Array.isArray(formadorData.cursos_ministrados)) {
         setCursos(formadorData.cursos_ministrados);
       } else {
-        // Caso contrário, buscar os cursos separadamente
+        // Buscar cursos em endpoint separado se necessário
         try {
           const cursosResponse = await fetch(`${API_BASE}/formadores/${id}/cursos`);
           
@@ -47,17 +54,14 @@ const DetalhesFormadores = () => {
             const cursosData = await cursosResponse.json();
             setCursos(Array.isArray(cursosData) ? cursosData : []);
           } else {
-            console.warn(`Não foi possível carregar os cursos do formador. Estado: ${cursosResponse.status}`);
             setCursos([]);
           }
         } catch (error) {
-          console.error("Erro ao carregar cursos do formador:", error);
           setCursos([]);
         }
       }
       
     } catch (error) {
-      console.error("Erro ao carregar dados do formador:", error);
       setError(error.message || "Erro desconhecido ao carregar dados do formador.");
     } finally {
       setLoading(false);
@@ -68,12 +72,13 @@ const DetalhesFormadores = () => {
     fetchFormador();
   }, [fetchFormador]);
 
-  // Função para obter a URL da imagem do perfil ou capa
+  /**
+   * Obter URL da imagem de perfil
+   */
   const getImageUrl = (formador, type = 'avatar') => {
     if (!formador) return type === 'avatar' ? '/placeholder-formador.jpg' : '/placeholder-cover.jpg';
     
     if (type === 'avatar') {
-      // Para avatar (foto de perfil)
       if (formador.foto_perfil && (formador.foto_perfil.startsWith('http') || formador.foto_perfil.startsWith('/'))) {
         return formador.foto_perfil;
       }
@@ -89,7 +94,7 @@ const DetalhesFormadores = () => {
       
       return '/placeholder-formador.jpg';
     } else {
-      // Para foto de capa
+      // Foto de capa
       if (formador.foto_capa && (formador.foto_capa.startsWith('http') || formador.foto_capa.startsWith('/'))) {
         return formador.foto_capa;
       }
@@ -97,7 +102,6 @@ const DetalhesFormadores = () => {
       const email = formador.email;
       if (!email) return '/placeholder-cover.jpg';
       
-      // Verificação para USER_CAPA
       if (IMAGES && typeof IMAGES.USER_CAPA === 'function') {
         return IMAGES.USER_CAPA(email);
       } else if (IMAGES && IMAGES.DEFAULT_CAPA) {
@@ -108,7 +112,9 @@ const DetalhesFormadores = () => {
     }
   };
 
-  // Função para obter a URL da imagem do curso
+  /**
+   * Obter URL da imagem do curso
+   */
   const getCursoImageUrl = (curso) => {
     if (curso && curso.imagem_path) {
       return `${API_BASE}/${curso.imagem_path}`;
@@ -125,7 +131,9 @@ const DetalhesFormadores = () => {
     return fallbackCurso;
   };
 
-  // Função para determinar a classe CSS do estado
+  /**
+   * Obter classe CSS para o estado do curso
+   */
   const getStatusClass = (estado) => {
     if (!estado) return 'status-pendente';
     
@@ -142,7 +150,9 @@ const DetalhesFormadores = () => {
     return 'status-pendente';
   };
 
-  // Função para formatar o nome do estado
+  /**
+   * Formatar nome do estado para exibição
+   */
   const formatStatusName = (estado) => {
     if (!estado) return 'Agendado';
     
@@ -163,7 +173,9 @@ const DetalhesFormadores = () => {
     navigate(-1);
   };
 
-  // Verifica se o utilizador está inscrito no curso
+  /**
+   * Verificar se utilizador está inscrito no curso
+   */
   const verificarInscricao = async (cursoId) => {
     try {
       const token = localStorage.getItem('token');
@@ -182,29 +194,29 @@ const DetalhesFormadores = () => {
       
       return false;
     } catch (error) {
-      console.error("Erro ao verificar inscrição:", error);
       return false;
     }
   };
 
-  // Função para verificar se um curso é acessível (agendado ou com utilizador inscrito)
+  /**
+   * Verificar se curso é acessível
+   */
   const verificarAcessoCurso = (curso) => {
     const estado = curso.estado?.toLowerCase() || '';
     
-    // Considera acessível se estiver agendado/planeado
     return estado.includes('planeado') || 
            estado.includes('planejado') || 
            estado.includes('agendado');
-    
-    // Nota: A verificação de inscrição é feita de forma assíncrona no momento do clique
   };
   
-  // Navega para a página do curso apenas se estiver agendado ou o utilizador estiver inscrito
+  /**
+   * Navegar para página do curso
+   */
   const irParaCurso = async (curso) => {
     const cursoId = curso.id_curso || curso.id;
     const estado = curso.estado?.toLowerCase() || '';
     
-    // Permite acesso se o curso estiver agendado/planeado
+    // Permitir acesso se curso está agendado
     const ehAgendado = estado.includes('planeado') || 
                         estado.includes('planejado') || 
                         estado.includes('agendado');
@@ -214,12 +226,11 @@ const DetalhesFormadores = () => {
       return;
     }
     
-    // Verifica se o utilizador está inscrito antes de permitir acesso
+    // Verificar inscrição para outros estados
     const inscrito = await verificarInscricao(cursoId);
     if (inscrito) {
       navigate(`/cursos/${cursoId}`);
     } else {
-      // Notifica o utilizador que não pode aceder a este curso
       toast.warning("Acesso restrito: Não está inscrito neste curso.", {
         position: "top-right",
         autoClose: 3000
@@ -227,7 +238,7 @@ const DetalhesFormadores = () => {
     }
   };
 
-  // Filtrar cursos ativos/todos
+  // Filtrar cursos conforme tab ativa
   const filteredCursos = activeTab === 'ativos' 
     ? cursos.filter(curso => curso.estado === 'em_curso' || curso.estado === 'Disponível')
     : cursos;
@@ -287,7 +298,6 @@ const DetalhesFormadores = () => {
     );
   }
 
-  // Debug da URL da imagem de capa
   const coverImageUrl = getImageUrl(formador, 'cover');
   
   return (
@@ -297,14 +307,13 @@ const DetalhesFormadores = () => {
         <div className="flex-1 fade-in">
           <div className="page-container">
             
-            {/* Secção com foto de capa e foto de perfil */}
+            {/* Foto de capa e perfil */}
             <div className="cover-container">
               <img 
                 src={coverImageUrl} 
                 alt="Capa" 
                 className="cover-image"
                 onError={(e) => {
-                  console.log("Erro ao carregar imagem de capa, a usar fallback");
                   if (IMAGES && IMAGES.DEFAULT_CAPA) {
                     e.target.src = IMAGES.DEFAULT_CAPA;
                   } else {
@@ -319,7 +328,6 @@ const DetalhesFormadores = () => {
                   alt={formador.nome || "Formador"} 
                   className="profile-avatar"
                   onError={(e) => {
-                    console.log("Erro ao carregar imagem de perfil, a usar fallback");
                     if (IMAGES && IMAGES.DEFAULT_AVATAR) {
                       e.target.src = IMAGES.DEFAULT_AVATAR;
                     } else {
@@ -359,7 +367,7 @@ const DetalhesFormadores = () => {
               </div>
             </div>
             
-            {/* Descrição do formador */}
+            {/* Descrição */}
             <div className="content-section descricao-section">
               <h2 className="section-title">Descrição</h2>
               <div className="descricao-content">
@@ -367,7 +375,7 @@ const DetalhesFormadores = () => {
               </div>
             </div>
             
-            {/* Secção de cursos com estilo da home */}
+            {/* Cursos associados */}
             <div className="content-section">
               <div className="cursos-header">
                 <h2 className="section-title">Cursos Associados</h2>
@@ -393,7 +401,6 @@ const DetalhesFormadores = () => {
                 </button>
               </div>
               
-              {/* Estilo de cursos semelhante à página inicial */}
               <div className="cursos-container">
                 {filteredCursos.length === 0 ? (
                   <div className="sem-cursos">

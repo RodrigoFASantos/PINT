@@ -5,30 +5,39 @@ const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
 const verificarCargo = require('../../middleware/role_middleware');
 
-// Rota para obter todas as áreas (acessível a todos os utilizadores autenticados)
+/**
+ * Rotas para gestão de áreas de formação
+ * Permite consultar, criar, atualizar e eliminar áreas organizadas por categorias
+ */
+
+// === CONSULTA DE ÁREAS (todos os utilizadores autenticados) ===
+
+// Obter lista de todas as áreas
 router.get('/', verificarToken, areasController.getAllAreas);
 
-// Rota para obter todas as áreas de uma categoria específica
+// Obter áreas de uma categoria específica
 router.get('/categoria/:id_categoria', verificarToken, areasController.getAreasByCategoria);
 
-// Rota para obter uma área específica pelo ID
+// Obter dados de uma área específica
 router.get('/:id', verificarToken, areasController.getAreaById);
 
-// Rota para criar uma nova área (apenas admin e gestor)
+// === GESTÃO DE ÁREAS (apenas administradores e gestores) ===
+
+// Criar nova área
 router.post('/', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']), 
   areasController.createArea
 );
 
-// Rota para atualizar uma área existente (apenas admin e gestor)
+// Atualizar área existente
 router.put('/:id', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']), 
   areasController.updateArea
 );
 
-// Rota para excluir uma área (apenas admin e gestor)
+// Eliminar área
 router.delete('/:id', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']),

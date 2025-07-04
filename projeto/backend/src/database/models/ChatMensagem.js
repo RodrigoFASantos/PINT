@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: MENSAGENS DE CHAT
+// =============================================================================
+// Sistema de mensagens de chat em tempo real para cada tópico
+// Suporta texto, anexos (imagens, vídeos, ficheiros) e sistema de likes/dislikes
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
@@ -8,10 +14,11 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     autoIncrement: true,
     allowNull: false
   },
+  // Campo virtual para compatibilidade com código antigo
   id_comentario: {
     type: DataTypes.VIRTUAL,
     get() {
-      return this.id; // Retorna o valor de 'id' quando 'id_comentario' é acessado
+      return this.id; // Retorna o valor de 'id' quando 'id_comentario' é acedido
     },
     set(value) {
       // Não faz nada, apenas para compatibilidade
@@ -23,7 +30,8 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     references: {
       model: 'topico_area',
       key: 'id_topico'
-    }
+    },
+    comment: "Tópico ao qual a mensagem pertence"
   },
   id_utilizador: {
     type: DataTypes.INTEGER,
@@ -31,67 +39,77 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
     references: {
       model: 'utilizadores',
       key: 'id_utilizador'
-    }
+    },
+    comment: "Utilizador que enviou a mensagem"
   },
   texto: {
     type: DataTypes.TEXT,
-    allowNull: true // Permite mensagens só com anexo
+    allowNull: true,
+    comment: "Conteúdo textual da mensagem (pode ser null se só tiver anexo)"
   },
   anexo_url: {
     type: DataTypes.STRING(255),
-    allowNull: true
+    allowNull: true,
+    comment: "URL do ficheiro anexo"
   },
   anexo_nome: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
+    comment: "Nome original do ficheiro anexo"
   },
   tipo_anexo: {
     type: DataTypes.ENUM('imagem', 'video', 'file'),
-    allowNull: true
+    allowNull: true,
+    comment: "Tipo de anexo da mensagem"
   },
   data_criacao: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    comment: "Data e hora de criação da mensagem"
   },
   likes: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 0
+    defaultValue: 0,
+    comment: "Contador de likes da mensagem"
   },
   dislikes: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 0
+    defaultValue: 0,
+    comment: "Contador de dislikes da mensagem"
   },
   foi_denunciada: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    comment: "Indica se a mensagem foi denunciada"
   },
   oculta: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    comment: "Indica se a mensagem está oculta (moderação)"
   },
-  // Campos adicionados como virtuais para manter compatibilidade
+  // Campos virtuais para manter compatibilidade com interfaces antigas
   denuncias: {
     type: DataTypes.VIRTUAL,
     get() {
-      return 0; // Retorna um valor padrão para manter compatibilidade
+      return 0;
     }
   },
   motivo_denuncia: {
     type: DataTypes.VIRTUAL,
     get() {
-      return null; // Retorna um valor padrão para manter compatibilidade
+      return null;
     }
   }
 }, {
   tableName: 'chat_mensagens',
   timestamps: false,
   hooks: {
-    // Hook para garantir que os dados sejam consistentes com a interface
+    // Hook que garante compatibilidade com código que usa id_comentario
     afterFind: (result) => {
       if (!result) return result;
       
@@ -101,7 +119,6 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
           if (item && !item.id_comentario) {
             item.id_comentario = item.id;
           }
-          // Garantir que denuncias e motivo_denuncia estejam definidos
           if (item) {
             item.denuncias = 0;
             item.motivo_denuncia = null;
@@ -113,7 +130,6 @@ const ChatMensagem = sequelize.define('chat_mensagens', {
         if (!result.id_comentario) {
           result.id_comentario = result.id;
         }
-        // Garantir que denuncias e motivo_denuncia estejam definidos
         result.denuncias = 0;
         result.motivo_denuncia = null;
       }

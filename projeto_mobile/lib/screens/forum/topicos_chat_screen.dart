@@ -148,7 +148,7 @@ class _TopicosChatScreenState extends State<TopicosChatScreen> {
     });
 
     // Scroll automático para o final da lista (opcional)
-    // Se você tiver um ScrollController, pode implementar isso
+    // Se  tiver um ScrollController, pode implementar isso
 
     final texto = novoComentario['texto']?.toString() ?? 'sem texto';
     final textoPreview =

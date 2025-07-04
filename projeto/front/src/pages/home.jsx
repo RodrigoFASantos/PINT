@@ -9,6 +9,10 @@ import fallbackCurso from '../images/default_image.png';
 import TrocarSenhaModal from '../components/Trocar_Senha_Modal';
 import './css/home.css';
 
+/**
+ * Componente principal da página inicial
+ * Exibe cursos inscritos do utilizador e cursos sugeridos
+ */
 export default function Home() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -18,18 +22,20 @@ export default function Home() {
   const [refreshCount, setRefreshCount] = useState(0);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [filtroAtivo, setFiltroAtivo] = useState('todos'); // Estado para o filtro
+  const [filtroAtivo, setFiltroAtivo] = useState('todos');
 
-  // Estados para paginação
+  // Estados para controlo de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalInscricoes, setTotalInscricoes] = useState(0);
-  const inscricoesPerPage = 12; // Número de inscrições por página
+  const inscricoesPerPage = 12;
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Referência para animação de texto
   const textRef = useRef(null);
 
+  // Frases para animação do banner
   const texts = [
     "Aprender aqui é mais fácil",
     "Aprender aqui é uma experiência nova",
@@ -39,28 +45,25 @@ export default function Home() {
     "Aprender aqui é inovador"
   ];
 
-  // Verificar autenticação e redirecionar se não estiver autenticado
+  // Verificar autenticação e redirecionar se necessário
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('Usuário não autenticado, redirecionando para login');
       navigate('/login');
     }
   }, [navigate]);
 
-  // Verificar se é o primeiro login
+  // Verificar se é o primeiro login do utilizador
   useEffect(() => {
     const verificarPrimeiroLogin = async () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          console.log('Verificando primeiro login...');
-
-          // Decodificar o token para obter as informações do usuário
+          // Descodificar token para obter informações do utilizador
           const decodedToken = JSON.parse(atob(token.split('.')[1]));
           setUserId(decodedToken.id_utilizador);
 
-          // Verificar perfil do usuário para saber se é primeiro login
+          // Verificar estado do perfil
           const config = {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -68,24 +71,18 @@ export default function Home() {
           };
 
           const response = await axios.get(`${API_BASE}/users/perfil`, config);
-          console.log('Dados do perfil recebidos:', response.data);
 
-          // Verificação mais robusta, aceitando tanto 1 como true ou '1'
+          // Verificar se é primeiro login
           const primeiroLogin = response.data.primeiro_login;
           const isPrimeiroLogin = primeiroLogin === 1 || primeiroLogin === '1' || primeiroLogin === true;
 
-          console.log('Valor de primeiro_login:', primeiroLogin, 'É primeiro login?', isPrimeiroLogin);
-
           if (isPrimeiroLogin) {
-            console.log('Primeiro login detectado, exibindo modal de troca de senha');
             setShowPasswordModal(true);
           } else {
-            console.log('Não é primeiro login, carregando inscrições');
             buscarInscricoes();
           }
         } catch (error) {
-          console.error('Erro ao verificar perfil:', error);
-          // Mesmo com erro, tentamos buscar as inscrições
+          // Em caso de erro, tentar carregar inscrições na mesma
           buscarInscricoes();
         }
       }
@@ -94,19 +91,17 @@ export default function Home() {
     verificarPrimeiroLogin();
   }, []);
 
-  // Fechar o modal e atualizar o localStorage
+  // Fechar modal de mudança de senha
   const handleClosePasswordModal = () => {
-    console.log('Modal de senha fechado, atualizando estado');
     setShowPasswordModal(false);
-
-    // Após fechar o modal, buscar inscrições
     buscarInscricoes();
   };
 
+  // Animação do texto no banner
   useEffect(() => {
     let index = 0;
     let charIndex = 0;
-    let state = "typing"; // typing, waitingAfterTyping, deleting
+    let state = "typing";
 
     function animateText() {
       const current = texts[index];
@@ -119,9 +114,9 @@ export default function Home() {
 
         if (charIndex === current.length) {
           state = "waitingAfterTyping";
-          setTimeout(animateText, 1500); // espera antes de apagar
+          setTimeout(animateText, 1500);
         } else {
-          setTimeout(animateText, 100); // escrever
+          setTimeout(animateText, 100);
         }
       }
       else if (state === "waitingAfterTyping") {
@@ -135,9 +130,9 @@ export default function Home() {
         if (charIndex === 0) {
           index = (index + 1) % texts.length;
           state = "typing";
-          setTimeout(animateText, 300); // pequena pausa antes de escrever nova
+          setTimeout(animateText, 300);
         } else {
-          setTimeout(animateText, 50); // apagar
+          setTimeout(animateText, 50);
         }
       }
     }
@@ -145,11 +140,13 @@ export default function Home() {
     animateText();
 
     return () => {
-      // Cleanup se o componente desmontar
       clearTimeout();
     };
   }, []);
 
+  /**
+   * Obter URL da imagem do curso com fallback
+   */
   const getImageUrl = (inscricao) => {
     if (inscricao && inscricao.imagem_path) {
       return `${API_BASE}/${inscricao.imagem_path}`;
@@ -166,15 +163,16 @@ export default function Home() {
     return fallbackCurso;
   };
 
-  // Função para buscar inscrições com paginação
+  /**
+   * Buscar inscrições do utilizador com paginação
+   */
   const buscarInscricoes = async () => {
     try {
-      console.log(`Buscando inscrições (página: ${currentPage}, contagem: ${refreshCount})`);
       setLoading(true);
       const token = localStorage.getItem('token');
 
       if (!token) {
-        setError('Usuário não autenticado');
+        setError('Utilizador não autenticado');
         setLoading(false);
         return;
       }
@@ -185,23 +183,20 @@ export default function Home() {
         }
       };
 
-      // Adicionar parâmetros de paginação
+      // Parâmetros de paginação
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: inscricoesPerPage.toString()
       });
 
       const response = await axios.get(`${API_BASE}/inscricoes/minhas-inscricoes?${params.toString()}`, config);
-      console.log('Inscrições recebidas:', response.data);
       
-      // Verificar se a resposta tem a estrutura esperada com paginação
+      // Verificar estrutura da resposta
       if (response.data.inscricoes) {
-        // Se a API retorna um objeto com paginação
         setInscricoes(response.data.inscricoes);
         setTotalPages(response.data.totalPages || 1);
         setTotalInscricoes(response.data.total || response.data.inscricoes.length);
       } else {
-        // Se a API retorna apenas um array (compatibilidade com versão anterior)
         setInscricoes(response.data);
         const total = response.data.length;
         setTotalInscricoes(total);
@@ -211,46 +206,46 @@ export default function Home() {
       setLoading(false);
       setRefreshCount(prev => prev + 1);
     } catch (err) {
-      console.error('Erro ao buscar inscrições:', err);
       setError('Não foi possível carregar os cursos inscritos');
       setLoading(false);
     }
   };
 
+  /**
+   * Navegar para página de detalhes do curso
+   */
   const redirecionarParaDetalheCurso = (cursoId) => {
-    console.log('Redirecionando para o curso:', cursoId);
     navigate(`/cursos/${cursoId}`);
   };
 
-  // Função para filtrar as inscrições
+  /**
+   * Filtrar inscrições com base no filtro activo
+   */
   const filtrarInscricoes = () => {
     if (filtroAtivo === 'ativos') {
-      // Filtra apenas cursos com status que indicam atividade
       return inscricoes.filter(inscricao => {
         const status = inscricao.status ? inscricao.status.toLowerCase() : 'agendado';
-        // Considera ativos: em andamento, agendado, iniciado, etc.
-        // Exclui: finalizado, cancelado, concluído, etc.
         return !['finalizado', 'cancelado', 'concluído', 'terminado', 'encerrado'].includes(status);
       });
     }
-    return inscricoes; // Retorna todos se filtro for 'todos'
+    return inscricoes;
   };
 
   const inscricoesFiltradas = filtrarInscricoes();
 
-  // Buscar inscrições sempre que a página mudar
+  // Carregar inscrições quando a página muda
   useEffect(() => {
     buscarInscricoes();
   }, [currentPage]);
 
-  // Resetar para primeira página quando filtro mudar
+  // Voltar à primeira página quando filtro muda
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
   }, [filtroAtivo]);
 
-  // Funções para navegação de páginas
+  // Navegação entre páginas
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -263,7 +258,7 @@ export default function Home() {
     }
   };
 
-  // Calcular o total de inscrições filtradas para exibir nos botões
+  // Calcular totais para os botões de filtro
   const totalTodos = inscricoes.length;
   const totalAtivos = inscricoes.filter(inscricao => {
     const status = inscricao.status ? inscricao.status.toLowerCase() : 'agendado';
@@ -274,13 +269,14 @@ export default function Home() {
     <div className="home-container">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      {/* Modal de alteração de senha para primeiro login */}
+      {/* Modal para mudança de senha no primeiro login */}
       <TrocarSenhaModal
         isOpen={showPasswordModal}
         onClose={handleClosePasswordModal}
         userId={userId}
       />
 
+      {/* Banner principal com animação */}
       <div className="banner">
         <img src={banner} alt="banner" />
         <div className="overlay-text">
@@ -292,11 +288,12 @@ export default function Home() {
       </div>
 
       <div className="content-container">
+        {/* Secção de cursos inscritos */}
         <section className="cursos-section">
           <div className="section-header">
             <h2 className="section-title">Cursos Inscrito</h2>
             
-            {/* Filtro de cursos */}
+            {/* Filtros de cursos */}
             <div className="filtro-cursos">
               <button 
                 className={`filtro-btn ${filtroAtivo === 'todos' ? 'ativo' : ''}`}
@@ -314,7 +311,7 @@ export default function Home() {
           </div>
 
           {loading ? (
-            <div className="loading">Carregando cursos...</div>
+            <div className="loading">A carregar cursos...</div>
           ) : error ? (
             <div className="error-message">{error}</div>
           ) : inscricoesFiltradas.length > 0 ? (
@@ -349,7 +346,7 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Paginação - só mostra se há mais de uma página */}
+              {/* Paginação */}
               {totalPages > 1 && (
                 <div className="pagination-container">
                   <button 
@@ -380,16 +377,17 @@ export default function Home() {
             <div className="sem-inscricoes">
               <p>
                 {filtroAtivo === 'ativos' 
-                  ? 'Você não possui cursos ativos no momento.' 
-                  : 'Você não está inscrito em nenhum curso.'
+                  ? 'Não possui cursos ativos no momento.' 
+                  : 'Não está inscrito em nenhum curso.'
                 }
               </p>
             </div>
           )}
         </section>
 
+        {/* Secção de cursos sugeridos */}
         <section className="cursos-section">
-          <h2 className="section-title">Cursos Sugeridos para Você</h2>
+          <h2 className="section-title">Cursos Sugeridos</h2>
           <div className="cursos-grid">
             <CursosSugeridos />
           </div>

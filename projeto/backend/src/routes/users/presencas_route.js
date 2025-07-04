@@ -12,25 +12,34 @@ const {
   getFormandosPresenca
 } = require("../../controllers/users/presencas_ctrl");
 
-// Rota para obter presenças de um curso
+/**
+ * Rotas para gestão de presenças
+ * Permite criar, consultar e atualizar presenças de formandos nos cursos
+ */
+
+// === CONSULTA DE PRESENÇAS ===
+
+// Obter todas as presenças de um curso específico
 router.get("/curso/:id", verificarToken, getPresencasByCurso);
 
-// Rota para obter presenças de um formando em um curso
+// Obter presenças de um formando num curso específico
 router.get("/formando/:cursoId/:userId", verificarToken, getPresencasByFormando);
 
-// Rota para criar presença (formador)
-router.post("/criar", verificarToken, criarPresenca);
-
-// Rota para marcar presença (formando)
-router.post("/marcar", verificarToken, marcarPresenca);
-
-// Rota para obter horas disponíveis de um curso
+// Obter horas disponíveis de um curso para marcar presenças
 router.get("/horas-disponiveis/:id", verificarToken, getHorasDisponiveisCurso);
 
-// Rota para atualizar presença (admin)
+// Obter lista de formandos para uma presença específica (apenas formadores e admins)
+router.get("/formandos/:presencaId", verificarToken, autorizar([1, 2]), getFormandosPresenca);
+
+// === GESTÃO DE PRESENÇAS ===
+
+// Criar nova presença (formadores)
+router.post("/criar", verificarToken, criarPresenca);
+
+// Marcar presença (formandos)
+router.post("/marcar", verificarToken, marcarPresenca);
+
+// Atualizar presença existente (apenas administradores)
 router.put("/atualizar/:id", verificarToken, autorizar([1]), atualizarPresenca);
 
-// Obter lista de formandos para uma presença específica (apenas formadores)
-router.get("/formandos/:presencaId", verificarToken, autorizar([1, 2]), getFormandosPresenca);
-                                                                      
 module.exports = router;

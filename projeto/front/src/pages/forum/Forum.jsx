@@ -26,7 +26,7 @@ const ForumPartilha = () => {
 
   // Removido o useEffect problemático que utilizava currentUser não definido
 
-  // Carregar categorias e perfil do usuário
+  // Carregar categorias e perfil do utilizador
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -50,12 +50,12 @@ const ForumPartilha = () => {
         });
         setCategoriasExpandidas(estadoInicial);
 
-        // Obter perfil do usuário
+        // Obter perfil do utilizador
         const userResponse = await axios.get(`${API_BASE}/users/perfil`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Armazenar o cargo do usuário
+        // Armazenar o cargo do utilizador
         setUserRole(userResponse.data.id_cargo || '');
         setLoading(false);
       } catch (error) {
@@ -229,7 +229,7 @@ const ForumPartilha = () => {
                                   <h3>{topico.titulo}</h3>
                                   <p className="topico-desc">{topico.descricao || 'Sem descrição'}</p>
                                   <div className="topico-meta">
-                                    <span className="autor">Por: {topico.criador?.nome || 'Usuário'}</span>
+                                    <span className="autor">Por: {topico.criador?.nome || 'utilizador'}</span>
                                     <span className="data">
                                       {formatarData(topico.data_criacao)}
                                     </span>

@@ -78,7 +78,7 @@ class _PerfilScreenState extends State<PerfilScreen>
 
   Future<void> _loadFormadorData() async {
     try {
-      // Aqui você pode implementar uma chamada específica para dados de formador
+      // Aqui  pode implementar uma chamada específica para dados de formador
       // Por enquanto, vamos simular com dados fictícios
       setState(() {
         _formadorData = {
@@ -110,7 +110,7 @@ class _PerfilScreenState extends State<PerfilScreen>
         'idade': int.tryParse(_idadeController.text) ?? 0,
       };
 
-      // Aqui você implementaria a chamada à API para atualizar o perfil
+      // Aqui implementaria a chamada à API para atualizar o perfil
       // await _apiService.updateProfile(updateData);
 
       AppUtils.showSuccess(context, 'Perfil atualizado com sucesso!');
@@ -121,7 +121,7 @@ class _PerfilScreenState extends State<PerfilScreen>
     }
   }
 
-  // MUDANÇA: Métodos para obter URLs das imagens usando o ApiService
+  //  Métodos para obter URLs das imagens usando o ApiService
   String _getAvatarUrl() {
     if (_userData == null) return _apiService.defaultAvatarUrl;
 
@@ -494,7 +494,7 @@ class _PerfilScreenState extends State<PerfilScreen>
     if (cursos.isEmpty) {
       return Center(
         child: Text(
-          'Você não está a ministrar nenhum curso atualmente.',
+          ' não está a ministrar nenhum curso atualmente.',
           style: TextStyle(
             color: Colors.grey.shade600,
             fontStyle: FontStyle.italic,
@@ -525,7 +525,7 @@ class _PerfilScreenState extends State<PerfilScreen>
     if (cursos.isEmpty) {
       return Center(
         child: Text(
-          'Você não está inscrito em nenhum curso atualmente.',
+          ' não está inscrito em nenhum curso atualmente.',
           style: TextStyle(
             color: Colors.grey.shade600,
             fontStyle: FontStyle.italic,

@@ -10,28 +10,37 @@ import AreaModal from '../../components/areaModal';
 import CursosModal from '../../components/cursos/Cursos_Modal';
 import "./css/Criar_Utilizador.css";
 
+/**
+ * Componente para editar dados de utilizadores existentes
+ * Permite alterar informações pessoais e, no caso de formadores,
+ * gerir associações com categorias, áreas e cursos
+ */
 function EditarUtilizador() {
-    const { id } = useParams();
+    const { id } = useParams(); // ID do utilizador a editar
     const navigate = useNavigate();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    
+    /**
+     * Alterna o estado da barra lateral
+     */
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    // Estado para controlar qual modal está aberto
+    // Estados para controlar os modais de seleção
     const [modalAberto, setModalAberto] = useState(false);
     const [modalTipo, setModalTipo] = useState(null); // 'categoria', 'area' ou 'curso'
 
-    // Estados para categorias e áreas
+    // Estados para gerir categorias, áreas e cursos
     const [categorias, setCategorias] = useState([]);
     const [areas, setAreas] = useState([]);
     const [categoriasSelecionadas, setCategoriasSelecionadas] = useState([]);
     const [areasSelecionadas, setAreasSelecionadas] = useState([]);
     const [cursoSelecionado, setCursoSelecionado] = useState(null);
 
-    // Estado de carregamento para o botão de submissão
+    // Estados de controlo da interface e carregamento
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Estado do formulário
+    // Estado para armazenar os dados do formulário
     const [formData, setFormData] = useState({
         nome: '',
         email: '',
@@ -47,24 +56,25 @@ function EditarUtilizador() {
         cargo: ''
     });
 
-    // Carregar dados do usuário
+    /**
+     * Carrega os dados completos do utilizador desde a API
+     * Também carrega associações específicas se for formador
+     */
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                console.log("[DEBUG] ID recebido:", id);
-                console.log("[DEBUG] API_BASE:", API_BASE);
-                console.log("[DEBUG] URL construída:", `${API_BASE}/users/${id}`);
-
                 const token = localStorage.getItem('token');
                 const response = await axios.get(`${API_BASE}/users/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
                 const userData = response.data;
+                
+                // Preenche o formulário com os dados existentes
                 setFormData({
                     nome: userData.nome || '',
                     email: userData.email || '',
-                    password: '', // Sempre vazio por segurança
+                    password: '', // Mantém vazio por segurança
                     idade: userData.idade || '',
                     telefone: userData.telefone || '',
                     morada: userData.morada || '',
@@ -76,10 +86,10 @@ function EditarUtilizador() {
                     cargo: userData.id_cargo === 2 ? 'formador' : 'formando'
                 });
 
-                // Se for formador, carregar suas categorias e áreas atuais
+                // Se for formador, carrega as suas associações atuais
                 if (userData.id_cargo === 2) {
                     try {
-                        // Carregar categorias do formador
+                        // Carrega categorias associadas ao formador
                         const catResponse = await axios.get(`${API_BASE}/formadores/${id}/categorias`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
@@ -87,7 +97,7 @@ function EditarUtilizador() {
                         if (catResponse.data && catResponse.data.length > 0) {
                             setCategoriasSelecionadas(catResponse.data);
 
-                            // Carregar áreas do formador
+                            // Carrega áreas associadas ao formador
                             const areasResponse = await axios.get(`${API_BASE}/formadores/${id}/areas`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
@@ -103,27 +113,24 @@ function EditarUtilizador() {
 
                 setIsLoading(false);
             } catch (error) {
-                console.error("ERRO COMPLETO:", error);
-                console.error("Status do erro:", error.response?.status);
-                console.error("Dados do erro:", error.response?.data);
-                console.error("Mensagem do erro:", error.message);
-
-                toast.error(`Erro ao carregar dados do usuário: ${error.response?.data?.message || error.message}`);
+                console.error("Erro ao carregar dados do utilizador:", error);
+                toast.error(`Erro ao carregar dados do utilizador: ${error.response?.data?.message || error.message}`);
                 setIsLoading(false);
             }
         };
+        
         fetchUserData();
     }, [id]);
 
-    // Definir a função carregarAreas com useCallback
+    /**
+     * Carrega as áreas disponíveis baseadas nas categorias selecionadas
+     * Utiliza useCallback para evitar loops infinitos no useEffect
+     */
     const carregarAreas = useCallback(async () => {
         try {
             if (categoriasSelecionadas.length > 0) {
                 const categoriaId = categoriasSelecionadas[0].id_categoria;
-                console.log(`A carregar áreas para a categoria ID: ${categoriaId}`);
-
                 const response = await axios.get(`${API_BASE}/categorias/${categoriaId}/areas`);
-                console.log("Áreas carregadas com sucesso:", response.data);
                 setAreas(response.data);
             }
         } catch (error) {
@@ -132,7 +139,9 @@ function EditarUtilizador() {
         }
     }, [categoriasSelecionadas]);
 
-    // Função para carregar categorias
+    /**
+     * Carrega todas as categorias disponíveis desde a API
+     */
     const carregarCategorias = async () => {
         try {
             const response = await axios.get(`${API_BASE}/categorias`);
@@ -143,12 +152,12 @@ function EditarUtilizador() {
         }
     };
 
-    // Carregar categorias quando o componente for montado
+    // Carrega categorias quando o componente é montado
     useEffect(() => {
         carregarCategorias();
     }, []);
 
-    // Carregar áreas quando uma categoria for selecionada
+    // Carrega áreas sempre que as categorias selecionadas mudam
     useEffect(() => {
         if (categoriasSelecionadas.length > 0) {
             carregarAreas();
@@ -158,64 +167,92 @@ function EditarUtilizador() {
         }
     }, [categoriasSelecionadas, carregarAreas]);
 
-    // Funções para abrir modais específicos
+    /**
+     * Abre o modal de seleção de categorias
+     */
     const abrirModalCategoria = () => {
         setModalTipo('categoria');
         setModalAberto(true);
     };
 
+    /**
+     * Abre o modal de seleção de áreas
+     * Requer que pelo menos uma categoria esteja selecionada
+     */
     const abrirModalArea = () => {
         if (categoriasSelecionadas.length === 0) {
-            toast.warning("Selecione uma categoria primeiro");
+            toast.warning("Seleciona uma categoria primeiro");
             return;
         }
         setModalTipo('area');
         setModalAberto(true);
     };
 
+    /**
+     * Abre o modal de seleção de cursos
+     * Requer que pelo menos uma categoria esteja selecionada
+     */
     const abrirModalCurso = () => {
         if (categoriasSelecionadas.length === 0) {
-            toast.warning("Selecione uma categoria primeiro");
+            toast.warning("Seleciona uma categoria primeiro");
             return;
         }
         setModalTipo('curso');
         setModalAberto(true);
     };
 
-    // Função para fechar o modal
+    /**
+     * Fecha qualquer modal que esteja aberto
+     */
     const fecharModal = () => {
         setModalAberto(false);
         setModalTipo(null);
     };
 
-    // Funções para lidar com seleções dos modais
+    /**
+     * Gere a seleção de categorias vinda do modal
+     * @param {Array} categorias - Array de categorias selecionadas
+     */
     const handleCategoriaSelecionada = (categorias) => {
         setCategoriasSelecionadas(categorias);
-        // Resetar áreas quando mudar as categorias
-        setAreasSelecionadas([]);
+        setAreasSelecionadas([]); // Limpa áreas quando muda categorias
         fecharModal();
     };
 
+    /**
+     * Gere a seleção de áreas vinda do modal
+     * @param {Array} areas - Array de áreas selecionadas
+     */
     const handleAreaSelecionada = (areas) => {
         setAreasSelecionadas(areas);
         fecharModal();
     };
 
+    /**
+     * Gere a seleção de curso vinda do modal
+     * @param {number} cursoId - ID do curso selecionado
+     */
     const handleCursoSelecionado = (cursoId) => {
         setCursoSelecionado(cursoId);
         fecharModal();
     };
 
+    /**
+     * Gere mudanças nos campos do formulário
+     * Inclui validação especial para o campo idade
+     * @param {Event} e - Evento de mudança do input
+     */
     const handleChange = (e) => {
         const { name, value } = e.target;
 
+        // Validação especial para idade (limita entre 1 e 99)
         if (name === 'idade') {
             const idade = Math.min(99, Math.max(1, Number(value)));
             setFormData({ ...formData, idade });
             return;
         }
 
-        // Se mudar o cargo para formando, limpar categorias, áreas e curso
+        // Se mudar cargo para formando, limpa todas as associações de formador
         if (name === 'cargo' && value === 'formando') {
             setCategoriasSelecionadas([]);
             setAreasSelecionadas([]);
@@ -225,6 +262,11 @@ function EditarUtilizador() {
         setFormData({ ...formData, [name]: value });
     };
 
+    /**
+     * Processa o envio do formulário e atualiza o utilizador
+     * Gere tanto dados básicos como associações específicas de formadores
+     * @param {Event} e - Evento de submissão do formulário
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -234,10 +276,7 @@ function EditarUtilizador() {
         try {
             const token = localStorage.getItem('token');
 
-            console.log("[DEBUG] A atualizar utilizador:", id);
-            console.log("[DEBUG] URL para PUT:", `${API_BASE}/users/${id}`);
-
-            // Atualizar informações básicas do usuário
+            // Prepara dados básicos para atualização
             const basicData = {
                 nome: formData.nome,
                 email: formData.email,
@@ -252,21 +291,21 @@ function EditarUtilizador() {
                 id_cargo: formData.cargo === 'formador' ? 2 : 3
             };
 
-            // Se uma nova senha foi fornecida, incluí-la
+            // Inclui nova password se foi fornecida
             if (formData.password) {
                 basicData.password = formData.password;
             }
 
-            // Atualizar dados básicos
+            // Atualiza dados básicos do utilizador
             await axios.put(`${API_BASE}/users/${id}`, basicData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            // Se for formador, atualizar suas associações
+            // Gere associações específicas de formadores
             if (formData.cargo === 'formador') {
-                // Primeiro remover todas as associações existentes
+                // Remove todas as associações existentes antes de adicionar novas
                 try {
-                    // Remover todas as categorias do formador
+                    // Remove categorias existentes
                     const categoriesResponse = await axios.get(`${API_BASE}/formadores/${id}/categorias`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -278,12 +317,12 @@ function EditarUtilizador() {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
                             } catch (err) {
-                                console.log(`Erro ao remover categoria ${categoria.id_categoria}:`, err);
+                                // Log silencioso - não é crítico se já foi removida
                             }
                         }
                     }
 
-                    // Remover todas as áreas do formador
+                    // Remove áreas existentes
                     const areasResponse = await axios.get(`${API_BASE}/formadores/${id}/areas`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -295,15 +334,15 @@ function EditarUtilizador() {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
                             } catch (err) {
-                                console.log(`Erro ao remover área ${area.id_area}:`, err);
+                                // Log silencioso - não é crítico se já foi removida
                             }
                         }
                     }
                 } catch (cleanupError) {
-                    console.log("Erro ao limpar associações anteriores:", cleanupError);
+                    // Erro na limpeza não é crítico, continua com as novas associações
                 }
 
-                // Adicionar novas categorias
+                // Adiciona novas categorias selecionadas
                 if (categoriasSelecionadas.length > 0) {
                     await axios.post(`${API_BASE}/formadores/${id}/categorias`, {
                         categorias: categoriasSelecionadas.map(cat => cat.id_categoria)
@@ -312,7 +351,7 @@ function EditarUtilizador() {
                     });
                 }
 
-                // Adicionar novas áreas
+                // Adiciona novas áreas selecionadas
                 if (areasSelecionadas.length > 0) {
                     await axios.post(`${API_BASE}/formadores/${id}/areas`, {
                         areas: areasSelecionadas.map(area => area.id_area)
@@ -321,9 +360,9 @@ function EditarUtilizador() {
                     });
                 }
             } else {
-                // Se mudou para formando, remover todas as associações
+                // Se mudou para formando, remove todas as associações
                 try {
-                    // Remover todas as categorias
+                    // Remove todas as categorias
                     const categoriesResponse = await axios.get(`${API_BASE}/formadores/${id}/categorias`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -335,12 +374,12 @@ function EditarUtilizador() {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
                             } catch (err) {
-                                console.log(`Erro ao remover categoria ${categoria.id_categoria}:`, err);
+                                // Log silencioso - não é crítico
                             }
                         }
                     }
 
-                    // Remover todas as áreas
+                    // Remove todas as áreas
                     const areasResponse = await axios.get(`${API_BASE}/formadores/${id}/areas`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -352,12 +391,12 @@ function EditarUtilizador() {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
                             } catch (err) {
-                                console.log(`Erro ao remover área ${area.id_area}:`, err);
+                                // Log silencioso - não é crítico
                             }
                         }
                     }
                 } catch (cleanupError) {
-                    console.log("Erro ao remover associações ao mudar para formando:", cleanupError);
+                    // Erro na limpeza não impede o sucesso da operação principal
                 }
             }
 
@@ -365,8 +404,8 @@ function EditarUtilizador() {
             navigate('/admin/usuarios');
 
         } catch (error) {
-            console.error("Erro ao atualizar usuário:", error);
-            let mensagem = "Erro ao atualizar usuário. Por favor, tente novamente.";
+            console.error("Erro ao atualizar utilizador:", error);
+            let mensagem = "Erro ao atualizar utilizador. Tenta novamente.";
             if (error.response?.data?.message) {
                 mensagem = error.response.data.message;
             }
@@ -376,6 +415,7 @@ function EditarUtilizador() {
         }
     };
 
+    // Ecrã de carregamento enquanto busca dados do utilizador
     if (isLoading) {
         return (
             <div className="register-container">
@@ -394,35 +434,115 @@ function EditarUtilizador() {
             <ToastContainer />
 
             <form className='form-register' onSubmit={handleSubmit}>
-
                 <div className="inputs">
+                    {/* Primeira linha: dados básicos */}
                     <div className="row">
-                        <input type="text" name="nome" placeholder="Nome do Utilizador" value={formData.nome} onChange={handleChange} required />
+                        <input 
+                            type="text" 
+                            name="nome" 
+                            placeholder="Nome do Utilizador" 
+                            value={formData.nome} 
+                            onChange={handleChange} 
+                            required 
+                        />
                         <select name="cargo" value={formData.cargo} onChange={handleChange} required>
                             <option disabled value="">Cargo do Utilizador</option>
                             <option value="formador">Formador</option>
                             <option value="formando">Formando</option>
                         </select>
-                        <input type="number" name="idade" placeholder="Idade" value={formData.idade} onChange={handleChange} required min="1" max="99" />
-                        <input type="number" name="telefone" placeholder="Telefone" value={formData.telefone} onChange={handleChange} required />
+                        <input 
+                            type="number" 
+                            name="idade" 
+                            placeholder="Idade" 
+                            value={formData.idade} 
+                            onChange={handleChange} 
+                            required 
+                            min="1" 
+                            max="99" 
+                        />
+                        <input 
+                            type="number" 
+                            name="telefone" 
+                            placeholder="Telefone" 
+                            value={formData.telefone} 
+                            onChange={handleChange} 
+                            required 
+                        />
                     </div>
+                    
+                    {/* Segunda linha: credenciais */}
                     <div className="row">
-                        <input type="password" name="password" placeholder="Nova Password (deixe em branco para manter a atual)" value={formData.password} onChange={handleChange} />
-                        <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
+                        <input 
+                            type="password" 
+                            name="password" 
+                            placeholder="Nova Password (deixa em branco para manter a atual)" 
+                            value={formData.password} 
+                            onChange={handleChange} 
+                        />
+                        <input 
+                            type="email" 
+                            name="email" 
+                            placeholder="Email" 
+                            value={formData.email} 
+                            onChange={handleChange} 
+                            required 
+                        />
                     </div>
+                    
+                    {/* Terceira linha: morada */}
                     <div className="row">
-                        <input type="text" name="morada" placeholder="Morada" value={formData.morada} onChange={handleChange} />
-                        <input type="text" name="codigo_postal" placeholder="Código Postal" value={formData.codigo_postal} onChange={handleChange} />
+                        <input 
+                            type="text" 
+                            name="morada" 
+                            placeholder="Morada" 
+                            value={formData.morada} 
+                            onChange={handleChange} 
+                        />
+                        <input 
+                            type="text" 
+                            name="codigo_postal" 
+                            placeholder="Código Postal" 
+                            value={formData.codigo_postal} 
+                            onChange={handleChange} 
+                        />
                     </div>
+                    
+                    {/* Quarta linha: localização */}
                     <div className="row">
-                        <input type="text" name="cidade" placeholder="Cidade" value={formData.cidade} onChange={handleChange} />
-                        <input type="text" name="distrito" placeholder="Distrito" value={formData.distrito} onChange={handleChange} />
+                        <input 
+                            type="text" 
+                            name="cidade" 
+                            placeholder="Cidade" 
+                            value={formData.cidade} 
+                            onChange={handleChange} 
+                        />
+                        <input 
+                            type="text" 
+                            name="distrito" 
+                            placeholder="Distrito" 
+                            value={formData.distrito} 
+                            onChange={handleChange} 
+                        />
                     </div>
+                    
+                    {/* Quinta linha: dados adicionais */}
                     <div className="row">
-                        <input type="text" name="freguesia" placeholder="Freguesia" value={formData.freguesia} onChange={handleChange} />
-                        <textarea name="descricao" placeholder="Descrição" value={formData.descricao} onChange={handleChange} />
+                        <input 
+                            type="text" 
+                            name="freguesia" 
+                            placeholder="Freguesia" 
+                            value={formData.freguesia} 
+                            onChange={handleChange} 
+                        />
+                        <textarea 
+                            name="descricao" 
+                            placeholder="Descrição" 
+                            value={formData.descricao} 
+                            onChange={handleChange} 
+                        />
                     </div>
 
+                    {/* Controlos específicos para formadores */}
                     {formData.cargo === "formador" && (
                         <div className="row">
                             <button
@@ -457,7 +577,7 @@ function EditarUtilizador() {
                 </div>
             </form>
 
-            {/* Renderizar o modal apropriado com base no modalTipo */}
+            {/* Modais para seleção de categorias, áreas e cursos */}
             {modalAberto && modalTipo === 'categoria' && (
                 <CategoriaModal
                     isOpen={modalAberto}

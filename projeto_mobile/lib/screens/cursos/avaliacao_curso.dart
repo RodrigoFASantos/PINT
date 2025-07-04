@@ -835,7 +835,7 @@ class _AvaliacaoCursoState extends State<AvaliacaoCurso> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Ao iniciar, você será direcionado para a tela do quiz.',
+                        'Ao iniciar,  será direcionado para a tela do quiz.',
                         style: TextStyle(
                           color: Colors.blue[700],
                           fontSize: 14,

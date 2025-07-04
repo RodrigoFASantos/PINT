@@ -361,7 +361,7 @@ const QuizPage = () => {
                     <li><strong>Pode selecionar múltiplas respostas para cada pergunta.</strong></li>
                     <li>Responda todas as perguntas antes de enviar.</li>
                     {quiz.tempo_limite && (
-                      <li>Você terá {quiz.tempo_limite} minutos para completar o quiz.</li>
+                      <li>Terá {quiz.tempo_limite} minutos para completar o quiz.</li>
                     )}
                     <li>Clique em "Iniciar Quiz" quando estiver pronto para começar.</li>
                     <li>Após iniciar, não será possível pausar o quiz.</li>

@@ -4,7 +4,17 @@ const { getAllConteudos, getConteudoById, getConteudosByPasta, getConteudosByCur
 const authMiddleware = require('../../middleware/auth');
 const uploadMiddleware = require('../../middleware/upload_middleware');
 
-// Middleware para verificar se o utilizador é admin ou formador
+/**
+ * Rotas para gestão de conteúdos dos cursos
+ * Permite criar, editar, eliminar e organizar materiais didáticos
+ */
+
+/**
+ * Middleware que verifica se o utilizador é administrador ou formador
+ * @param {Object} req - Objeto de requisição
+ * @param {Object} res - Objeto de resposta
+ * @param {Function} next - Função para passar ao próximo middleware
+ */
 const permissionMiddleware = (req, res, next) => {
   if (req.user.id_cargo === 1 || req.user.id_cargo === 2) {
     return next();
@@ -12,7 +22,12 @@ const permissionMiddleware = (req, res, next) => {
   return res.status(403).json({ message: 'Acesso negado. Apenas administradores e formadores podem executar esta ação.' });
 };
 
-// Middleware para verificar se é admin
+/**
+ * Middleware que verifica se o utilizador é administrador
+ * @param {Object} req - Objeto de requisição
+ * @param {Object} res - Objeto de resposta
+ * @param {Function} next - Função para passar ao próximo middleware
+ */
 const adminMiddleware = (req, res, next) => {
   if (req.user.id_cargo === 1) {
     return next();
@@ -20,33 +35,48 @@ const adminMiddleware = (req, res, next) => {
   return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem executar esta ação.' });
 };
 
-// Rotas para gestão de conteúdos
+// Listar todos os conteúdos do sistema
+// Acesso: Utilizadores autenticados
 router.get('/', authMiddleware, getAllConteudos);
+
+// Obter detalhes de um conteúdo específico
+// Acesso: Utilizadores autenticados
 router.get('/:id', authMiddleware, getConteudoById);
+
+// Listar conteúdos organizados por pasta
+// Acesso: Utilizadores autenticados
 router.get('/pasta/:pastaId', authMiddleware, getConteudosByPasta);
 
-// Rota para obter conteúdos por curso
+// Listar todos os conteúdos de um curso específico
+// Acesso: Utilizadores autenticados
 router.get('/curso/:cursoId', authMiddleware, getConteudosByCurso);
 
-// Rota para criar um novo conteúdo
+// Criar novo conteúdo com possibilidade de upload de ficheiros
+// Acesso: Administradores e Formadores
 router.post('/', authMiddleware, permissionMiddleware, uploadMiddleware.uploadCursoConteudo, createConteudo);
 
-// Rota para atualizar um conteúdo existente
+// Atualizar conteúdo existente com possibilidade de upload de ficheiros
+// Acesso: Administradores e Formadores
 router.put('/:id', authMiddleware, permissionMiddleware, uploadMiddleware.uploadCursoConteudo, updateConteudo);
 
-// Rota para excluir um conteúdo (exclusão lógica)
+// Eliminar conteúdo (exclusão lógica - marca como eliminado mas mantém na base de dados)
+// Acesso: Administradores e Formadores
 router.delete('/:id', authMiddleware, permissionMiddleware, deleteConteudo);
 
-// Rota para excluir permanentemente um conteúdo
+// Eliminar conteúdo permanentemente da base de dados
+// Acesso: Apenas Administradores
 router.delete('/:id/permanent', authMiddleware, adminMiddleware, deleteConteudoPermanently);
 
-// Rota para restaurar um conteúdo excluído logicamente
+// Restaurar conteúdo previamente eliminado logicamente
+// Acesso: Administradores e Formadores
 router.put('/:id/restore', authMiddleware, permissionMiddleware, restoreConteudo);
 
-// Rota para reordenar conteúdos numa pasta
+// Reordenar a sequência de conteúdos dentro de uma pasta
+// Acesso: Administradores e Formadores
 router.put('/pasta/:pastaId/ordenar', authMiddleware, permissionMiddleware, reordenarConteudos);
 
-// Rota para corrigir conteúdos sem id_curso (apenas admin)
+// Ferramenta administrativa para corrigir conteúdos sem associação a curso
+// Acesso: Apenas Administradores
 router.post('/admin/corrigir', authMiddleware, adminMiddleware, corrigirConteudosSemCurso);
 
 module.exports = router;

@@ -10,13 +10,26 @@ import FormadorModal from '../../components/users/Formador_Modal';
 import './css/Criar_Curso.css';
 import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 
+/**
+ * Componente principal para criação de novos cursos na plataforma
+ * 
+ * Este componente fornece uma interface completa para criar cursos com todas
+ * as funcionalidades avançadas:
+ * - Suporte a cursos síncronos (com formador e vagas) e assíncronos (autoestudo)
+ * - Upload de imagem de capa com validação completa
+ * - Seleção hierárquica de tópicos (categoria → área → tópico)
+ * - Sistema de associações entre cursos
+ * - Validação robusta de formulário
+ * - Feedback visual em tempo real
+ * - Integração com notificações automáticas
+ */
 const CriarCurso = () => {
-  // Estados para controlo da interface
+  // === ESTADOS DE INTERFACE E NAVEGAÇÃO ===
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
 
-  // Estado do formulário principal incluindo campo de tópico
+  // === ESTADO PRINCIPAL DO FORMULÁRIO ===
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -28,35 +41,47 @@ const CriarCurso = () => {
     id_formador: '',
     id_area: '',
     id_categoria: '',
-    id_topico: '', // Campo para associar curso a um tópico específico
+    id_topico: '',
     imagem: null,
   });
 
-  // Estados para controlo de modais
+  // === ESTADOS DE CONTROLO DE MODAIS ===
   const [modalAberto, setModalAberto] = useState(false);
   const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
 
-  // Estados para dados carregados do servidor
+  // === ESTADOS PARA DADOS CARREGADOS DO SERVIDOR ===
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
 
-  // Estados para funcionalidades adicionais
+  // === ESTADOS PARA FUNCIONALIDADES AVANÇADAS ===
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [cursosAssociados, setCursosAssociados] = useState([]);
   const [topicosFetched, setTopicosFetched] = useState(false);
 
-  // Função para abrir modal de associação de cursos
+  /**
+   * Abre modal para associação de cursos relacionados
+   * 
+   * Permite ao utilizador selecionar cursos existentes para criar
+   * associações bidirecionais que ajudam na descoberta de conteúdo relacionado.
+   */
   const abrirModalAssociacao = () => {
     setModalAssociacaoAberto(true);
   };
 
-  // Manipular selecção de curso para associação
+  /**
+   * Adiciona curso à lista de associações a criar
+   * 
+   * Verifica se o curso já está na lista para evitar duplicatas
+   * e fornece feedback visual apropriado ao utilizador.
+   * 
+   * @param {Object} cursoSelecionado - Dados do curso a associar
+   */
   const handleAssociarCurso = (cursoSelecionado) => {
-    // Verificar se o curso já está na lista de associações
+    // Verificar se o curso já está associado
     if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
       setCursosAssociados([...cursosAssociados, cursoSelecionado]);
       toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
@@ -65,46 +90,60 @@ const CriarCurso = () => {
     }
   };
 
-  // Remover curso da lista de associações
+  /**
+   * Remove curso da lista de associações
+   * 
+   * @param {number} cursoId - ID do curso a remover das associações
+   */
   const removerAssociacao = (cursoId) => {
     setCursosAssociados(cursosAssociados.filter(c => c.id_curso !== cursoId));
     toast.info("Curso removido da lista de associações");
   };
 
-  // Carregar tópicos quando categoria E área são selecionadas
+  /**
+   * Carrega tópicos disponíveis baseados na categoria e área selecionadas
+   * 
+   * Implementa sistema de fallback hierárquico para garantir que sempre
+   * há tópicos disponíveis:
+   * 1. Tópicos específicos para categoria+área
+   * 2. Tópicos gerais da categoria
+   * 3. Tópicos do fórum relacionados
+   * 
+   * Este efeito é executado sempre que categoria ou área mudam.
+   */
   useEffect(() => {
     if (formData.id_categoria && formData.id_area) {
       setIsLoading(true);
       setTopicosFetched(false);
 
-      console.log(`A procurar tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
+      console.log(`🔍 [CRIAR] A procurar tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
 
-      // Usar a rota correta para obter tópicos
+      // === PRIMEIRA TENTATIVA: BUSCAR TODOS OS TÓPICOS E FILTRAR LOCALMENTE ===
       axios.get(`${API_BASE}/topicos-area/todos`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
         .then(res => {
-          console.log("Tópicos gerais carregados:", res.data);
+          console.log("✅ [CRIAR] Tópicos gerais carregados:", res.data);
 
-          // Lidar com diferentes formatos de resposta
+          // Normalizar estrutura da resposta (pode vir em formatos diferentes)
           let topicos = Array.isArray(res.data) ? res.data :
             (res.data.data ? res.data.data : []);
 
-          // Filtrar tópicos pela categoria e área selecionadas
+          // Filtrar tópicos que coincidem exatamente com categoria e área
           const topicosFiltrados = topicos.filter(topico => {
             const categoriaMatch = topico.id_categoria == formData.id_categoria;
             const areaMatch = topico.id_area == formData.id_area;
             return categoriaMatch && areaMatch;
           });
 
-          console.log("Tópicos filtrados:", topicosFiltrados);
+          console.log(`📊 [CRIAR] ${topicosFiltrados.length} tópicos filtrados encontrados`);
 
           if (topicosFiltrados.length > 0) {
             setTopicosDisponiveis(topicosFiltrados);
           } else {
-            // Tentar procurar especificamente por categoria
+            // Se não há tópicos específicos, tentar fallback por categoria
             buscarTopicosCategoria();
           }
 
@@ -112,22 +151,25 @@ const CriarCurso = () => {
           setIsLoading(false);
         })
         .catch(err => {
-          console.error("Erro ao carregar tópicos gerais:", err);
-          // Tentar procurar especificamente por categoria
+          console.error("❌ [CRIAR] Erro ao carregar tópicos gerais:", err);
           buscarTopicosCategoria();
         });
     } else {
-      // Se não tiver categoria ou área selecionada, limpar tópicos
+      // Limpar tópicos se categoria ou área não estão selecionadas
       setTopicosDisponiveis([]);
       setTopicosFetched(false);
-      // Limpar o tópico selecionado
       setFormData(prev => ({ ...prev, id_topico: '' }));
     }
   }, [formData.id_categoria, formData.id_area]);
 
-  // Procurar tópicos por categoria específica
+  /**
+   * Busca tópicos por categoria específica (fallback 1)
+   * 
+   * Usado quando não há tópicos para a combinação categoria+área.
+   * Procura tópicos apenas da categoria, filtrando depois por área.
+   */
   const buscarTopicosCategoria = () => {
-    console.log(`A procurar tópicos para categoria específica: ${formData.id_categoria}`);
+    console.log(`🔍 [CRIAR] Fallback: A procurar tópicos para categoria ${formData.id_categoria}`);
 
     axios.get(`${API_BASE}/topicos-area/categoria/${formData.id_categoria}`, {
       headers: {
@@ -135,32 +177,35 @@ const CriarCurso = () => {
       }
     })
       .then(res => {
-        console.log("Tópicos por categoria:", res.data);
+        console.log("✅ [CRIAR] Tópicos por categoria:", res.data);
 
-        // Verificar formato dos dados
         let topicos = Array.isArray(res.data) ? res.data :
           (res.data.data ? res.data.data : []);
 
-        // Filtrar adicionalmente por área
+        // Filtrar por área ou aceitar tópicos genéricos (sem área específica)
         const topicosFiltrados = topicos.filter(topico =>
           topico.id_area == formData.id_area || !topico.id_area
         );
 
-        console.log("Tópicos filtrados por área:", topicosFiltrados);
+        console.log(`📊 [CRIAR] ${topicosFiltrados.length} tópicos filtrados por categoria/área`);
         setTopicosDisponiveis(topicosFiltrados);
         setTopicosFetched(true);
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao procurar tópicos por categoria:", err);
-        // Última tentativa: procurar no fórum
+        console.error("❌ [CRIAR] Erro ao procurar tópicos por categoria:", err);
         buscarTopicosForum();
       });
   };
 
-  // Procurar tópicos do fórum como último recurso
+  /**
+   * Busca tópicos do fórum como último recurso (fallback 2)
+   * 
+   * Usado quando não há tópicos específicos disponíveis.
+   * Procura no sistema de fórum por tópicos relacionados.
+   */
   const buscarTopicosForum = () => {
-    console.log("A procurar tópicos do fórum como último recurso");
+    console.log("🔍 [CRIAR] Último recurso: A procurar tópicos do fórum");
 
     axios.get(`${API_BASE}/forum`, {
       headers: {
@@ -168,14 +213,14 @@ const CriarCurso = () => {
       }
     })
       .then(res => {
-        console.log("Tópicos do fórum:", res.data);
+        console.log("✅ [CRIAR] Tópicos do fórum:", res.data);
 
         let topicos = Array.isArray(res.data) ? res.data :
           (res.data.data ? res.data.data : []);
 
-        // Filtrar por categoria e área
+        // Filtrar tópicos do fórum pela categoria e área selecionadas
         const topicosFiltrados = topicos.filter(topico => {
-          // Verificar diversas possibilidades de estrutura de dados
+          // Lidar com diferentes estruturas de dados possíveis
           const categoriaId = topico.id_categoria ||
             (topico.categoria && topico.categoria.id_categoria);
           const areaId = topico.id_area ||
@@ -185,13 +230,13 @@ const CriarCurso = () => {
             (areaId == formData.id_area || !areaId);
         });
 
-        console.log("Tópicos do fórum filtrados:", topicosFiltrados);
+        console.log(`📊 [CRIAR] ${topicosFiltrados.length} tópicos do fórum filtrados`);
         setTopicosDisponiveis(topicosFiltrados);
         setTopicosFetched(true);
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao procurar tópicos do fórum:", err);
+        console.error("❌ [CRIAR] Erro ao procurar tópicos do fórum:", err);
         toast.error("Não foi possível carregar os tópicos. Verifica a tua ligação ou tenta novamente mais tarde.");
         setTopicosDisponiveis([]);
         setTopicosFetched(true);
@@ -199,68 +244,86 @@ const CriarCurso = () => {
       });
   };
 
-  // Carregar dados iniciais quando o componente é montado
+  /**
+   * Carrega dados iniciais necessários quando o componente é montado
+   * 
+   * Executa carregamento paralelo de:
+   * - Lista de formadores disponíveis
+   * - Categorias de cursos
+   * - Áreas de formação
+   * 
+   * Usa Promise.all não foi implementado aqui para permitir carregamento
+   * independente e melhor tratamento de erros individuais.
+   */
   useEffect(() => {
-    // Definir estado de carregamento
     setIsLoading(true);
 
-    // Carregar lista de formadores
+    // === CARREGAR LISTA DE FORMADORES DISPONÍVEIS ===
     axios.get(`${API_BASE}/users/formadores`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
       .then(res => {
-        console.log("Formadores carregados:", res.data);
+        console.log("✅ [CRIAR] Formadores carregados:", res.data);
         setFormadores(res.data);
       })
       .catch(err => {
-        console.error("Erro ao carregar formadores:", err);
+        console.error("❌ [CRIAR] Erro ao carregar formadores:", err);
         toast.error("Erro ao carregar formadores. Verifica a consola para mais detalhes.");
       });
 
-    // Carregar lista de categorias
+    // === CARREGAR CATEGORIAS DISPONÍVEIS ===
     axios.get(`${API_BASE}/categorias`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
       .then(res => {
-        console.log("Categorias carregadas:", res.data);
+        console.log("✅ [CRIAR] Categorias carregadas:", res.data);
         setCategorias(res.data);
       })
       .catch(err => {
-        console.error("Erro ao carregar categorias:", err);
+        console.error("❌ [CRIAR] Erro ao carregar categorias:", err);
         toast.error("Erro ao carregar categorias");
       });
 
-    // Carregar todas as áreas disponíveis
+    // === CARREGAR TODAS AS ÁREAS DISPONÍVEIS ===
     axios.get(`${API_BASE}/areas`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
       .then(res => {
-        console.log("Áreas carregadas:", res.data);
+        console.log("✅ [CRIAR] Áreas carregadas:", res.data);
         setAreas(res.data);
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao carregar áreas:", err);
+        console.error("❌ [CRIAR] Erro ao carregar áreas:", err);
         toast.error("Erro ao carregar áreas");
         setIsLoading(false);
       });
   }, []);
 
-  // Função para obter ID da categoria de uma área de forma flexível
+  /**
+   * Extrai ID da categoria de uma área de forma flexível
+   * 
+   * Suporta diferentes formatos de API para máxima compatibilidade:
+   * - id_categoria, categoria_id, idCategoria, categoriaId
+   * - Busca dinâmica por campos que contenham 'categoria' e 'id'
+   * 
+   * @param {Object} area - Objeto área com possível ID de categoria
+   * @returns {number|null} ID da categoria ou null se não encontrado
+   */
   const getCategoriaId = (area) => {
-    // Tentar diferentes formatos de propriedade
+    // Verificar formatos padrão mais comuns
     if (area.id_categoria !== undefined) return area.id_categoria;
     if (area.categoria_id !== undefined) return area.categoria_id;
     if (area.idCategoria !== undefined) return area.idCategoria;
     if (area.categoriaId !== undefined) return area.categoriaId;
 
-    // Se não encontrar, procurar qualquer chave que contenha "categoria" e "id"
+    // Busca dinâmica por campos que contenham 'categoria' e 'id'
     const categoriaKey = Object.keys(area).find(k =>
       k.toLowerCase().includes('categoria') && k.toLowerCase().includes('id')
     );
@@ -268,68 +331,146 @@ const CriarCurso = () => {
     return categoriaKey ? area[categoriaKey] : null;
   };
 
-  // Filtrar áreas baseado na categoria selecionada
+  /**
+   * Filtra áreas baseado na categoria selecionada
+   * 
+   * Atualiza a lista de áreas disponíveis sempre que a categoria muda
+   * e limpa seleções dependentes (área e tópico) para evitar inconsistências.
+   */
   useEffect(() => {
     if (formData.id_categoria) {
-      // Converter para string para garantir comparação consistente
       const categoriaId = String(formData.id_categoria);
 
-      // Filtragem flexível para lidar com diferentes estruturas de dados
+      // Filtrar áreas que pertencem à categoria selecionada
       const areasFiltered = areas.filter(area => {
         const areaCategoriaId = getCategoriaId(area);
         return areaCategoriaId !== null && String(areaCategoriaId) === categoriaId;
       });
 
-      console.log("Categoria selecionada:", categoriaId);
-      console.log("Áreas filtradas:", areasFiltered);
+      console.log(`🏷️ [CRIAR] Categoria ${categoriaId} selecionada - ${areasFiltered.length} áreas disponíveis`);
       setAreasFiltradas(areasFiltered);
 
-      // Limpar área selecionada se a categoria mudar
+      // Limpar seleções dependentes para evitar inconsistências
       setFormData(prev => ({ ...prev, id_area: '', id_topico: '' }));
     } else {
       setAreasFiltradas([]);
     }
   }, [formData.id_categoria, areas]);
 
-  // Manipular mudanças nos campos do formulário
+  /**
+   * Processa alterações nos campos do formulário
+   * 
+   * Inclui validações específicas para cada tipo de campo e lógica
+   * de dependências entre campos relacionados (categoria → área → tópico).
+   * 
+   * @param {Event} e - Evento de mudança do campo
+   */
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
-    if (name === 'imagem') {
-      const file = files[0];
-      setFormData({ ...formData, imagem: file });
+    console.log(`🔍 [CRIAR] Campo alterado: ${name} = ${name === 'imagem' ? 'FILE_OBJECT' : value}`);
 
-      // Criar uma prévia da imagem
+    if (name === 'imagem') {
+      // === PROCESSAMENTO DE UPLOAD DE IMAGEM ===
+      const file = files[0];
+
       if (file) {
+        console.log(`📁 [CRIAR] Ficheiro selecionado: ${file.name} (${file.type}, ${file.size} bytes)`);
+
+        // Validação de tamanho (15MB máximo)
+        const maxSize = 15 * 1024 * 1024;
+        if (file.size > maxSize) {
+          console.error(`❌ [CRIAR] Ficheiro demasiado grande: ${file.size} bytes`);
+          toast.error(`Ficheiro demasiado grande. Máximo 15MB permitido. O teu ficheiro tem ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
+          e.target.value = '';
+          return;
+        }
+
+        // Validação de tipo de ficheiro
+        const allowedTypes = [
+          'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+          'image/webp', 'image/svg+xml', 'image/bmp', 'image/tiff'
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+          // Verificação adicional por extensão para ficheiros com MIME type incorreto
+          const fileName = file.name.toLowerCase();
+          const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
+          const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+
+          if (!hasValidExtension) {
+            console.error(`❌ [CRIAR] Tipo de ficheiro não permitido: ${file.type}`);
+            toast.error(`Tipo de ficheiro não permitido: "${file.type}". Usa imagens nos formatos: JPEG, PNG, GIF, WebP, SVG, BMP ou TIFF.`);
+            e.target.value = '';
+            return;
+          } else {
+            toast.warning('Tipo de ficheiro não reconhecido, mas a extensão parece válida. Se houver problemas, tenta converter para JPEG ou PNG.');
+          }
+        }
+
+        // Verificação de integridade (tamanho mínimo)
+        if (file.size < 100) {
+          console.error(`❌ [CRIAR] Ficheiro muito pequeno (possivelmente corrompido): ${file.size} bytes`);
+          toast.error('O ficheiro parece estar corrompido ou é demasiado pequeno.');
+          e.target.value = '';
+          return;
+        }
+
+        // Atualizar estado com ficheiro válido
+        setFormData({ ...formData, imagem: file });
+
+        // Criar preview da imagem
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreviewImage(reader.result);
+          toast.success('Imagem carregada com sucesso!');
+        };
+        reader.onerror = () => {
+          console.error('❌ [CRIAR] Erro ao criar preview da imagem');
+          toast.error('Erro ao processar a imagem. Tenta novamente.');
+          setFormData({ ...formData, imagem: null });
         };
         reader.readAsDataURL(file);
       } else {
+        // Limpar imagem se nenhum ficheiro foi selecionado
+        setFormData({ ...formData, imagem: null });
         setPreviewImage(null);
       }
+
     } else if (name === 'tipo') {
-      // Se o curso mudar para assíncrono, limpar o formador
+      // === LÓGICA ESPECÍFICA PARA TIPOS DE CURSO ===
       if (value === 'assincrono') {
-        setFormData({ ...formData, [name]: value, id_formador: '', vagas: '' });
+        // Cursos assíncronos não precisam de formador nem vagas
+        setFormData({ ...formData, [name]: value, vagas: '', id_formador: '' });
+        toast.info('Curso assíncrono selecionado. Formador e vagas foram limpos automaticamente.');
+      } else if (value === 'sincrono') {
+        setFormData({ ...formData, [name]: value });
+        toast.info('Curso síncrono selecionado. Lembra-te de definir um formador e número de vagas.');
       } else {
         setFormData({ ...formData, [name]: value });
       }
+
     } else if (name === 'id_categoria') {
-      // Quando a categoria muda, limpar o campo de área e tópico
-      console.log("Categoria alterada para:", value);
+      // === GESTÃO DE DEPENDÊNCIAS HIERÁRQUICAS ===
+      // Limpar campos dependentes ao mudar categoria
       setFormData({ ...formData, [name]: value, id_area: '', id_topico: '' });
+      if (value) {
+        toast.info('Categoria selecionada. Por favor, seleciona uma área.');
+      }
+
     } else if (name === 'id_area') {
-      // Verificar se uma categoria foi selecionada antes
+      // Validar se categoria está selecionada primeiro
       if (!formData.id_categoria) {
         toast.error("É necessário selecionar uma categoria primeiro");
         return;
       }
-      // Quando a área muda, limpar apenas o tópico
       setFormData({ ...formData, [name]: value, id_topico: '' });
+      if (value) {
+        toast.info('Área selecionada. Por favor, seleciona um tópico.');
+      }
+
     } else if (name === 'id_topico') {
-      // Verificar se categoria e área foram selecionadas
+      // Validar hierarquia completa antes de selecionar tópico
       if (!formData.id_categoria) {
         toast.error("É necessário selecionar uma categoria primeiro");
         return;
@@ -339,24 +480,390 @@ const CriarCurso = () => {
         return;
       }
       setFormData({ ...formData, [name]: value });
+      if (value) {
+        toast.success('Tópico selecionado com sucesso!');
+      }
+
+    } else if (name === 'nome') {
+      // === VALIDAÇÕES ESPECÍFICAS DO NOME ===
+      if (value.length > 100) {
+        toast.warning('Nome do curso muito longo. Máximo 100 caracteres.');
+        return;
+      }
+
+      // Verificar caracteres problemáticos para nomes de ficheiros
+      const invalidChars = /[<>:"\/\\|?*]/g;
+      if (invalidChars.test(value)) {
+        toast.warning('Nome contém caracteres não recomendados para nomes de ficheiros.');
+      }
+      setFormData({ ...formData, [name]: value });
+
+    } else if (name === 'duracao') {
+      // === VALIDAÇÃO DA DURAÇÃO ===
+      const duracao = parseInt(value);
+      if (value && (isNaN(duracao) || duracao <= 0)) {
+        toast.error('A duração deve ser um número positivo');
+        return;
+      }
+      if (duracao > 1000) {
+        toast.warning('Duração muito longa. Verifica se está correta.');
+      }
+      setFormData({ ...formData, [name]: value });
+
+    } else if (name === 'vagas') {
+      // === VALIDAÇÃO DO NÚMERO DE VAGAS ===
+      const vagas = parseInt(value);
+      if (value && (isNaN(vagas) || vagas <= 0)) {
+        toast.error('O número de vagas deve ser um número positivo');
+        return;
+      }
+      if (vagas > 1000) {
+        toast.warning('Número de vagas muito alto. Verifica se está correto.');
+      }
+      setFormData({ ...formData, [name]: value });
+
+    } else if (name === 'data_inicio' || name === 'data_fim') {
+      // === VALIDAÇÃO DAS DATAS ===
+      if (value) {
+        const dataAtual = new Date();
+        const dataSelecionada = new Date(value);
+
+        // Normalizar para comparação de datas (ignorar horas)
+        dataAtual.setHours(0, 0, 0, 0);
+        dataSelecionada.setHours(0, 0, 0, 0);
+
+        if (name === 'data_inicio' && dataSelecionada < dataAtual) {
+          toast.error('A data de início não pode ser anterior à data atual');
+          return;
+        }
+
+        if (name === 'data_fim') {
+          const dataInicio = formData.data_inicio ? new Date(formData.data_inicio) : dataAtual;
+          dataInicio.setHours(0, 0, 0, 0);
+
+          if (dataSelecionada <= dataInicio) {
+            toast.error('A data de fim deve ser posterior à data de início');
+            return;
+          }
+        }
+      }
+      setFormData({ ...formData, [name]: value });
+
+    } else if (name === 'descricao') {
+      // === VALIDAÇÃO DA DESCRIÇÃO ===
+      if (value.length > 500) {
+        toast.warning('Descrição muito longa. Máximo 500 caracteres.');
+        return;
+      }
+      setFormData({ ...formData, [name]: value });
+
     } else {
+      // === CAMPOS GENÉRICOS ===
       setFormData({ ...formData, [name]: value });
     }
   };
 
-  // Manipular seleção de formador
+  /**
+   * Processa seleção de formador no modal
+   * 
+   * Atualiza o estado com o ID do formador selecionado e fornece
+   * feedback sobre a seleção ou remoção.
+   * 
+   * @param {number|null} formadorId - ID do formador selecionado ou null para remover
+   */
   const handleFormadorSelection = (formadorId) => {
-    // Se formadorId estiver vazio, isso significa que o utilizador removeu a seleção
     setFormData({ ...formData, id_formador: formadorId });
-    console.log(`Formador ${formadorId ? 'selecionado' : 'removido'}: ${formadorId}`);
+    console.log(`👨‍🏫 [CRIAR] Formador ${formadorId ? 'selecionado' : 'removido'}: ${formadorId}`);
   };
 
-  // Validar formulário antes de submeter
+  /**
+   * Processa submissão do formulário para criar o curso
+   * 
+   * Executa validação completa, cria FormData para envio, processa
+   * upload e gere associações de cursos. Inclui tratamento robusto
+   * de erros e feedback detalhado para o utilizador.
+   * 
+   * @param {Event} e - Evento de submissão do formulário
+   */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    console.log('🚀 [CRIAR] A iniciar submissão do formulário');
+    console.log('📊 [CRIAR] Estado atual do formData:', formData);
+
+    // === VALIDAÇÃO COMPLETA DO FORMULÁRIO ===
+    if (!validateForm()) {
+      toast.error('Por favor, corrige os erros no formulário antes de continuar');
+      return;
+    }
+
+    // === CRIAR FORMDATA PARA ENVIO ===
+    const data = new FormData();
+
+    // Adicionar todos os campos do formulário ao FormData
+    for (let key in formData) {
+      if (key === 'id_topico') {
+        // Mapear id_topico para id_topico_categoria (formato esperado pelo backend)
+        continue;
+      }
+
+      if (formData[key] !== null && formData[key] !== '' && formData[key] !== undefined) {
+        if (key === 'imagem' && formData[key]) {
+          // Verificação final de integridade da imagem
+          if (formData[key].size === 0) {
+            toast.error('A imagem parece estar corrompida. Tenta selecionar outra imagem.');
+            return;
+          }
+          data.append(key, formData[key]);
+        } else if (key !== 'imagem') {
+          data.append(key, formData[key]);
+        }
+      }
+    }
+
+    // Mapear tópico para formato esperado pelo backend
+    if (formData.id_topico) {
+      data.append('id_topico_categoria', formData.id_topico);
+    } else {
+      toast.error('Erro interno: tópico não selecionado corretamente');
+      return;
+    }
+
+    // === VERIFICAÇÕES PRÉ-ENVIO ===
+    
+    // Verificar conectividade à internet
+    if (!navigator.onLine) {
+      toast.error('Sem conexão à internet. Verifica a tua ligação e tenta novamente.');
+      return;
+    }
+
+    // Verificar token de autenticação
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Sessão expirada. Por favor, faz login novamente.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const uploadStartTime = Date.now();
+      console.log('📡 [CRIAR] A enviar para o servidor...');
+
+      // === ENVIAR CURSO PARA O BACKEND ===
+      const response = await axios.post(`${API_BASE}/cursos`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 60000, // Timeout de 1 minuto
+        
+        // Callback de progresso do upload para ficheiros grandes
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.lengthComputable) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`📈 [CRIAR] Progresso do upload: ${percentCompleted}%`);
+
+            // Mostrar progresso apenas para uploads grandes (>1MB)
+            if (progressEvent.total > 1024 * 1024) {
+              toast.info(`A enviar... ${percentCompleted}%`, { 
+                autoClose: false, 
+                toastId: 'upload-progress' 
+              });
+            }
+          }
+        }
+      });
+
+      const uploadDuration = (Date.now() - uploadStartTime) / 1000;
+      console.log(`✅ [CRIAR] Upload concluído em ${uploadDuration.toFixed(2)} segundos`);
+
+      // Remover toast de progresso e mostrar sucesso
+      toast.dismiss('upload-progress');
+      toast.success('🎉 Curso criado com sucesso!');
+
+      // === PROCESSAR ASSOCIAÇÕES DE CURSOS SE EXISTIREM ===
+      if (cursosAssociados.length > 0 && response.data.curso) {
+        const novoCursoId = response.data.curso.id_curso;
+        console.log(`🔗 [CRIAR] A processar ${cursosAssociados.length} associações`);
+
+        let associacoesCreated = 0;
+        let associacoesFailed = 0;
+
+        // Processar cada associação individualmente
+        for (const [index, cursoAssociado] of cursosAssociados.entries()) {
+          try {
+            await axios.post(`${API_BASE}/associar-cursos`, {
+              id_curso_origem: novoCursoId,
+              id_curso_destino: cursoAssociado.id_curso,
+              descricao: `Curso associado durante a criação de ${formData.nome}`
+            }, {
+              headers: { 'Authorization': `Bearer ${token}` },
+              timeout: 30000
+            });
+
+            associacoesCreated++;
+            console.log(`✅ [CRIAR] Associação ${index + 1} criada com sucesso`);
+          } catch (assocError) {
+            associacoesFailed++;
+            console.error(`❌ [CRIAR] Erro ao criar associação ${index + 1}:`, assocError);
+            toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
+          }
+        }
+
+        // Feedback sobre associações criadas
+        if (associacoesCreated > 0) {
+          toast.success(`🔗 ${associacoesCreated} associações de cursos criadas com sucesso!`);
+        }
+        if (associacoesFailed > 0) {
+          toast.warning(`⚠️ ${associacoesFailed} associações falharam. Podes tentar novamente mais tarde.`);
+        }
+      }
+
+      // === LIMPEZA E REDIRECIONAMENTO ===
+      
+      // Limpar formulário após sucesso
+      setFormData({
+        nome: '', descricao: '', tipo: '', vagas: '', duracao: '',
+        data_inicio: '', data_fim: '', id_formador: '', id_area: '',
+        id_categoria: '', id_topico: '', imagem: null,
+      });
+      setPreviewImage(null);
+      setCursosAssociados([]);
+
+      // Redirecionar para o curso criado após breve delay
+      const novoCursoId = response.data.curso.id_curso;
+      setTimeout(() => {
+        navigate(`/cursos/${novoCursoId}`);
+      }, 1500);
+
+    } catch (error) {
+      console.error('💥 [CRIAR] Erro durante o upload:', error);
+      toast.dismiss('upload-progress');
+
+      // === TRATAMENTO ESPECÍFICO DE ERROS ===
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            if (data?.error === 'NOME_DUPLICADO') {
+              toast.error('❌ Já existe um curso com este nome. Escolhe um nome diferente.');
+            } else if (data?.error === 'INVALID_FILE_TYPE') {
+              toast.error('❌ Tipo de ficheiro inválido. Usa uma imagem nos formatos: JPEG, PNG, GIF ou WebP.');
+            } else if (data?.error === 'LIMIT_FILE_SIZE') {
+              toast.error('❌ Ficheiro demasiado grande. Máximo 15MB permitido.');
+            } else {
+              toast.error(`❌ Dados inválidos: ${data?.message || 'Erro desconhecido'}`);
+            }
+            break;
+            
+          case 401:
+            toast.error('❌ Sessão expirada. Faz login novamente.');
+            localStorage.removeItem('token');
+            setTimeout(() => navigate('/login'), 2000);
+            break;
+            
+          case 403:
+            toast.error('❌ Não tens permissão para criar cursos. Contacta o administrador.');
+            break;
+            
+          case 413:
+            toast.error('❌ Ficheiro demasiado grande para o servidor. Reduz o tamanho da imagem.');
+            break;
+            
+          case 500:
+            toast.error('❌ Erro interno do servidor. Tenta novamente em alguns minutos.');
+            break;
+            
+          default:
+            toast.error(`❌ Erro do servidor (${status}): ${data?.message || 'Erro desconhecido'}`);
+        }
+      } else if (error.request) {
+        if (error.code === 'ECONNABORTED') {
+          toast.error('❌ Timeout: O servidor demorou muito a responder. Tenta novamente.');
+        } else {
+          toast.error('❌ Erro de rede. Verifica a tua ligação à internet.');
+        }
+      } else {
+        toast.error('❌ Erro inesperado. Tenta recarregar a página.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Valida todos os campos do formulário antes da submissão
+   * 
+   * Executa verificação abrangente de:
+   * - Campos obrigatórios básicos
+   * - Validações específicas por tipo de curso
+   * - Consistência de datas
+   * - Limites de tamanho de texto
+   * - Integridade de ficheiros
+   * 
+   * @returns {boolean} true se válido, false caso contrário
+   */
   const validateForm = () => {
-    // Validar datas
-    const dataInicio = new Date(formData.data_inicio);
-    const dataFim = new Date(formData.data_fim);
+    console.log('🔍 [CRIAR] A validar formulário...');
+
+    // === CAMPOS OBRIGATÓRIOS BÁSICOS ===
+    if (!formData.nome || formData.nome.trim() === '') {
+      toast.error("O nome do curso é obrigatório");
+      return false;
+    }
+
+    if (!formData.tipo) {
+      toast.error("É necessário selecionar o tipo de curso (Síncrono ou Assíncrono)");
+      return false;
+    }
+
+    if (!formData.duracao || parseInt(formData.duracao) <= 0) {
+      toast.error("É necessário definir uma duração válida para o curso em horas");
+      return false;
+    }
+
+    if (!formData.id_categoria) {
+      toast.error("É necessário selecionar uma categoria");
+      return false;
+    }
+
+    if (!formData.id_area) {
+      toast.error("É necessário selecionar uma área");
+      return false;
+    }
+
+    if (!formData.id_topico) {
+      toast.error("É necessário selecionar um tópico");
+      return false;
+    }
+
+    if (!formData.descricao || formData.descricao.trim() === '') {
+      toast.error("A descrição do curso é obrigatória");
+      return false;
+    }
+
+    // === VALIDAÇÃO DAS DATAS ===
+    if (!formData.data_inicio) {
+      toast.error("É necessário definir a data de início do curso");
+      return false;
+    }
+
+    if (!formData.data_fim) {
+      toast.error("É necessário definir a data de fim do curso");
+      return false;
+    }
+
+    // Verificar consistência das datas
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const dataInicio = new Date(formData.data_inicio);
+    dataInicio.setHours(0, 0, 0, 0);
+
+    const dataFim = new Date(formData.data_fim);
+    dataFim.setHours(0, 0, 0, 0);
 
     if (dataInicio < hoje) {
       toast.error("A data de início não pode ser anterior à data atual");
@@ -368,162 +875,86 @@ const CriarCurso = () => {
       return false;
     }
 
-    // Validar formador para cursos síncronos
-    if (formData.tipo === 'sincrono' && !formData.id_formador) {
-      toast.error("Seleciona um formador para o curso síncrono");
-      return false;
-    }
-
-    // Validar formador para cursos assíncronos deve ser administrador
-    if (formData.tipo === 'assincrono') {
+    // === VALIDAÇÕES ESPECÍFICAS PARA CURSOS SÍNCRONOS ===
+    if (formData.tipo === 'sincrono') {
       if (!formData.id_formador) {
-        toast.error("É obrigatório selecionar um formador administrador para cursos assíncronos");
+        toast.error("É obrigatório selecionar um formador para cursos síncronos");
         return false;
       }
 
-      // Verificar se o formador selecionado é administrador
-      const formadorSelecionado = formadores.find(f => {
-        const formadorId = f.id_utilizador || f.id_user || f.id || f.idUser || f.userId;
-        return String(formadorId) === String(formData.id_formador);
-      });
+      if (!formData.vagas || parseInt(formData.vagas) <= 0) {
+        toast.error("É necessário definir um número válido de vagas para cursos síncronos");
+        return false;
+      }
+    }
 
-      if (formadorSelecionado) {
-        const cargoFormador = formadorSelecionado.cargo?.id_cargo || formadorSelecionado.id_cargo;
-        if (cargoFormador !== 1) {
-          toast.error("Para cursos assíncronos, o formador deve ser um administrador");
+    // === VALIDAÇÕES DE TAMANHO DE TEXTO ===
+    if (formData.nome.length > 100) {
+      toast.error("O nome do curso não pode ter mais de 100 caracteres");
+      return false;
+    }
+
+    if (formData.descricao.length > 500) {
+      toast.error("A descrição não pode ter mais de 500 caracteres");
+      return false;
+    }
+
+    // === VALIDAÇÃO DE IMAGEM SE PRESENTE ===
+    if (formData.imagem) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      if (!allowedTypes.includes(formData.imagem.type)) {
+        // Verificação adicional por extensão
+        const fileName = formData.imagem.name.toLowerCase();
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+        const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+
+        if (!hasValidExtension) {
+          toast.error("Tipo de imagem inválido. Usa JPEG, PNG, GIF, WebP ou SVG");
           return false;
         }
       }
+
+      const maxSize = 15 * 1024 * 1024;
+      if (formData.imagem.size > maxSize) {
+        toast.error(`Imagem demasiado grande. Máximo 15MB permitido. A tua imagem tem ${(formData.imagem.size / 1024 / 1024).toFixed(2)}MB`);
+        return false;
+      }
     }
 
-    // Validar número de vagas para cursos síncronos
-    if (formData.tipo === 'sincrono' && (!formData.vagas || parseInt(formData.vagas) <= 0)) {
-      toast.error("Define um número válido de vagas para o curso síncrono");
-      return false;
-    }
-
-    // Validar seleção de tópico
-    if (!formData.id_topico) {
-      toast.error("É necessário selecionar um tópico");
-      return false;
-    }
-
-    // Validar duração
-    if (!formData.duracao || parseInt(formData.duracao) <= 0) {
-      toast.error("Define uma duração válida para o curso em horas");
-      return false;
-    }
-
+    console.log('✅ [CRIAR] Formulário validado com sucesso');
     return true;
   };
 
-  // Manipular submissão do formulário
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const data = new FormData();
-    for (let key in formData) {
-      if (formData[key] !== null && formData[key] !== '') {
-        data.append(key, formData[key]);
-      }
-    }
-
-    // Adicionar id_topico_categoria ao FormData
-    if (formData.id_topico) {
-      data.append('id_topico_categoria', formData.id_topico);
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await axios.post(`${API_BASE}/cursos`, data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-      });
-
-      toast.success('Curso criado com sucesso!');
-
-      // Se houver cursos a associar, criar as associações
-      if (cursosAssociados.length > 0 && response.data.curso) {
-        const novoCursoId = response.data.curso.id_curso;
-
-        // Criar cada associação
-        for (const cursoAssociado of cursosAssociados) {
-          try {
-            await axios.post(`${API_BASE}/associar-cursos`, {
-              id_curso_origem: novoCursoId,
-              id_curso_destino: cursoAssociado.id_curso,
-              descricao: `Curso associado durante a criação de ${formData.nome}`
-            }, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
-            });
-            console.log(`Associação criada: ${novoCursoId} -> ${cursoAssociado.id_curso}`);
-          } catch (assocError) {
-            console.error(`Erro ao criar associação com curso ${cursoAssociado.nome}:`, assocError);
-            toast.error(`Não foi possível associar o curso "${cursoAssociado.nome}"`);
-          }
-        }
-
-        toast.success(`${cursosAssociados.length} associações de cursos criadas com sucesso!`);
-      }
-
-      // Limpar o formulário após envio bem-sucedido
-      setFormData({
-        nome: '',
-        descricao: '',
-        tipo: '',
-        vagas: '',
-        duracao: '',
-        data_inicio: '',
-        data_fim: '',
-        id_formador: '',
-        id_area: '',
-        id_categoria: '',
-        id_topico: '',
-        imagem: null,
-      });
-      setPreviewImage(null);
-      setCursosAssociados([]);
-
-      // Redirecionar para a página do curso criado
-      const novoCursoId = response.data.curso.id_curso;
-      navigate(`/cursos/${novoCursoId}`);
-    } catch (error) {
-      console.error('Erro ao criar curso:', error);
-      const errorMessage = error.response?.data?.message || 'Erro desconhecido';
-      toast.error('Erro ao criar curso: ' + errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Encontrar o formador atual pelos dados
+  /**
+   * Obtém o nome do formador selecionado para exibição
+   * 
+   * Procura o formador na lista carregada e retorna o nome ou ID
+   * para mostrar na interface. Suporta diferentes estruturas de dados.
+   * 
+   * @returns {string|null} Nome do formador ou null se não encontrado
+   */
   const getFormadorNome = () => {
     if (!formData.id_formador || !formadores.length) return null;
 
     const formador = formadores.find(f => {
-      // Verificar diferentes propriedades possíveis para o ID
+      // Suportar diferentes formatos de ID do formador
       const formadorId = f.id_utilizador || f.id_user || f.id || f.idUser || f.userId;
       return String(formadorId) === String(formData.id_formador);
     });
 
-    // Verificar diferentes propriedades possíveis para o nome
     return formador ? (formador.nome || formador.name || formador.fullName || `ID: ${formData.id_formador}`) : `ID: ${formData.id_formador}`;
   };
 
   const formadorNome = getFormadorNome();
 
-  // Determinar a data mínima para os campos de data hoje
+  /**
+   * Determina a data mínima para os campos de data (hoje)
+   * 
+   * @returns {string} Data atual no formato YYYY-MM-DD
+   */
   const getMinDate = () => {
     const hoje = new Date();
-    return hoje.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    return hoje.toISOString().split('T')[0];
   };
 
   return (
@@ -532,6 +963,7 @@ const CriarCurso = () => {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
         <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
+          {/* === ÁREA DE UPLOAD DE IMAGEM === */}
           <div className="course-image-container">
             <div
               className="course-image-upload"
@@ -550,7 +982,9 @@ const CriarCurso = () => {
             </div>
           </div>
 
+          {/* === CAMPOS DO FORMULÁRIO === */}
           <div className="inputs">
+            {/* Linha 1: Nome e Tipo */}
             <div className="row">
               <input
                 type="text"
@@ -573,7 +1007,7 @@ const CriarCurso = () => {
               </select>
             </div>
 
-            {/* Categoria, Área e Tópico na mesma linha */}
+            {/* Linha 2: Categoria, Área e Tópico */}
             <div className="row">
               <select
                 name="id_categoria"
@@ -612,9 +1046,7 @@ const CriarCurso = () => {
                   <option value="" disabled>A carregar áreas...</option>
                 ) : areasFiltradas.length > 0 ? (
                   areasFiltradas.map(area => {
-                    // Obter ID da área de maneira flexível
                     const areaId = area.id_area || area.id || area.idArea || area.area_id;
-                    // Obter nome da área de maneira flexível
                     const areaNome = area.nome || area.name || area.descricao || area.description;
 
                     return (
@@ -651,9 +1083,7 @@ const CriarCurso = () => {
                   <option value="" disabled>A carregar tópicos...</option>
                 ) : topicosDisponiveis.length > 0 ? (
                   topicosDisponiveis.map(topico => {
-                    // Verificar diferentes formatos de ID
                     const topicoId = topico.id || topico.id_topico || topico.topico_id;
-                    // Verificar diferentes formatos de título
                     const topicoTitulo = topico.titulo || topico.title || topico.nome || topico.name;
 
                     return (
@@ -674,30 +1104,47 @@ const CriarCurso = () => {
               </select>
             </div>
 
+            {/* Linha 3: Formador, Vagas e Duração (condicional) */}
             <div className="row">
               {formData.tipo === 'sincrono' && (
-                <>
-                  <button
-                    type="button"
-                    className="select-formador-button"
-                    onClick={() => setModalAberto(true)}
-                  >
-                    <i className="fas fa-user-plus"></i>
-                    {formData.id_formador
-                      ? `Formador: ${formadorNome} (Clica para alterar)`
-                      : "Selecionar Formador"}
-                  </button>
-                  <input
-                    type="number"
-                    name="vagas"
-                    placeholder="Vagas"
-                    value={formData.vagas}
-                    onChange={handleChange}
-                    min="1"
-                    required
-                  />
-                </>
+                <button
+                  type="button"
+                  className="select-formador-button"
+                  onClick={() => setModalAberto(true)}
+                >
+                  <i className="fas fa-user-plus"></i>
+                  {formData.id_formador
+                    ? `Formador: ${formadorNome} (Clica para alterar)`
+                    : `Selecionar Formador`}
+                </button>
               )}
+
+              {formData.tipo === 'sincrono' && (
+                <input
+                  type="number"
+                  name="vagas"
+                  placeholder="Vagas"
+                  value={formData.vagas}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+              )}
+
+              {formData.tipo === 'assincrono' && (
+                <div className="info-box" style={{
+                  background: '#e8f4f8',
+                  border: '1px solid #bee5eb',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  color: '#0c5460'
+                }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+                  Cursos assíncronos não requerem formador e não têm limite de vagas
+                </div>
+              )}
+
               <input
                 type="number"
                 name="duracao"
@@ -709,6 +1156,7 @@ const CriarCurso = () => {
               />
             </div>
 
+            {/* Linha 4: Datas */}
             <div className="row">
               <div className="input-group">
                 <label>Data de Início</label>
@@ -735,6 +1183,7 @@ const CriarCurso = () => {
               </div>
             </div>
 
+            {/* Descrição */}
             <textarea
               name="descricao"
               placeholder="Descrição do curso"
@@ -745,6 +1194,7 @@ const CriarCurso = () => {
               required
             ></textarea>
 
+            {/* === GESTÃO DE ASSOCIAÇÕES === */}
             <div className="associacoes-container">
               <h3 className="associacoes-titulo">Cursos Associados</h3>
 
@@ -777,6 +1227,7 @@ const CriarCurso = () => {
               )}
             </div>
 
+            {/* === BOTÃO DE SUBMISSÃO === */}
             <button
               type="submit"
               className="submit-button"
@@ -787,6 +1238,7 @@ const CriarCurso = () => {
           </div>
         </form>
 
+        {/* === MODAIS === */}
         <FormadorModal
           isOpen={modalAberto}
           onClose={() => setModalAberto(false)}
@@ -795,16 +1247,15 @@ const CriarCurso = () => {
           currentFormadorId={formData.id_formador}
         />
 
+        <CursoAssociacaoModal
+          isOpen={modalAssociacaoAberto}
+          onClose={() => setModalAssociacaoAberto(false)}
+          onSelectCurso={handleAssociarCurso}
+          cursoAtualId={null}
+        />
+
         <ToastContainer />
       </div>
-
-      {/* Modal de associação de cursos */}
-      <CursoAssociacaoModal
-        isOpen={modalAssociacaoAberto}
-        onClose={() => setModalAssociacaoAberto(false)}
-        onSelectCurso={handleAssociarCurso}
-        cursoAtualId={null}
-      />
     </div>
   );
 };

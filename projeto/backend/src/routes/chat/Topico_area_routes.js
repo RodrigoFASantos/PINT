@@ -1,53 +1,57 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const authMiddleware = require("../../middleware/auth");
-const autorizar = require("../../middleware/autorizar");
-const { uploadChatFile } = require('../../middleware/upload_middleware');
-
-const {
+const { 
   getAllTopicosCategoria,
-  getAllTopicos,
   getTopicoById,
   getTopicosByCategoria,
   createTopico,
-  solicitarTopico,
   updateTopico,
   deleteTopico,
   getComentariosByTopico,
   createComentario,
-  avaliarComentario,
-  denunciarComentario
-} = require("../../controllers/chat/Topico_area_ctrl");
+  avaliarComentario
+} = require('../../controllers/chat/Topico_area_ctrl');
+const authMiddleware = require('../../middleware/auth');
 
-// Middleware para verificar autenticação
+/**
+ * Rotas para gestão de tópicos de área e comentários
+ * Permite criar, consultar, editar e interagir com tópicos e comentários
+ */
+
+// Aplicar autenticação a todas as rotas
 router.use(authMiddleware);
 
-// Rotas gerais para tópicos
-router.get("/", getAllTopicosCategoria);  // Mantém a rota original para compatibilidade
-router.get("/todos", getAllTopicos);      // rota para listar todos os tópicos com formato alternativo
+// === GESTÃO DE TÓPICOS ===
 
-// Rotas para manipulação de tópicos específicos
-router.get("/:id", getTopicoById);
-router.get("/categoria/:id_categoria", getTopicosByCategoria);
+// Listar todos os tópicos com filtros opcionais
+router.get('/', getAllTopicosCategoria);
 
-// Rotas para criar e manipular tópicos
-router.post("/", autorizar([1, 2]), createTopico);
-router.post("/solicitar", solicitarTopico);
-router.put("/:id", autorizar([1, 2]), updateTopico);
-router.delete("/:id", autorizar([1, 2]), deleteTopico);
+// Obter detalhes de um tópico específico
+router.get('/:id', getTopicoById);
 
-// Rota para obter todos os comentários de um tópico
-router.get("/:id/comentarios", getComentariosByTopico);
+// Obter tópicos filtrados por categoria específica
+router.get('/categoria/:id_categoria', getTopicosByCategoria);
 
-// Rota para criar um novo comentário em um tópico com upload de arquivo
-router.post(
-  "/:id/comentarios",
-  uploadChatFile,
-  createComentario
-);
+// Criar novo tópico de discussão
+router.post('/', createTopico);
 
-// Rotas para Comentários
-router.post("/:id_topico/comentarios/:id_comentario/avaliar", avaliarComentario);
-router.post("/:id_topico/comentarios/:id_comentario/denunciar", denunciarComentario);
+// Atualizar tópico existente
+router.put('/:id', updateTopico);
+
+// Eliminar tópico e todo o seu conteúdo
+router.delete('/:id', deleteTopico);
+
+// === GESTÃO DE COMENTÁRIOS ===
+
+// Obter comentários de um tópico específico
+router.get('/:id/comentarios', getComentariosByTopico);
+
+// Criar novo comentário em um tópico
+router.post('/:id/comentarios', createComentario);
+
+// === INTERAÇÃO COM COMENTÁRIOS ===
+
+// Avaliar comentário (like/dislike)
+router.post('/:id_topico/comentarios/:id_comentario/avaliar', avaliarComentario);
 
 module.exports = router;

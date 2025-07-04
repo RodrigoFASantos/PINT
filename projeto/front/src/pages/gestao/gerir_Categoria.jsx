@@ -152,7 +152,7 @@ const Gerir_Categoria = () => {
           // Verificar se o usuário tem permissão (admin ou gestor)
           if (currentUser.id_cargo !== 1) {
             console.log('[DEBUG] Gerir_Categoria: Usuário não é administrador. Redirecionando...');
-            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            toast.error('Acesso negado.  não tem permissão para acessar esta página.');
             navigate('/');
             return;
           }

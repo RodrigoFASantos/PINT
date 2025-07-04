@@ -1,8 +1,26 @@
-const { Topico_Area, ChatMensagem, User, Categoria, ChatDenuncia } = require('../../database/associations');
+const { Topico_Area, ChatMensagem, ChatInteracao, ChatDenuncia, User, Categoria, Area } = require('../../database/associations');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
-// Função para criar estrutura de diretórios para chat
+/**
+ * CONTROLADORES PARA SISTEMA DE CHAT E MENSAGENS DE TÓPICOS
+ * 
+ * Este módulo complementa o sistema de tópicos com funcionalidades
+ * específicas de chat em tempo real, gestão de mensagens e moderação.
+ * Fornece operações para interação dinâmica em tópicos de discussão
+ * com suporte a anexos multimédia e sistema de denúncias.
+ */
+
+// =============================================================================
+// FUNÇÕES AUXILIARES PARA GESTÃO DE FICHEIROS
+// =============================================================================
+
+/**
+ * Criar estrutura de diretórios para chat
+ * 
+ * Organiza automaticamente os ficheiros de chat em pastas
+ * hierárquicas baseadas na categoria e tópico da discussão.
+ */
 const createChatDirectoryStructure = (categoriaNome, topicoNome) => {
   try {
     const categoriaSlug = uploadUtils.normalizarNome(categoriaNome);
@@ -10,26 +28,43 @@ const createChatDirectoryStructure = (categoriaNome, topicoNome) => {
     
     return uploadUtils.criarDiretoriosChat(categoriaSlug, topicoSlug);
   } catch (error) {
-    console.error('Erro ao criar estrutura de diretórios:', error);
     return null;
   }
 };
 
-// Função para mover arquivo
+/**
+ * Mover ficheiro para localização definitiva
+ * 
+ * Transfere ficheiros da pasta temporária para o destino final
+ * organizando-os na estrutura de pastas apropriada.
+ */
 const moveFile = (origem, destino) => {
   return uploadUtils.moverArquivo(origem, destino);
 };
 
-// Função para obter o tipo de arquivo
+/**
+ * Determinar tipo de ficheiro baseado no MIME type
+ * 
+ * Classifica ficheiros em categorias (imagem, documento, vídeo, etc.)
+ * para facilitar o processamento e apresentação na interface.
+ */
 const getFileType = (mimetype) => {
   return uploadUtils.getFileType(mimetype);
 };
 
-// Controlador para obter detalhes de um tópico específico
+// =============================================================================
+// CONSULTA E NAVEGAÇÃO DE TÓPICOS
+// =============================================================================
+
+/**
+ * Obter detalhes completos de um tópico específico
+ * 
+ * Retorna informações completas sobre um tópico incluindo
+ * metadados, criador e informações da categoria associada.
+ */
 const getTopico = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`Buscando tópico com ID: ${id}`);
 
     const topico = await Topico_Area.findOne({
       where: { id_topico: id },
@@ -48,20 +83,17 @@ const getTopico = async (req, res) => {
     });
 
     if (!topico) {
-      console.log(`Tópico com ID ${id} não encontrado`);
       return res.status(404).json({
         success: false,
         message: 'Tópico não encontrado'
       });
     }
 
-    console.log(`Tópico encontrado:`, topico);
     res.status(200).json({
       success: true,
       data: topico
     });
   } catch (error) {
-    console.error('Erro ao obter tópico:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter detalhes do tópico',
@@ -70,11 +102,15 @@ const getTopico = async (req, res) => {
   }
 };
 
-// Controlador para obter todas as mensagens de um tópico
+/**
+ * Obter todas as mensagens de um tópico
+ * 
+ * Lista cronologicamente todas as mensagens de discussão
+ * de um tópico específico incluindo informações dos autores.
+ */
 const getMensagens = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`Buscando mensagens para o tópico ID: ${id}`);
 
     const mensagens = await ChatMensagem.findAll({
       where: { id_topico: id },
@@ -88,14 +124,11 @@ const getMensagens = async (req, res) => {
       order: [['data_criacao', 'ASC']]
     });
 
-    console.log(`Encontradas ${mensagens.length} mensagens para o tópico ${id}`);
-
     res.status(200).json({
       success: true,
       data: mensagens
     });
   } catch (error) {
-    console.error('Erro ao obter mensagens:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter mensagens do tópico',
@@ -104,16 +137,23 @@ const getMensagens = async (req, res) => {
   }
 };
 
-// Controlador para enviar uma nova mensagem num tópico
+// =============================================================================
+// CRIAÇÃO E GESTÃO DE MENSAGENS
+// =============================================================================
+
+/**
+ * Enviar nova mensagem num tópico
+ * 
+ * Processa criação de nova mensagem de chat com suporte
+ * para anexos de ficheiros e notificações em tempo real via WebSocket.
+ */
 const enviarMensagem = async (req, res) => {
   try {
     const { id } = req.params;
     const { texto } = req.body;
-    const userId = req.user.id_utilizador || req.user.id;
+    const userId = req.utilizador.id_utilizador || req.user.id_utilizador;
 
-    console.log(`Enviando mensagem para tópico ${id} pelo utilizador ${userId}`);
-    console.log(`Texto da mensagem: ${texto}`);
-
+    // Verificar se o tópico existe e obter dados da categoria
     const topico = await Topico_Area.findByPk(id, {
       include: [{ model: Categoria, as: 'categoria' }]
     });
@@ -125,6 +165,7 @@ const enviarMensagem = async (req, res) => {
       });
     }
 
+    // Preparar dados base da mensagem
     const mensagemData = {
       id_topico: id,
       id_utilizador: userId,
@@ -132,17 +173,17 @@ const enviarMensagem = async (req, res) => {
       data_criacao: new Date(),
       likes: 0,
       dislikes: 0,
-      denuncias: 0
+      foi_denunciada: false,
+      oculta: false
     };
 
+    // Processar anexo se fornecido
     if (req.file) {
-      console.log('Ficheiro detectado:', req.file.originalname);
-      
-      // Obter nomes para diretórios
+      // Obter nomes para organização de diretórios
       const categoriaNome = topico.categoria ? topico.categoria.nome : 'sem_categoria';
       const topicoNome = topico.titulo;
       
-      // Criar estrutura de diretórios para o chat
+      // Criar estrutura de diretórios específica para chat
       const chatPaths = createChatDirectoryStructure(categoriaNome, topicoNome);
       
       if (!chatPaths) {
@@ -152,11 +193,11 @@ const enviarMensagem = async (req, res) => {
         });
       }
 
-      // Gerar nome único para o arquivo
+      // Gerar nome único para o ficheiro
       const fileExtension = path.extname(req.file.originalname);
       const fileName = `${Date.now()}_${userId}${fileExtension}`;
       
-      // Mover o arquivo para o destino
+      // Transferir ficheiro para destino final
       const sourceFile = req.file.path;
       const targetFile = path.join(chatPaths.conteudosPath, fileName);
       
@@ -169,17 +210,18 @@ const enviarMensagem = async (req, res) => {
         });
       }
       
-      // Adicionar informações do arquivo à mensagem
+      // Adicionar informações do anexo à mensagem
       mensagemData.anexo_url = `${chatPaths.conteudosUrlPath}/${fileName}`;
       mensagemData.anexo_nome = req.file.originalname;
       mensagemData.tipo_anexo = getFileType(req.file.mimetype);
     }
 
+    // Criar mensagem na base de dados
     const novaMensagem = await ChatMensagem.create(mensagemData);
-    console.log(`Mensagem criada com ID: ${novaMensagem.id_comentario}`);
 
+    // Carregar mensagem completa com dados do utilizador
     const mensagemCompleta = await ChatMensagem.findOne({
-      where: { id_comentario: novaMensagem.id_comentario },
+      where: { id: novaMensagem.id },
       include: [
         {
           model: User,
@@ -189,8 +231,8 @@ const enviarMensagem = async (req, res) => {
       ]
     });
 
+    // Notificar utilizadores conectados via WebSocket
     if (req.io) {
-      console.log(`Emitindo evento 'novoComentario' para tópico ${id}`);
       req.io.to(`topico_${id}`).emit('novoComentario', mensagemCompleta);
     }
 
@@ -200,7 +242,6 @@ const enviarMensagem = async (req, res) => {
       data: mensagemCompleta
     });
   } catch (error) {
-    console.error('Erro ao enviar mensagem:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao enviar mensagem',
@@ -209,15 +250,23 @@ const enviarMensagem = async (req, res) => {
   }
 };
 
-// Controlador para avaliar um comentário (Like/Deslike)
+// =============================================================================
+// SISTEMA DE INTERAÇÕES E MODERAÇÃO
+// =============================================================================
+
+/**
+ * Avaliar mensagem (Like/Dislike)
+ * 
+ * Permite aos utilizadores expressar aprovação ou desaprovação
+ * sobre mensagens específicas no sistema de chat.
+ */
 const avaliarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
     const { tipo } = req.body;
-    const userId = req.user.id_utilizador || req.user.id;
+    const userId = req.utilizador.id_utilizador || req.user.id_utilizador;
 
-    console.log(`Avaliando comentário ${idComentario} como ${tipo}`);
-
+    // Validar tipo de avaliação
     if (!['like', 'dislike'].includes(tipo)) {
       return res.status(400).json({
         success: false,
@@ -225,6 +274,7 @@ const avaliarMensagem = async (req, res) => {
       });
     }
 
+    // Procurar mensagem a avaliar
     const mensagem = await ChatMensagem.findByPk(idComentario);
     if (!mensagem) {
       return res.status(404).json({
@@ -233,15 +283,65 @@ const avaliarMensagem = async (req, res) => {
       });
     }
 
-    if (tipo === 'like') {
-      await mensagem.update({ likes: mensagem.likes + 1 });
+    // Verificar se utilizador já avaliou esta mensagem
+    const interacaoExistente = await ChatInteracao.findOne({
+      where: {
+        id_mensagem: idComentario,
+        id_utilizador: userId
+      }
+    });
+
+    if (interacaoExistente) {
+      // Se a avaliação é a mesma, remover (toggle)
+      if (interacaoExistente.tipo === tipo) {
+        await interacaoExistente.destroy();
+        // Decrementar contador
+        if (tipo === 'like') {
+          await mensagem.update({ likes: Math.max(0, mensagem.likes - 1) });
+        } else {
+          await mensagem.update({ dislikes: Math.max(0, mensagem.dislikes - 1) });
+        }
+      } else {
+        // Alterar tipo de avaliação
+        await interacaoExistente.update({ tipo });
+        
+        // Ajustar contadores
+        if (tipo === 'like') {
+          await mensagem.update({ 
+            likes: mensagem.likes + 1,
+            dislikes: Math.max(0, mensagem.dislikes - 1)
+          });
+        } else {
+          await mensagem.update({ 
+            dislikes: mensagem.dislikes + 1,
+            likes: Math.max(0, mensagem.likes - 1)
+          });
+        }
+      }
     } else {
-      await mensagem.update({ dislikes: mensagem.dislikes + 1 });
+      // Criar nova interação
+      await ChatInteracao.create({
+        id_mensagem: idComentario,
+        id_utilizador: userId,
+        tipo,
+        data_interacao: new Date()
+      });
+      
+      // Incrementar contador apropriado
+      if (tipo === 'like') {
+        await mensagem.update({ likes: mensagem.likes + 1 });
+      } else {
+        await mensagem.update({ dislikes: mensagem.dislikes + 1 });
+      }
     }
 
+    // Recarregar mensagem para obter contadores atualizados
+    await mensagem.reload();
+
+    // Notificar via WebSocket
     if (req.io) {
       req.io.to(`topico_${mensagem.id_topico}`).emit('comentarioAvaliado', {
-        id_comentario: mensagem.id_comentario,
+        id_comentario: mensagem.id,
         likes: mensagem.likes,
         dislikes: mensagem.dislikes
       });
@@ -256,7 +356,6 @@ const avaliarMensagem = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao avaliar mensagem:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao avaliar mensagem',
@@ -265,16 +364,20 @@ const avaliarMensagem = async (req, res) => {
   }
 };
 
-// Denunciar uma mensagem
+/**
+ * Denunciar mensagem por conteúdo inadequado
+ * 
+ * Sistema de moderação comunitária que permite reportar conteúdo
+ * impróprio, spam ou que viole as regras de conduta da plataforma.
+ * Regista a denúncia e notifica automaticamente os administradores.
+ */
 const denunciarMensagem = async (req, res) => {
   try {
     const { idComentario } = req.params;
     const { motivo, descricao } = req.body;
-    const id_utilizador = req.user.id_utilizador || req.user.id;
+    const id_utilizador = req.utilizador.id_utilizador || req.user.id_utilizador;
 
-    console.log(`Denunciando comentário ${idComentario} por motivo: ${motivo}`);
-
-    // Validação básica
+    // Validar dados obrigatórios
     if (!motivo) {
       return res.status(400).json({
         success: false,
@@ -291,7 +394,7 @@ const denunciarMensagem = async (req, res) => {
       });
     }
 
-    // Verificar se o utilizador já denunciou esta mensagem
+    // Verificar se utilizador já denunciou esta mensagem
     const denunciaExistente = await ChatDenuncia.findOne({
       where: {
         id_mensagem: idComentario,
@@ -302,11 +405,11 @@ const denunciarMensagem = async (req, res) => {
     if (denunciaExistente) {
       return res.status(400).json({
         success: false,
-        message: 'Você já denunciou esta mensagem anteriormente'
+        message: 'Já denunciou esta mensagem anteriormente'
       });
     }
 
-    // Criar a denúncia na tabela específica
+    // Criar registo de denúncia
     await ChatDenuncia.create({
       id_mensagem: idComentario,
       id_denunciante: id_utilizador,
@@ -316,31 +419,25 @@ const denunciarMensagem = async (req, res) => {
       resolvida: false
     });
 
-    // Marcar a mensagem como denunciada e incrementar o contador
+    // Marcar mensagem como denunciada
     await mensagem.update({
-      foi_denunciado: true,
-      denuncias: mensagem.denuncias + 1
+      foi_denunciada: true
     });
 
-    // Notificar administradores via Socket.IO
+    // Notificar administradores via WebSocket
     if (req.io) {
       req.io.to('admin_channel').emit('comentarioDenunciado', {
-        id_comentario: mensagem.id_comentario,
+        id_comentario: mensagem.id,
         id_topico: mensagem.id_topico,
-        denuncias: mensagem.denuncias,
         motivo
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Mensagem denunciada com sucesso. Obrigado pela sua contribuição.',
-      data: {
-        denuncias: mensagem.denuncias
-      }
+      message: 'Mensagem denunciada com sucesso. Obrigado pela sua contribuição.'
     });
   } catch (error) {
-    console.error('Erro ao denunciar mensagem:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao denunciar mensagem',
@@ -349,13 +446,154 @@ const denunciarMensagem = async (req, res) => {
   }
 };
 
+// =============================================================================
+// FUNCIONALIDADES AUXILIARES DE MODERAÇÃO
+// =============================================================================
 
+/**
+ * Obter estatísticas de atividade de um tópico
+ * 
+ * Retorna métricas de participação e engagement
+ * para análise de moderadores e administradores.
+ */
+const obterEstatisticasTopico = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-// Exportar todas as funções no final do ficheiro
+    // Verificar se o tópico existe
+    const topico = await Topico_Area.findByPk(id);
+    if (!topico) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tópico não encontrado'
+      });
+    }
+
+    // Calcular estatísticas básicas
+    const totalMensagens = await ChatMensagem.count({
+      where: { id_topico: id }
+    });
+
+    const participantesUnicos = await ChatMensagem.count({
+      where: { id_topico: id },
+      distinct: true,
+      col: 'id_utilizador'
+    });
+
+    const mensagensComAnexos = await ChatMensagem.count({
+      where: { 
+        id_topico: id,
+        anexo_url: { [require('sequelize').Op.ne]: null }
+      }
+    });
+
+    const totalDenuncias = await ChatDenuncia.count({
+      include: [{
+        model: ChatMensagem,
+        as: 'mensagem',
+        where: { id_topico: id }
+      }]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id_topico: id,
+        titulo_topico: topico.titulo,
+        total_mensagens: totalMensagens,
+        participantes_unicos: participantesUnicos,
+        mensagens_com_anexos: mensagensComAnexos,
+        total_denuncias: totalDenuncias,
+        media_mensagens_por_participante: participantesUnicos > 0 ? (totalMensagens / participantesUnicos).toFixed(2) : 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao obter estatísticas do tópico',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Moderar mensagem (ocultar/mostrar)
+ * 
+ * Permite que moderadores ocultem temporariamente mensagens
+ * inadequadas sem as eliminar permanentemente.
+ */
+const moderarMensagem = async (req, res) => {
+  try {
+    const { idComentario } = req.params;
+    const { acao, motivo } = req.body; // acao: 'ocultar' ou 'mostrar'
+    const userRole = req.utilizador.id_cargo || req.user.id_cargo;
+
+    // Verificar permissões de moderação
+    if (userRole !== 1 && userRole !== 2) {
+      return res.status(403).json({
+        success: false,
+        message: 'Não tem permissões para moderar mensagens'
+      });
+    }
+
+    // Procurar mensagem
+    const mensagem = await ChatMensagem.findByPk(idComentario);
+    if (!mensagem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mensagem não encontrada'
+      });
+    }
+
+    // Aplicar ação de moderação
+    let novoEstado;
+    if (acao === 'ocultar') {
+      novoEstado = true;
+    } else if (acao === 'mostrar') {
+      novoEstado = false;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Ação inválida. Use "ocultar" ou "mostrar"'
+      });
+    }
+
+    await mensagem.update({
+      oculta: novoEstado
+    });
+
+    // Notificar via WebSocket
+    if (req.io) {
+      req.io.to(`topico_${mensagem.id_topico}`).emit('mensagemModerada', {
+        id_comentario: mensagem.id,
+        oculta: novoEstado,
+        motivo: motivo || null
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Mensagem ${acao === 'ocultar' ? 'ocultada' : 'exibida'} com sucesso`,
+      data: {
+        id_comentario: mensagem.id,
+        oculta: novoEstado
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao moderar mensagem',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getTopico,
   getMensagens,
   enviarMensagem,
   avaliarMensagem,
-  denunciarMensagem
+  denunciarMensagem,
+  obterEstatisticasTopico,
+  moderarMensagem
 };

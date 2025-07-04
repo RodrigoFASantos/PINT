@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: ASSOCIAÇÕES ENTRE CURSOS
+// =============================================================================
+// Permite criar relações entre cursos (pré-requisitos, cursos relacionados, etc.)
+// Útil para criar percursos formativos ou sugerir cursos complementares
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
@@ -16,7 +22,8 @@ const AssociarCursos = sequelize.define('AssociarCursos', {
       key: 'id_curso'
     },
     onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
+    comment: "Curso que está a ser associado"
   },
   id_curso_destino: {
     type: DataTypes.INTEGER,
@@ -26,12 +33,13 @@ const AssociarCursos = sequelize.define('AssociarCursos', {
       key: 'id_curso'
     },
     onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
+    comment: "Curso ao qual está a ser associado"
   },
   descricao: {
     type: DataTypes.TEXT,
     allowNull: true,
-    comment: 'Descrição opcional da relação entre os cursos'
+    comment: 'Descrição da relação entre os cursos (ex: pré-requisito, complementar)'
   }
 }, {
   tableName: 'associar_cursos',
@@ -54,6 +62,7 @@ const AssociarCursos = sequelize.define('AssociarCursos', {
     }
   ],
   validate: {
+    // Impede que um curso seja associado a si mesmo
     naoAssociarAoMesmoCurso() {
       if (this.id_curso_origem === this.id_curso_destino) {
         throw new Error('Um curso não pode ser associado a si mesmo');

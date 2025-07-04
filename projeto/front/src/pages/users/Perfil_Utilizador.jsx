@@ -8,6 +8,10 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import API_BASE, { IMAGES } from '../../api';
 
+/**
+ * Componente do perfil do utilizador
+ * Permite visualizar e editar informações pessoais
+ */
 const PerfilUser = () => {
   const { currentUser, updateUserInfo } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -20,7 +24,7 @@ const PerfilUser = () => {
     idade: ''
   });
 
-  // estados para categorias, áreas e cursos
+  // Estados para dados específicos de formador
   const [formadorData, setFormadorData] = useState({
     categorias: [],
     cursosInscritos: [],
@@ -36,30 +40,27 @@ const PerfilUser = () => {
   const [capaPreview, setCapaPreview] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // estado para controlar a aba ativa
+  // Estado para controlo de abas
   const [activeTab, setActiveTab] = useState('ministrados');
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Função para alternar entre abas
+  /**
+   * Alternar entre abas
+   */
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
 
-  // Código existente para carregar o perfil
+  // Inicialização do componente
   useEffect(() => {
-    console.log('🔄 INICIALIZAÇÃO: useEffect disparado, iniciando carregamento');
-
-    // Flag para gerenciar o cleanup quando o componente desmontar
     let isMounted = true;
 
     const loadProfile = async () => {
       try {
-        console.log('🔄 INICIALIZAÇÃO: Tentando carregar perfil do utilizador');
         const token = localStorage.getItem('token');
 
         if (!token) {
-          console.error('🔴 INICIALIZAÇÃO: Token não encontrado');
           toast.error('Sessão expirada. Por favor, faça login novamente.');
           setTimeout(() => {
             window.location.href = '/login';
@@ -67,23 +68,17 @@ const PerfilUser = () => {
           return;
         }
 
-        console.log('🔄 INICIALIZAÇÃO: Token encontrado, a buscar perfil');
-
-        // Buscar os dados do perfil
         await fetchUserProfile();
 
         if (isMounted) {
-          console.log('🟢 INICIALIZAÇÃO: Perfil carregado com sucesso');
+          // Perfil carregado com sucesso
         }
       } catch (error) {
         if (isMounted) {
-          console.error('🔴 INICIALIZAÇÃO: Erro crítico ao inicializar perfil:', error);
           toast.error('Erro ao carregar dados. A tentar novamente em 5 segundos...');
 
-          // Tentar novamente após 5 segundos
           setTimeout(() => {
             if (isMounted) {
-              console.log('🔄 INICIALIZAÇÃO: A tentar recarregar o perfil após falha');
               loadProfile();
             }
           }, 5000);
@@ -91,36 +86,25 @@ const PerfilUser = () => {
       }
     };
 
-    // Iniciar carregamento
     loadProfile();
 
-    // Cleanup ao desmontar o componente
     return () => {
       isMounted = false;
-      console.log('🔄 INICIALIZAÇÃO: Componente desmontando, a cancelar operações pendentes');
     };
   }, []);
 
+  /**
+   * Carregar perfil do utilizador
+   */
   const fetchUserProfile = async () => {
     try {
-      console.log('🔄 PERFIL: A iniciar busca do perfil do utilizador');
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('🔄 PERFIL: Token não encontrado, a abortar');
         return;
       }
 
-      console.log('🔄 PERFIL: A enviar requisição para a API');
       const response = await axios.get(`${API_BASE}/users/perfil`, {
         headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      console.log('🔄 PERFIL: Resposta recebida do servidor', {
-        status: response.status,
-        id_usuario: response.data.id_utilizador,
-        nome: response.data.nome,
-        foto_perfil: response.data.foto_perfil,
-        foto_capa: response.data.foto_capa
       });
 
       setUserInfo(response.data);
@@ -131,52 +115,35 @@ const PerfilUser = () => {
         idade: response.data.idade || ''
       });
 
-      // Verificar se é formador ou admin
+      // Verificar tipo de utilizador
       setIsFormador(response.data.id_cargo === 2);
       setIsAdmin(response.data.id_cargo === 1);
 
-      // Se for formador, buscar categorias, áreas e cursos
+      // Carregar dados específicos de formador
       if (response.data.id_cargo === 2) {
         await fetchFormadorData();
       }
 
-      // Extrair o nome do arquivo real (para debug)
-      const extractFilename = (path) => {
-        if (!path) return 'não definido';
-        const parts = path.split('/');
-        return parts[parts.length - 1];
-      };
-
-      console.log('🔄 PERFIL: Nome do arquivo AVATAR:', extractFilename(response.data.foto_perfil));
-      console.log('🔄 PERFIL: Nome do arquivo CAPA:', extractFilename(response.data.foto_capa));
-
-      // Adicionar timestamp para evitar cache do navegador + parâmetro force para garantir
+      // Configurar URLs das imagens com timestamp anti-cache
       const timestamp = Date.now();
       const cacheParam = `t=${timestamp}&force=true`;
-      console.log('🔄 PERFIL: Usando parâmetros anti-cache:', cacheParam);
 
-      // Configurar as URLs das imagens com timestamp para forçar recarregamento
       if (response.data.foto_perfil === 'AVATAR.png') {
-        console.log('🔄 PERFIL: Usando imagem de AVATAR padrão');
         setAvatarPreview(IMAGES.DEFAULT_AVATAR);
       } else {
         const avatarUrl = `${IMAGES.USER_AVATAR(response.data.email)}?${cacheParam}`;
-        console.log('🔄 PERFIL: URL do AVATAR com anti-cache:', avatarUrl);
         setAvatarPreview(avatarUrl);
       }
 
       if (response.data.foto_capa === 'CAPA.png') {
-        console.log('🔄 PERFIL: Usando imagem de CAPA padrão');
         setCapaPreview(IMAGES.DEFAULT_CAPA);
       } else {
         const capaUrl = `${IMAGES.USER_CAPA(response.data.email)}?${cacheParam}`;
-        console.log('🔄 PERFIL: URL da CAPA com anti-cache:', capaUrl);
         setCapaPreview(capaUrl);
       }
 
-      // Limpeza explícita de cache (adicional)
+      // Limpeza de cache
       if ('caches' in window) {
-        console.log('🔄 PERFIL: A limpar cache de imagens');
         caches.keys().then(names => {
           names.forEach(name => {
             caches.delete(name);
@@ -185,19 +152,17 @@ const PerfilUser = () => {
       }
 
     } catch (error) {
-      console.error('🔴 PERFIL: Erro ao buscar perfil:', error);
-      console.error('🔴 PERFIL: Detalhes do erro:', error.response || error.message);
       toast.error('Não foi possível carregar os dados do perfil');
     }
   };
 
-  // função para buscar dados específicos de formador
+  /**
+   * Carregar dados específicos de formador
+   */
   const fetchFormadorData = async () => {
     try {
-      console.log('🔄 FORMADOR: A iniciar busca de dados específicos do formador');
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('🔄 FORMADOR: Token não encontrado, a abortar');
         return;
       }
 
@@ -205,17 +170,9 @@ const PerfilUser = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      console.log('🔄 FORMADOR: Dados recebidos', {
-        categorias: response.data.categorias.length,
-        cursosInscritos: response.data.cursosInscritos.length,
-        cursosMinistrados: response.data.cursosMinistrados.length
-      });
-
       setFormadorData(response.data);
 
     } catch (error) {
-      console.error('🔴 FORMADOR: Erro ao buscar dados do formador:', error);
-      console.error('🔴 FORMADOR: Detalhes do erro:', error.response || error.message);
       toast.error('Não foi possível carregar os dados específicos do formador');
     }
   };
@@ -225,13 +182,13 @@ const PerfilUser = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Modificado para prevenir o comportamento padrão do evento
+  /**
+   * Alternar modo de edição
+   */
   const handleEditToggle = (e) => {
     e.preventDefault();
-    console.log("Botão de edição clicado. Estado atual de isEditing:", isEditing);
     setIsEditing(!isEditing);
 
-    // Se estiver cancelando a edição, restaurar os dados originais
     if (isEditing && userInfo) {
       setFormData({
         nome: userInfo.nome || '',
@@ -239,12 +196,14 @@ const PerfilUser = () => {
         telefone: userInfo.telefone || '',
         idade: userInfo.idade || ''
       });
-      // Limpar arquivos de upload
       setAvatarFile(null);
       setCapaFile(null);
     }
   };
 
+  /**
+   * Upload da foto de perfil
+   */
   const handleAvatarUpload = async (file) => {
     if (!file) return null;
 
@@ -253,13 +212,11 @@ const PerfilUser = () => {
 
     if (userInfo && userInfo.email) {
       formData.append('email', userInfo.email);
-      console.log('Email adicionado ao FormData:', userInfo.email);
     }
 
     try {
       setIsUploading(true);
       const token = localStorage.getItem('token');
-      console.log('A enviar upload de avatar com token:', token ? 'Presente' : 'Ausente');
 
       const response = await axios.post(`${API_BASE}/users/img/perfil`, formData, {
         headers: {
@@ -272,12 +229,14 @@ const PerfilUser = () => {
       return response.data;
     } catch (error) {
       setIsUploading(false);
-      console.error('Erro ao fazer upload do avatar:', error.response || error);
       toast.error('Falha ao enviar imagem de perfil: ' + (error.response?.data?.message || error.message));
       return null;
     }
   };
 
+  /**
+   * Upload da foto de capa
+   */
   const handleCapaUpload = async (file) => {
     if (!file) return null;
 
@@ -286,13 +245,11 @@ const PerfilUser = () => {
 
     if (userInfo && userInfo.email) {
       formData.append('email', userInfo.email);
-      console.log('Email adicionado ao FormData:', userInfo.email);
     }
 
     try {
       setIsUploading(true);
       const token = localStorage.getItem('token');
-      console.log('A enviar upload de capa com token:', token ? 'Presente' : 'Ausente');
 
       const response = await axios.post(`${API_BASE}/users/img/capa`, formData, {
         headers: {
@@ -305,20 +262,20 @@ const PerfilUser = () => {
       return response.data;
     } catch (error) {
       setIsUploading(false);
-      console.error('Erro ao fazer upload da capa:', error.response || error);
       toast.error('Falha ao enviar imagem de capa: ' + (error.response?.data?.message || error.message));
       return null;
     }
   };
 
+  /**
+   * Submeter alterações do perfil
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Formulário enviado com dados:", formData);
 
     try {
       const token = localStorage.getItem('token');
 
-      // Atualizar dados do perfil
       const response = await axios.put(`${API_BASE}/users/perfil`, formData, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -327,10 +284,8 @@ const PerfilUser = () => {
         toast.success('Perfil atualizado com sucesso!');
         setIsEditing(false);
 
-        // Recarregar dados do perfil
         await fetchUserProfile();
 
-        // Atualizar o contexto de autenticação se essa função existir
         if (typeof updateUserInfo === 'function') {
           updateUserInfo(userInfo);
         }
@@ -339,23 +294,27 @@ const PerfilUser = () => {
       }
 
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
       toast.error('Erro ao atualizar o perfil: ' + (error.response?.data?.message || 'Erro desconhecido'));
     }
   };
 
-  // Funções para lidar com cliques nas áreas de imagem
+  /**
+   * Acionar upload de avatar
+   */
   const handleAvatarClick = () => {
-    // Aciona o input de arquivo
     document.getElementById('avatar-upload').click();
   };
 
+  /**
+   * Acionar upload de capa
+   */
   const handleCapaClick = () => {
-    // Aciona o input de arquivo
     document.getElementById('capa-upload').click();
   };
 
-  // Função modificada para fazer upload automático
+  /**
+   * Processar mudança de avatar
+   */
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -364,44 +323,29 @@ const PerfilUser = () => {
         return;
       }
 
-      console.log('🖼️ AVATAR: A iniciar processo de upload', {
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: `${(file.size / 1024).toFixed(2)} KB`
-      });
-
       setAvatarFile(file);
 
       // Criar preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        console.log('🖼️ AVATAR: Preview criado e armazenado na memória');
         setAvatarPreview(reader.result);
       };
       reader.readAsDataURL(file);
 
-      // Toast de notificação
       toast.info('A enviar imagem de perfil...', { autoClose: false, toastId: 'uploading-avatar' });
 
       try {
-        // Upload automático
-        console.log('🖼️ AVATAR: A enviar para o servidor via API');
         const result = await handleAvatarUpload(file);
 
         if (result) {
-          console.log('🖼️ AVATAR: Upload bem-sucedido', result);
           toast.update('uploading-avatar', {
             render: 'Imagem de perfil atualizada com sucesso!',
             type: 'success',
             autoClose: 3000
           });
 
-          // Recarrega o perfil para obter a URL atualizada
-          console.log('🖼️ AVATAR: A recarregar perfil para atualizar URLs das imagens');
           await fetchUserProfile();
-          console.log('🖼️ AVATAR: Perfil recarregado');
         } else {
-          console.error('🖼️ AVATAR: Falha no upload - resposta vazia ou null');
           toast.update('uploading-avatar', {
             render: 'Falha ao enviar imagem de perfil',
             type: 'error',
@@ -409,7 +353,6 @@ const PerfilUser = () => {
           });
         }
       } catch (error) {
-        console.error('🖼️ AVATAR: Erro durante o processo de upload', error);
         toast.update('uploading-avatar', {
           render: `Erro ao enviar imagem: ${error.message}`,
           type: 'error',
@@ -419,7 +362,9 @@ const PerfilUser = () => {
     }
   };
 
-  // Função modificada para fazer upload automático
+  /**
+   * Processar mudança de capa
+   */
   const handleCapaChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -428,44 +373,29 @@ const PerfilUser = () => {
         return;
       }
 
-      console.log('🖼️ CAPA: A iniciar processo de upload', {
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: `${(file.size / 1024).toFixed(2)} KB`
-      });
-
       setCapaFile(file);
 
       // Criar preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        console.log('🖼️ CAPA: Preview criado e armazenado na memória');
         setCapaPreview(reader.result);
       };
       reader.readAsDataURL(file);
 
-      // Toast de notificação
       toast.info('A enviar imagem de capa...', { autoClose: false, toastId: 'uploading-capa' });
 
       try {
-        // Upload automático
-        console.log('🖼️ CAPA: A enviar para o servidor via API');
         const result = await handleCapaUpload(file);
 
         if (result) {
-          console.log('🖼️ CAPA: Upload bem-sucedido', result);
           toast.update('uploading-capa', {
             render: 'Imagem de capa atualizada com sucesso!',
             type: 'success',
             autoClose: 3000
           });
 
-          // Recarrega o perfil para obter a URL atualizada
-          console.log('🖼️ CAPA: A recarregar perfil para atualizar URLs das imagens');
           await fetchUserProfile();
-          console.log('🖼️ CAPA: Perfil recarregado, URLs atualizadas');
         } else {
-          console.error('🖼️ CAPA: Falha no upload - resposta vazia ou null');
           toast.update('uploading-capa', {
             render: 'Falha ao enviar imagem de capa',
             type: 'error',
@@ -473,7 +403,6 @@ const PerfilUser = () => {
           });
         }
       } catch (error) {
-        console.error('🖼️ CAPA: Erro durante o processo de upload', error);
         toast.update('uploading-capa', {
           render: `Erro ao enviar imagem: ${error.message}`,
           type: 'error',
@@ -483,19 +412,18 @@ const PerfilUser = () => {
     }
   };
 
+  /**
+   * Terminar sessão
+   */
   const handleLogout = () => {
-    // Remover token do localStorage
     localStorage.removeItem('token');
 
-    // Se estiver usando o contexto de autenticação, atualize-o
     if (typeof updateUserInfo === 'function') {
       updateUserInfo(null);
     }
 
-    // Exibir mensagem de sucesso
     toast.success('Sessão terminada com sucesso!');
 
-    // Redirecionar para a página de login após um breve delay
     setTimeout(() => {
       window.location.href = '/login';
     }, 1500);
@@ -527,9 +455,8 @@ const PerfilUser = () => {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <div className="perfil-content">
-        {/* Seção da capa do perfil */}
+        {/* Foto de capa */}
         <div className="perfil-capa" style={{ backgroundImage: `url('${capaPreview}')` }} onClick={isUploading ? null : handleCapaClick}>
-          {/* Input oculto para upload de capa */}
           <input
             id="capa-upload"
             type="file"
@@ -541,7 +468,7 @@ const PerfilUser = () => {
           {isUploading && <div className="uploading-overlay">A enviar imagem...</div>}
         </div>
 
-        {/* Botão de engrenagem - AGORA POSICIONADO ENTRE A CAPA E AS INFORMAÇÕES */}
+        {/* Botão de configurações */}
         <button
           className="btn-settings-gear"
           onClick={handleEditToggle}
@@ -554,7 +481,6 @@ const PerfilUser = () => {
         <div className="perfil-info">
           <div className="perfil-avatar-container">
             <div className="perfil-avatar" style={{ backgroundImage: `url('${avatarPreview}')` }} onClick={isUploading ? null : handleAvatarClick}>
-              {/* Input oculto para upload de avatar */}
               <input
                 id="avatar-upload"
                 type="file"
@@ -573,18 +499,10 @@ const PerfilUser = () => {
               <span className="cargo-badge">{userInfo.cargo?.descricao || 'Cargo não definido'}</span>
             </div>
 
-
-
-
-
-
-
-
             <div className={`perfil-dados ${isEditing ? 'editing-mode' : ''}`}>
               {isEditing ? (
                 <form id="edit-form" onSubmit={handleSubmit}>
                   <div className="colunas-input">
-                    {/* Coluna Nome com classe específica */}
                     <div className="coluna coluna-nome">
                       <div className="form-group">
                         <input
@@ -597,7 +515,6 @@ const PerfilUser = () => {
                       </div>
                     </div>
 
-                    {/* Coluna Email com classe específica */}
                     <div className="coluna coluna-email">
                       <div className="form-group">
                         <input
@@ -610,7 +527,6 @@ const PerfilUser = () => {
                       </div>
                     </div>
 
-                    {/* Coluna Telefone com classe específica */}
                     <div className="coluna coluna-telefone">
                       <div className="form-group">
                         <input
@@ -623,7 +539,6 @@ const PerfilUser = () => {
                       </div>
                     </div>
 
-                    {/* Coluna Idade com classe específica */}
                     <div className="coluna coluna-idade">
                       <div className="form-group">
                         <input
@@ -638,7 +553,6 @@ const PerfilUser = () => {
                       </div>
                     </div>
 
-                    {/* Coluna Botões com classe específica - botões lado a lado */}
                     <div className="coluna coluna-botoes">
                       <button type="submit" className="btn-action-icon btn-save-icon" title="Guardar">
                         <i className="fas fa-check"></i>
@@ -679,12 +593,7 @@ const PerfilUser = () => {
               )}
             </div>
 
-
-
-
-
-
-            {/* seção para exibir categorias e áreas (apenas para formadores) */}
+            {/* Especializações para formadores */}
             {isFormador && (
               <div className="formador-categorias-areas">
                 <h3>Especializações</h3>
@@ -714,7 +623,7 @@ const PerfilUser = () => {
           </div>
         </div>
 
-        {/* seção para exibir cursos do formador */}
+        {/* Cursos do formador */}
         {isFormador && (
           <div className="formador-cursos-section">
             <div className="cursos-tabs">
@@ -733,7 +642,7 @@ const PerfilUser = () => {
             </div>
 
             <div className="cursos-content">
-              {/* Tabela de cursos ministrados */}
+              {/* Cursos ministrados */}
               <div
                 className="cursos-table-container"
                 style={{ display: activeTab === 'ministrados' ? 'block' : 'none' }}
@@ -766,11 +675,11 @@ const PerfilUser = () => {
                     </tbody>
                   </table>
                 ) : (
-                  <p className="no-data-message">Você não está a ministrar nenhum curso atualmente.</p>
+                  <p className="no-data-message"> não está a ministrar nenhum curso atualmente.</p>
                 )}
               </div>
 
-              {/* Tabela de cursos inscritos */}
+              {/* Cursos inscritos */}
               <div
                 className="cursos-table-container"
                 style={{ display: activeTab === 'inscritos' ? 'block' : 'none' }}
@@ -803,14 +712,14 @@ const PerfilUser = () => {
                     </tbody>
                   </table>
                 ) : (
-                  <p className="no-data-message">Você não está inscrito em nenhum curso atualmente.</p>
+                  <p className="no-data-message"> não está inscrito em nenhum curso atualmente.</p>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Botão de Terminar Sessão posicionado no canto inferior direito */}
+        {/* Botão de terminar sessão */}
         <div className="logout-button-container">
           <button
             type="button"

@@ -31,7 +31,7 @@ export default function CursoPagina() {
   // Extrair valores do estado cursoData para uso mais fácil
   const { curso, inscrito, loading, error, acessoNegado } = cursoData;
 
-  // Configurar o userRole baseado no usuário atual
+  // Configurar o userRole baseado no utilizador atual
   useEffect(() => {
     if (currentUser && currentUser.id_cargo) {
       setUserRole(currentUser.id_cargo);
@@ -71,7 +71,7 @@ export default function CursoPagina() {
           return;
         }
 
-        // Verificar inscrição do usuário no curso
+        // Verificar inscrição do utilizador no curso
         const inscricaoResponse = await axios.get(`${API_BASE}/inscricoes/verificar/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });

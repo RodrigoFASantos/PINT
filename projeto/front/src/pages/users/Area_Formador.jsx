@@ -7,15 +7,19 @@ import CriarConteudoModal from '../../components/cursos/Criar_Conteudo_Modal';
 import CriarAvaliacaoModal from '../../components/cursos/Criar_Avaliacao_Modal';
 import '../users/css/Area_Formador.css';
 
+/**
+ * Área do formador - exibe os cursos que o formador está a ministrar
+ * Permite acesso rápido aos cursos e suas funcionalidades
+ */
 export default function AreaFormador() {
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Sidebar
+  // Estados para controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Modais
+  // Estados para modais
   const [showAddConteudo, setShowAddConteudo] = useState(false);
   const [showAvaliacao, setShowAvaliacao] = useState(false);
   const [cursoSelecionado, setCursoSelecionado] = useState(null);
@@ -23,7 +27,7 @@ export default function AreaFormador() {
 
   const navigate = useNavigate();
 
-  // Busca de cursos ministrados
+  // Carregar cursos ministrados pelo formador
   useEffect(() => {
     const fetchCursosFormador = async () => {
       try {
@@ -33,7 +37,7 @@ export default function AreaFormador() {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Extrai e formata os cursos ministrados
+        // Extrair e formatar dados dos cursos
         const { cursosMinistrados = [] } = response.data;
         const formatados = cursosMinistrados.map(c => ({
           cursoId: c.id,
@@ -44,7 +48,7 @@ export default function AreaFormador() {
           dataFim: c.dataFim,
           tipoCurso: c.tipo,
           vagasTotais: c.vagas,
-          status: c.status // se o backend enviar
+          status: c.status
         }));
 
         setCursos(formatados);
@@ -58,10 +62,14 @@ export default function AreaFormador() {
     fetchCursosFormador();
   }, []);
 
-  // Redireciona para detalhe do curso
+  /**
+   * Navegar para página de detalhes do curso
+   */
   const handleVerCurso = (id) => navigate(`/cursos/${id}`);
 
-  // Calcula status se não vier do backend
+  /**
+   * Determinar estado do curso baseado nas datas
+   */
   const verificarStatusCurso = (curso) => {
     if (curso.status) return curso.status;
     const hoje = new Date();
@@ -70,6 +78,28 @@ export default function AreaFormador() {
     if (hoje >= inicio && hoje <= fim) return "Em curso";
     if (hoje > fim) return "Terminado";
     return "Agendado";
+  };
+
+  /**
+   * Recarregar lista de cursos após alterações
+   */
+  const recarregarCursos = async () => {
+    const token = localStorage.getItem('token');
+    const resp = await axios.get(`${API_BASE}/formadores/profile`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const { cursosMinistrados = [] } = resp.data;
+    setCursos(cursosMinistrados.map(c => ({
+      cursoId: c.id,
+      nomeCurso: c.nome,
+      categoria: c.categoria,
+      area: c.area,
+      dataInicio: c.dataInicio,
+      dataFim: c.dataFim,
+      tipoCurso: c.tipo,
+      vagasTotais: c.vagas,
+      status: c.status
+    })));
   };
 
   if (loading) {
@@ -143,38 +173,19 @@ export default function AreaFormador() {
         </div>
       </div>
 
-
-      {/* Modal de criar conteúdo */}
+      {/* Modal para criar conteúdo */}
       {showAddConteudo && cursoSelecionado && (
         <CriarConteudoModal
           curso={cursoSelecionado}
           onClose={() => setShowAddConteudo(false)}
           onSuccess={() => {
             setShowAddConteudo(false);
-            // Recarrega cursos ao criar conteúdo
-            (async () => {
-              const token = localStorage.getItem('token');
-              const resp = await axios.get(`${API_BASE}/formadores/profile`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              const { cursosMinistrados = [] } = resp.data;
-              setCursos(cursosMinistrados.map(c => ({
-                cursoId: c.id,
-                nomeCurso: c.nome,
-                categoria: c.categoria,
-                area: c.area,
-                dataInicio: c.dataInicio,
-                dataFim: c.dataFim,
-                tipoCurso: c.tipo,
-                vagasTotais: c.vagas,
-                status: c.status
-              })));
-            })();
+            recarregarCursos();
           }}
         />
       )}
 
-      {/* Modal de criar avaliação */}
+      {/* Modal para criar avaliação */}
       {showAvaliacao && cursoSelecionado && alunoSelecionado && (
         <CriarAvaliacaoModal
           curso={cursoSelecionado}
@@ -182,25 +193,7 @@ export default function AreaFormador() {
           onClose={() => setShowAvaliacao(false)}
           onSuccess={() => {
             setShowAvaliacao(false);
-            // Recarrega cursos ao avaliar aluno
-            (async () => {
-              const token = localStorage.getItem('token');
-              const resp = await axios.get(`${API_BASE}/formadores/profile`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              const { cursosMinistrados = [] } = resp.data;
-              setCursos(cursosMinistrados.map(c => ({
-                cursoId: c.id,
-                nomeCurso: c.nome,
-                categoria: c.categoria,
-                area: c.area,
-                dataInicio: c.dataInicio,
-                dataFim: c.dataFim,
-                tipoCurso: c.tipo,
-                vagasTotais: c.vagas,
-                status: c.status
-              })));
-            })();
+            recarregarCursos();
           }}
         />
       )}

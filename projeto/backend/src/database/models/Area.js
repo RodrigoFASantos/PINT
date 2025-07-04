@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: ÁREAS DE FORMAÇÃO
+// =============================================================================
+// Define as áreas específicas dentro de cada categoria de formação
+// Exemplo: Categoria "Informática" pode ter áreas como "Programação", "Redes", etc.
+
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -10,6 +16,7 @@ const Area = sequelize.define("areas", {
   nome: {
     type: DataTypes.STRING(255),
     allowNull: false,
+    comment: "Nome da área de formação (ex: Programação Web, Design Gráfico)"
   },
   id_categoria: {
     type: DataTypes.INTEGER,
@@ -18,6 +25,7 @@ const Area = sequelize.define("areas", {
       model: "categorias",
       key: "id_categoria",
     },
+    comment: "Categoria pai à qual esta área pertence"
   },
 }, {
   tableName: "areas",

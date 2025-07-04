@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../../middleware/auth");
 const autorizar = require("../../middleware/autorizar");
-
 const {
   getForumTemaDenuncias,
   getForumComentarioDenuncias,
@@ -18,124 +17,57 @@ const {
   ocultarChatMensagem
 } = require("../../controllers/chat/denuncias_ctrl");
 
-// Middleware para verificar autenticação em todas as rotas
+/**
+ * Rotas para gestão de denúncias
+ * Permite criar, consultar e resolver denúncias de conteúdo inadequado
+ * Inclui gestão de temas, comentários do fórum e mensagens de chat
+ */
+
+// Aplicar autenticação a todas as rotas
 router.use(authMiddleware);
 
-// ========================================
-// ROTAS PÚBLICAS (para qualquer usuário autenticado)
-// ========================================
+// === ROTAS PÚBLICAS (qualquer utilizador autenticado) ===
 
-// Rota para criar denúncia de tema
+// Criar denúncia de tema do fórum
 router.post("/forum-tema/denunciar", criarForumTemaDenuncia);
 
-// Rota para verificar denúncias feitas pelo utilizador
+// Consultar denúncias feitas pelo utilizador
 router.get("/usuario/denuncias-temas", getUsuarioDenunciasTemas);
-
-// Rota para verificar comentários denunciados pelo utilizador
 router.get("/usuario/denuncias-comentarios", getUsuarioDenunciasComentarios);
 
-// ========================================
-// ROTAS ADMINISTRATIVAS (apenas para admins - cargo 1)
-// ========================================
+// === ROTAS ADMINISTRATIVAS (apenas administradores) ===
 
-// Middleware de debug para rotas administrativas
-router.use((req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Rota administrativa acessada: ${req.method} ${req.originalUrl}`);
-  console.log(`🔍 [DENUNCIAS] Utilizador: ${req.utilizador?.nome} (Cargo: ${req.utilizador?.id_cargo})`);
-  next();
-});
+// === CONSULTA DE DENÚNCIAS ===
 
-// ========================================
-// ROTAS PARA OBTER DENÚNCIAS (URL corrigidas para coincidir com frontend)
-// ========================================
+// Obter denúncias de temas do fórum
+router.get("/denuncias/forum-tema", autorizar([1]), getForumTemaDenuncias);
 
-// Frontend chama: /api/denuncias/denuncias/forum-tema
-router.get("/denuncias/forum-tema", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Obtendo denúncias de temas do fórum`);
-  next();
-}, getForumTemaDenuncias);
+// Obter denúncias de comentários do fórum
+router.get("/denuncias/forum-comentario", autorizar([1]), getForumComentarioDenuncias);
 
-// Frontend chama: /api/denuncias/denuncias/forum-comentario
-router.get("/denuncias/forum-comentario", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Obtendo denúncias de comentários do fórum`);
-  next();
-}, getForumComentarioDenuncias);
+// Obter denúncias de mensagens de chat
+router.get("/denuncias/chat", autorizar([1]), getChatDenuncias);
 
-// Frontend chama: /api/denuncias/denuncias/chat
-router.get("/denuncias/chat", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Obtendo denúncias de chat`);
-  next();
-}, getChatDenuncias);
+// === RESOLUÇÃO DE DENÚNCIAS ===
 
-// ========================================
-// ROTAS PARA RESOLVER DENÚNCIAS (URL corrigidas)
-// ========================================
+// Resolver denúncia de tema do fórum
+router.post("/denuncias/forum-tema/:id/resolver", autorizar([1]), resolverForumTemaDenuncia);
 
-// Frontend chama: /api/denuncias/denuncias/forum-tema/${id}/resolver
-router.post("/denuncias/forum-tema/:id/resolver", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Resolvendo denúncia de tema ID: ${req.params.id}`);
-  console.log(`🔍 [DENUNCIAS] Ação tomada: ${req.body.acao_tomada}`);
-  next();
-}, resolverForumTemaDenuncia);
+// Resolver denúncia de comentário do fórum
+router.post("/denuncias/forum-comentario/:id/resolver", autorizar([1]), resolverForumComentarioDenuncia);
 
-// Frontend chama: /api/denuncias/denuncias/forum-comentario/${id}/resolver
-router.post("/denuncias/forum-comentario/:id/resolver", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Resolvendo denúncia de comentário ID: ${req.params.id}`);
-  console.log(`🔍 [DENUNCIAS] Ação tomada: ${req.body.acao_tomada}`);
-  next();
-}, resolverForumComentarioDenuncia);
+// Resolver denúncia de mensagem de chat
+router.post("/denuncias/chat/:id/resolver", autorizar([1]), resolverChatDenuncia);
 
-// Frontend chama: /api/denuncias/denuncias/chat/${id}/resolver
-router.post("/denuncias/chat/:id/resolver", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Resolvendo denúncia de chat ID: ${req.params.id}`);
-  console.log(`🔍 [DENUNCIAS] Ação tomada: ${req.body.acao_tomada}`);
-  next();
-}, resolverChatDenuncia);
+// === OCULTAÇÃO DE CONTEÚDO ===
 
-// ========================================
-// ROTAS PARA OCULTAR CONTEÚDO (URL corrigidas)
-// ========================================
+// Ocultar tema do fórum
+router.post("/forum-tema/ocultar", autorizar([1]), ocultarForumTema);
 
-// Frontend chama: /api/denuncias/forum-tema/ocultar
-router.post("/forum-tema/ocultar", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Ocultando tema ID: ${req.body.id}`);
-  next();
-}, ocultarForumTema);
+// Ocultar comentário do fórum
+router.post("/forum-comentario/ocultar", autorizar([1]), ocultarForumComentario);
 
-// Frontend chama: /api/denuncias/forum-comentario/ocultar
-router.post("/forum-comentario/ocultar", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Ocultando comentário ID: ${req.body.id}`);
-  next();
-}, ocultarForumComentario);
-
-// Frontend chama: /api/denuncias/chat-mensagem/ocultar
-router.post("/chat-mensagem/ocultar", autorizar([1]), (req, res, next) => {
-  console.log(`🔍 [DENUNCIAS] Ocultando mensagem de chat ID: ${req.body.id}`);
-  next();
-}, ocultarChatMensagem);
-
-// ========================================
-// ROTA DE DEBUG PARA VERIFICAR TODAS AS ROTAS DISPONÍVEIS
-// ========================================
-router.get("/debug/rotas", autorizar([1]), (req, res) => {
-  const rotas = [
-    'GET /denuncias/forum-tema',
-    'GET /denuncias/forum-comentario', 
-    'GET /denuncias/chat',
-    'POST /denuncias/forum-tema/:id/resolver',
-    'POST /denuncias/forum-comentario/:id/resolver',
-    'POST /denuncias/chat/:id/resolver',
-    'POST /forum-tema/ocultar',
-    'POST /forum-comentario/ocultar',
-    'POST /chat-mensagem/ocultar'
-  ];
-  
-  res.json({
-    success: true,
-    message: "Rotas de denúncias disponíveis",
-    rotas: rotas,
-    baseUrl: "/api/denuncias"
-  });
-});
+// Ocultar mensagem de chat
+router.post("/chat-mensagem/ocultar", autorizar([1]), ocultarChatMensagem);
 
 module.exports = router;

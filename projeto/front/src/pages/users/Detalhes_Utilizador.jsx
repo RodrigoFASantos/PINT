@@ -4,6 +4,10 @@ import API_BASE, { IMAGES } from "../../api";
 import Sidebar from "../../components/Sidebar";
 import "./css/Detalhes_Formadores.css";
 
+/**
+ * Componente para exibir detalhes de um utilizador específico
+ * Mostra informações pessoais do utilizador
+ */
 const DetalhesUtilizador = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -14,6 +18,9 @@ const DetalhesUtilizador = () => {
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  /**
+   * Carregar dados do utilizador
+   */
   const fetchUtilizador = useCallback(async () => {
     try {
       setLoading(true);
@@ -34,7 +41,6 @@ const DetalhesUtilizador = () => {
       setUtilizador(userData);
       
     } catch (error) {
-      console.error("Erro ao carregar dados do utilizador:", error);
       setError(error.message || "Erro desconhecido ao carregar dados do utilizador.");
     } finally {
       setLoading(false);
@@ -45,6 +51,9 @@ const DetalhesUtilizador = () => {
     fetchUtilizador();
   }, [fetchUtilizador]);
 
+  /**
+   * Obter URL da imagem do utilizador
+   */
   const getImageUrl = (utilizador, type = 'avatar') => {
     if (!utilizador) return type === 'avatar' ? '/placeholder-formador.jpg' : '/placeholder-cover.jpg';
     
@@ -83,6 +92,9 @@ const DetalhesUtilizador = () => {
     navigate('/admin/usuarios');
   };
 
+  /**
+   * Obter nome do cargo baseado no ID
+   */
   const getCargoNome = (idCargo) => {
     switch (parseInt(idCargo)) {
       case 1: return 'Gestor';

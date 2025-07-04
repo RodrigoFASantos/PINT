@@ -1,13 +1,29 @@
+const rateLimit = require('express-rate-limit');
+const Joi = require('joi');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Sistema completo de tratamento de erros, rate limiting e validação
+ * Inclui middlewares para controlo de erro, limitação de requisições e validação de dados
+ */
+
 // ==========================================
-// 1. MIDDLEWARE DE TRATAMENTO DE ERROS
+// MIDDLEWARE DE TRATAMENTO DE ERROS GLOBAL
 // ==========================================
 
+/**
+ * Middleware global para tratamento centralizado de erros
+ * @param {Error} err - Objecto de erro
+ * @param {Object} req - Requisição HTTP
+ * @param {Object} res - Resposta HTTP
+ * @param {Function} next - Próximo middleware
+ */
 const errorHandler = (err, req, res, next) => {
-  console.error('=== ERRO ENCONTRADO ===');
+  console.error('=== ERRO DETECTADO ===');
   console.error('URL:', req.originalUrl);
   console.error('Método:', req.method);
   console.error('Erro:', err.message);
-  console.error('Stack:', err.stack);
   
   // Erro de validação do Sequelize
   if (err.name === 'SequelizeValidationError') {
@@ -23,7 +39,7 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'SequelizeUniqueConstraintError') {
     return res.status(409).json({
       success: false,
-      message: 'Já existe um registro com estes dados',
+      message: 'Já existe um registo com estes dados',
       errors: [err.message]
     });
   }
@@ -48,43 +64,44 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = errorHandler;
-
 // ==========================================
-// 2. MIDDLEWARE DE RATE LIMITING
+// SISTEMA DE RATE LIMITING
 // ==========================================
-// Arquivo: middleware/rateLimit.js
 
-const rateLimit = require('express-rate-limit');
-
-// Rate limit geral para APIs
+/**
+ * Rate limit geral para todas as APIs
+ */
 const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP por window
+  max: 100, // máximo 100 requisições por IP
   message: {
     success: false,
     message: 'Muitas tentativas. Tente novamente mais tarde.',
-    errors: ['Rate limit excedido']
+    errors: ['Limite de requisições excedido']
   },
   standardHeaders: true,
   legacyHeaders: false
 });
 
-// Rate limit específico para quiz (mais restritivo)
+/**
+ * Rate limit específico para operações de quiz (mais restritivo)
+ */
 const quizRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 10, // máximo 10 requests por IP por minuto
+  max: 10, // máximo 10 requisições por minuto
   message: {
     success: false,
     message: 'Muitas tentativas de quiz. Aguarde um momento.',
-    errors: ['Rate limit para quiz excedido']
+    errors: ['Limite de quiz excedido']
   }
 });
 
-// Rate limit para submissão de quiz (muito restritivo)
+/**
+ * Rate limit para submissão de quiz (muito restritivo)
+ */
 const submitRateLimit = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutos
-  max: 3, // máximo 3 submissões por IP por 5 minutos
+  max: 3, // máximo 3 submissões por 5 minutos
   message: {
     success: false,
     message: 'Muitas submissões de quiz. Aguarde antes de tentar novamente.',
@@ -92,20 +109,13 @@ const submitRateLimit = rateLimit({
   }
 });
 
-module.exports = {
-  generalRateLimit,
-  quizRateLimit,
-  submitRateLimit
-};
-
 // ==========================================
-// 3. VALIDAÇÃO COM JOI
+// SISTEMA DE VALIDAÇÃO COM JOI
 // ==========================================
-// Arquivo: middleware/quizValidation.js
 
-const Joi = require('joi');
-
-// Schema para criação de quiz
+/**
+ * Schema de validação para criação de quiz
+ */
 const createQuizSchema = Joi.object({
   titulo: Joi.string()
     .required()
@@ -161,7 +171,7 @@ const createQuizSchema = Joi.object({
           .valid('multipla_escolha', 'verdadeiro_falso', 'resposta_curta')
           .required()
           .messages({
-            'any.only': 'Tipo de pergunta deve ser: multipla_escolha, verdadeiro_falso ou resposta_curta'
+            'any.only': 'Tipo deve ser: multipla_escolha, verdadeiro_falso ou resposta_curta'
           }),
           
         pontos: Joi.number()
@@ -198,7 +208,7 @@ const createQuizSchema = Joi.object({
                 return value;
               })
               .messages({
-                'custom.exactlyOneCorrect': 'Verdadeiro/Falso deve ter exatamente uma opção correta'
+                'custom.exactlyOneCorrect': 'Verdadeiro/Falso deve ter exactamente uma opção correcta'
               }),
             otherwise: Joi.array()
               .min(2)
@@ -218,7 +228,7 @@ const createQuizSchema = Joi.object({
               })
               .messages({
                 'array.min': 'Múltipla escolha deve ter pelo menos 2 opções',
-                'custom.exactlyOneCorrect': 'Múltipla escolha deve ter exatamente uma opção correta'
+                'custom.exactlyOneCorrect': 'Múltipla escolha deve ter exactamente uma opção correcta'
               })
           })
         })
@@ -229,25 +239,29 @@ const createQuizSchema = Joi.object({
     })
 });
 
-// Schema para submissão de quiz
+/**
+ * Schema de validação para submissão de quiz
+ */
 const submitQuizSchema = Joi.object({
   respostas: Joi.object()
     .pattern(
-      Joi.number().integer(), // pergunta ID
+      Joi.number().integer(), // ID da pergunta
       Joi.alternatives().try(
-        Joi.number().integer(), // índice da opção selecionada
+        Joi.number().integer(), // índice da opção seleccionada
         Joi.string(), // resposta de texto
         Joi.array().items(Joi.number().integer()) // múltiplas opções (futuro)
       )
     )
     .required()
     .messages({
-      'object.base': 'Respostas devem ser um objeto',
+      'object.base': 'Respostas devem ser um objecto',
       'any.required': 'Respostas são obrigatórias'
     })
 });
 
-// Middleware de validação
+/**
+ * Middleware de validação para criação de quiz
+ */
 const validateCreateQuiz = (req, res, next) => {
   const { error, value } = createQuizSchema.validate(req.body, { 
     abortEarly: false,
@@ -267,6 +281,9 @@ const validateCreateQuiz = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware de validação para submissão de quiz
+ */
 const validateSubmitQuiz = (req, res, next) => {
   const { error, value } = submitQuizSchema.validate(req.body, { 
     abortEarly: false 
@@ -285,33 +302,27 @@ const validateSubmitQuiz = (req, res, next) => {
   next();
 };
 
-module.exports = {
-  validateCreateQuiz,
-  validateSubmitQuiz,
-  createQuizSchema,
-  submitQuizSchema
-};
-
 // ==========================================
-// 4. MIDDLEWARE DE LOGGING/AUDITORIA
+// SISTEMA DE AUDITORIA E LOGGING
 // ==========================================
-// Arquivo: middleware/auditLogger.js
 
-const fs = require('fs');
-const path = require('path');
-
-// Garantir que o diretório de logs existe
+// Garantir que o directório de logs existe
 const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
+/**
+ * Middleware de auditoria para registar acções importantes
+ * @param {string} action - Tipo de acção a ser auditada
+ * @returns {Function} Middleware de auditoria
+ */
 const auditLogger = (action) => {
   return (req, res, next) => {
     const originalSend = res.send;
     
     res.send = function(data) {
-      // Log da ação
+      // Preparar entrada de log
       const logEntry = {
         timestamp: new Date().toISOString(),
         action,
@@ -330,7 +341,7 @@ const auditLogger = (action) => {
         success: res.statusCode < 400
       };
       
-      // Adicionar dados específicos baseado na ação
+      // Adicionar dados específicos baseado na acção
       if (action === 'QUIZ_CREATED' && res.statusCode === 201) {
         try {
           const responseData = JSON.parse(data);
@@ -354,14 +365,9 @@ const auditLogger = (action) => {
         }
       }
       
-      // Escrever log
+      // Escrever log no ficheiro
       const logFile = path.join(logsDir, `quiz-audit-${new Date().toISOString().split('T')[0]}.log`);
       fs.appendFileSync(logFile, JSON.stringify(logEntry) + '\n');
-      
-      // Log no console em desenvolvimento
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AUDIT] ${action}:`, logEntry);
-      }
       
       originalSend.call(this, data);
     };
@@ -370,87 +376,14 @@ const auditLogger = (action) => {
   };
 };
 
-module.exports = auditLogger;
-
-
-// Arquivo: routes/quiz_route_melhorado.js
-
-const express = require("express");
-const router = express.Router();
-const verificarToken = require('../../middleware/auth');
-const autorizar = require('../../middleware/autorizar');
-const { generalRateLimit, quizRateLimit, submitRateLimit } = require('../../middleware/rateLimit');
-const { validateCreateQuiz, validateSubmitQuiz } = require('../../middleware/quizValidation');
-const auditLogger = require('../../middleware/auditLogger');
-
-const { 
-  getAllQuizzes, 
-  createQuiz, 
-  getQuizById, 
-  updateQuiz,
-  updateQuizCompleto,
-  deleteQuiz,
-  iniciarQuiz, 
-  submeterQuiz,
-} = require("../../controllers/quiz/quiz_ctrl");
-
-// Aplicar rate limiting geral
-router.use(generalRateLimit);
-
-// Rotas abertas para todos utilizadores autenticados
-router.get("/", verificarToken, getAllQuizzes);
-router.get("/:id", verificarToken, getQuizById);
-
-// Rotas para administradores e formadores com validação e auditoria
-router.post("/", 
-  verificarToken, 
-  autorizar([1, 2]), 
+module.exports = {
+  errorHandler,
+  generalRateLimit,
   quizRateLimit,
-  validateCreateQuiz,
-  auditLogger('QUIZ_CREATED'),
-  createQuiz
-);
-
-router.put("/:id", 
-  verificarToken, 
-  autorizar([1, 2]), 
-  quizRateLimit,
-  auditLogger('QUIZ_UPDATED'),
-  updateQuiz
-);
-
-router.put("/:id/completo", 
-  verificarToken, 
-  autorizar([1, 2]), 
-  quizRateLimit,
-  validateCreateQuiz,
-  auditLogger('QUIZ_UPDATED_COMPLETE'),
-  updateQuizCompleto
-);
-
-router.delete("/:id", 
-  verificarToken, 
-  autorizar([1, 2]), 
-  auditLogger('QUIZ_DELETED'),
-  deleteQuiz
-);
-
-// Rotas para formandos fazerem quizzes com rate limiting específico
-router.post("/:id_quiz/iniciar", 
-  verificarToken, 
-  autorizar([3]), 
-  quizRateLimit,
-  auditLogger('QUIZ_STARTED'),
-  iniciarQuiz
-);
-
-router.post("/:id/submeter", 
-  verificarToken, 
-  autorizar([3]), 
   submitRateLimit,
+  validateCreateQuiz,
   validateSubmitQuiz,
-  auditLogger('QUIZ_SUBMITTED'),
-  submeterQuiz
-);
-
-module.exports = router;
+  createQuizSchema,
+  submitQuizSchema,
+  auditLogger
+};

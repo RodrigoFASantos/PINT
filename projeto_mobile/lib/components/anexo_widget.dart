@@ -424,7 +424,7 @@ class AnexoItem extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // Aqui você pode adicionar lógica para download
+              // Aqui  pode adicionar lógica para download
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(

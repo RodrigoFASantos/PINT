@@ -182,7 +182,6 @@ class NavbarScreen extends StatelessWidget implements PreferredSizeWidget {
   void _navigateToPerfil(BuildContext context) {
     Navigator.pushNamed(context, '/perfil').catchError((error) {
       debugPrint('Erro na navegação para perfil: $error');
-      // Aqui você pode adicionar uma navegação alternativa se necessário
     });
   }
 

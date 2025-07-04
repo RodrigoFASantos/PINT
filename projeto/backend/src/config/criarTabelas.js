@@ -1,14 +1,26 @@
 const sequelize = require("../config/db");
 
+/**
+ * Cria todas as tabelas da aplicação na ordem correta
+ * 
+ * A ordem é fundamental devido às dependências de chaves estrangeiras:
+ * 1. Tabelas base (cargos, categorias)
+ * 2. Utilizadores e dependências
+ * 3. Cursos e estrutura académica
+ * 4. Sistema de mensagens e fórum
+ * 5. Avaliações e certificações
+ * 
+ * Configurado com CASCADE DELETE para facilitar gestão de dados
+ */
 const createTablesInOrder = async () => {
   const createTablesSQL = [
-    // Tabela de cargos
+    // Tabela de cargos/funções dos utilizadores
     `CREATE TABLE IF NOT EXISTS cargos (
       id_cargo SERIAL PRIMARY KEY,
       descricao VARCHAR(255) NOT NULL
     );`,
 
-    // Tabela de utilizadores pendentes
+    // Tabela para utilizadores em processo de registo (validação de email)
     `CREATE TABLE IF NOT EXISTS "User_Pendente" (
       id SERIAL PRIMARY KEY,
       id_cargo INTEGER NOT NULL,
@@ -23,7 +35,7 @@ const createTablesInOrder = async () => {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
 
-    // Tabela de utilizadores principais
+    // Tabela principal de utilizadores do sistema
     `CREATE TABLE IF NOT EXISTS utilizadores (
       id_utilizador SERIAL PRIMARY KEY,
       id_cargo INTEGER NOT NULL REFERENCES cargos(id_cargo),
@@ -43,20 +55,20 @@ const createTablesInOrder = async () => {
       descricao TEXT
     );`,
 
-    // Tabela de categorias
+    // Sistema de categorização de cursos - nível superior
     `CREATE TABLE IF NOT EXISTS categorias (
       id_categoria SERIAL PRIMARY KEY,
       nome VARCHAR(255) NOT NULL UNIQUE
     );`,
 
-    // Tabela de áreas
+    // Áreas específicas dentro de cada categoria
     `CREATE TABLE IF NOT EXISTS areas (
       id_area SERIAL PRIMARY KEY,
       nome VARCHAR(255) NOT NULL,
       id_categoria INTEGER NOT NULL REFERENCES categorias(id_categoria)
     );`,
 
-    // Tabela de associações pendentes de formadores
+    // Associações pendentes de formadores (durante registo)
     `CREATE TABLE IF NOT EXISTS formador_associacoes_pendentes (
       id SERIAL PRIMARY KEY,
       id_pendente INTEGER NOT NULL REFERENCES "User_Pendente"(id) ON DELETE CASCADE,
@@ -67,7 +79,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_formador_pendente UNIQUE (id_pendente)
     );`,
 
-    // Tabela de formadores e categorias
+    // Ligação entre formadores e categorias que podem lecionar
     `CREATE TABLE IF NOT EXISTS formador_categoria (
       id SERIAL PRIMARY KEY,
       id_formador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
@@ -76,7 +88,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_formador_categoria UNIQUE (id_formador, id_categoria)
     );`,
 
-    // Tabela de formadores e áreas
+    // Ligação entre formadores e áreas específicas
     `CREATE TABLE IF NOT EXISTS formador_area (
       id SERIAL PRIMARY KEY,
       id_formador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
@@ -85,7 +97,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_formador_area UNIQUE (id_formador, id_area)
     );`,
 
-    // Tabela de tópicos de área corrigida com cascade
+    // Tópicos de discussão dentro de cada área
     `CREATE TABLE IF NOT EXISTS topico_area (
       id_topico SERIAL PRIMARY KEY,
       id_categoria INTEGER NOT NULL REFERENCES categorias(id_categoria),
@@ -97,7 +109,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN NOT NULL DEFAULT TRUE
     );`,
 
-    // Tabela de cursos corrigida com set null para formador
+    // Tabela principal de cursos
     `CREATE TABLE IF NOT EXISTS curso (
       id_curso SERIAL PRIMARY KEY,
       nome VARCHAR(255) NOT NULL,
@@ -117,7 +129,7 @@ const createTablesInOrder = async () => {
       dir_path VARCHAR(500)
     );`,
 
-    // Tabela de associação entre cursos nova funcionalidade
+    // Sistema de associação entre cursos (pré-requisitos, sequências)
     `CREATE TABLE IF NOT EXISTS associar_cursos (
       id_associacao SERIAL PRIMARY KEY,
       id_curso_origem INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -125,15 +137,11 @@ const createTablesInOrder = async () => {
       descricao TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      
-      -- Constraint única para evitar associações duplicadas
       CONSTRAINT unique_course_association UNIQUE(id_curso_origem, id_curso_destino),
-      
-      -- Validação para impedir que um curso seja associado a si mesmo
       CONSTRAINT check_different_courses CHECK (id_curso_origem != id_curso_destino)
     );`,
 
-    // Tabela de inscrições em cursos já tinha cascade mantido
+    // Inscrições de formandos em cursos
     `CREATE TABLE IF NOT EXISTS inscricoes_cursos (
       id_inscricao SERIAL PRIMARY KEY,
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
@@ -149,7 +157,7 @@ const createTablesInOrder = async () => {
       data_cancelamento TIMESTAMP WITH TIME ZONE
     );`,
 
-    // Tabela de presença em cursos
+    // Registo de presenças para cursos síncronos
     `CREATE TABLE IF NOT EXISTS curso_presenca (
       id_curso_presenca SERIAL PRIMARY KEY,
       id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -160,7 +168,7 @@ const createTablesInOrder = async () => {
       codigo VARCHAR(20) NOT NULL
     );`,
 
-    // Tabela de presença de formandos corrigida com cascade
+    // Registo individual de presença de cada formando
     `CREATE TABLE IF NOT EXISTS formando_presenca (
       id_formando_presenca SERIAL PRIMARY KEY,
       id_curso_presenca INTEGER NOT NULL REFERENCES curso_presenca(id_curso_presenca) ON DELETE CASCADE,
@@ -169,7 +177,7 @@ const createTablesInOrder = async () => {
       duracao DECIMAL(5,2) NULL
     );`,
 
-    // Tabela de avaliações corrigida com cascade
+    // Avaliações finais e certificações
     `CREATE TABLE IF NOT EXISTS avaliacoes (
       id_avaliacao SERIAL PRIMARY KEY,
       id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao) ON DELETE CASCADE,
@@ -182,7 +190,7 @@ const createTablesInOrder = async () => {
       data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
-    // Tabela de ocorrências de cursos
+    // Sistema de edições/ocorrências de cursos
     `CREATE TABLE IF NOT EXISTS ocorrencias_cursos (
       id_ocorrencia SERIAL PRIMARY KEY,
       id_curso_original INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -191,7 +199,7 @@ const createTablesInOrder = async () => {
       numero_edicao INTEGER NOT NULL
     );`,
 
-    // Tabela de notificações
+    // Sistema de notificações da aplicação
     `CREATE TABLE IF NOT EXISTS notificacoes (
       id_notificacao SERIAL PRIMARY KEY,
       titulo VARCHAR(255) NOT NULL,
@@ -202,7 +210,7 @@ const createTablesInOrder = async () => {
       enviado_email BOOLEAN NOT NULL DEFAULT FALSE
     );`,
 
-    // Tabela de notificações para utilizadores já tinha cascade mantido
+    // Ligação entre notificações e utilizadores (quem recebe)
     `CREATE TABLE IF NOT EXISTS notificacoes_utilizadores (
       id SERIAL PRIMARY KEY,
       id_notificacao INTEGER NOT NULL REFERENCES notificacoes(id_notificacao) ON DELETE CASCADE,
@@ -212,7 +220,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_notificacao_utilizador UNIQUE (id_notificacao, id_utilizador)
     );`,
 
-    // Tabela de quizzes
+    // Sistema de quizzes/questionários
     `CREATE TABLE IF NOT EXISTS quizzes (
       id_quiz SERIAL PRIMARY KEY,
       id_curso INTEGER NOT NULL REFERENCES curso(id_curso) ON DELETE CASCADE,
@@ -224,7 +232,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE
     );`,
 
-    // Tabela de perguntas de quiz
+    // Perguntas individuais dos quizzes
     `CREATE TABLE IF NOT EXISTS quiz_perguntas (
       id_pergunta SERIAL PRIMARY KEY,
       id_quiz INTEGER NOT NULL REFERENCES quizzes(id_quiz) ON DELETE CASCADE,
@@ -234,7 +242,7 @@ const createTablesInOrder = async () => {
       ordem INTEGER NOT NULL DEFAULT 0
     );`,
 
-    // Tabela de opções de quiz
+    // Opções de resposta para perguntas de múltipla escolha
     `CREATE TABLE IF NOT EXISTS quiz_opcoes (
       id_opcao SERIAL PRIMARY KEY,
       id_pergunta INTEGER NOT NULL REFERENCES quiz_perguntas(id_pergunta) ON DELETE CASCADE,
@@ -243,7 +251,7 @@ const createTablesInOrder = async () => {
       ordem INTEGER NOT NULL DEFAULT 0
     );`,
 
-    // Tabela de respostas de quiz corrigida com cascade
+    // Respostas dos utilizadores aos quizzes
     `CREATE TABLE IF NOT EXISTS quiz_respostas (
       id_resposta SERIAL PRIMARY KEY,
       id_inscricao INTEGER NOT NULL REFERENCES inscricoes_cursos(id_inscricao) ON DELETE CASCADE,
@@ -254,7 +262,7 @@ const createTablesInOrder = async () => {
       completo BOOLEAN NOT NULL DEFAULT FALSE
     );`,
 
-    // Tabela de detalhes de respostas de quiz
+    // Detalhes de cada resposta individual
     `CREATE TABLE IF NOT EXISTS quiz_respostas_detalhes (
       id_resposta_detalhe SERIAL PRIMARY KEY,
       id_resposta INTEGER NOT NULL REFERENCES quiz_respostas(id_resposta) ON DELETE CASCADE,
@@ -265,7 +273,7 @@ const createTablesInOrder = async () => {
       pontos_obtidos DECIMAL(5,2)
     );`,
 
-    // Tabela de push subscriptions corrigida com cascade
+    // Sistema de notificações push
     `CREATE TABLE IF NOT EXISTS push_subscriptions (
       id_subscription SERIAL PRIMARY KEY,
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
@@ -275,7 +283,7 @@ const createTablesInOrder = async () => {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );`,
 
-    // Tabela de tipos de conteúdo
+    // Tipos de conteúdo suportados pela aplicação
     `CREATE TABLE IF NOT EXISTS tipos_conteudo (
       id_tipo SERIAL PRIMARY KEY,
       nome VARCHAR(50) NOT NULL UNIQUE,
@@ -284,7 +292,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN DEFAULT TRUE
     );`,
 
-    // Tabela de tópicos de curso
+    // Estrutura de tópicos dentro de cada curso
     `CREATE TABLE IF NOT EXISTS curso_topico (
       id_topico SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
@@ -295,7 +303,7 @@ const createTablesInOrder = async () => {
       dir_path VARCHAR(500)
     );`,
 
-    // Tabela de pastas de tópicos de curso
+    // Pastas organizacionais dentro de cada tópico
     `CREATE TABLE IF NOT EXISTS curso_topico_pasta (
       id_pasta SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
@@ -306,7 +314,7 @@ const createTablesInOrder = async () => {
       data_limite TIMESTAMP WITH TIME ZONE
     );`,
 
-    // Tabela de conteúdo de pastas de curso
+    // Conteúdos específicos (ficheiros, links, vídeos) dentro das pastas
     `CREATE TABLE IF NOT EXISTS curso_topico_pasta_conteudo (
       id_conteudo SERIAL PRIMARY KEY,
       titulo VARCHAR(255) NOT NULL,
@@ -321,7 +329,7 @@ const createTablesInOrder = async () => {
       ativo BOOLEAN NOT NULL DEFAULT TRUE
     );`,
 
-    // Tabela de trabalhos entregues corrigida com cascade
+    // Sistema de entrega de trabalhos pelos formandos
     `CREATE TABLE IF NOT EXISTS trabalhos_entregues (
       id_trabalho SERIAL PRIMARY KEY,
       id_utilizador INTEGER NOT NULL REFERENCES utilizadores(id_utilizador) ON DELETE CASCADE,
@@ -334,7 +342,7 @@ const createTablesInOrder = async () => {
       observacoes TEXT
     );`,
 
-    // Tabela de mensagens de chat corrigida com cascade
+    // Sistema de chat/mensagens instantâneas
     `CREATE TABLE IF NOT EXISTS chat_mensagens (
       id SERIAL PRIMARY KEY,
       id_topico INTEGER NOT NULL REFERENCES topico_area(id_topico) ON DELETE CASCADE,
@@ -350,7 +358,7 @@ const createTablesInOrder = async () => {
       oculta BOOLEAN NOT NULL DEFAULT FALSE
     );`,
 
-    // Tabela de interações de chat corrigida com cascade
+    // Sistema de likes/dislikes para mensagens de chat
     `CREATE TABLE IF NOT EXISTS chat_interacoes (
       id_interacao SERIAL PRIMARY KEY,
       id_mensagem INTEGER NOT NULL REFERENCES chat_mensagens(id) ON DELETE CASCADE,
@@ -360,7 +368,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_user_message UNIQUE (id_mensagem, id_utilizador)
     );`,
 
-    // Tabela de denúncias de chat corrigida com cascade
+    // Sistema de denúncias para mensagens de chat
     `CREATE TABLE IF NOT EXISTS chat_denuncias (
       id_denuncia SERIAL PRIMARY KEY,
       id_mensagem INTEGER NOT NULL REFERENCES chat_mensagens(id) ON DELETE CASCADE,
@@ -372,7 +380,7 @@ const createTablesInOrder = async () => {
       acao_tomada VARCHAR(255)
     );`,
 
-    // Tabela de temas do fórum corrigida com cascade
+    // Temas/tópicos do fórum de discussão
     `CREATE TABLE IF NOT EXISTS forum_tema (
       id_tema SERIAL PRIMARY KEY,
       id_topico INTEGER NOT NULL REFERENCES topico_area(id_topico) ON DELETE CASCADE,
@@ -390,7 +398,7 @@ const createTablesInOrder = async () => {
       oculto BOOLEAN NOT NULL DEFAULT FALSE
     );`,
 
-    // Tabela de interações de temas do fórum corrigida com cascade
+    // Interações (likes/dislikes) nos temas do fórum
     `CREATE TABLE IF NOT EXISTS forum_tema_interacao (
       id_interacao SERIAL PRIMARY KEY,
       id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema) ON DELETE CASCADE,
@@ -400,7 +408,7 @@ const createTablesInOrder = async () => {
       CONSTRAINT unique_user_tema UNIQUE (id_tema, id_utilizador)
     );`,
 
-    // Tabela de denúncias de temas do fórum corrigida com cascade
+    // Sistema de denúncias para temas do fórum
     `CREATE TABLE IF NOT EXISTS forum_tema_denuncia (
       id_denuncia SERIAL PRIMARY KEY,
       id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema) ON DELETE CASCADE,
@@ -412,7 +420,7 @@ const createTablesInOrder = async () => {
       acao_tomada VARCHAR(255)
     );`,
 
-    // Tabela de comentários do fórum
+    // Comentários aos temas do fórum
     `CREATE TABLE IF NOT EXISTS forum_comentario (
       id_comentario SERIAL PRIMARY KEY,
       id_tema INTEGER NOT NULL REFERENCES forum_tema(id_tema) ON DELETE CASCADE,
@@ -429,7 +437,7 @@ const createTablesInOrder = async () => {
     );`
   ];
 
-  // Executar a criação das tabelas em sequência
+  // Executar cada comando SQL sequencialmente
   for (const sql of createTablesSQL) {
     try {
       await sequelize.query(sql);
@@ -437,7 +445,7 @@ const createTablesInOrder = async () => {
     } catch (error) {
       console.error(`❌ Erro ao criar tabela: ${error.message}`);
       console.error(sql);
-      throw error; // Interromper a execução se houver um erro
+      throw error;
     }
   }
 

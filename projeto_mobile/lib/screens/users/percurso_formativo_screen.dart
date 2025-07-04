@@ -379,7 +379,7 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Tentar novamente
-              // Você pode implementar uma lógica para tentar novamente aqui
+              //  pode implementar uma lógica para tentar novamente aqui
             },
             child: Text('Tentar novamente'),
             style: ElevatedButton.styleFrom(
@@ -778,11 +778,11 @@ class _PercursoFormativoScreenState extends State<PercursoFormativoScreen> {
   String _getEmptyMessage(String tipo) {
     switch (tipo) {
       case 'agendado':
-        return 'Você não tem cursos agendados.';
+        return ' não tem cursos agendados.';
       case 'andamento':
-        return 'Você não está inscrito em nenhum curso atualmente.';
+        return ' não está inscrito em nenhum curso atualmente.';
       case 'completo':
-        return 'Você ainda não concluiu nenhum curso.';
+        return ' ainda não concluiu nenhum curso.';
       default:
         return 'Nenhum curso encontrado.';
     }

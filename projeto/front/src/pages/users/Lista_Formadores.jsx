@@ -4,32 +4,49 @@ import API_BASE, { IMAGES } from "../../api";
 import Sidebar from "../../components/Sidebar";
 import "./css/Lista_Formadores.css";
 
+/**
+ * Componente da página que apresenta a listagem completa de formadores
+ * Inclui paginação, gestão de estados de carregamento e navegação para perfis individuais
+ */
 export default function FormadoresPage() {
+  // Estados principais para gestão dos dados dos formadores
   const [formadores, setFormadores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Estados para controlo da paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const formadoresPerPage = 10;
 
   const navigate = useNavigate();
+  
+  /**
+   * Alterna entre abrir e fechar a barra lateral de navegação
+   */
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Função para obter o URL da imagem de perfil do formador
+  /**
+   * Constrói o URL da imagem de perfil do formador
+   * Tenta diferentes abordagens para garantir que uma imagem válida é sempre retornada
+   * 
+   * @param {Object} formador - Dados do formador que contêm informações da foto
+   * @returns {string} URL completo da imagem de perfil
+   */
   const getProfileImageUrl = (formador) => {
     if (!formador) return '/placeholder-formador.jpg';
 
-    // Se o formador já tiver uma URL de foto de perfil completa, use-a
+    // Verifica se já tem URL absoluto ou relativo válido
     if (formador.foto_perfil && (formador.foto_perfil.startsWith('http') || formador.foto_perfil.startsWith('/'))) {
       return formador.foto_perfil;
     }
 
-    // Obter o email do formador para buscar sua imagem
+    // Tenta gerar URL baseado no email através do sistema de imagens da API
     const email = formador.email;
     if (!email) return '/placeholder-formador.jpg';
 
-    // Usar a função de URLs de imagens com o email, se disponível
+    // Utiliza as funções específicas do sistema de imagens se disponíveis
     if (IMAGES && typeof IMAGES.FORMADOR === 'function') {
       return IMAGES.FORMADOR(email);
     } else if (IMAGES && typeof IMAGES.USER_AVATAR === 'function') {
@@ -39,20 +56,25 @@ export default function FormadoresPage() {
     return '/placeholder-formador.jpg';
   };
 
-  // Função para obter o URL da imagem de capa do formador
+  /**
+   * Constrói o URL da imagem de capa/fundo do cartão do formador
+   * Funciona de forma similar à função anterior mas para imagens de capa
+   * 
+   * @param {Object} formador - Dados do formador que contêm informações da capa
+   * @returns {string} URL completo da imagem de capa
+   */
   const getCoverImageUrl = (formador) => {
     if (!formador) return '/placeholder-cover.jpg';
 
-    // Se o formador já tiver uma URL de foto de capa completa, use-a
+    // Verifica se já tem URL de capa definido
     if (formador.foto_capa && (formador.foto_capa.startsWith('http') || formador.foto_capa.startsWith('/'))) {
       return formador.foto_capa;
     }
 
-    // Obter o email do formador para buscar sua imagem de capa
     const email = formador.email;
     if (!email) return '/placeholder-cover.jpg';
 
-    // Usar a função de URLs de imagens com o email, se disponível
+    // Tenta usar as funções específicas para capas no sistema de imagens
     if (IMAGES && typeof IMAGES.USER_CAPA === 'function') {
       return IMAGES.USER_CAPA(email);
     } else if (IMAGES && IMAGES.DEFAULT_CAPA) {
@@ -62,32 +84,53 @@ export default function FormadoresPage() {
     return '/placeholder-cover.jpg';
   };
 
+  /**
+   * Efetua chamada à API para carregar a lista de formadores
+   * Implementa paginação e gestão de erros robusta
+   * Executa automaticamente quando a página atual muda
+   */
   useEffect(() => {
     const fetchFormadores = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         const response = await fetch(`${API_BASE}/formadores?page=${currentPage}&limit=${formadoresPerPage}`);
   
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Erro ao carregar formadores: ${response.status}`);
+          let errorMessage = `Erro ${response.status}`;
+          
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseError) {
+            errorMessage = `Erro de servidor (${response.status})`;
+          }
+          
+          throw new Error(errorMessage);
         }
   
         const data = await response.json();
-        const total = Math.max(1, data.totalPages || 1); // força mínimo de 1
+        
+        // Valida a estrutura dos dados recebidos
+        if (!data || typeof data !== 'object') {
+          throw new Error('Resposta inválida do servidor');
+        }
+        
+        const totalPagesFromAPI = Math.max(1, data.totalPages || 1);
   
-        // Corrigir se a página atual for maior do que a última página válida
-        if (currentPage > total) {
+        // Corrige automaticamente se a página atual exceder o total disponível
+        if (currentPage > totalPagesFromAPI) {
           setCurrentPage(1);
           return;
         }
   
-        setFormadores(data.formadores || []);
-        setTotalPages(total);
-        setError(null);
+        setFormadores(Array.isArray(data.formadores) ? data.formadores : []);
+        setTotalPages(totalPagesFromAPI);
+        
       } catch (error) {
         console.error("Erro ao carregar formadores:", error);
-        setError("Não foi possível carregar a lista de formadores. Tente novamente mais tarde.");
+        setError(error.message || "Não foi possível carregar a lista de formadores. Tenta novamente mais tarde.");
       } finally {
         setLoading(false);
       }
@@ -96,28 +139,42 @@ export default function FormadoresPage() {
     fetchFormadores();
   }, [currentPage]);
   
+  /**
+   * Navega para a página anterior na paginação
+   * Só executa se não estivermos já na primeira página
+   */
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
   };
 
+  /**
+   * Navega para a próxima página na paginação
+   * Só executa se não estivermos já na última página
+   */
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
   };
 
+  /**
+   * Redireciona para a página de detalhes de um formador específico
+   * Valida se o ID do formador é válido antes de navegar
+   * 
+   * @param {number} formadorId - Identificador único do formador
+   */
   const handleFormadorClick = (formadorId) => {
     if (!formadorId) {
-      console.error("Tentativa de navegar para formador sem ID");
+      console.error("Tentativa de navegar para formador sem ID válido");
       return;
     }
 
-    console.log(`Navegando para detalhes do formador ID: ${formadorId}`);
     navigate(`/formadores/${formadorId}`);
   };
 
+  // Interface de carregamento mostrada enquanto os dados são obtidos
   if (loading) {
     return (
       <div className="p-6 min-h-screen flex flex-col bg-white">
@@ -132,16 +189,18 @@ export default function FormadoresPage() {
     );
   }
 
+  // Interface de erro com opção para tentar novamente
   if (error) {
     return (
       <div className="p-6 min-h-screen flex flex-col bg-white">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-red-500 text-lg">{error}</p>
+            <p className="text-red-500 text-lg mb-2">⚠️ Erro ao carregar formadores</p>
+            <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               Tentar novamente
             </button>
@@ -151,24 +210,25 @@ export default function FormadoresPage() {
     );
   }
 
+  // Interface principal da página com lista de formadores
   return (
     <div className="p-6 min-h-screen flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <h1 className="page-title">Formadores</h1>
 
-      {/* Lista de formadores com o novo design */}
+      {/* Grelha responsiva que apresenta os cartões dos formadores */}
       <div className="formadores-grid">
         {formadores.length > 0 ? (
           formadores.map((formador, index) => {
-            // Obter o ID do formador de forma segura
-            const formadorId = formador.id || formador.id_utilizador;
+            // Obtém o ID do formador de forma segura, tentando diferentes propriedades
+            const formadorId = formador.id_utilizador || formador.id;
 
             return (
               <div
-                key={formadorId || index}
+                key={formadorId || `formador-${index}`}
                 onClick={() => formadorId && handleFormadorClick(formadorId)}
-                className="formador-card"
+                className={`formador-card ${formadorId ? 'cursor-pointer' : 'cursor-default'}`}
                 style={{
                   backgroundImage: `url(${getCoverImageUrl(formador)})`
                 }}
@@ -184,11 +244,18 @@ export default function FormadoresPage() {
                     }}
                   />
                   <h3 className="formador-name">
-                    {formador.nome || formador.name || "Nome não disponível"}
+                    {formador.nome || "Nome não disponível"}
                   </h3>
                   <p className="formador-email">
                     {formador.email || "Email não disponível"}
                   </p>
+                  
+                  {/* Mostra informações adicionais se disponíveis */}
+                  {formador.telefone && (
+                    <p className="formador-telefone text-sm text-gray-300 mt-1">
+                      📞 {formador.telefone}
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -196,32 +263,39 @@ export default function FormadoresPage() {
         ) : (
           <div className="col-span-full text-center py-10">
             <p className="text-gray-600 text-lg">Nenhum formador disponível no momento.</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Os formadores poderão aparecer aqui após se registarem no sistema.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Paginação - Cópia exata da página de cursos.jsx */}
-      <div className="flex justify-center items-center my-6 pagination-container">
-        <button
-          onClick={goToPreviousPage}
-          disabled={currentPage === 1}
-          className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
-          aria-label="Página anterior"
-        >
-          <span className="pagination-icon">&#10094;</span>
-        </button>
+      {/* Controlos de paginação - só aparecem se houver mais de uma página */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center my-6 pagination-container">
+          <button
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 pagination-button ${currentPage === 1 ? 'pagination-disabled' : 'pagination-active'}`}
+            aria-label="Página anterior"
+          >
+            <span className="pagination-icon">&#10094;</span>
+          </button>
 
-        <span className="mx-4 text-lg font-medium pagination-info">{currentPage}/{totalPages}</span>
+          <span className="mx-4 text-lg font-medium pagination-info">
+            {currentPage} / {totalPages}
+          </span>
 
-        <button
-          onClick={goToNextPage}
-          disabled={currentPage === totalPages}
-          className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
-          aria-label="Próxima página"
-        >
-          <span className="pagination-icon">&#10095;</span>
-        </button>
-      </div>
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 pagination-button ${currentPage === totalPages ? 'pagination-disabled' : 'pagination-active'}`}
+            aria-label="Próxima página"
+          >
+            <span className="pagination-icon">&#10095;</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

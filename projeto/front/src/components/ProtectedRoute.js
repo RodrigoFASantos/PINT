@@ -52,7 +52,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
           setHasPermission(true);
         } else {
           console.log('[DEBUG] ProtectedRoute: Permissão negada! Usuário não tem cargo permitido.');
-          toast.error('Você não tem permissão para acessar esta página.');
+          toast.error('Não tem permissão para acessar esta página.');
         }
       } catch (error) {
         console.error('[DEBUG] ProtectedRoute: Erro ao verificar permissão:', error);

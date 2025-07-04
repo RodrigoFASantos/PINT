@@ -1,378 +1,321 @@
 const nodemailer = require('nodemailer');
-const path = require('path');
-require('dotenv').config();
-
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD,
-  },
-});
-
-// Verificar configuração do transportador na inicialização
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ [EMAIL] Erro na configuração do email:', error);
-  } else {
-    console.log('✅ [EMAIL] Servidor de email configurado e pronto para enviar mensagens');
-    console.log('📧 [EMAIL] Host:', process.env.EMAIL_HOST);
-    console.log('📧 [EMAIL] Porta:', process.env.EMAIL_PORT);
-    console.log('📧 [EMAIL] Utilizador:', process.env.EMAIL_USER);
-  }
-});
 
 /**
- * Envia email de confirmação de registo para o user
- * @param {Object} user - Objeto com informações do user
- * @returns {Promise} - Promessa que resolve quando o email é enviado
+ * SERVIÇO DE EMAIL PARA ENVIO DE NOTIFICAÇÕES E CONFIRMAÇÕES
+ * 
+ * Este módulo centraliza todas as funcionalidades de envio de emails
+ * incluindo confirmação de registro, recuperação de password e notificações
+ * de inscrições em cursos. Suporta diferentes provedores SMTP.
+ */
+
+// =============================================================================
+// CONFIGURAÇÃO DO TRANSPORTER
+// =============================================================================
+
+/**
+ * Criar transporter do nodemailer com configuração baseada em variáveis de ambiente
+ * Suporta Gmail, Outlook, SMTP personalizado e modo de desenvolvimento
+ */
+const createTransporter = () => {
+  const emailConfig = {
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE === 'true' || false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  };
+
+  // Configurações específicas para diferentes provedores
+  if (process.env.EMAIL_HOST === 'smtp.gmail.com') {
+    emailConfig.service = 'gmail';
+  }
+
+  // Modo de desenvolvimento - usar ethereal email para testes
+  if (process.env.NODE_ENV === 'development' && !process.env.EMAIL_USER) {
+    console.log('⚠️  Modo desenvolvimento: Configure EMAIL_USER e EMAIL_PASS para envio real');
+    return nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      auth: {
+        user: 'ethereal.user@ethereal.email',
+        pass: 'ethereal.pass'
+      }
+    });
+  }
+
+  try {
+    return nodemailer.createTransport(emailConfig);
+  } catch (error) {
+    console.error('❌ Erro ao criar transporter de email:', error.message);
+    // Retornar transporter mock para evitar crashes
+    return {
+      sendMail: async () => {
+        console.log('📧 Email mockado (transporter indisponível)');
+        return { messageId: 'mock-id' };
+      }
+    };
+  }
+};
+
+const transporter = createTransporter();
+
+// =============================================================================
+// TEMPLATES DE EMAIL
+// =============================================================================
+
+/**
+ * Template HTML para email de confirmação de registro
+ */
+const getRegistrationEmailTemplate = (user) => {
+  const confirmUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirmar-conta?token=${user.token}`;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Confirmação de Conta</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #007bff; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9f9f9; }
+            .button { display: inline-block; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Bem-vindo à Plataforma de Formação</h1>
+            </div>
+            <div class="content">
+                <h2>Olá, ${user.nome}!</h2>
+                <p>Obrigado por se registar na nossa plataforma como <strong>${user.cargo_descricao || 'utilizador'}</strong>.</p>
+                <p>Para ativar a sua conta, clique no botão abaixo:</p>
+                <a href="${confirmUrl}" class="button">Confirmar Conta</a>
+                <p>Ou copie e cole este link no seu navegador:</p>
+                <p><a href="${confirmUrl}">${confirmUrl}</a></p>
+                <p><strong>Dados da sua conta:</strong></p>
+                <ul>
+                    <li>Nome: ${user.nome}</li>
+                    <li>Email: ${user.email}</li>
+                    <li>Cargo: ${user.cargo_descricao || 'Não especificado'}</li>
+                    ${user.senha_temporaria ? `<li>Senha temporária: ${user.senha_temporaria}</li>` : ''}
+                </ul>
+                <p><small>Este link é válido por 24 horas.</small></p>
+            </div>
+            <div class="footer">
+                <p>Se não solicitou este registro, ignore este email.</p>
+                <p>&copy; 2024 Plataforma de Formação. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Template HTML para email de recuperação de password
+ */
+const getPasswordResetTemplate = (user, resetToken) => {
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Recuperação de Password</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9f9f9; }
+            .button { display: inline-block; padding: 12px 24px; background: #dc3545; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Recuperação de Password</h1>
+            </div>
+            <div class="content">
+                <h2>Olá, ${user.nome}!</h2>
+                <p>Recebemos um pedido para redefinir a password da sua conta.</p>
+                <p>Clique no botão abaixo para criar uma nova password:</p>
+                <a href="${resetUrl}" class="button">Redefinir Password</a>
+                <p>Ou copie e cole este link no seu navegador:</p>
+                <p><a href="${resetUrl}">${resetUrl}</a></p>
+                <p><small>Este link é válido por 1 hora por motivos de segurança.</small></p>
+                <p><strong>Se não solicitou esta alteração, ignore este email.</strong> A sua password atual permanece inalterada.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2024 Plataforma de Formação. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Template HTML para confirmação de inscrição em curso
+ */
+const getCourseInscricaoTemplate = (user, curso) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Inscrição Confirmada</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #28a745; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9f9f9; }
+            .course-info { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Inscrição Confirmada!</h1>
+            </div>
+            <div class="content">
+                <h2>Olá, ${user.nome}!</h2>
+                <p>A sua inscrição foi realizada com sucesso!</p>
+                <div class="course-info">
+                    <h3>Detalhes do Curso:</h3>
+                    <ul>
+                        <li><strong>Nome:</strong> ${curso.nome}</li>
+                        <li><strong>Tipo:</strong> ${curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}</li>
+                        <li><strong>Data de Início:</strong> ${new Date(curso.data_inicio).toLocaleDateString('pt-PT')}</li>
+                        <li><strong>Data de Fim:</strong> ${new Date(curso.data_fim).toLocaleDateString('pt-PT')}</li>
+                        ${curso.formador ? `<li><strong>Formador:</strong> ${curso.formador.nome}</li>` : ''}
+                        ${curso.vagas ? `<li><strong>Vagas:</strong> ${curso.vagas}</li>` : ''}
+                    </ul>
+                </div>
+                <p>Pode acompanhar o progresso do curso e aceder aos materiais através da plataforma.</p>
+                <p>Boa formação!</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2024 Plataforma de Formação. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+};
+
+// =============================================================================
+// FUNÇÕES DE ENVIO DE EMAIL
+// =============================================================================
+
+/**
+ * Enviar email de confirmação de registro
  */
 const sendRegistrationEmail = async (user) => {
   try {
-    console.log('📧 [EMAIL] === ENVIANDO EMAIL DE CONFIRMAÇÃO ===');
-    console.log('📧 [EMAIL] Destinatário:', user.email);
-    console.log('📧 [EMAIL] Nome:', user.nome);
+    if (!user.email || !user.token) {
+      throw new Error('Email e token são obrigatórios');
+    }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    // Usar o token fornecido pelo user pendente
-    const confirmationUrl = `${frontendUrl}/confirm-account?token=${user.token}`;
-
-    console.log('📧 [EMAIL] URL de confirmação:', confirmationUrl);
-
-    // Criar tabela com os dados da conta
-    const accountDetailsTable = `
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e0e0e0;">
-        <tr>
-          <th colspan="2" style="padding: 12px; background-color: #f5f7fa; border-bottom: 1px solid #e0e0e0; text-align: left; color: #333;">
-            Dados da Conta
-          </th>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Nome</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.nome || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Email</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.email || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Cargo</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.cargo_descricao || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Idade</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.idade || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Telefone</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.telefone || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Morada</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.morada || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Código Postal</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${user.codigo_postal || 'Não informado'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Senha Provisória</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-family: monospace; background-color: #f8fafc; color: #2563eb;">${user.senha_temporaria || 'Senha definida pelo user'}</td>
-        </tr>
-      </table>
-    `;
-
-    // Template do email de confirmação
     const mailOptions = {
-      from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
+      from: `"Plataforma de Formação" <${process.env.EMAIL_USER || 'noreply@plataforma.com'}>`,
       to: user.email,
-      subject: 'Confirme seu registo na Plataforma de Cursos',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #3b82f6;">Bem-vindo à Plataforma de Cursos</h2>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <p>Olá, ${user.nome}!</p>
-            <p>Obrigado por se cadastrar em nossa plataforma de cursos online. Estamos muito felizes em tê-lo conosco!</p>
-            <p>Abaixo estão os dados da sua conta:</p>
-          </div>
-          
-          ${accountDetailsTable}
-          
-          <div style="margin: 30px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
-            <p style="margin: 0; color: #334155;"><strong>Importante:</strong> Para sua segurança, recomendamos que altere sua senha após o primeiro acesso.</p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Confirmar registo</a>
-          </div>
-          
-          <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
-            <p>Se você não solicitou este cadastro, por favor ignore este email.</p>
-            <p>Se o botão acima não funcionar, copie e cole o link abaixo no seu navegador:</p>
-            <p style="word-break: break-all;">${confirmationUrl}</p>
-            <p>Este link expira em 24 horas.</p>
-          </div>
-          
-          <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
-            <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
-            <p>Este email foi enviado para: ${user.email}</p>
-          </div>
-        </div>
-      `
+      subject: 'Confirmação de Conta - Plataforma de Formação',
+      html: getRegistrationEmailTemplate(user)
     };
 
-    console.log('📧 [EMAIL] A enviar email de confirmação...');
-    // Enviar o email
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [EMAIL] Email de confirmação enviado com sucesso:', info.messageId);
-    console.log('📧 [EMAIL] Response:', info.response);
-    return info;
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email de confirmação enviado para: ${user.email}`);
+    return result;
+
   } catch (error) {
-    console.error('❌ [EMAIL] Erro ao enviar email de registo:', error);
-    console.error('❌ [EMAIL] Stack:', error.stack);
+    console.error(`❌ Erro ao enviar email de confirmação para ${user.email}:`, error.message);
     throw error;
   }
 };
 
 /**
- * Envia email de recuperação de senha para o user
- * @param {Object} user - Objeto com informações do user
- * @param {String} token - Token para redefinição de senha
- * @returns {Promise} - Promessa que resolve quando o email é enviado
+ * Enviar email de recuperação de password
  */
-const sendPasswordResetEmail = async (user, token) => {
+const sendPasswordResetEmail = async (user, resetToken) => {
   try {
-    console.log('🔑 [EMAIL] === ENVIANDO EMAIL DE RECUPERAÇÃO ===');
-    console.log('🔑 [EMAIL] Destinatário:', user.email);
-    console.log('🔑 [EMAIL] Nome:', user.nome);
+    if (!user.email || !resetToken) {
+      throw new Error('Email e token de reset são obrigatórios');
+    }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-
-    console.log('🔑 [EMAIL] URL de recuperação:', resetUrl);
-
-    // Template do email de recuperação de senha
     const mailOptions = {
-      from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
+      from: `"Plataforma de Formação" <${process.env.EMAIL_USER || 'noreply@plataforma.com'}>`,
       to: user.email,
-      subject: 'Recuperação de Senha - Plataforma de Cursos',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #ef4444;">Recuperação de Senha</h2>
-          </div>
-          
-          <div style="margin-bottom: 30px;">
-            <p>Olá, <strong>${user.nome}</strong>!</p>
-            <p>Recebemos uma solicitação para redefinir sua senha na Plataforma de Cursos.</p>
-            <p>Se você fez esta solicitação, clique no botão abaixo para criar uma nova senha:</p>
-          </div>
-          
-          <div style="margin: 30px 0; background-color: #fef2f2; padding: 15px; border-radius: 5px; border-left: 4px solid #ef4444;">
-            <p style="margin: 0; color: #dc2626;"><strong> Importante:</strong></p>
-            <ul style="margin: 10px 0; color: #dc2626;">
-              <li>Este link é válido por apenas <strong>1 hora</strong></li>
-              <li>Após clicar no link, você será redirecionado para criar uma nova senha</li>
-              <li>Por segurança, o link só pode ser usado uma vez</li>
-            </ul>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Redefinir Senha</a>
-          </div>
-          
-          <div style="margin: 30px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #64748b;">
-            <p style="margin: 0; color: #475569;"><strong>Não solicitou esta recuperação?</strong></p>
-            <p style="margin: 10px 0 0 0; color: #475569;">Se você não pediu para recuperar sua senha, pode ignorar este email com segurança. Sua conta permanece protegida.</p>
-          </div>
-          
-          <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
-            <p><strong>Problemas com o botão?</strong> Copie e cole o link abaixo no seu navegador:</p>
-            <p style="word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8em;">${resetUrl}</p>
-            <p style="color: #dc2626;"><strong>Lembrete:</strong> Este link expira em 1 hora por motivos de segurança.</p>
-          </div>
-          
-          <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
-            <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
-            <p>Este email foi enviado para: ${user.email}</p>
-            <p>Horário da solicitação: ${new Date().toLocaleString('pt-PT')}</p>
-          </div>
-        </div>
-      `
+      subject: 'Recuperação de Password - Plataforma de Formação',
+      html: getPasswordResetTemplate(user, resetToken)
     };
 
-    console.log('🔑 [EMAIL] A enviar email de recuperação...');
-    // Enviar o email
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [EMAIL] Email de recuperação enviado com sucesso:', info.messageId);
-    console.log('🔑 [EMAIL] Response:', info.response);
-    return info;
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email de recuperação enviado para: ${user.email}`);
+    return result;
+
   } catch (error) {
-    console.error('❌ [EMAIL] Erro ao enviar email de recuperação de senha:', error);
-    console.error('❌ [EMAIL] Stack:', error.stack);
+    console.error(`❌ Erro ao enviar email de recuperação para ${user.email}:`, error.message);
     throw error;
   }
 };
 
 /**
- * Envia email de divulgação de cursos para uma lista de formandos
- * @param {Array} formandos - Lista de objetos de formandos
- * @param {Array} cursos - Lista de objetos de cursos a serem divulgados
- * @param {Object} area - Objeto da área (opcional, para divulgação por área)
- * @returns {Promise} - Promessa que resolve quando todos os emails forem enviados
- */
-const sendMailingList = async (formandos, cursos, area = null) => {
-  try {
-    console.log('📢 [EMAIL] === ENVIANDO DIVULGAÇÃO DE CURSOS ===');
-    console.log('📢 [EMAIL] Destinatários:', formandos.length);
-    console.log('📢 [EMAIL] Cursos:', cursos.length);
-
-    // Preparar conteúdo dos cursos para o email
-    const cursosHtml = cursos.map(curso => `
-      <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px;">
-        <h3 style="color: #3b82f6; margin-top: 0;">${curso.nome}</h3>
-        <p>${curso.descricao || 'Sem descrição disponível.'}</p>
-        <p><strong>Área:</strong> ${curso.area ? curso.area.nome : 'Não especificada'}</p>
-        <p><strong>Início:</strong> ${curso.data_inicio ? new Date(curso.data_inicio).toLocaleDateString() : 'A definir'}</p>
-        <p><strong>Vagas:</strong> ${curso.vagas || 'Ilimitadas'}</p>
-        <a href="${process.env.FRONTEND_URL}/cursos/${curso.id_curso}" 
-           style="display: inline-block; padding: 8px 15px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          Ver Detalhes
-        </a>
-      </div>
-    `).join('');
-
-    // Título personalizado com base na divulgação (geral ou por área)
-    const tituloDivulgacao = area
-      ? `Novos Cursos na Área de ${area.nome}`
-      : 'Novos Cursos Disponíveis';
-
-    // Enviar email para cada formando
-    const promises = formandos.map(async (formando) => {
-      const mailOptions = {
-        from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
-        to: formando.email,
-        subject: tituloDivulgacao,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #3b82f6;">${tituloDivulgacao}</h2>
-            </div>
-            
-            <div style="margin-bottom: 30px;">
-              <p>Olá, ${formando.nome}!</p>
-              <p>Temos novidades para você! Confira os cursos que acabamos de disponibilizar:</p>
-            </div>
-            
-            <div style="margin: 30px 0;">
-              ${cursosHtml}
-            </div>
-            
-            <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
-              <p>Para ver todos os cursos disponíveis, acesse <a href="${process.env.FRONTEND_URL}/cursos">nossa plataforma</a>.</p>
-              <p>Se não deseja receber estas divulgações, por favor atualize suas preferências no seu perfil.</p>
-            </div>
-            
-            <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
-              <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
-            </div>
-          </div>
-        `
-      };
-
-      // Enviar email para este formando
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`📢 [EMAIL] Email de divulgação enviado para ${formando.email}:`, info.messageId);
-      return info;
-    });
-
-    // Esperar que todos os emails sejam enviados
-    await Promise.all(promises);
-    console.log(`✅ [EMAIL] Divulgação enviada para ${formandos.length} formandos.`);
-  } catch (error) {
-    console.error('❌ [EMAIL] Erro ao enviar emails de divulgação:', error);
-    throw error;
-  }
-};
-
-/**
- * Envia email de confirmação de inscrição num curso
- * @param {Object} user - Objeto com informações do utilizador
- * @param {Object} curso - Objeto com informações do curso
- * @returns {Promise} - Promessa que resolve quando o email é enviado
+ * Enviar email de confirmação de inscrição em curso
  */
 const sendCourseInscricaoEmail = async (user, curso) => {
   try {
-    console.log('📚 [EMAIL] === ENVIANDO CONFIRMAÇÃO DE INSCRIÇÃO ===');
-    console.log('📚 [EMAIL] Utilizador:', user.email);
-    console.log('📚 [EMAIL] Curso:', curso.nome);
+    if (!user.email) {
+      throw new Error('Email do utilizador é obrigatório');
+    }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const cursoUrl = `${frontendUrl}/cursos/${curso.id_curso}`;
-
-    // Formatar datas
-    const dataInicio = new Date(curso.data_inicio).toLocaleDateString('pt-PT');
-    const dataFim = new Date(curso.data_fim).toLocaleDateString('pt-PT');
-
-    // Template do email de confirmação de inscrição
     const mailOptions = {
-      from: `"Plataforma de Cursos" <${process.env.EMAIL_USER}>`,
+      from: `"Plataforma de Formação" <${process.env.EMAIL_USER || 'noreply@plataforma.com'}>`,
       to: user.email,
-      subject: `Confirmação de Inscrição: ${curso.nome}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0f0f0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #3b82f6;">Inscrição Realizada com Sucesso!</h2>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <p>Olá, ${user.nome}!</p>
-            <p>A sua inscrição no curso <strong>${curso.nome}</strong> foi realizada com sucesso.</p>
-          </div>
-          
-          <div style="margin: 20px 0; background-color: #f8fafc; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
-            <h3 style="margin-top: 0; color: #334155;">Detalhes do Curso</h3>
-            <p><strong>Nome:</strong> ${curso.nome}</p>
-            <p><strong>Tipo:</strong> ${curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'}</p>
-            <p><strong>Data de Início:</strong> ${dataInicio}</p>
-            <p><strong>Data de Fim:</strong> ${dataFim}</p>
-            ${curso.formador ? `<p><strong>Formador:</strong> ${curso.formador.nome}</p>` : ''}
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${cursoUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Ver Detalhes do Curso</a>
-          </div>
-          
-          <div style="margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px; font-size: 0.9em; color: #777;">
-            <p>Se tiver alguma dúvida, entre em contato connosco respondendo a este email.</p>
-          </div>
-          
-          <div style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
-            <p>© ${new Date().getFullYear()} Plataforma de Cursos. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      `
+      subject: `Inscrição Confirmada - ${curso.nome}`,
+      html: getCourseInscricaoTemplate(user, curso)
     };
 
-    console.log('📚 [EMAIL] A enviar email de confirmação de inscrição...');
-    // Enviar o email
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [EMAIL] Email de confirmação de inscrição enviado:', info.messageId);
-    return info;
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email de inscrição enviado para: ${user.email}`);
+    return result;
+
   } catch (error) {
-    console.error('❌ [EMAIL] Erro ao enviar email de confirmação de inscrição:', error);
+    console.error(`❌ Erro ao enviar email de inscrição para ${user.email}:`, error.message);
     throw error;
   }
 };
+
+/**
+ * Testar configuração de email
+ */
+const testEmailConfig = async () => {
+  try {
+    await transporter.verify();
+    console.log('✅ Configuração de email válida');
+    return true;
+  } catch (error) {
+    console.error('❌ Configuração de email inválida:', error.message);
+    return false;
+  }
+};
+
+// =============================================================================
+// EXPORTAÇÕES
+// =============================================================================
 
 module.exports = {
   sendRegistrationEmail,
   sendPasswordResetEmail,
-  sendMailingList,
-  sendCourseInscricaoEmail
+  sendCourseInscricaoEmail,
+  testEmailConfig,
+  transporter
 };

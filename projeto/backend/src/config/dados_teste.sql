@@ -126,7 +126,7 @@ INSERT INTO topico_area (id_categoria, id_area, titulo, descricao, criado_por, d
 VALUES
   (1, 1, 'JavaScript Moderno', 'Discussões sobre JavaScript ES6+', 1, NOW(), TRUE),
   (1, 2, 'Desenvolvimento React Native', 'Tópicos sobre desenvolvimento mobile com React Native', 4, NOW(), TRUE),
-  (2, 4, 'Princípios de UX/UI', 'Discussões sobre experiência do usuário e interface', 5, NOW(), TRUE),
+  (2, 4, 'Princípios de UX/UI', 'Discussões sobre experiência do utilizador e interface', 5, NOW(), TRUE),
   (3, 6, 'Estratégias SEO 2025', 'Técnicas de otimização para mecanismos de busca', 6, NOW(), TRUE),
   (4, 8, 'Metodologias Ágeis', 'Discussões sobre Scrum, Kanban e outras metodologias ágeis', 7, NOW(), TRUE),
   (6, 11, 'Práticas Agrícolas Sustentáveis', 'Discussões sobre agricultura moderna e sustentável', 1, NOW(), TRUE);
@@ -192,7 +192,7 @@ VALUES
   (1, 'Avaliação de JavaScript Básico', 'Teste seus conhecimentos em JavaScript', NOW(), 30, TRUE),
   (1, 'Avaliação Final de JavaScript', 'Avaliação final do curso', NOW(), 60, TRUE),
   (2, 'Fundamentos de React Native', 'Teste sobre os fundamentos do React Native', NOW(), 45, TRUE),
-  (3, 'Princípios de UX/UI', 'Questionário sobre os princípios de experiência do usuário', NOW(), 30, TRUE);
+  (3, 'Princípios de UX/UI', 'Questionário sobre os princípios de experiência do utilizador', NOW(), 30, TRUE);
 
 -- =============================================
 -- 18. OCORRENCIAS_CURSOS
@@ -340,7 +340,7 @@ VALUES
   (1, 4, 'Claro! Closures são funções que têm acesso ao escopo externo mesmo após a função externa ter retornado. Exemplo: function criarContador() { let contador = 0; return function() { return ++contador; }; }', NULL, NULL, NULL, NOW() - INTERVAL '2 days' + INTERVAL '30 minutes', 3, 0, FALSE, FALSE),
   (1, 8, 'Muito obrigado pela explicação! Agora entendi melhor.', NULL, NULL, NULL, NOW() - INTERVAL '2 days' + INTERVAL '1 hour', 1, 0, FALSE, FALSE),
   (2, 10, 'Como faço para estilizar um componente no React Native?', NULL, NULL, NULL, NOW() - INTERVAL '1 day', 0, 0, FALSE, FALSE),
-  (2, 4, 'No React Native você pode usar o StyleSheet. Exemplo: const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: "#fff" } });', 'uploads/anexos/exemplo_stylesheet.png', 'exemplo_stylesheet.png', 'imagem', NOW() - INTERVAL '1 day' + INTERVAL '2 hours', 2, 0, FALSE, FALSE);
+  (2, 4, 'No React Native  pode usar o StyleSheet. Exemplo: const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: "#fff" } });', 'uploads/anexos/exemplo_stylesheet.png', 'exemplo_stylesheet.png', 'imagem', NOW() - INTERVAL '1 day' + INTERVAL '2 hours', 2, 0, FALSE, FALSE);
 
 -- =============================================
 -- 29. CHAT_INTERACOES

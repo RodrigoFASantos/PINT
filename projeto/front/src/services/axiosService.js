@@ -1,13 +1,24 @@
-import axios from 'axios';
+/**
+ * Serviço HTTP centralizado usando Axios
+ * 
+ * Este módulo configura uma instância do Axios com:
+ * - URL base importada da configuração da API
+ * - Interceptadores para autenticação automática
+ * - Tratamento centralizado de erros
+ * - Serviços específicos para notificações
+ */
 
-// Importar a URL base do arquivo api.js para manter consistência
+import axios from 'axios';
 import API_BASE from '../api';
 
-console.log('🔧 [AXIOS SERVICE] =================================');
-console.log('🔧 [AXIOS SERVICE] URL Base importada:', API_BASE);
-console.log('🔧 [AXIOS SERVICE] =================================');
-
-// Criar uma instância do axios com a configuração necessária
+/**
+ * Instância configurada do Axios
+ * 
+ * Configurações:
+ * - baseURL: URL base da API
+ * - timeout: 10 segundos
+ * - headers: Content-Type padrão JSON
+ */
 const axiosInstance = axios.create({
   baseURL: API_BASE,
   timeout: 10000,
@@ -16,16 +27,15 @@ const axiosInstance = axios.create({
   }
 });
 
-// Interceptador para adicionar o token a todas as requisições
+/**
+ * Interceptador de requisições
+ * 
+ * Adiciona automaticamente o token de autorização a todas as requisições
+ * se estiver disponível no localStorage
+ */
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    console.log('🔧 [AXIOS SERVICE] Interceptor request:', {
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-      hasToken: !!token
-    });
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -33,73 +43,91 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('🔧 [AXIOS SERVICE] Erro no interceptor request:', error);
+    console.error('Erro no interceptador de requisição:', error);
     return Promise.reject(error);
   }
 );
 
-// Interceptador para logs e tratamento de erros
+/**
+ * Interceptador de respostas
+ * 
+ * Trata erros de forma centralizada e gere casos específicos como:
+ * - 401: Sessão expirada (redireciona para login)
+ * - Outros erros HTTP
+ * - Erros de rede
+ */
 axiosInstance.interceptors.response.use(
   (response) => {
-    // Adicionar logs para depuração em desenvolvimento
-    console.log(`✅ [AXIOS SERVICE] Resposta de ${response.config.url}:`, response.data);
     return response;
   },
   (error) => {
-    console.error('❌ [AXIOS SERVICE] Erro na requisição:', {
-      url: error.config?.url,
-      baseURL: error.config?.baseURL,
-      fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'N/A',
-      status: error.response?.status,
-      message: error.message,
-      type: error.code
-    });
-    
+    // Log do erro para diagnóstico
     if (error.response) {
-      console.error(`❌ [AXIOS SERVICE] Erro ${error.response.status} em ${error.config?.url}:`, error.response.data);
+      console.error(`Erro ${error.response.status} na API:`, error.response.data);
       
-      // Tratamento específico para 401 (não autorizado)
+      // Tratamento específico para erro 401 (não autorizado)
       if (error.response.status === 401) {
-        // Lógica para redirecionamento ao login ou refresh token
-        console.warn('🚨 [AXIOS SERVICE] Sessão expirada ou inválida. Redirecionando...');
+        console.warn('Sessão expirada. A redirecionar para o login...');
+        
+        // Limpar dados de autenticação
         localStorage.removeItem('token');
         localStorage.removeItem('nomeUsuario');
+        
+        // Redirecionar para página de login
         window.location.href = '/login';
       }
     } else if (error.request) {
-      console.error('🚨 [AXIOS SERVICE] Sem resposta do servidor:', error.request);
-      console.error('🚨 [AXIOS SERVICE] Possível problema de conectividade ou CORS');
+      // Erro de rede ou servidor inacessível
+      console.error('Servidor inacessível ou erro de rede:', error.message);
     } else {
-      console.error('🚨 [AXIOS SERVICE] Erro ao configurar requisição:', error.message);
+      // Erro na configuração da requisição
+      console.error('Erro na configuração da requisição:', error.message);
     }
     
     return Promise.reject(error);
   }
 );
 
-// Serviço para notificações
+/**
+ * Serviço para gestão de notificações
+ * 
+ * Centraliza todas as operações relacionadas com notificações
+ */
 export const notificacoesService = {
-  // Buscar todas as notificações do usuário
+  /**
+   * Buscar todas as notificações do utilizador autenticado
+   * 
+   * @returns {Promise} Promise com a resposta da API
+   */
   getNotificacoes: () => {
-    console.log('📬 [AXIOS SERVICE] Buscando notificações...');
     return axiosInstance.get('/notificacoes');
   },
   
-  // Buscar contagem de notificações não lidas
+  /**
+   * Buscar contagem de notificações não lidas
+   * 
+   * @returns {Promise} Promise com a contagem de notificações não lidas
+   */
   getNotificacoesNaoLidasContagem: () => {
-    console.log('📬 [AXIOS SERVICE] Buscando contagem de notificações não lidas...');
     return axiosInstance.get('/notificacoes/nao-lidas/contagem');
   },
   
-  // Marcar uma notificação como lida
+  /**
+   * Marcar uma notificação específica como lida
+   * 
+   * @param {number} idNotificacao - ID da notificação a marcar como lida
+   * @returns {Promise} Promise com a resposta da API
+   */
   marcarComoLida: (idNotificacao) => {
-    console.log(`📬 [AXIOS SERVICE] Marcando notificação ${idNotificacao} como lida...`);
     return axiosInstance.put(`/notificacoes/${idNotificacao}/lida`);
   },
   
-  // Marcar todas as notificações como lidas
+  /**
+   * Marcar todas as notificações como lidas
+   * 
+   * @returns {Promise} Promise com a resposta da API
+   */
   marcarTodasComoLidas: () => {
-    console.log('📬 [AXIOS SERVICE] Marcando todas as notificações como lidas...');
     return axiosInstance.put('/notificacoes/marcar-todas-como-lidas');
   }
 };

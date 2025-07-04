@@ -1,29 +1,32 @@
 const jwt = require('jsonwebtoken');
 
+/**
+ * Middleware de autenticação JWT para proteger rotas
+ * Verifica se o utilizador possui token válido antes de acedera recursos protegidos
+ */
+
+/**
+ * Verifica a validade do token JWT nas requisições
+ * @param {Object} req - Objecto de requisição HTTP
+ * @param {Object} res - Objecto de resposta HTTP
+ * @param {Function} next - Função para continuar para o próximo middleware
+ */
 function verificarToken(req, res, next) {
-  console.log('🔍 A iniciar verificação de token');
-  console.log('URL acedida:', req.url);
-
+  // Extrair token do cabeçalho Authorization
   const authHeader = req.headers['authorization'];
-  console.log('Cabeçalho de autorização:', authHeader ? 'PRESENTE' : 'AUSENTE');
-
   const token = authHeader && authHeader.split(' ')[1];
 
-  console.log('Token recebido:', token ? 'Sim' : 'Não');
-
   if (!token) {
-    console.log('Nenhum token fornecido');
     return res.status(401).json({ message: 'Token não fornecido!' });
   }
 
+  // Verificar e descodificar o token JWT
   jwt.verify(token, process.env.JWT_SECRET || 'segredo', (err, utilizador) => {
     if (err) {
-      console.log('Erro na verificação do token:', err.message);
-      
-      // Mensagens específicas para diferentes tipos de erro
+      // Tratar diferentes tipos de erro de token
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({ 
-          message: 'Token expirado. Faz login novamente.',
+          message: 'Token expirado. Faça login novamente.',
           code: 'TOKEN_EXPIRED'
         });
       } else if (err.name === 'JsonWebTokenError') {
@@ -39,32 +42,20 @@ function verificarToken(req, res, next) {
       }
     }
 
-    console.log('✅ Token validado com sucesso');
-    console.log('Utilizador autenticado:', {
-      id_utilizador: utilizador.id_utilizador,
-      email: utilizador.email,
-      id_cargo: utilizador.id_cargo
-    });
-
-    // Verificar se o token contém os campos essenciais
+    // Verificar se o token contém os campos obrigatórios
     if (!utilizador.id_utilizador || !utilizador.id_cargo) {
-      console.log('⚠️ Token não contém campos obrigatórios:', {
-        id_utilizador: utilizador.id_utilizador,
-        id_cargo: utilizador.id_cargo
-      });
       return res.status(401).json({ 
         message: 'Token malformado - campos obrigatórios em falta',
         code: 'MALFORMED_TOKEN'
       });
     }
 
-    // Normalizar o objeto utilizador para compatibilidade
-    req.user = utilizador; // Para compatibilidade com código novo
+    // Adicionar dados do utilizador ao objecto de requisição
+    req.user = utilizador;       // Para compatibilidade com código novo
     req.utilizador = utilizador; // Para compatibilidade com código existente
 
     next();
   });
 }
 
-// Exporta apenas a função verificarToken
 module.exports = verificarToken;

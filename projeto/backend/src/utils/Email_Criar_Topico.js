@@ -1,8 +1,13 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Configurar transportador de email usando variáveis de ambiente
-const transporter = nodemailer.createTransport({
+/**
+ * Módulo para envio de emails de solicitação de criação de tópicos
+ * Permite aos utilizadores solicitar novos tópicos aos administradores
+ */
+
+// Configuração do transportador de email usando variáveis de ambiente
+const transporter = nodemailer.createTransporter({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT || '587'),
   secure: process.env.EMAIL_SECURE === 'true',
@@ -13,20 +18,23 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Envia um email ao administrador para solicitar a criação de um novo tópico.
- * @param {string} categoriaNome - Nome da categoria do tópico solicitado.
- * @param {string} titulo - Título do tópico solicitado.
- * @param {string} descricao - Descrição do tópico solicitado.
- * @param {Object} solicitante - Objeto com dados do utilizador solicitante (nome e email).
+ * Envia email ao administrador solicitando criação de novo tópico
+ * @param {string} categoriaNome - Nome da categoria onde será criado o tópico
+ * @param {string} titulo - Título do tópico solicitado
+ * @param {string} descricao - Descrição detalhada do tópico
+ * @param {Object} solicitante - Dados do utilizador que fez a solicitação
+ * @param {string} solicitante.nome - Nome do solicitante
+ * @param {string} solicitante.email - Email do solicitante
+ * @returns {Promise<boolean>} True se o email foi enviado com sucesso
  */
 const sendTopicRequestEmail = async (categoriaNome, titulo, descricao, solicitante) => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL;
     if (!adminEmail) {
-      throw new Error('ADMIN_EMAIL não configurado no ambiente');
+      throw new Error('Email do administrador não configurado');
     }
 
-    // Configurar conteúdo do email
+    // Configuração do conteúdo do email
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: adminEmail,
@@ -40,12 +48,12 @@ const sendTopicRequestEmail = async (categoriaNome, titulo, descricao, solicitan
       `,
     };
 
-    // Enviar o email
+    // Envio do email
     await transporter.sendMail(mailOptions);
-    console.log(`Email de pedido de tópico enviado para ${adminEmail} (Tópico: "${titulo}")`);
+    console.log(`Pedido de tópico "${titulo}" enviado para administrador`);
     return true;
   } catch (error) {
-    console.error('Erro ao enviar email de pedido de tópico:', error);
+    console.error('Erro ao enviar pedido de tópico:', error.message);
     throw error;
   }
 };

@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: UTILIZADORES PENDENTES
+// =============================================================================
+// Armazena temporariamente dados de utilizadores que se registaram
+// mas ainda aguardam aprovação dos administradores
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 const bcrypt = require('bcrypt');
@@ -10,36 +16,44 @@ const User_Pendente = sequelize.define('User_Pendente', {
   },
   id_cargo: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    comment: "Cargo pretendido pelo utilizador"
   },
   nome: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    comment: "Nome completo do candidato"
   },
   idade: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    comment: "Idade do candidato"
   },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    comment: "Email para registo (deve ser único)"
   },
   telefone: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    comment: "Telefone de contacto"
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    comment: "Password encriptada automaticamente"
   },
   token: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    comment: "Token único para validação do registo"
   },
   expires_at: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    comment: "Data de expiração do pedido de registo"
   }
 }, {
   tableName: "User_Pendente",
@@ -48,11 +62,11 @@ const User_Pendente = sequelize.define('User_Pendente', {
   updatedAt: 'updated_at'
 });
 
-// Hook para hashear a senha antes de salvar
-User_Pendente.beforeCreate(async (User_Pendente) => {
-  if (User_Pendente.password) {
+// Hook para encriptar automaticamente a password antes de guardar
+User_Pendente.beforeCreate(async (userPendente) => {
+  if (userPendente.password) {
     const salt = await bcrypt.genSalt(10);
-    User_Pendente.password = await bcrypt.hash(User_Pendente.password, salt);
+    userPendente.password = await bcrypt.hash(userPendente.password, salt);
   }
 });
 

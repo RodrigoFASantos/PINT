@@ -204,7 +204,7 @@ const denunciarComentario = async (req, res) => {
       console.log(`[DENUNCIA] Utilizador ${id_utilizador} já denunciou o comentário ${idComentario}`);
       return res.status(400).json({
         success: false,
-        message: 'Você já denunciou este comentário anteriormente'
+        message: ' já denunciou este comentário anteriormente'
       });
     }
     

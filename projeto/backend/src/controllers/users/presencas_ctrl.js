@@ -378,7 +378,7 @@ exports.marcarPresenca = async (req, res) => {
       if (todasMarcadas.every(marcada => marcada)) {
         return res.status(400).json({
           message: "Presença já registrada",
-          detalhes: "Você já marcou presença em todas as sessões com este código"
+          detalhes: " já marcou presença em todas as sessões com este código"
         });
       }
 
@@ -397,7 +397,7 @@ exports.marcarPresenca = async (req, res) => {
 
       return res.status(400).json({
         message: "Nenhuma presença ativa encontrada",
-        detalhes: "Todas as presenças com este código já expiraram ou você já marcou presença"
+        detalhes: "Todas as presenças com este código já expiraram ou  já marcou presença"
       });
     }
 

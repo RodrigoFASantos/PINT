@@ -2,8 +2,6 @@ const express = require("express");
 const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
-
-// Importar apenas as funções necessárias do controller
 const { 
   getEstatisticas,
   getCursosPorCategoria,
@@ -12,33 +10,36 @@ const {
   getCursosMaisInscritos
 } = require("../../controllers/dashboard/dashboard_ctrl");
 
-// Rota principal de estatísticas gerais do dashboard
+/**
+ * Rotas para dashboard administrativo
+ * Fornece estatísticas e dados agregados para análise
+ * Acesso restrito apenas a administradores
+ */
+
+// === DADOS ESTATÍSTICOS ===
+
+// Estatísticas gerais do sistema
 router.get("/estatisticas", verificarToken, autorizar([1]), getEstatisticas);
 
-// Rota para dados de cursos agrupados por categoria
+// Dados de cursos agrupados por categoria
 router.get("/cursos-categoria", verificarToken, autorizar([1]), getCursosPorCategoria);
 
-// Rota para dados de inscrições mensais
+// Dados de inscrições mensais (evolução temporal)
 router.get("/inscricoes-mes", verificarToken, autorizar([1]), getInscricoesPorMes);
 
-// Rota para dados de utilizadores agrupados por perfil
+// Dados de utilizadores agrupados por perfil/cargo
 router.get("/utilizadores-perfil", verificarToken, autorizar([1]), getUtilizadoresPorPerfil);
 
-// Rota para dados dos cursos mais populares
+// Dados dos cursos mais populares (por número de inscrições)
 router.get("/cursos-populares", verificarToken, autorizar([1]), getCursosMaisInscritos);
 
-// Rota de teste para verificar se a API está funcionando
+// === ROTA DE TESTE ===
+
+// Verificação do estado da API do dashboard
 router.get("/teste", (req, res) => {
   res.json({ 
-    message: "Dashboard API está funcionando!", 
-    timestamp: new Date().toISOString(),
-    rotas_disponiveis: [
-      '/estatisticas',
-      '/cursos-categoria', 
-      '/inscricoes-mes',
-      '/utilizadores-perfil',
-      '/cursos-populares'
-    ]
+    message: "Dashboard API está a funcionar!", 
+    timestamp: new Date().toISOString()
   });
 });
 

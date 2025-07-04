@@ -9,22 +9,25 @@ import AreaModal from '../../components/areaModal';
 import CursosModal from '../../components/cursos/Cursos_Modal';
 import "../users/css/Criar_Utilizador.css";
 
+/**
+ * Componente para criação de novos utilizadores
+ * Suporta criação de formadores, formandos e gestores
+ */
 function CriarUser() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Estado para controlar qual modal está aberto
+  // Estados para controlo de modais
   const [modalAberto, setModalAberto] = useState(false);
-  const [modalTipo, setModalTipo] = useState(null); // 'categoria', 'area' ou 'curso'
+  const [modalTipo, setModalTipo] = useState(null);
 
-  // Estados para categorias e áreas
+  // Estados para categorias e áreas (formadores)
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
   const [categoriasSelecionadas, setCategoriasSelecionadas] = useState([]);
   const [areasSelecionadas, setAreasSelecionadas] = useState([]);
   const [cursoSelecionado, setCursoSelecionado] = useState(null);
 
-  // Estado de carregamento para o botão de submissão
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estado do formulário
@@ -39,72 +42,64 @@ function CriarUser() {
     cargo: ''
   });
 
-  // Definir a função carregarAreas com useCallback para evitar recriação em cada render
+  /**
+   * Carregar áreas baseadas nas categorias selecionadas
+   */
   const carregarAreas = useCallback(async () => {
     try {
       if (categoriasSelecionadas.length > 0) {
-        setAreas([]); // Limpar áreas anteriores
+        setAreas([]);
         
-        // Carregar áreas uma categoria de cada vez usando o endpoint existente
         let todasAreas = [];
         
-        // Criar um array de promessas, uma para cada categoria
+        // Carregar áreas para cada categoria selecionada
         const promises = categoriasSelecionadas.map(async (categoria) => {
           const categoriaId = categoria.id_categoria;
-          console.log(`A carregar áreas para a categoria ID: ${categoriaId}`);
           
           try {
-            // Usar o endpoint existente que funciona
             const response = await axios.get(`${API_BASE}/categorias/${categoriaId}/areas`);
-            return response.data; // Retornar as áreas para esta categoria
+            return response.data;
           } catch (catError) {
-            console.error(`Erro ao carregar áreas para categoria ${categoriaId}:`, catError);
-            return []; // Retornar array vazio se houver erro
+            return [];
           }
         });
         
-        // Aguardar que todos os pedidos sejam concluídos
         const resultados = await Promise.all(promises);
         
-        // Combinar todas as áreas e remover duplicatas
+        // Combinar áreas e remover duplicatas
         resultados.forEach(areasCategoria => {
           areasCategoria.forEach(area => {
-            // Apenas adicionar se já não estiver no array (verificar por id_area)
             if (!todasAreas.some(a => a.id_area === area.id_area)) {
               todasAreas.push(area);
             }
           });
         });
         
-        console.log(`Total de ${todasAreas.length} áreas carregadas de ${categoriasSelecionadas.length} categorias`);
         setAreas(todasAreas);
       }
     } catch (error) {
-      console.error("Erro ao carregar áreas:", error);
-      if (error.response) {
-        console.error("Resposta do servidor:", error.response.status, error.response.data);
-      }
       toast.error("Erro ao carregar áreas. Verifique a consola para mais detalhes.");
     }
   }, [categoriasSelecionadas]);
 
-  // Função para carregar categorias
+  /**
+   * Carregar lista de categorias disponíveis
+   */
   const carregarCategorias = async () => {
     try {
       const response = await axios.get(`${API_BASE}/categorias`);
       setCategorias(response.data);
     } catch (error) {
-      console.error("Erro ao carregar categorias:", error);
       toast.error("Erro ao carregar categorias");
     }
   };
 
-  // Carregar categorias quando o componente for montado
+  // Carregar categorias na inicialização
   useEffect(() => {
     carregarCategorias();
   }, []);
 
-  // Carregar áreas quando uma categoria for selecionada
+  // Carregar áreas quando categorias mudam
   useEffect(() => {
     if (categoriasSelecionadas.length > 0) {
       carregarAreas();
@@ -114,12 +109,17 @@ function CriarUser() {
     }
   }, [categoriasSelecionadas, carregarAreas]);
 
-  // Funções para abrir modais específicos
+  /**
+   * Abrir modal para seleção de categorias
+   */
   const abrirModalCategoria = () => {
     setModalTipo('categoria');
     setModalAberto(true);
   };
 
+  /**
+   * Abrir modal para seleção de áreas
+   */
   const abrirModalArea = () => {
     if (categoriasSelecionadas.length === 0) {
       toast.warning("Seleccione uma categoria primeiro");
@@ -129,6 +129,9 @@ function CriarUser() {
     setModalAberto(true);
   };
 
+  /**
+   * Abrir modal para seleção de cursos
+   */
   const abrirModalCurso = () => {
     if (categoriasSelecionadas.length === 0) {
       toast.warning("Seleccione uma categoria primeiro");
@@ -138,31 +141,43 @@ function CriarUser() {
     setModalAberto(true);
   };
 
-  // Função para fechar o modal
+  /**
+   * Fechar modal activo
+   */
   const fecharModal = () => {
     setModalAberto(false);
     setModalTipo(null);
   };
 
-  // Funções para lidar com seleções dos modais
+  /**
+   * Processar seleção de categorias
+   */
   const handleCategoriaSelecionada = (categorias) => {
     setCategoriasSelecionadas(categorias);
-    // Restabelecer áreas e curso selecionado quando mudar as categorias
     setAreasSelecionadas([]);
     setCursoSelecionado(null);
     fecharModal();
   };
 
+  /**
+   * Processar seleção de áreas
+   */
   const handleAreaSelecionada = (areas) => {
     setAreasSelecionadas(areas);
     fecharModal();
   };
 
+  /**
+   * Processar seleção de curso
+   */
   const handleCursoSelecionado = (cursoId) => {
     setCursoSelecionado(cursoId);
     fecharModal();
   };
 
+  /**
+   * Processar mudanças no formulário
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'idade') {
@@ -174,6 +189,9 @@ function CriarUser() {
     setFormData({ ...formData, [name]: value });
   };
 
+  /**
+   * Submeter formulário para criação de utilizador
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -184,7 +202,7 @@ function CriarUser() {
       let response;
 
       if (formData.cargo === 'formador') {
-        // Para formadores, usar objecto simples (sem FormData)
+        // Criar formador
         const formadorData = {
           nome: formData.nome,
           email: formData.email,
@@ -196,7 +214,7 @@ function CriarUser() {
           cargo: 'formador'
         };
 
-        // Adicionar categorias, áreas e curso selecionados
+        // Adicionar categorias, áreas e curso se selecionados
         if (categoriasSelecionadas.length > 0) {
           formadorData.categorias = categoriasSelecionadas.map(cat => cat.id_categoria);
         }
@@ -209,7 +227,6 @@ function CriarUser() {
           formadorData.curso = cursoSelecionado;
         }
 
-        // Enviar como application/json, não como multipart/form-data
         response = await axios.post(`${API_BASE}/formadores/register`, formadorData, {
           headers: {
             'Content-Type': 'application/json'
@@ -218,7 +235,7 @@ function CriarUser() {
 
         toast.success('Formador registado com sucesso! Um email de confirmação foi enviado.');
       } else if (formData.cargo === 'formando'){
-        // Para formandos, também usar objecto simples (sem FormData)
+        // Criar formando
         const formandoData = {
           nome: formData.nome,
           email: formData.email,
@@ -230,7 +247,6 @@ function CriarUser() {
           cargo: 'formando'
         };
 
-        // Enviar requisição para registar formando
         response = await axios.post(`${API_BASE}/users/register`, formandoData, {
           headers: {
             'Content-Type': 'application/json'
@@ -239,6 +255,7 @@ function CriarUser() {
 
         toast.success('Formando registado com sucesso! Um email de confirmação foi enviado.');
       } else if (formData.cargo === 'gestor') {
+        // Criar gestor
         const gestorData = {
           nome: formData.nome,
           email: formData.email,
@@ -250,7 +267,6 @@ function CriarUser() {
           cargo: 'gestor'
         };
 
-        // Enviar requisição para registar gestor
         response = await axios.post(`${API_BASE}/users/register`, gestorData, {
           headers: {
             'Content-Type': 'application/json'
@@ -262,7 +278,7 @@ function CriarUser() {
         throw new Error("Tipo de cargo não reconhecido");
       }
 
-      // Limpar o formulário após sucesso
+      // Limpar formulário após sucesso
       setFormData({
         nome: '',
         email: '',
@@ -278,8 +294,6 @@ function CriarUser() {
       setCursoSelecionado(null);
 
     } catch (error) {
-      console.error("Erro ao criar utilizador:", error);
-
       let mensagem = "Erro ao criar utilizador. Por favor, tente novamente.";
 
       if (error.response && error.response.data && error.response.data.message) {
@@ -298,7 +312,6 @@ function CriarUser() {
       <ToastContainer />
 
       <form className='form-register' onSubmit={handleSubmit}>
-
         <div className="inputs">
           <div className="row">
             <input type="text" name="nome" placeholder="Nome do Utilizador" value={formData.nome} onChange={handleChange} required />
@@ -320,6 +333,7 @@ function CriarUser() {
             <input type="text" name="codigo_postal" placeholder="Código Postal" value={formData.codigo_postal} onChange={handleChange} required />
           </div>
 
+          {/* Campos específicos para formadores */}
           {formData.cargo === "formador" && (
             <div className="row">
               <button
@@ -354,7 +368,7 @@ function CriarUser() {
         </div>
       </form>
 
-      {/* Renderizar o modal apropriado com base no modalTipo */}
+      {/* Modais para seleção */}
       {modalAberto && modalTipo === 'categoria' && (
         <CategoriaModal
           isOpen={modalAberto}

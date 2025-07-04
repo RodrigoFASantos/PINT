@@ -11,27 +11,37 @@ const {
     getTrabalhosByPastaId 
 } = require('../../controllers/avaliacoes/submissoes_ctrl');
 
-// Submeter ficheiro de avaliação
+/**
+ * Rotas para gestão de submissões de trabalhos
+ * Permite submeter e consultar trabalhos organizados por curso e pasta
+ * 
+ * IMPORTANTE: As rotas estão ordenadas da mais específica para a mais genérica
+ * para evitar conflitos de roteamento
+ */
+
+// === SUBMISSÃO DE TRABALHOS ===
+
+// Submeter novo ficheiro de avaliação
 router.post('/', auth, uploadAvaliacaoConteudo, handleUploadErrors, submitSubmissao);
 
-// IMPORTANTE: Ordenar rotas da mais específica para a mais genérica
+// === CONSULTA DE TRABALHOS (ordenadas por especificidade) ===
 
-// Buscar trabalho específico por ID - deve ser a primeira rota
+// Obter trabalho específico por ID (deve ser a primeira rota de consulta)
 router.get('/:id([0-9]+)', auth, getTrabalhoById);
 
-// Rota para buscar por ID da pasta
+// Obter trabalhos por ID da pasta
 router.get('/submissoes-pasta', auth, getTrabalhosByPastaId);
 
 // Rota alternativa para compatibilidade
 router.get('/pasta-id', auth, getTrabalhosByPastaId);
 
-// Rota para buscar por curso e pasta normalizada
+// Obter trabalhos por curso e pasta normalizada
 router.get('/curso/:cursoNome/pasta/:pastaNome', auth, getTrabalhosByPastaECurso);
 
-// Mostrar submissões de uma pasta específica
+// Obter submissões de uma pasta específica
 router.get('/pasta/:pastaNome', auth, getSubmissoesByPasta);
 
-// Mostrar todas as submissões de um curso (deve ser a última rota)
+// Obter todas as submissões de um curso (deve ser a última rota)
 router.get('/', auth, getSubmissoes);
 
 module.exports = router;

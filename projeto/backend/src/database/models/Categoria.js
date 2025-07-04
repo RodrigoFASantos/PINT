@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: CATEGORIAS DE FORMAÇÃO
+// =============================================================================
+// Define as grandes categorias de cursos (ex: Informática, Gestão, Saúde)
+// Cada categoria pode ter múltiplas áreas específicas
+
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -11,6 +17,7 @@ const Categoria = sequelize.define("categorias", {
     type: DataTypes.STRING(255),
     allowNull: false,
     unique: true,
+    comment: "Nome único da categoria de formação"
   },
 }, {
   tableName: "categorias",

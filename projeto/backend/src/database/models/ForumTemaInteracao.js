@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: INTERAÇÕES DOS TEMAS DO FÓRUM
+// =============================================================================
+// Regista as interações (likes/dislikes) dos utilizadores nos temas do fórum
+// Cada utilizador pode dar apenas uma interação por tema
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
@@ -14,7 +20,8 @@ const ForumTemaInteracao = sequelize.define('forum_tema_interacao', {
     references: {
       model: 'forum_tema',
       key: 'id_tema'
-    }
+    },
+    comment: "Tema que recebeu a interação"
   },
   id_utilizador: {
     type: DataTypes.INTEGER,
@@ -22,16 +29,19 @@ const ForumTemaInteracao = sequelize.define('forum_tema_interacao', {
     references: {
       model: 'utilizadores',
       key: 'id_utilizador'
-    }
+    },
+    comment: "Utilizador que fez a interação"
   },
   tipo: {
     type: DataTypes.ENUM('like', 'dislike'),
-    allowNull: false
+    allowNull: false,
+    comment: "Tipo de interação (like ou dislike)"
   },
   data_interacao: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    comment: "Data e hora da interação"
   }
 }, {
   tableName: 'forum_tema_interacao',
@@ -46,7 +56,7 @@ const ForumTemaInteracao = sequelize.define('forum_tema_interacao', {
       fields: ['id_utilizador']
     }
   ],
-  // Cada utilizador só pode ter uma interação por tema
+  // Restrição única: cada utilizador só pode ter uma interação por tema
   uniqueKeys: {
     unique_user_tema: {
       fields: ['id_tema', 'id_utilizador']

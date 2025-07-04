@@ -78,7 +78,7 @@ const PasswordChangeModal = ({ isOpen, onClose, userId }) => {
       <div className="password-modal">
         <h2>Alterar Senha</h2>
         <p className="modal-info">
-          Por medidas de segurança, você precisa alterar sua senha no primeiro acesso.
+          Por medidas de segurança, precisa alterar sua senha no primeiro acesso.
         </p>
         
         {success ? (

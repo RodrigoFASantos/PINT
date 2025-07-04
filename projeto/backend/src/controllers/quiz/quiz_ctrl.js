@@ -940,7 +940,7 @@ const iniciarQuiz = async (req, res) => {
 
     if (tentativaCompleta) {
       console.log(`Quiz já foi completado: ID ${tentativaCompleta.id_resposta}`);
-      return res.status(400).json(createResponse(false, 'Você já completou este quiz'));
+      return res.status(400).json(createResponse(false, 'Já completou este quiz'));
     }
 
     // Criar nova tentativa

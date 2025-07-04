@@ -628,7 +628,7 @@ const denunciarTema = async (req, res) => {
     if (denunciaExistente) {
       return res.status(400).json({
         success: false,
-        message: 'Você já denunciou este tema anteriormente'
+        message: ' já denunciou este tema anteriormente'
       });
     }
 
@@ -1213,7 +1213,7 @@ const denunciarComentario = async (req, res) => {
     if (denunciaExistente) {
       return res.status(400).json({
         success: false,
-        message: 'Você já denunciou este comentário anteriormente'
+        message: ' já denunciou este comentário anteriormente'
       });
     }
 

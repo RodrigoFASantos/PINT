@@ -14,21 +14,44 @@ const {
   getNotasQuizzesPorCurso
 } = require("../../controllers/quiz/quiz_ctrl");
 
-// Rotas abertas para todos utilizadores autenticados
+/**
+ * Rotas para gestão de quizzes
+ * Controla criação, edição, realização e avaliação de quizzes
+ */
+
+// === ROTAS GERAIS (todos os utilizadores autenticados) ===
+
+// Listar todos os quizzes disponíveis
 router.get("/", verificarToken, getAllQuizzes);
+
+// Obter dados de um quiz específico
 router.get("/:id", verificarToken, getQuizById);
 
-// Obter notas de quizzes por curso para avaliação
+// === ROTAS PARA FORMADORES E ADMINISTRADORES ===
+
+// Obter notas de quizzes por curso (para avaliação)
 router.get("/notas-curso/:cursoId", verificarToken, autorizar([1, 2]), getNotasQuizzesPorCurso);
 
-// Rotas apenas para administradores (formadores não podem criar/editar quizzes)
+// === ROTAS ADMINISTRATIVAS (apenas administradores) ===
+
+// Criar novo quiz
 router.post("/", verificarToken, autorizar([1]), createQuiz);
+
+// Atualizar quiz existente
 router.put("/:id", verificarToken, autorizar([1]), updateQuiz);
+
+// Atualização completa de quiz
 router.put("/:id/completo", verificarToken, autorizar([1]), updateQuizCompleto);
+
+// Eliminar quiz
 router.delete("/:id", verificarToken, autorizar([1]), deleteQuiz);
 
-// Rotas apenas para formandos (formadores não fazem quizzes)
+// === ROTAS PARA FORMANDOS (realização de quizzes) ===
+
+// Iniciar um quiz (apenas formandos)
 router.post("/:id/iniciar", verificarToken, autorizar([3]), iniciarQuiz);
+
+// Submeter respostas do quiz (apenas formandos)
 router.post("/:id/submeter", verificarToken, autorizar([3]), submeterQuiz);
 
 module.exports = router;

@@ -5,27 +5,36 @@ const verificarToken = require('../../middleware/auth');
 const autorizar = require('../../middleware/autorizar');
 const verificarCargo = require('../../middleware/role_middleware');
 
-// Rota para obter todas as categorias (acessível a todos os utilizadores autenticados)
+/**
+ * Rotas para gestão de categorias
+ * Permite consultar, criar, atualizar e eliminar categorias de cursos
+ */
+
+// === CONSULTA DE CATEGORIAS (todos os utilizadores autenticados) ===
+
+// Obter lista de todas as categorias
 router.get('/', verificarToken, categoriasController.getAllCategorias);
 
-// Rota para obter uma categoria específica pelo ID
+// Obter dados de uma categoria específica
 router.get('/:id', verificarToken, categoriasController.getCategoriaById);
 
-// Rota para criar uma nova categoria (apenas admin e gestor)
+// === GESTÃO DE CATEGORIAS (apenas administradores e gestores) ===
+
+// Criar nova categoria
 router.post('/', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']), 
   categoriasController.createCategoria
 );
 
-// Rota para atualizar uma categoria existente (apenas admin e gestor)
+// Atualizar categoria existente
 router.put('/:id', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']), 
   categoriasController.updateCategoria
 );
 
-// Rota para excluir uma categoria (apenas admin e gestor)
+// Eliminar categoria
 router.delete('/:id', 
   verificarToken, 
   verificarCargo(['admin', 'gestor']),

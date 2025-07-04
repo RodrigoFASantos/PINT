@@ -4,6 +4,9 @@ import '../providers/notificacoes_provider.dart';
 import '../components/sidebar_screen.dart';
 import '../components/navbar_screen.dart';
 
+/// Ecrã de Notificações
+/// Este ecrã apresenta todas as notificações do utilizador
+/// Permite marcar notificações como lidas e navegar para os respetivos conteúdos
 class NotificacoesScreen extends StatefulWidget {
   const NotificacoesScreen({Key? key}) : super(key: key);
 
@@ -12,28 +15,35 @@ class NotificacoesScreen extends StatefulWidget {
 }
 
 class _NotificacoesScreenState extends State<NotificacoesScreen> {
-  String? _message;
-  bool _showMessage = false;
+  // Variáveis para controlar as mensagens de feedback ao utilizador
+  String? _message; // Mensagem a exibir
+  bool _showMessage = false; // Controla se deve mostrar a mensagem
 
   @override
   void initState() {
     super.initState();
+    // Executa o carregamento das notificações após o widget ser construído
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _carregarNotificacoes();
     });
   }
 
+  /// Carrega as notificações do servidor
+  /// Acede ao provider de notificações e solicita a lista atualizada
   Future<void> _carregarNotificacoes() async {
     final provider = Provider.of<NotificacoesProvider>(context, listen: false);
     await provider.buscarNotificacoes();
   }
 
+  /// Exibe uma mensagem temporária ao utilizador
+  /// A mensagem aparece por 3 segundos e depois desaparece automaticamente
   void _mostrarMensagem(String mensagem) {
     setState(() {
       _message = mensagem;
       _showMessage = true;
     });
 
+    // Remove a mensagem após 3 segundos
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
@@ -43,12 +53,16 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     });
   }
 
+  /// Marca uma notificação específica como lida
+  /// Recebe o ID da notificação e chama o método correspondente no provider
   Future<void> _marcarComoLida(int idNotificacao) async {
     final provider = Provider.of<NotificacoesProvider>(context, listen: false);
     final result = await provider.marcarComoLida(idNotificacao);
     _mostrarMensagem(result['message'] ?? 'Notificação marcada como lida');
   }
 
+  /// Marca todas as notificações como lidas de uma só vez
+  /// Útil quando o utilizador quer limpar todas as notificações não lidas
   Future<void> _marcarTodasComoLidas() async {
     final provider = Provider.of<NotificacoesProvider>(context, listen: false);
     final result = await provider.marcarTodasComoLidas();
@@ -56,30 +70,35 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
         result['message'] ?? 'Todas as notificações foram marcadas como lidas');
   }
 
-  // Navegação para as páginas corretas
+  /// Navega para o conteúdo relacionado com a notificação
+  /// Analisa o tipo de notificação e redireciona para o ecrã apropriado
   void _navegarParaItem(Map<String, dynamic> notificacao) {
+    // Verifica se a notificação tem dados válidos
     if (notificacao['notificacao'] == null) {
       debugPrint('Dados de notificação inválidos: $notificacao');
       return;
     }
 
+    // Extrai os dados da notificação
     final dados = notificacao['notificacao'];
-    final tipo = dados['tipo'];
-    final idReferencia = dados['id_referencia'];
+    final tipo = dados['tipo']; // Tipo da notificação (curso, formador, etc.)
+    final idReferencia = dados['id_referencia']; // ID do item relacionado
 
+    // Verifica se existe um ID de referência
     if (idReferencia == null) {
       debugPrint('ID de referência não encontrado na notificação');
       return;
     }
 
-    debugPrint('Navegando para item de notificação: $notificacao');
+    debugPrint('Navegar para item de notificação: $notificacao');
     debugPrint('Tipo: $tipo, ID: $idReferencia');
 
+    // Navega para o ecrã apropriado baseado no tipo de notificação
     switch (tipo) {
-      case 'curso_adicionado':
+      case 'curso_':
       case 'formador_alterado':
       case 'data_curso_alterada':
-        // Usar rota '/curso' (singular) com arguments
+        // Para notificações relacionadas com cursos
         Navigator.pushNamed(
           context,
           '/curso',
@@ -87,68 +106,79 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
         );
         break;
       case 'formador_criado':
-        // Para formadores, manter a navegação original ou ajustar conforme necessário
+        // Para notificações sobre formadores
         Navigator.pushNamed(context, '/formadores/$idReferencia');
         break;
       case 'admin_criado':
-        // Para admin, manter a navegação original ou ajustar conforme necessário
+        // Para notificações administrativas
         Navigator.pushNamed(context, '/admin/users/$idReferencia');
         break;
       default:
+        // Tipo de notificação não reconhecido
         debugPrint('Tipo de notificação não reconhecido: $tipo');
         _mostrarMensagem('Tipo de notificação não suportado');
     }
   }
 
+  /// Determina a cor de fundo da notificação baseada no tipo e estado
+  /// Notificações não lidas têm uma opacidade maior
   Color _getNotificacaoCorDeFundo(String tipo, bool lida) {
     final baseColor = _getNotificacaoColor(tipo);
     return lida ? baseColor.withOpacity(0.1) : baseColor.withOpacity(0.2);
   }
 
+  /// Define a cor principal da notificação baseada no seu tipo
+  /// Cada tipo de notificação tem uma cor específica para fácil identificação
   Color _getNotificacaoColor(String tipo) {
     switch (tipo) {
-      case 'curso_adicionado':
-        return Colors.blue;
+      case 'curso_':
+        return Colors.blue; // Azul para cursos
       case 'formador_alterado':
       case 'formador_criado':
-        return Colors.orange;
+        return Colors.orange; // Laranja para formadores
       case 'admin_criado':
-        return Colors.purple;
+        return Colors.purple; // Roxo para administração
       case 'data_curso_alterada':
-        return Colors.green;
+        return Colors.green; // Verde para alterações de data
       default:
-        return Colors.grey;
+        return Colors.grey; // Cinzento para tipos desconhecidos
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      // Navbar sempre visível
+      backgroundColor: Colors.grey[50], // Fundo cinzento claro
+
+      // Barra de navegação sempre visível no topo
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: NavbarScreen(
-          currentUser: null, // Você pode passar dados do usuário se disponível
+          currentUser: null, // Pode passar dados do utilizador se disponível
         ),
       ),
-      // ADICIONADO: Sidebar sem navbar integrada
+
+      // Menu lateral (sidebar) sem barra de navegação integrada
       drawer: const SidebarScreen(
         currentRoute: '/notificacoes',
       ),
+
+      // Corpo principal do ecrã
       body: Consumer<NotificacoesProvider>(
         builder: (context, provider, child) {
           return RefreshIndicator(
+            // Permite atualizar as notificações puxando para baixo
             onRefresh: provider.recarregarNotificacoes,
             child: Column(
               children: [
-                // Header das notificações
+                // Cabeçalho das notificações
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.white,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Título e contador de notificações não lidas
                       Row(
                         children: [
                           Text(
@@ -160,6 +190,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                           ),
+                          // Badge com número de notificações não lidas
                           if (provider.notificacoesNaoLidas > 0) ...[
                             const SizedBox(width: 8),
                             Container(
@@ -181,6 +212,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                           ],
                         ],
                       ),
+                      // Botão para marcar todas as notificações como lidas
                       if (provider.notificacoesNaoLidas > 0)
                         ElevatedButton.icon(
                           onPressed: _marcarTodasComoLidas,
@@ -197,12 +229,12 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                   ),
                 ),
 
-                // Conteúdo principal
+                // Área principal do conteúdo
                 Expanded(
                   child: _buildContent(provider),
                 ),
 
-                // Toast message
+                // Mensagem toast (notificação temporária)
                 if (_showMessage && _message != null)
                   Container(
                     margin: const EdgeInsets.all(16),
@@ -232,7 +264,10 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
+  /// Constrói o conteúdo principal do ecrã baseado no estado do provider
+  /// Pode mostrar: loading, erro, lista vazia ou lista de notificações
   Widget _buildContent(NotificacoesProvider provider) {
+    // Estado de carregamento
     if (provider.loading) {
       return const Center(
         child: Column(
@@ -240,12 +275,13 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
           children: [
             CircularProgressIndicator(color: Color(0xFFFF8000)),
             SizedBox(height: 16),
-            Text('Carregando notificações...'),
+            Text('Carregar notificações...'),
           ],
         ),
       );
     }
 
+    // Estado de erro
     if (provider.error != null) {
       return Center(
         child: Column(
@@ -268,6 +304,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       );
     }
 
+    // Estado de lista vazia
     if (provider.notificacoes.isEmpty) {
       return const Center(
         child: Column(
@@ -276,7 +313,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             Icon(Icons.notifications_none, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text(
-              'Você não tem notificações.',
+              'Não tem notificações.',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
@@ -284,6 +321,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       );
     }
 
+    // Lista de notificações
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: provider.notificacoes.length,
@@ -294,14 +332,17 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
+  /// Constrói um item individual de notificação
+  /// Cada notificação é apresentada como um cartão com informações e ações
   Widget _buildNotificacaoItem(
       Map<String, dynamic> notificacao, NotificacoesProvider provider) {
-    // Verificar estrutura da notificação
+    // Verifica se a estrutura da notificação é válida
     if (notificacao['notificacao'] == null) {
       debugPrint('Notificação inválida: $notificacao');
-      return const SizedBox.shrink();
+      return const SizedBox.shrink(); // Retorna widget vazio
     }
 
+    // Extrai os dados da notificação
     final dados = notificacao['notificacao'];
     final tipo = dados['tipo'] ?? '';
     final titulo = dados['titulo'] ?? '';
@@ -316,6 +357,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        // Borda mais destacada para notificações não lidas
         border: Border.all(
           color: lida ? Colors.grey[300]! : _getNotificacaoColor(tipo),
           width: lida ? 1 : 2,
@@ -330,9 +372,10 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
+        // Permite clicar na notificação para navegar (se tiver referência)
         onTap: idReferencia != null
             ? () {
-                debugPrint('🔄 Clicando na notificação: $titulo');
+                debugPrint('🔄 Clicar na notificação: $titulo');
                 _navegarParaItem(notificacao);
               }
             : null,
@@ -341,7 +384,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ícone da notificação
+              // Ícone circular da notificação
               Container(
                 width: 40,
                 height: 40,
@@ -358,11 +401,12 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
               ),
               const SizedBox(width: 12),
 
-              // Conteúdo da notificação
+              // Conteúdo textual da notificação
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Título da notificação
                     Text(
                       titulo,
                       style: TextStyle(
@@ -372,6 +416,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // Mensagem da notificação
                     Text(
                       mensagem,
                       style: TextStyle(
@@ -380,6 +425,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    // Informações adicionais (tempo e link)
                     Row(
                       children: [
                         Icon(Icons.access_time,
@@ -392,6 +438,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                             color: Colors.grey[500],
                           ),
                         ),
+                        // Indicação de que pode ver detalhes
                         if (idReferencia != null) ...[
                           const SizedBox(width: 16),
                           Text(
@@ -409,7 +456,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                 ),
               ),
 
-              // Botão para marcar como lida
+              // Botão para marcar como lida (apenas se não estiver lida)
               if (!lida && idNotificacao != null)
                 IconButton(
                   icon: const Icon(Icons.check_circle_outline),

@@ -286,7 +286,7 @@ const Gerir_Cursos = () => {
 
           if (error.response.status === 403) {
             console.log('[DEBUG] Gerir_Cursos: Erro 403 - Acesso negado. A redirecionar para página inicial...');
-            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            toast.error('Acesso negado.  não tem permissão para acessar esta página.');
             navigate('/');
           } else if (error.response.status === 401) {
             console.log('[DEBUG] Gerir_Cursos: Erro 401 - Não autorizado. A redirecionar para login...');

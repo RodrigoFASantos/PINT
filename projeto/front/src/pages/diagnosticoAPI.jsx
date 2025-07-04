@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE from '../api';
 
+/**
+ * Componente para diagnóstico e teste das rotas da API
+ * Permite verificar se as ligações estão a funcionar correctamente
+ */
 const DiagnosticoAPI = () => {
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState(null);
@@ -10,7 +14,7 @@ const DiagnosticoAPI = () => {
   useEffect(() => {
     const testarAPI = async () => {
       try {
-        // Obter token do localStorage
+        // Obter token de autenticação do armazenamento local
         const token = localStorage.getItem('token');
         
         if (!token) {
@@ -18,26 +22,23 @@ const DiagnosticoAPI = () => {
           setLoading(false);
           return;
         }
-
-        // Testar a API
-        console.log('Token encontrado:', token.substring(0, 15) + '...');
         
-        // Verificar rota raiz da API
+        // Testar rota raiz da API
         const rotaRaiz = await axios.get(`${API_BASE}`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(e => ({ error: e }));
         
-        // Testar rota de usuários
+        // Testar rota de utilizadores
         const rotaUsers = await axios.get(`${API_BASE}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(e => ({ error: e }));
 
-        // Testar rota alternativa (talvez o endpoint seja diferente)
+        // Testar rota alternativa
         const rotaAlternativa = await axios.get(`${API_BASE}/users/all`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(e => ({ error: e }));
 
-        // Coletar resultados
+        // Compilar resultados do diagnóstico
         setResultado({
           api_base: API_BASE,
           rota_raiz: rotaRaiz.error ? 'Erro' : 'OK',
@@ -59,17 +60,11 @@ const DiagnosticoAPI = () => {
     testarAPI();
   }, []);
 
-  if (loading) {
-    return <div>Realizando diagnóstico da API...</div>;
-  }
-
-  if (error) {
-    return <div className="erro-diagnostico">{error}</div>;
-  }
-
+  /**
+   * Formatar resposta JSON para exibição, truncando se necessário
+   */
   const formatarJSON = (jsonString) => {
     try {
-      // Limitar o tamanho da resposta para não sobrecarregar a tela
       if (jsonString.length > 500) {
         return jsonString.substring(0, 500) + '... (truncado)';
       }
@@ -78,6 +73,14 @@ const DiagnosticoAPI = () => {
       return jsonString;
     }
   };
+
+  if (loading) {
+    return <div>Realizando diagnóstico da API...</div>;
+  }
+
+  if (error) {
+    return <div className="erro-diagnostico">{error}</div>;
+  }
 
   return (
     <div className="diagnostico-container">
@@ -115,7 +118,7 @@ const DiagnosticoAPI = () => {
       <div className="diagnostico-conclusao">
         <h3>Diagnóstico:</h3>
         {resultado.rota_users === 'OK' ? 
-          <p>A API está respondendo corretamente, mas o formato da resposta pode não ser compatível com o componente.</p> :
+          <p>A API está a responder correctamente, mas o formato da resposta pode não ser compatível com o componente.</p> :
           <p>Há um problema na comunicação com a API. Verifique as credenciais e as permissões de acesso.</p>
         }
       </div>

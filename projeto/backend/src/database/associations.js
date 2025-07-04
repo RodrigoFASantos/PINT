@@ -1,3 +1,12 @@
+// =============================================================================
+// ASSOCIAÇÕES DOS MODELOS SEQUELIZE
+// =============================================================================
+// Define todas as relações entre as tabelas da base de dados
+// Organizado por domínios funcionais para facilitar manutenção
+
+// =============================================================================
+// IMPORTAÇÃO DE TODOS OS MODELOS
+// =============================================================================
 const Area = require('./models/Area');
 const Avaliacao = require('./models/Avaliacao');
 const Cargo = require('./models/Cargo');
@@ -35,224 +44,282 @@ const ForumComentario = require('./models/ForumComentario');
 const Curso_Presenca = require('./models/Curso_Presenca');
 const Formando_Presenca = require('./models/Formando_Presenca');
 
+// Objeto com todos os modelos para referência
 const models = { 
-  Area, AssociarCursos, Avaliacao, Cargo, Categoria, ChatMensagem, ChatInteracao, ChatDenuncia, ConteudoCurso, Curso, FormadorCategoria, FormadorArea, Inscricao_Curso, OcorrenciaCurso, PastaCurso, PushSubscription, Quiz, QuizOpcao, QuizPergunta, QuizResposta, QuizRespostaDetalhe, TipoConteudo, Topico_Area, Curso_Topicos, Trabalho_Entregue, User, User_Pendente, FormadorAssociacoesPendentes, Notificacao, NotificacaoUtilizador, ForumTema, ForumTemaInteracao, ForumTemaDenuncia, ForumComentario, Curso_Presenca, Formando_Presenca 
+  Area, AssociarCursos, Avaliacao, Cargo, Categoria, ChatMensagem, ChatInteracao, ChatDenuncia, 
+  ConteudoCurso, Curso, FormadorCategoria, FormadorArea, Inscricao_Curso, OcorrenciaCurso, 
+  PastaCurso, PushSubscription, Quiz, QuizOpcao, QuizPergunta, QuizResposta, QuizRespostaDetalhe, 
+  TipoConteudo, Topico_Area, Curso_Topicos, Trabalho_Entregue, User, User_Pendente, 
+  FormadorAssociacoesPendentes, Notificacao, NotificacaoUtilizador, ForumTema, ForumTemaInteracao, 
+  ForumTemaDenuncia, ForumComentario, Curso_Presenca, Formando_Presenca 
 };
 
-// Associações User_Pendente
-User_Pendente.belongsTo(Cargo, { foreignKey: "id_cargo", as: "cargo", constraints: false });
-User_Pendente.hasOne(FormadorAssociacoesPendentes, { foreignKey: "id_pendente", as: "associacoes" });
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE UTILIZADORES
+// =============================================================================
 
-// Associações FormadorAssociacoesPendentes
-FormadorAssociacoesPendentes.belongsTo(User_Pendente, { foreignKey: "id_pendente", as: "usuario_pendente", onDelete: 'CASCADE' });
+// Utilizadores Pendentes (candidatos à aprovação)
+User_Pendente.belongsTo(Cargo, { 
+  foreignKey: "id_cargo", 
+  as: "cargo", 
+  constraints: false 
+});
+User_Pendente.hasOne(FormadorAssociacoesPendentes, { 
+  foreignKey: "id_pendente", 
+  as: "associacoes" 
+});
 
-// Associações User
+// Associações Pendentes de Formadores
+FormadorAssociacoesPendentes.belongsTo(User_Pendente, { 
+  foreignKey: "id_pendente", 
+  as: "usuario_pendente", 
+  onDelete: 'CASCADE' 
+});
+
+// Utilizadores Principais
 User.belongsTo(Cargo, { foreignKey: "id_cargo", as: "cargo" });
 User.hasMany(PushSubscription, { foreignKey: "id_utilizador", as: "subscriptions" });
 User.hasMany(Curso, { foreignKey: "id_formador", as: "cursos_ministrados" });
-User.belongsToMany(Curso, { through: Inscricao_Curso, foreignKey: "id_utilizador", otherKey: "id_curso", as: "cursos" });
+User.belongsToMany(Curso, { 
+  through: Inscricao_Curso, 
+  foreignKey: "id_utilizador", 
+  otherKey: "id_curso", 
+  as: "cursos" 
+});
 User.hasMany(Inscricao_Curso, { foreignKey: "id_utilizador", as: "inscricoes" });
-
-// Associações para sistema de associar cursos
-AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_origem", as: "cursoOrigem" });
-AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_destino", as: "cursoDestino" });
-
-// Adicionar associações bidirecionais em Curso para associações
-Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_origem", as: "cursosAssociadosOrigem" });
-Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_destino", as: "cursosAssociadosDestino" });
-
-// Formadores com categorias e áreas
-User.belongsToMany(Categoria, { through: FormadorCategoria, foreignKey: "id_formador", otherKey: "id_categoria", as: "categorias_formador" });
-User.belongsToMany(Area, { through: FormadorArea, foreignKey: "id_formador", otherKey: "id_area", as: "areas_formador" });
 User.hasMany(ChatMensagem, { foreignKey: "id_utilizador", as: "mensagens_enviadas" });
-
-// User com interações e denúncias
 User.hasMany(ChatInteracao, { foreignKey: "id_utilizador", as: "interacoes" });
 User.hasMany(ChatDenuncia, { foreignKey: "id_denunciante", as: "denuncias_feitas" });
+User.hasMany(NotificacaoUtilizador, { foreignKey: "id_utilizador", as: "notificacoes" });
+User.hasMany(Trabalho_Entregue, { foreignKey: "id_utilizador", as: "trabalhos" });
+User.hasMany(Formando_Presenca, { foreignKey: "id_utilizador", as: "presencas_marcadas" });
 
-// Associações Cargo
+// Cargos
 Cargo.hasMany(User, { foreignKey: "id_cargo", as: "utilizadores" });
+Cargo.hasMany(User_Pendente, { 
+  foreignKey: "id_cargo", 
+  as: "utilizadores_pendentes", 
+  constraints: false 
+});
 
-// Associações Categoria
+// =============================================================================
+// ASSOCIAÇÕES: ESPECIALIDADES DOS FORMADORES
+// =============================================================================
+
+// Formadores com Categorias (muitos-para-muitos)
+User.belongsToMany(Categoria, { 
+  through: FormadorCategoria, 
+  foreignKey: "id_formador", 
+  otherKey: "id_categoria", 
+  as: "categorias_formador" 
+});
+Categoria.belongsToMany(User, { 
+  through: FormadorCategoria, 
+  foreignKey: "id_categoria", 
+  otherKey: "id_formador", 
+  as: "formadores" 
+});
+
+// Formadores com Áreas (muitos-para-muitos)
+User.belongsToMany(Area, { 
+  through: FormadorArea, 
+  foreignKey: "id_formador", 
+  otherKey: "id_area", 
+  as: "areas_formador" 
+});
+Area.belongsToMany(User, { 
+  through: FormadorArea, 
+  foreignKey: "id_area", 
+  otherKey: "id_formador", 
+  as: "formadores" 
+});
+
+// Tabelas intermédias de especialidades
+FormadorCategoria.belongsTo(User, { foreignKey: "id_formador", as: "formador" });
+FormadorCategoria.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoria" });
+FormadorArea.belongsTo(User, { foreignKey: "id_formador", as: "formador" });
+FormadorArea.belongsTo(Area, { foreignKey: "id_area", as: "area" });
+
+// =============================================================================
+// ASSOCIAÇÕES: HIERARQUIA DE CATEGORIAS E ÁREAS
+// =============================================================================
+
+// Categorias principais
 Categoria.hasMany(Area, { foreignKey: "id_categoria", as: "areas" });
-Cargo.hasMany(User_Pendente, { foreignKey: "id_cargo", as: "utilizadores_pendentes", constraints: false });
 Categoria.hasMany(Curso, { foreignKey: "id_categoria", as: "cursos" });
 
-// Categoria com Formadores
-Categoria.belongsToMany(User, { through: FormadorCategoria, foreignKey: "id_categoria", otherKey: "id_formador", as: "formadores" });
-
-// Associações Area
+// Áreas específicas
 Area.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoriaParent" });
 Area.hasMany(Curso, { foreignKey: "id_area", as: "cursos" });
+Area.hasMany(Topico_Area, { foreignKey: "id_area", as: "topicos_categoria" });
 
-// Area com Formadores
-Area.belongsToMany(User, { through: FormadorArea, foreignKey: "id_area", otherKey: "id_formador", as: "formadores" });
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE CURSOS
+// =============================================================================
 
-// Associações Curso principais
+// Curso Principal
 Curso.belongsTo(User, { foreignKey: "id_formador", as: "formador" });
 Curso.belongsTo(Area, { foreignKey: "id_area", as: "area" });
 Curso.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoria" });
 Curso.belongsTo(Topico_Area, { foreignKey: "id_topico_area", as: "Topico_Area" });
-Topico_Area.hasMany(Curso, { foreignKey: "id_topico_area", as: "cursos_associados" });
-Curso.belongsToMany(User, { through: Inscricao_Curso, foreignKey: "id_curso", otherKey: "id_utilizador", as: "utilizadores" });
-Curso.hasMany(Quiz, { foreignKey: "id_curso", as: "quizzes" });
-Curso.hasMany(OcorrenciaCurso, { foreignKey: "id_curso_original", as: "ocorrencias" });
+Curso.belongsToMany(User, { 
+  through: Inscricao_Curso, 
+  foreignKey: "id_curso", 
+  otherKey: "id_utilizador", 
+  as: "utilizadores" 
+});
+
+// Hierarquia de Conteúdos: Curso > Tópicos > Pastas > Conteúdos
 Curso.hasMany(Curso_Topicos, { foreignKey: "id_curso", as: "topicos" });
+Curso_Topicos.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
+Curso_Topicos.hasMany(PastaCurso, { foreignKey: "id_topico", as: "pastas" });
+PastaCurso.belongsTo(Curso_Topicos, { foreignKey: "id_topico", as: "topico" });
+PastaCurso.hasMany(ConteudoCurso, { foreignKey: "id_pasta", as: "conteudos" });
+ConteudoCurso.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" });
+ConteudoCurso.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 Curso.hasMany(ConteudoCurso, { foreignKey: "id_curso", as: "conteudos" });
 
-// Associações FormadorCategoria
-FormadorCategoria.belongsTo(User, { foreignKey: "id_formador", as: "formador" });
-FormadorCategoria.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoria" });
+// Associações entre Cursos (pré-requisitos, relacionados)
+AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_origem", as: "cursoOrigem" });
+AssociarCursos.belongsTo(Curso, { foreignKey: "id_curso_destino", as: "cursoDestino" });
+Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_origem", as: "cursosAssociadosOrigem" });
+Curso.hasMany(AssociarCursos, { foreignKey: "id_curso_destino", as: "cursosAssociadosDestino" });
 
-// Associações FormadorArea
-FormadorArea.belongsTo(User, { foreignKey: "id_formador", as: "formador" });
-FormadorArea.belongsTo(Area, { foreignKey: "id_area", as: "area" });
+// Ocorrências/Edições de Cursos
+Curso.hasMany(OcorrenciaCurso, { foreignKey: "id_curso_original", as: "ocorrencias" });
+OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_original", as: "curso_original" });
+OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_nova_ocorrencia", as: "curso_nova_ocorrencia" });
 
-// Associações Inscricao_Curso
+// =============================================================================
+// ASSOCIAÇÕES: INSCRIÇÕES E AVALIAÇÕES
+// =============================================================================
+
+// Inscrições em Cursos
 Inscricao_Curso.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 Inscricao_Curso.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 
-// Associação Inscricao_Curso -> Avaliacao
-// Uma inscrição tem uma avaliação hasOne
-Inscricao_Curso.hasOne(Avaliacao, { 
-  foreignKey: "id_inscricao", 
-  as: "avaliacao" 
-});
+// Sistema de Avaliações (uma inscrição = uma avaliação)
+Inscricao_Curso.hasOne(Avaliacao, { foreignKey: "id_inscricao", as: "avaliacao" });
+Avaliacao.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
 
-// Associação reversa QuizResposta com Inscricao_Curso
+// Respostas a Quizzes
 Inscricao_Curso.hasMany(QuizResposta, { foreignKey: "id_inscricao", as: "quiz_respostas" });
 
-// Associações Quiz e relacionados
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE QUIZZES
+// =============================================================================
+
+// Estrutura: Curso > Quiz > Perguntas > Opções
+Curso.hasMany(Quiz, { foreignKey: "id_curso", as: "quizzes" });
 Quiz.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
 Quiz.hasMany(QuizPergunta, { foreignKey: "id_quiz", as: "perguntas" });
 Quiz.hasMany(QuizResposta, { foreignKey: "id_quiz", as: "respostas" });
+
 QuizPergunta.belongsTo(Quiz, { foreignKey: "id_quiz", as: "quiz" });
 QuizPergunta.hasMany(QuizOpcao, { foreignKey: "id_pergunta", as: "opcoes" });
 QuizOpcao.belongsTo(QuizPergunta, { foreignKey: "id_pergunta", as: "pergunta" });
+
+// Respostas dos Formandos
 QuizResposta.belongsTo(Quiz, { foreignKey: "id_quiz", as: "quiz" });
 QuizResposta.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
 QuizResposta.hasMany(QuizRespostaDetalhe, { foreignKey: "id_resposta", as: "detalhes" });
+
 QuizRespostaDetalhe.belongsTo(QuizResposta, { foreignKey: "id_resposta", as: "resposta" });
 QuizRespostaDetalhe.belongsTo(QuizPergunta, { foreignKey: "id_pergunta", as: "pergunta" });
 QuizRespostaDetalhe.belongsTo(QuizOpcao, { foreignKey: "id_opcao", as: "opcao" });
 
-// Associações OcorrenciaCurso
-OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_original", as: "curso_original" });
-OcorrenciaCurso.belongsTo(Curso, { foreignKey: "id_curso_nova_ocorrencia", as: "curso_nova_ocorrencia" });
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE PRESENÇAS
+// =============================================================================
 
-// Associações Topico_Area
+// Sessões de Presença por Curso
+Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
+Curso_Presenca.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
+
+// Presenças Individuais dos Formandos
+Curso_Presenca.hasMany(Formando_Presenca, { foreignKey: "id_curso_presenca", as: "registros_presenca" });
+Formando_Presenca.belongsTo(Curso_Presenca, { foreignKey: "id_curso_presenca", as: "presenca_curso" });
+Formando_Presenca.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
+
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE TRABALHOS
+// =============================================================================
+
+// Trabalhos Entregues pelos Formandos
+Curso.hasMany(Trabalho_Entregue, { foreignKey: "id_curso", as: "trabalhos_entregues" });
+Trabalho_Entregue.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
+Trabalho_Entregue.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
+Trabalho_Entregue.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" });
+PastaCurso.hasMany(Trabalho_Entregue, { foreignKey: "id_pasta", as: "trabalhos" });
+
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE CHAT
+// =============================================================================
+
+// Tópicos de Discussão
 Topico_Area.belongsTo(Categoria, { foreignKey: "id_categoria", as: "categoria" });
-Topico_Area.belongsTo(User, { foreignKey: "criado_por", as: "criador" });
 Topico_Area.belongsTo(Area, { foreignKey: "id_area", as: "area", required: true });
-
-// Associação recíproca opcional
-Area.hasMany(Topico_Area, { foreignKey: "id_area", as: "topicos_categoria" });
-
-// Associações Curso_Topicos
-Curso_Topicos.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
-Curso_Topicos.hasMany(PastaCurso, { foreignKey: "id_topico", as: "pastas" });
-
-// Associações PastaCurso
-PastaCurso.belongsTo(Curso_Topicos, { foreignKey: "id_topico", as: "topico" });
-PastaCurso.hasMany(ConteudoCurso, { foreignKey: "id_pasta", as: "conteudos" });
-
-// Associações ConteudoCurso
-ConteudoCurso.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" });
-ConteudoCurso.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
-
-// Associações ChatMensagem
-ChatMensagem.belongsTo(Topico_Area, { foreignKey: "id_topico", as: "topico" });
+Topico_Area.belongsTo(User, { foreignKey: "criado_por", as: "criador" });
+Topico_Area.hasMany(Curso, { foreignKey: "id_topico_area", as: "cursos_associados" });
 Topico_Area.hasMany(ChatMensagem, { foreignKey: "id_topico", as: "mensagens" });
-ChatMensagem.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 
-// ChatMensagem com ChatInteracao e ChatDenuncia
+// Mensagens de Chat
+ChatMensagem.belongsTo(Topico_Area, { foreignKey: "id_topico", as: "topico" });
+ChatMensagem.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 ChatMensagem.hasMany(ChatInteracao, { foreignKey: "id_mensagem", as: "interacoes" });
 ChatMensagem.hasMany(ChatDenuncia, { foreignKey: "id_mensagem", as: "denuncias_recebidas" });
 
-// Associações ChatInteracao
+// Interações com Mensagens (likes/dislikes)
 ChatInteracao.belongsTo(ChatMensagem, { foreignKey: "id_mensagem", as: "mensagem" });
 ChatInteracao.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 
-// Associações ChatDenuncia
+// Denúncias de Mensagens
 ChatDenuncia.belongsTo(ChatMensagem, { foreignKey: "id_mensagem", as: "mensagem" });
 ChatDenuncia.belongsTo(User, { foreignKey: "id_denunciante", as: "denunciante" });
 
-// Associações Trabalho_Entregue
-Trabalho_Entregue.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
-Trabalho_Entregue.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
-User.hasMany(Trabalho_Entregue, { foreignKey: "id_utilizador", as: "trabalhos" });
-Curso.hasMany(Trabalho_Entregue, { foreignKey: "id_curso", as: "trabalhos_entregues" });
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE FÓRUM
+// =============================================================================
 
-// Associações Avaliacao
-// Uma avaliação pertence a uma inscrição belongsTo
-Avaliacao.belongsTo(Inscricao_Curso, { foreignKey: "id_inscricao", as: "inscricao" });
-
-// Associações Notificação
-Notificacao.hasMany(NotificacaoUtilizador, { foreignKey: "id_notificacao", as: "destinatarios" });
-NotificacaoUtilizador.belongsTo(Notificacao, { foreignKey: "id_notificacao", as: "notificacao" });
-User.hasMany(NotificacaoUtilizador, { foreignKey: "id_utilizador", as: "notificacoes" });
-NotificacaoUtilizador.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
-
-// Criar associações para ForumTema
+// Temas do Fórum
 ForumTema.belongsTo(Topico_Area, { foreignKey: 'id_topico', as: 'topico' });
 ForumTema.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 ForumTema.hasMany(ForumTemaInteracao, { foreignKey: 'id_tema', as: 'interacoes' });
 ForumTema.hasMany(ForumTemaDenuncia, { foreignKey: 'id_tema', as: 'denuncias' });
 ForumTema.hasMany(ForumComentario, { foreignKey: 'id_tema', as: 'tema_comentarios' });
 
-// Criar associações para ForumTemaInteracao
+// Interações com Temas
 ForumTemaInteracao.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumTemaInteracao.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 
-// Criar associações para ForumTemaDenuncia
+// Denúncias de Temas
 ForumTemaDenuncia.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumTemaDenuncia.belongsTo(User, { foreignKey: 'id_denunciante', as: 'denunciante' });
 
-// Criar associações para ForumComentario
+// Comentários nos Temas
 ForumComentario.belongsTo(ForumTema, { foreignKey: 'id_tema', as: 'tema' });
 ForumComentario.belongsTo(User, { foreignKey: 'id_utilizador', as: 'utilizador' });
 
-// Associação entre Trabalho e Pasta
-Trabalho_Entregue.belongsTo(PastaCurso, { foreignKey: "id_pasta", as: "pasta" });
+// =============================================================================
+// ASSOCIAÇÕES: SISTEMA DE NOTIFICAÇÕES
+// =============================================================================
 
-// Associação recíproca
-PastaCurso.hasMany(Trabalho_Entregue, { foreignKey: "id_pasta", as: "trabalhos" });
+// Notificações Globais e por Utilizador
+Notificacao.hasMany(NotificacaoUtilizador, { foreignKey: "id_notificacao", as: "destinatarios" });
+NotificacaoUtilizador.belongsTo(Notificacao, { foreignKey: "id_notificacao", as: "notificacao" });
+NotificacaoUtilizador.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
 
-// Associações curso presença e formando presença críticas para o percurso
+// =============================================================================
+// APLICAR ASSOCIAÇÕES AUTOMÁTICAS DOS MODELOS
+// =============================================================================
 
-// Associações Curso_Presenca
-Curso_Presenca.belongsTo(Curso, { foreignKey: "id_curso", as: "curso" });
-Curso.hasMany(Curso_Presenca, { foreignKey: "id_curso", as: "presencas" });
-
-// Associações Formando_Presenca
-Formando_Presenca.belongsTo(Curso_Presenca, { foreignKey: "id_curso_presenca", as: "presenca_curso" });
-Formando_Presenca.belongsTo(User, { foreignKey: "id_utilizador", as: "utilizador" });
-
-// Associações bidirecionais críticas para o cálculo de horas
-User.hasMany(Formando_Presenca, { foreignKey: "id_utilizador", as: "presencas_marcadas" });
-Curso_Presenca.hasMany(Formando_Presenca, { foreignKey: "id_curso_presenca", as: "registros_presenca" });
-
-// Chamar funções associate para os modelos que as têm
+// Executa métodos associate() personalizados dos modelos (se existirem)
 Object.values(models).forEach(model => { 
   if (typeof model.associate === 'function') { 
     model.associate(models); 
-    console.log(`Aplicadas associações para o modelo: ${model.name || 'Desconhecido'}`); 
   } 
 });
 
-// Log de confirmação das associações críticas
-console.log("Associações críticas configuradas:");
-console.log("Inscricao_Curso -> Avaliacao hasOne");
-console.log("Avaliacao -> Inscricao_Curso belongsTo");
-console.log("Inscricao_Curso -> Curso belongsTo");
-console.log("Inscricao_Curso -> User belongsTo");
-console.log("Curso_Presenca -> Curso belongsTo");
-console.log("Curso -> Curso_Presenca hasMany");
-console.log("Formando_Presenca -> Curso_Presenca belongsTo");
-console.log("Formando_Presenca -> User belongsTo");
-console.log("User -> Formando_Presenca hasMany");
-console.log("Curso_Presenca -> Formando_Presenca hasMany");
-console.log("AssociarCursos -> Curso cursoOrigem e cursoDestino");
-console.log("Curso -> AssociarCursos cursosAssociadosOrigem e cursosAssociadosDestino");
+console.log("✅ Associações dos modelos carregadas com sucesso");
 
 module.exports = models;

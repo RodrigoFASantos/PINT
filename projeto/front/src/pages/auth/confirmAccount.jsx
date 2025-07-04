@@ -117,7 +117,7 @@ function ConfirmAccount() {
           <div className="success-container">
             <h3>Conta confirmada com sucesso!</h3>
             <p>{message}</p>
-            <p>Você será redirecionado para a página inicial em alguns segundos...</p>
+            <p> será redirecionado para a página inicial em alguns segundos...</p>
             <div className="loader"></div>
           </div>
         );

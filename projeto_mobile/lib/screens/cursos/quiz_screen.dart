@@ -421,7 +421,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   'Pode selecionar múltiplas respostas para cada pergunta.',
                   'Responda todas as perguntas antes de enviar.',
                   if (quiz!['tempo_limite'] != null)
-                    'Você terá ${quiz!['tempo_limite']} minutos para completar o quiz.',
+                    ' terá ${quiz!['tempo_limite']} minutos para completar o quiz.',
                   'Após iniciar, não será possível pausar o quiz.',
                 ].map((instrucao) => Padding(
                       padding: EdgeInsets.only(bottom: 8),

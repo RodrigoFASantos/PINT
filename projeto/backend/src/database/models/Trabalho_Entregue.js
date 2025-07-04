@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: TRABALHOS ENTREGUES
+// =============================================================================
+// Regista os trabalhos/projetos submetidos pelos formandos
+// Inclui sistema de avaliação e feedback dos formadores
+
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
@@ -7,8 +13,6 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
     primaryKey: true,
     autoIncrement: true,
   },
-
-  // passa a guardar diretamente quem submeteu
   id_utilizador: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -16,9 +20,8 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
       model: "utilizadores",
       key: "id_utilizador",
     },
+    comment: "Formando que submeteu o trabalho"
   },
-
-  // Curso
   id_curso: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -26,9 +29,8 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
       model: "curso",
       key: "id_curso",
     },
+    comment: "Curso ao qual o trabalho se refere"
   },
-  
-  // Pasta do curso (adicionado)
   id_pasta: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -36,36 +38,36 @@ const Trabalho_Entregue = sequelize.define("trabalhos_entregues", {
       model: "pastas_curso",
       key: "id_pasta",
     },
+    comment: "Pasta específica onde o trabalho foi solicitado"
   },
-
   ficheiro_path: {
     type: DataTypes.STRING(500),
     allowNull: false,
+    comment: "Caminho do ficheiro submetido no servidor"
   },
-  
   nome_ficheiro: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    comment: "Nome original do ficheiro submetido"
   },
-  
   data_entrega: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
+    comment: "Data e hora de submissão do trabalho"
   },
-
-  // avaliaçao 0–20
   avaliacao: {
     type: DataTypes.INTEGER,
     allowNull: true,
     validate: {
       min: 0,
       max: 20
-    }
+    },
+    comment: "Nota atribuída pelo formador (0-20, null se não avaliado)"
   },
-
   observacoes: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    comment: "Observações e feedback do formador"
   }
 }, {
   tableName: "trabalhos_entregues",

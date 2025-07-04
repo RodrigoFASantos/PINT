@@ -3,20 +3,28 @@ const router = express.Router();
 const verificarToken = require('../../middleware/auth');
 const { buscarSugestoesFormandos, getPercursoFormandos, getEstatisticasGerais } = require("../../controllers/users/Percurso_Formandos_ctrl");
 
-// Rota para debug - verificar se o servidor está a responder
-router.get("/debug-check", (req, res) => {
-  res.status(200).json({ message: "API de percurso formandos está a funcionar!" });
-});
+/**
+ * Rotas para gestão de percursos e estatísticas de formandos
+ * Permite consultar estatísticas, buscar formandos e gerir percursos formativos
+ */
 
-// Rotas específicas
+// === ROTAS PROTEGIDAS (requerem autenticação) ===
+
+// Obter estatísticas gerais dos formandos
 router.get("/estatisticas", verificarToken, getEstatisticasGerais);
+
+// Buscar sugestões de formandos (para autocompletar, etc.)
 router.get("/buscar-formandos", verificarToken, buscarSugestoesFormandos);
+
+// Obter percurso completo dos formandos (área administrativa)
 router.get("/admin/percurso-formandos", verificarToken, getPercursoFormandos);
 
-// Rota de teste
+// === ROTAS DE TESTE ===
+
+// Verificação do estado da API
 router.get("/test", (req, res) => {
   res.status(200).json({ 
-    message: "Rota de teste do percurso formandos funcionando!", 
+    message: "API de percurso formandos está a funcionar!", 
     timestamp: new Date().toISOString() 
   });
 });

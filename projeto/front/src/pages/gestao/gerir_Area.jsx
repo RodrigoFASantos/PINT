@@ -169,7 +169,7 @@ const Gerir_Area = () => {
           return;
         }
         
-        // Log do usuário atual do AuthContext
+        // Log do utilizador atual do AuthContext
         console.log('[DEBUG] Gerir_Area: Utilizador atual do AuthContext:', currentUser);
         
         if (currentUser) {
@@ -181,10 +181,10 @@ const Gerir_Area = () => {
             cargo: currentUser.cargo
           });
           
-          // Verificar se o usuário tem permissão (admin ou gestor)
+          // Verificar se o utilizador tem permissão (admin ou gestor)
           if (currentUser.id_cargo !== 1) {
-            console.log('[DEBUG] Gerir_Area: Usuário não é administrador. Redirecionando...');
-            toast.error('Acesso negado. Você não tem permissão para acessar esta página.');
+            console.log('[DEBUG] Gerir_Area: utilizador não é administrador. Redirecionando...');
+            toast.error('Acesso negado. Não tem permissão para acessar esta página.');
             navigate('/');
             return;
           }

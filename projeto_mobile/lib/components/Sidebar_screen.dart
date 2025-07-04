@@ -229,7 +229,6 @@ class _SidebarScreenState extends State<SidebarScreen> {
   }
 
   // Métodos de navegação e utilitários
-
   void _navigate(String? route) {
     if (route == null) return;
 

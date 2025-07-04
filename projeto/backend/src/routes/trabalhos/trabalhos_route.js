@@ -11,16 +11,25 @@ const PastaCurso = require("../../database/models/PastaCurso");
 const TopicoCurso = require("../../database/models/Curso_Topicos");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 
-// Criar middleware personalizado para lidar com uploads de trabalhos
+/**
+ * Rotas para gestão de trabalhos e submissões
+ * Permite upload, consulta e avaliação de trabalhos dos formandos
+ */
+
+/**
+ * Middleware personalizado para upload de trabalhos
+ * Gere o upload de ficheiros de trabalhos para a estrutura correta de diretórios
+ * Verifica permissões e organiza ficheiros por curso/tópico/pasta
+ */
 const uploadTrabalho = async (req, res, next) => {
   try {
-    // Usar o middleware de upload temporário
+    // Processar upload do ficheiro
     uploadMiddleware.upload.single("ficheiro")(req, res, async (err) => {
       if (err) {
         return uploadMiddleware.handleUploadErrors(err, req, res, next);
       }
 
-      // Se não houver ficheiro, continuar para permitir que o controlador trate isso
+      // Se não houver ficheiro, continuar (controlador irá tratar)
       if (!req.file) {
         return next();
       }
@@ -28,19 +37,18 @@ const uploadTrabalho = async (req, res, next) => {
       const { id_pasta, id_curso } = req.body;
       const id_utilizador = req.utilizador.id_utilizador;
 
-      // Se não temos pasta ou curso, continuar e deixar o controlador tratar
+      // Validar parâmetros obrigatórios
       if (!id_pasta || !id_curso) {
         return res.status(400).json({ message: 'Pasta e curso são obrigatórios' });
       }
 
-      // Verificar se a pasta e o curso existem e se o utilizador está inscrito
       try {
         // Verificar se o utilizador está inscrito no curso
         const inscricao = await Inscricao_Curso.findOne({
           where: {
             id_utilizador: id_utilizador,
             id_curso: id_curso,
-            estado: 'inscrito' // Adaptar ao campo correto do modelo
+            estado: 'inscrito'
           }
         });
 
@@ -48,12 +56,16 @@ const uploadTrabalho = async (req, res, next) => {
           return res.status(403).json({ message: 'Não está inscrito neste curso' });
         }
 
-        const pasta = await PastaCurso.findByPk(id_pasta);
+        // Validar existência de pasta, curso e tópico
+        const [pasta, curso] = await Promise.all([
+          PastaCurso.findByPk(id_pasta),
+          Curso.findByPk(id_curso)
+        ]);
+
         if (!pasta) {
           return res.status(404).json({ message: 'Pasta não encontrada' });
         }
 
-        const curso = await Curso.findByPk(id_curso);
         if (!curso) {
           return res.status(404).json({ message: 'Curso não encontrado' });
         }
@@ -69,7 +81,7 @@ const uploadTrabalho = async (req, res, next) => {
           topico.nome.toLowerCase() === 'avaliacao' || 
           topico.nome.toLowerCase().includes('avalia');
 
-        // Criar caminhos para salvar o ficheiro seguindo a estrutura correta
+        // Preparar estrutura de diretórios
         const cursoSlug = uploadUtils.normalizarNome(curso.nome);
         const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
         
@@ -77,8 +89,7 @@ const uploadTrabalho = async (req, res, next) => {
         let destPath;
         
         if (isAvaliacao) {
-          // Para tópicos de avaliação, usar a estrutura correta:
-          // uploads/cursos/curso_slug/avaliacao/pasta_slug/submissoes
+          // Estrutura para avaliações: uploads/cursos/curso_slug/avaliacao/pasta_slug/submissoes
           submissoesDir = path.join(
             uploadUtils.BASE_UPLOAD_DIR,
             'cursos',
@@ -87,10 +98,9 @@ const uploadTrabalho = async (req, res, next) => {
             pastaSlug,
             'submissoes'
           );
-          
           destPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/submissoes`;
         } else {
-          // Para outros tópicos, usar estrutura normal dentro de topicos
+          // Estrutura para outros tópicos: uploads/cursos/curso_slug/topicos/topico_slug/pasta_slug/submissoes
           const topicoSlug = uploadUtils.normalizarNome(topico.nome);
           submissoesDir = path.join(
             uploadUtils.BASE_UPLOAD_DIR,
@@ -101,66 +111,45 @@ const uploadTrabalho = async (req, res, next) => {
             pastaSlug,
             'submissoes'
           );
-          
           destPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/submissoes`;
         }
         
-        // Criar diretório de submissões se não existir
-        console.log(`Verificando diretório de submissões: ${submissoesDir}`);
+        // Criar diretório se não existir
         uploadUtils.ensureDir(submissoesDir);
         
-        // Verificar se o diretório foi criado corretamente
         if (!fs.existsSync(submissoesDir)) {
           console.error(`Erro: Diretório ${submissoesDir} não foi criado`);
           return res.status(500).json({ message: 'Erro ao criar diretórios para submissão' });
         }
-        
-        console.log(`Diretório de submissões criado: ${submissoesDir}`);
-        console.log(`Salvando submissão em: ${submissoesDir}`);
 
-        // Preparar nome do ficheiro
+        // Preparar nome único do ficheiro
         const originalName = req.file.originalname;
         const extension = path.extname(originalName);
         const timestamp = Date.now();
-        
-        // Obter email do utilizador das informações disponíveis no req
         const userEmail = req.utilizador.email || `user_${req.utilizador.id_utilizador}`;
-        
-        // Limpar caracteres problemáticos no email
         const cleanEmail = userEmail.replace(/[/\\?%*:|"<>]/g, '_');
-        
-        // Incluir também ID do tópico e pasta para melhor organização
         const fileName = `${cleanEmail}_topico${topico.id_topico}_pasta${pasta.id_pasta}_${timestamp}${extension}`;
-        
         const filePath = path.join(submissoesDir, fileName);
 
-        // Verificar se o ficheiro temporário existe antes de tentar movê-lo
+        // Verificar se ficheiro temporário existe
         if (!fs.existsSync(req.file.path)) {
           console.error(`Erro: Ficheiro temporário ${req.file.path} não encontrado`);
           return res.status(500).json({ message: 'Ficheiro temporário não encontrado' });
         }
         
-        console.log(`Movendo ficheiro de ${req.file.path} para ${filePath}`);
-        
         try {
-          // Tentar usar o método moverArquivo
+          // Mover ficheiro para destino final
           const movido = uploadUtils.moverArquivo(req.file.path, filePath);
           
           if (!movido) {
-            console.error(`Falha ao mover ficheiro para ${filePath}, tentando copiar manualmente`);
-            
-            // Tentativa alternativa: copiar e depois remover
+            // Tentativa alternativa: copiar e remover
             fs.copyFileSync(req.file.path, filePath);
             
-            // Verificar se o ficheiro foi copiado corretamente
             if (fs.existsSync(filePath)) {
-              // Tentar remover o ficheiro temporário
               try {
                 fs.unlinkSync(req.file.path);
-                console.log(`Ficheiro copiado e temporário removido com sucesso`);
               } catch (unlinkError) {
                 console.error(`Aviso: Não foi possível remover ficheiro temporário: ${unlinkError.message}`);
-                // Continuar mesmo sem remover o temporário
               }
             } else {
               console.error(`Erro: Ficheiro não foi copiado para ${filePath}`);
@@ -168,13 +157,13 @@ const uploadTrabalho = async (req, res, next) => {
             }
           }
           
-          console.log(`Ficheiro movido com sucesso para: ${filePath}`);
+          console.log(`✅ Trabalho submetido: ${fileName}`);
         } catch (moveError) {
           console.error(`Erro crítico ao mover ficheiro: ${moveError.message}`);
           return res.status(500).json({ message: 'Erro ao mover ficheiro para o destino final' });
         }
 
-        // Adicionar informações ao req para usar no controller
+        // Preparar informações para o controlador
         req.fileInfo = {
           originalName: originalName,
           fileName: fileName,
@@ -184,7 +173,6 @@ const uploadTrabalho = async (req, res, next) => {
           isAvaliacao: isAvaliacao
         };
 
-        console.log(`Ficheiro de trabalho guardado em: ${filePath}`);
         next();
       } catch (error) {
         console.error('Erro ao processar ficheiro de trabalho:', error);
@@ -197,19 +185,22 @@ const uploadTrabalho = async (req, res, next) => {
   }
 };
 
-// Adicionar rota específica para submissões de avaliação
+// === ROTAS DE TRABALHOS ===
+
+// Obter lista de todos os trabalhos
+router.get("/", verificarToken, getAllTrabalhos);
+
+// Submeter novo trabalho
+router.post("/", verificarToken, uploadTrabalho, createTrabalho);
+
+// Rota específica para submissões de avaliação
 router.post("/avaliacao", verificarToken, (req, res, next) => {
-  // Definir explicitamente que este é um upload de avaliação
   req.isAvaliacaoUpload = true;
   req.body.tipo_submissao = 'avaliacao';
   next();
 }, uploadTrabalho, createTrabalho);
 
-// Rotas
-router.get("/", verificarToken, getAllTrabalhos);
-router.post("/", verificarToken, uploadTrabalho, createTrabalho);
-
-// Atualizar nota de um trabalho
+// Atualizar nota de um trabalho (formadores/admins)
 router.put("/:id", verificarToken, updateTrabalhoNota);
 
 module.exports = router;

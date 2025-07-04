@@ -236,7 +236,7 @@ const Curso_Conteudo_ficheiro_Modal = ({ conteudo, onClose, API_BASE }) => {
 
           <div className="modal-footer">
             <p className="disclaimer">
-              Ao fazer o download, você concorda com os nossos termos de serviço.
+              Ao fazer o download, concorda com os nossos termos de serviço.
             </p>
           </div>
         </div>

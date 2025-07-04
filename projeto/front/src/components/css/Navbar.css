@@ -61,7 +61,7 @@
   justify-content: center;
 }
 
-/* Se você não estiver usando Material UI Badge, aqui está uma implementação CSS pura */
+/* Se  não estiver usando Material UI Badge, aqui está uma implementação CSS pura */
 .notification-badge {
   position: absolute;
   top: -5px;

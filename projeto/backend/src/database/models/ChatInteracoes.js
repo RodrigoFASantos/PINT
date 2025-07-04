@@ -1,3 +1,9 @@
+// =============================================================================
+// MODELO: INTERAÇÕES DO CHAT (LIKES/DISLIKES)
+// =============================================================================
+// Regista as interações dos utilizadores com as mensagens de chat
+// Cada utilizador pode dar apenas um like ou dislike por mensagem
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
 
@@ -13,8 +19,9 @@ const ChatInteracao = sequelize.define('chat_interacoes', {
     allowNull: false,
     references: {
       model: 'chat_mensagens',
-      key: 'id'  // Referência ao campo 'id' em vez de 'id_comentario'
-    }
+      key: 'id'
+    },
+    comment: "Mensagem que recebeu a interação"
   },
   id_utilizador: {
     type: DataTypes.INTEGER,
@@ -22,16 +29,19 @@ const ChatInteracao = sequelize.define('chat_interacoes', {
     references: {
       model: 'utilizadores',
       key: 'id_utilizador'
-    }
+    },
+    comment: "Utilizador que fez a interação"
   },
   tipo: {
     type: DataTypes.ENUM('like', 'dislike'),
-    allowNull: false
+    allowNull: false,
+    comment: "Tipo de interação (like ou dislike)"
   },
   data_interacao: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    comment: "Data e hora da interação"
   }
 }, {
   tableName: 'chat_interacoes',
@@ -46,7 +56,7 @@ const ChatInteracao = sequelize.define('chat_interacoes', {
       fields: ['id_utilizador']
     }
   ],
-  // Cada utilizador só pode ter uma interação por mensagem
+  // Restrição única: cada utilizador só pode ter uma interação por mensagem
   uniqueKeys: {
     unique_user_message: {
       fields: ['id_mensagem', 'id_utilizador']
