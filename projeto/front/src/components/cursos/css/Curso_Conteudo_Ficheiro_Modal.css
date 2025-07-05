@@ -1,220 +1,303 @@
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
+/* Sobreposição de fundo escuro que cobre toda a janela */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
 
-  .modal-container {
-    background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: 800px;
-    width: 90%;
-  }
+/* Container principal do modal com posicionamento relativo para o X */
+.modal-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 800px;
+  width: 90%;
+  position: relative; /* Necessário para posicionar o X */
+}
 
-  .modal-container h2 {
-    margin-top: 0;
-    margin-bottom: 20px;
-  }
+/* Título principal do modal */
+.modal-container h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
 
-  .modal-download,
-  .modal-view,
-  .modal-close {
-    margin: 10px 0;
-    padding: 10px 20px;
-    border-radius: 4px;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    width: 100%;
-    text-align: center;
-    text-decoration: none;
-    display: block;
-  }
+/* Botão X no canto superior direito do modal principal */
+.modal-close-x {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #999;
+  line-height: 1;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
 
-  .modal-download {
-    background-color: #4a90e2;
-    color: white;
-  }
+/* Efeito hover para o botão X */
+.modal-close-x:hover {
+  color: #333;
+  background-color: #f0f0f0;
+}
 
-  .modal-view {
-    background-color: #f0f0f0;
-    color: #333;
-  }
+/* Botões de ação do modal principal */
+.modal-download,
+.modal-view,
+.modal-close {
+  margin: 10px 0;
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.3s ease;
+}
 
-  .modal-close {
-    background-color: #e0e0e0;
-    color: #666;
-  }
+/* Botão de download - cor azul */
+.modal-download {
+  background-color: #4a90e2;
+  color: white;
+}
 
-  .download-modal {
-    background-color: white;
-    border-radius: 8px;
-    width: 500px;
-    max-width: 90%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
+.modal-download:hover {
+  background-color: #3a7bc8;
+}
 
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #eaeaea;
-  }
+/* Botão de visualização - cor cinzenta clara */
+.modal-view {
+  background-color: #f0f0f0;
+  color: #333;
+}
 
-  .modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-    color: #333;
-  }
+.modal-view:hover {
+  background-color: #e0e0e0;
+}
 
-  .close-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #999;
-  }
+/* Botão de fechar - cor cinzenta */
+.modal-close {
+  background-color: #e0e0e0;
+  color: #666;
+}
 
-  .modal-content {
-    padding: 20px;
-  }
+.modal-close:hover {
+  background-color: #d0d0d0;
+}
 
-  .file-info {
-    display: flex;
-    margin-bottom: 20px;
-  }
+/* Modal secundário para detalhes de download */
+.download-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 
-  .file-icon {
-    font-size: 48px;
-    margin-right: 20px;
-  }
+/* Cabeçalho do modal de download */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eaeaea;
+}
 
-  .file-details h4 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
-  }
+/* Título do modal de download */
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
 
-  .file-details p {
-    margin: 4px 0;
-    color: #666;
-    font-size: 14px;
-  }
+/* Botão X para fechar o modal de download */
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
 
-  .download-progress {
-    margin: 20px 0;
-  }
+.close-button:hover {
+  color: #333;
+  background-color: #f0f0f0;
+}
 
-  .progress-bar {
-    height: 10px;
-    background-color: #f0f0f0;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: 5px;
-  }
+/* Conteúdo principal do modal de download */
+.modal-content {
+  padding: 20px;
+}
 
-  .progress-fill {
-    height: 100%;
-    background-color: #4a90e2;
-    transition: width 0.3s ease;
-  }
+/* Container para informações do ficheiro */
+.file-info {
+  display: flex;
+  margin-bottom: 20px;
+}
 
-  .progress-text {
-    text-align: center;
-    font-size: 14px;
-    color: #666;
-  }
+/* Ícone representativo do tipo de ficheiro */
+.file-icon {
+  font-size: 48px;
+  margin-right: 20px;
+}
 
-  .download-actions {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0;
-  }
+/* Detalhes textuais do ficheiro */
+.file-details h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
 
-  .download-button {
-    background-color: #4a90e2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
+.file-details p {
+  margin: 4px 0;
+  color: #666;
+  font-size: 14px;
+}
 
-  .download-button:hover {
-    background-color: #3a7bc8;
-  }
+/* Container para a barra de progresso */
+.download-progress {
+  margin: 20px 0;
+}
 
-  .modal-footer {
-    padding: 12px 20px;
-    border-top: 1px solid #eaeaea;
-  }
+/* Barra de progresso visual */
+.progress-bar {
+  height: 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
 
-  .disclaimer {
-    margin: 0;
-    font-size: 12px;
-    color: #999;
-    text-align: center;
-  }
+/* Preenchimento da barra de progresso */
+.progress-fill {
+  height: 100%;
+  background-color: #4a90e2;
+  transition: width 0.3s ease;
+}
 
-  /* Estilos para o player de vídeo */
-  .video-player-container {
-    width: 100%;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: #000;
-    aspect-ratio: 16/9;
-  }
+/* Texto com percentagem do progresso */
+.progress-text {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
 
-  .video-player {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+/* Container para botões de ação de download */
+.download-actions {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
 
-  .video-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    color: #666;
-    transition: background-color 0.3s;
-  }
+/* Botão principal de download */
+.download-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
 
-  .video-placeholder:hover {
-    background-color: #e0e0e0;
-  }
+.download-button:hover {
+  background-color: #3a7bc8;
+}
 
-  .video-play-button {
-    font-size: 48px;
-    margin-bottom: 10px;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background-color: rgba(74, 144, 226, 0.8);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+/* Rodapé do modal com disclaimer */
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #eaeaea;
+}
 
-  .video-placeholder-text {
-    font-size: 16px;
-  }
+/* Texto de disclaimer nos termos */
+.disclaimer {
+  margin: 0;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+
+/* === ESTILOS PARA REPRODUTOR DE VÍDEO === */
+
+/* Container principal do reprodutor de vídeo */
+.video-player-container {
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #000;
+  aspect-ratio: 16/9; /* Mantém proporção widescreen */
+}
+
+/* Elemento de vídeo propriamente dito */
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Mantém proporção sem cortar */
+}
+
+/* Placeholder mostrado antes de carregar o vídeo */
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  color: #666;
+  transition: background-color 0.3s;
+}
+
+.video-placeholder:hover {
+  background-color: #e0e0e0;
+}
+
+/* Botão de play circular no centro do placeholder */
+.video-play-button {
+  font-size: 48px;
+  margin-bottom: 10px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: rgba(74, 144, 226, 0.8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Texto explicativo no placeholder */
+.video-placeholder-text {
+  font-size: 16px;
+}

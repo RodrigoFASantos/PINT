@@ -48,142 +48,138 @@ const getFileType = (mimetype) => {
 // =============================================================================
 // CONSULTA E NAVEGAÇÃO DE TÓPICOS
 // =============================================================================
+
 /**
- * Obter todos os tópicos com filtros opcionais
- * Se não houver filtros específicos, retorna lista simples para formulários
- * Se houver filtros, retorna organizado por categoria para chat/fórum
+ * Obter todos os tópicos com paginação, filtros e contagem
+ * Similar à função getAllAreas do controlador de áreas
+ * 
+ * @param {Request} req - Requisição HTTP
+ * @param {Response} res - Resposta HTTP
  */
 const getAllTopicosCategoria = async (req, res) => {
   try {
-    const { busca, categoria_id, area_id, grouped } = req.query;
+    const { page = 1, limit = 10, search, categoria, area, grouped } = req.query;
     
-    const whereClause = { ativo: true };
+    // Converter para números e garantir valores válidos
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
     
-    // Filtros opcionais
-    if (categoria_id) whereClause.id_categoria = categoria_id;
-    if (area_id) whereClause.id_area = area_id;
+    // Calcular offset para paginação
+    const offset = (pageNum - 1) * limitNum;
     
-    // Busca por texto
-    if (busca) {
-      whereClause[Op.or] = [
-        { titulo: { [Op.iLike]: `%${busca}%` } },
-        { descricao: { [Op.iLike]: `%${busca}%` } }
+    // Configurar opções base da consulta
+    const options = {
+      where: { ativo: true },
+      limit: limitNum,
+      offset,
+      order: [['data_criacao', 'DESC']],
+      include: [
+        {
+          model: Categoria,
+          as: 'categoria',
+          attributes: ['id_categoria', 'nome']
+        },
+        {
+          model: Area,
+          as: 'area',
+          attributes: ['id_area', 'nome']
+        },
+        {
+          model: User,
+          as: 'criador',
+          attributes: ['id_utilizador', 'nome', 'email']
+        }
+      ]
+    };
+    
+    // Construir filtros dinâmicos
+    const where = { ativo: true };
+    
+    // Filtro por título/descrição - busca parcial e insensível a maiúsculas
+    if (search && search.trim()) {
+      where[Op.or] = [
+        { titulo: { [Op.iLike]: `%${search.trim()}%` } },
+        { descricao: { [Op.iLike]: `%${search.trim()}%` } }
       ];
     }
     
-    // Buscar tópicos diretamente (evitar includes problemáticos)
-    const topicos = await Topico_Area.findAll({
-      where: whereClause,
-      attributes: [
-        'id_topico', 
-        'titulo', 
-        'descricao', 
-        'data_criacao', 
-        'id_categoria', 
-        'id_area',
-        'criado_por'
-      ],
-      order: [['titulo', 'ASC']]
-    });
-
-    // Se não há filtros específicos ou se é para formulários, retornar lista simples
-    if (!grouped && !busca && !categoria_id) {
-      // Buscar dados relacionados de forma mais simples
-      const topicosCompletos = [];
+    // Filtro por categoria específica
+    if (categoria && categoria.trim()) {
+      where.id_categoria = categoria.trim();
+    }
+    
+    // Filtro por área específica
+    if (area && area.trim()) {
+      where.id_area = area.trim();
+    }
+    
+    // Aplicar filtros se existirem
+    if (Object.keys(where).length > 0) {
+      options.where = where;
+    }
+    
+    // Executar consulta com contagem total para paginação
+    const { count, rows } = await Topico_Area.findAndCountAll(options);
+    
+    // Adicionar contagem de mensagens para cada tópico
+    const topicosComContagem = await Promise.all(rows.map(async (topico) => {
+      const mensagensCount = await ChatMensagem.count({
+        where: {
+          id_topico: topico.id_topico
+        }
+      });
       
-      for (const topico of topicos) {
-        let topicoData = topico.toJSON();
+      return {
+        ...topico.toJSON(),
+        mensagens_count: mensagensCount
+      };
+    }));
+    
+    // Calcular informações de paginação
+    const totalPaginas = Math.ceil(count / limitNum);
+    
+    // Se é para agrupamento por categoria, organizar os dados
+    if (grouped === 'true') {
+      const topicosPorCategoria = {};
+      
+      topicosComContagem.forEach(topico => {
+        const categoriaId = topico.id_categoria || 'sem_categoria';
         
-        // Buscar categoria se necessário
-        if (topico.id_categoria) {
-          try {
-            const categoria = await Categoria.findByPk(topico.id_categoria, {
-              attributes: ['id_categoria', 'nome']
-            });
-            topicoData.categoria = categoria ? categoria.toJSON() : null;
-          } catch (error) {
-            console.warn('Erro ao buscar categoria:', error.message);
-            topicoData.categoria = null;
-          }
+        if (!topicosPorCategoria[categoriaId]) {
+          topicosPorCategoria[categoriaId] = {
+            id_categoria: categoriaId,
+            nome: topico.categoria ? topico.categoria.nome : 'Sem categoria',
+            topicos_categoria: []
+          };
         }
         
-        // Buscar área se necessário
-        if (topico.id_area) {
-          try {
-            const area = await Area.findByPk(topico.id_area, {
-              attributes: ['id_area', 'nome']
-            });
-            topicoData.area = area ? area.toJSON() : null;
-          } catch (error) {
-            console.warn('Erro ao buscar área:', error.message);
-            topicoData.area = null;
-          }
-        }
-        
-        topicosCompletos.push(topicoData);
-      }
+        topicosPorCategoria[categoriaId].topicos_categoria.push(topico);
+      });
+      
+      const categoriasComTopicos = Object.values(topicosPorCategoria);
       
       return res.status(200).json({
         success: true,
-        data: topicosCompletos,
-        total: topicosCompletos.length
+        data: categoriasComTopicos,
+        total_categorias: categoriasComTopicos.length
       });
     }
     
-    // Se há filtros específicos, organizar por categoria
-    const topicosPorCategoria = {};
-    
-    for (const topico of topicos) {
-      const categoriaId = topico.id_categoria;
-      
-      if (!topicosPorCategoria[categoriaId]) {
-        // Buscar nome da categoria
-        let categoriaNome = 'Sem categoria';
-        if (categoriaId) {
-          try {
-            const categoria = await Categoria.findByPk(categoriaId, {
-              attributes: ['id_categoria', 'nome']
-            });
-            if (categoria) {
-              categoriaNome = categoria.nome;
-            }
-          } catch (error) {
-            console.warn('Erro ao buscar categoria:', error.message);
-          }
-        }
-        
-        topicosPorCategoria[categoriaId] = {
-          id_categoria: categoriaId,
-          nome: categoriaNome,
-          topicos_categoria: []
-        };
-      }
-      
-      // Adicionar dados da área ao tópico se necessário
-      let topicoCompleto = topico.toJSON();
-      if (topico.id_area) {
-        try {
-          const area = await Area.findByPk(topico.id_area, {
-            attributes: ['id_area', 'nome']
-          });
-          topicoCompleto.area = area ? area.toJSON() : null;
-        } catch (error) {
-          console.warn('Erro ao buscar área:', error.message);
-          topicoCompleto.area = null;
-        }
-      }
-      
-      topicosPorCategoria[categoriaId].topicos_categoria.push(topicoCompleto);
-    }
-
-    const categoriasComTopicos = Object.values(topicosPorCategoria);
-    
+    // Retornar resposta estruturada para listagem simples
     res.status(200).json({
       success: true,
-      data: categoriasComTopicos,
-      total_categorias: categoriasComTopicos.length
+      total: count,
+      pages: totalPaginas,
+      current_page: pageNum,
+      data: topicosComContagem,
+      pagination_info: {
+        has_previous: pageNum > 1,
+        has_next: pageNum < totalPaginas,
+        items_per_page: limitNum,
+        total_items: count,
+        showing_items: topicosComContagem.length
+      }
     });
-    
   } catch (error) {
     console.error('Erro ao obter tópicos:', error);
     res.status(500).json({
@@ -336,6 +332,8 @@ const getTopicosByCategoria = async (req, res) => {
  * Criar novo tópico de discussão
  */
 const createTopico = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const userId = req.utilizador.id_utilizador || req.user.id_utilizador;
     const userRole = req.utilizador.id_cargo || req.user.id_cargo;
@@ -343,6 +341,7 @@ const createTopico = async (req, res) => {
     
     // Verificar permissões
     if (userRole !== 1 && userRole !== 2) {
+      await transaction.rollback();
       return res.status(403).json({
         success: false,
         message: 'Apenas administradores e formadores podem criar tópicos'
@@ -350,10 +349,27 @@ const createTopico = async (req, res) => {
     }
     
     // Validar dados obrigatórios
-    if (!titulo || !id_categoria || !id_area) {
+    if (!titulo || titulo.trim() === '') {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Título, categoria e área são obrigatórios'
+        message: 'O título do tópico é obrigatório e não pode estar vazio'
+      });
+    }
+    
+    if (!id_categoria) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'A categoria é obrigatória'
+      });
+    }
+    
+    if (!id_area) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'A área é obrigatória'
       });
     }
     
@@ -364,31 +380,54 @@ const createTopico = async (req, res) => {
     ]);
     
     if (!categoria) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Categoria não encontrada'
+        message: 'Categoria especificada não foi encontrada'
       });
     }
     
     if (!area) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Área não encontrada'
+        message: 'Área especificada não foi encontrada'
       });
     }
     
-    // Criar tópico
+    // Verificar duplicação de título na mesma área
+    const topicoExistente = await Topico_Area.findOne({
+      where: {
+        titulo: {
+          [Op.iLike]: titulo.trim()
+        },
+        id_area,
+        ativo: true
+      }
+    });
+    
+    if (topicoExistente) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Já existe um tópico com este título nesta área'
+      });
+    }
+    
+    // Criar o novo tópico
     const novoTopico = await Topico_Area.create({
-      titulo,
-      descricao,
+      titulo: titulo.trim(),
+      descricao: descricao ? descricao.trim() : '',
       id_categoria,
       id_area,
       criado_por: userId,
       data_criacao: new Date(),
       ativo: true
-    });
+    }, { transaction });
     
-    // Buscar tópico completo para retornar
+    await transaction.commit();
+    
+    // Buscar tópico criado com informações completas
     const topicoCompleto = await Topico_Area.findByPk(novoTopico.id_topico, {
       include: [
         {
@@ -415,6 +454,7 @@ const createTopico = async (req, res) => {
       data: topicoCompleto
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Erro ao criar tópico:', error);
     res.status(500).json({
       success: false,
@@ -428,6 +468,8 @@ const createTopico = async (req, res) => {
  * Atualizar tópico existente
  */
 const updateTopico = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
     const userId = req.utilizador.id_utilizador || req.user.id_utilizador;
@@ -437,6 +479,7 @@ const updateTopico = async (req, res) => {
     // Buscar tópico
     const topico = await Topico_Area.findByPk(id);
     if (!topico) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Tópico não encontrado'
@@ -445,16 +488,26 @@ const updateTopico = async (req, res) => {
     
     // Verificar permissões (criador, administrador ou formador)
     if (topico.criado_por !== userId && userRole !== 1 && userRole !== 2) {
+      await transaction.rollback();
       return res.status(403).json({
         success: false,
-        message: 'Sem permissão para atualizar este tópico'
+        message: 'Sem permissão para actualizar este tópico'
       });
     }
     
-    // Preparar dados de atualização
+    // Validação dos dados obrigatórios
+    if (titulo && titulo.trim() === '') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'O título do tópico não pode estar vazio'
+      });
+    }
+    
+    // Preparar dados de actualização
     const updateData = {};
-    if (titulo) updateData.titulo = titulo;
-    if (descricao !== undefined) updateData.descricao = descricao;
+    if (titulo) updateData.titulo = titulo.trim();
+    if (descricao !== undefined) updateData.descricao = descricao.trim();
     if (id_categoria) updateData.id_categoria = id_categoria;
     if (id_area) updateData.id_area = id_area;
     
@@ -463,10 +516,36 @@ const updateTopico = async (req, res) => {
       updateData.ativo = ativo;
     }
     
-    // Atualizar tópico
-    await topico.update(updateData);
+    // Verificar duplicação de título se foi alterado
+    if (titulo && titulo.trim() !== topico.titulo) {
+      const topicoExistente = await Topico_Area.findOne({
+        where: {
+          titulo: {
+            [Op.iLike]: titulo.trim()
+          },
+          id_area: id_area || topico.id_area,
+          id_topico: {
+            [Op.ne]: id
+          },
+          ativo: true
+        }
+      });
+      
+      if (topicoExistente) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Já existe outro tópico com este título nesta área'
+        });
+      }
+    }
     
-    // Buscar tópico atualizado
+    // Actualizar tópico
+    await topico.update(updateData, { transaction });
+    
+    await transaction.commit();
+    
+    // Buscar tópico actualizado
     const topicoAtualizado = await Topico_Area.findByPk(id, {
       include: [
         {
@@ -489,14 +568,15 @@ const updateTopico = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Tópico atualizado com sucesso',
+      message: 'Tópico actualizado com sucesso',
       data: topicoAtualizado
     });
   } catch (error) {
-    console.error('Erro ao atualizar tópico:', error);
+    await transaction.rollback();
+    console.error('Erro ao actualizar tópico:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao atualizar tópico',
+      message: 'Erro ao actualizar tópico',
       error: error.message
     });
   }
@@ -506,12 +586,15 @@ const updateTopico = async (req, res) => {
  * Eliminar tópico e todo o seu conteúdo
  */
 const deleteTopico = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
     const userRole = req.utilizador.id_cargo || req.user.id_cargo;
     
     // Verificar permissões (apenas administradores)
     if (userRole !== 1) {
+      await transaction.rollback();
       return res.status(403).json({
         success: false,
         message: 'Apenas administradores podem eliminar tópicos'
@@ -521,6 +604,7 @@ const deleteTopico = async (req, res) => {
     // Buscar tópico
     const topico = await Topico_Area.findByPk(id);
     if (!topico) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Tópico não encontrado'
@@ -546,7 +630,8 @@ const deleteTopico = async (req, res) => {
           model: ChatMensagem, 
           as: 'mensagem', 
           where: { id_topico: id } 
-        }]
+        }],
+        transaction
       });
     }
     
@@ -556,22 +641,32 @@ const deleteTopico = async (req, res) => {
         model: ChatMensagem, 
         as: 'mensagem', 
         where: { id_topico: id } 
-      }]
+      }],
+      transaction
     });
     
     // Eliminar mensagens
     if (totalMensagens > 0) {
-      await ChatMensagem.destroy({ where: { id_topico: id } });
+      await ChatMensagem.destroy({ 
+        where: { id_topico: id },
+        transaction 
+      });
     }
     
+    // Guardar nome do tópico para confirmação
+    const nomeTopico = topico.titulo;
+    
     // Eliminar tópico
-    await topico.destroy();
+    await topico.destroy({ transaction });
+    
+    await transaction.commit();
     
     res.status(200).json({
       success: true,
-      message: `Tópico eliminado com sucesso. ${totalMensagens} mensagens e ${totalDenuncias} denúncias também foram removidas.`
+      message: `Tópico "${nomeTopico}" eliminado com sucesso. ${totalMensagens} mensagens e ${totalDenuncias} denúncias também foram removidas.`
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Erro ao eliminar tópico:', error);
     res.status(500).json({
       success: false,

@@ -8,110 +8,160 @@ import { useAuth } from '../../contexts/AuthContext';
 import './css/gerir_Categoria.css';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * Componente para gestão de categorias de formação
+ * 
+ * Permite aos administradores:
+ * - Ver todas as categorias com contagem de áreas
+ * - Criar novas categorias
+ * - Editar categorias existentes
+ * - Eliminar categorias (só se não tiverem áreas)
+ * - Filtrar categorias por nome
+ * - Navegar entre páginas (10 itens por página)
+ * 
+ * Acesso restrito: apenas utilizadores com id_cargo === 1 (administradores)
+ */
 const Gerir_Categoria = () => {
   const navigate = useNavigate();
-  
-  // Auth context
   const { currentUser } = useAuth();
   
-  // Estados para sidebar
+  // Estados para controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // Estados para categorias
+  // Estados para dados das categorias
   const [categorias, setCategorias] = useState([]);
+  const [todasAsCategorias, setTodasAsCategorias] = useState([]);
   const [totalCategorias, setTotalCategorias] = useState(0);
+  
+  // Estados para paginação e filtros
   const [paginaAtual, setPaginaAtual] = useState(1);
   const categoriasPorPagina = 10;
   const [filtros, setFiltros] = useState({ nome: '' });
+  
+  // Estados para modais de confirmação e edição
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [editCategoria, setEditCategoria] = useState(null);
   const [newCategoriaNome, setNewCategoriaNome] = useState('');
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
   
-  // Estado de carregamento
-  const [loading, setLoading] = useState(true);
-  
-  // Ref para debounce
+  // Referência para timeout de filtros (evita muitas requisições)
   const filterTimeoutRef = useRef(null);
 
-  // Toggle para a sidebar
+  /**
+   * Alterna a visibilidade da barra lateral
+   */
   const toggleSidebar = () => {
-    console.log('[DEBUG] Gerir_Categoria: Toggling sidebar');
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Função para buscar categorias com paginação e filtros
+  /**
+   * Busca as categorias da API com paginação e filtros
+   * Implementa paginação automática no frontend quando a API retorna todas as categorias
+   * @param {number} pagina - Número da página a buscar
+   * @param {object} filtrosAtuais - Filtros a aplicar na busca
+   */
   const buscarCategorias = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
-      console.log('[DEBUG] Gerir_Categoria: A iniciar busca de categorias - Página:', pagina);
-      console.log('[DEBUG] Gerir_Categoria: Filtros aplicados:', filtrosAtuais);
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Criar objeto de parâmetros para a requisição
+      // Preparar parâmetros da requisição
       const params = {
         page: pagina,
         limit: categoriasPorPagina,
       };
       
-      // Adicionar filtros válidos
-      if (filtrosAtuais.nome) {
-        params.search = filtrosAtuais.nome;
+      // Adicionar filtro de nome se especificado
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        params.search = filtrosAtuais.nome.trim();
       }
       
-      // Remover parâmetros vazios
+      // Limpar parâmetros vazios
       Object.keys(params).forEach(key => 
         (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
       );
       
-      console.log('[DEBUG] Gerir_Categoria: A buscar categorias com os parâmetros finais:', params);
-      
+      // Fazer requisição à API
       const response = await axios.get(`${API_BASE}/categorias`, {
         params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Categoria: Resposta da API (categorias):', response.data);
-      
-      if (response.data) {
-        if (Array.isArray(response.data.categorias)) {
-          setCategorias(response.data.categorias);
-          setTotalCategorias(response.data.total || response.data.categorias.length);
-        } else if (Array.isArray(response.data)) {
-          setCategorias(response.data);
-          setTotalCategorias(response.data.length);
+      // Processar diferentes formatos de resposta da API
+      let categoriasData = [];
+      let total = 0;
+      let processouComSucesso = false;
+      let usarPaginacaoFrontend = false;
+
+      if (response.data && response.data.total !== undefined) {
+        // Formato padrão: {total: 12, categorias: [...]} - API com paginação
+        categoriasData = response.data.categorias;
+        total = response.data.total || 0;
+        processouComSucesso = true;
+      } else if (Array.isArray(response.data)) {
+        // Formato alternativo: array directo [{...}, {...}, ...] - API sem paginação
+        const todasAsCategoriasRecebidas = response.data;
+        
+        // Aplicar filtros manualmente
+        let categoriasFiltradas = todasAsCategoriasRecebidas;
+        
+        // Filtro por nome
+        if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+          const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+          categoriasFiltradas = categoriasFiltradas.filter(categoria => 
+            categoria.nome?.toLowerCase().includes(termoBusca)
+          );
+        }
+        
+        total = categoriasFiltradas.length;
+        
+        // Implementar paginação manual no frontend
+        const startIndex = (pagina - 1) * categoriasPorPagina;
+        const endIndex = startIndex + categoriasPorPagina;
+        categoriasData = categoriasFiltradas.slice(startIndex, endIndex);
+        
+        // Armazenar todas as categorias para futuras operações
+        setTodasAsCategorias(todasAsCategoriasRecebidas);
+        
+        processouComSucesso = true;
+        usarPaginacaoFrontend = true;
+      } else if (response.data && Array.isArray(response.data.categorias)) {
+        // Formato alternativo: {categorias: [...]} sem total
+        categoriasData = response.data.categorias;
+        total = response.data.total || response.data.categorias.length;
+        processouComSucesso = true;
+      }
+
+      if (processouComSucesso) {
+        // Verificar se os dados são válidos
+        if (Array.isArray(categoriasData)) {
+          setCategorias(categoriasData);
+          setTotalCategorias(total || 0);
+          setPaginaAtual(pagina);
         } else {
-          console.error('[DEBUG] Gerir_Categoria: Formato de resposta inesperado:', response.data);
           toast.error('Formato de dados inválido recebido do servidor.');
           setCategorias([]);
           setTotalCategorias(0);
         }
       } else {
-        console.error('[DEBUG] Gerir_Categoria: Resposta vazia ou inválida');
-        toast.error('Nenhum dado recebido do servidor.');
+        toast.error('Erro ao carregar categorias do servidor.');
         setCategorias([]);
         setTotalCategorias(0);
       }
       
-      setPaginaAtual(pagina);
       setLoading(false);
     } catch (error) {
-      console.error('[DEBUG] Gerir_Categoria: Erro ao buscar categorias:', error);
-      
+      // Gestão de erros específicos
       if (error.response) {
-        console.error('[DEBUG] Gerir_Categoria: Dados do erro:', error.response.data);
-        console.error('[DEBUG] Gerir_Categoria: Status:', error.response.status);
-        
         if (error.response.status === 401) {
-          console.log('[DEBUG] Gerir_Categoria: Erro 401 - Não autorizado. A redirecionar para login...');
-          toast.error('Não autorizado. Faça login novamente.');
+          toast.error('Não autorizado. Faz login novamente.');
           navigate('/login');
         } else {
           toast.error(`Erro ao carregar categorias: ${error.response.data?.message || 'Erro desconhecido'}`);
         }
       } else {
-        console.error('[DEBUG] Gerir_Categoria: Erro:', error.message);
         toast.error('Erro ao processar a requisição.');
       }
       
@@ -119,59 +169,41 @@ const Gerir_Categoria = () => {
       setTotalCategorias(0);
       setLoading(false);
     }
-  }, [categoriasPorPagina, navigate]);
+  }, [categoriasPorPagina, navigate, filtros]);
 
-  // Efeito para carregar dados iniciais
+  /**
+   * Carrega dados iniciais quando o componente é montado
+   */
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('[DEBUG] Gerir_Categoria: ===== A INICIAR VERIFICAÇÕES DE AUTENTICAÇÃO =====');
         setLoading(true);
         const token = localStorage.getItem('token');
         
-        console.log('[DEBUG] Gerir_Categoria: Token no localStorage:', token ? 'SIM' : 'NÃO');
-        
+        // Verificar se o utilizador está autenticado
         if (!token) {
-          console.log('[DEBUG] Gerir_Categoria: Token não encontrado. A redirecionar para login...');
           navigate('/login');
           return;
         }
         
-        // Log do usuário atual do AuthContext
-        console.log('[DEBUG] Gerir_Categoria: Utilizador atual do AuthContext:', currentUser);
-        
+        // Verificar permissões de acesso
         if (currentUser) {
-          console.log('[DEBUG] Gerir_Categoria: Dados do utilizador do AuthContext:', {
-            id_utilizador: currentUser.id_utilizador,
-            nome: currentUser.nome,
-            id_cargo: currentUser.id_cargo,
-            email: currentUser.email,
-            cargo: currentUser.cargo
-          });
-          
-          // Verificar se o usuário tem permissão (admin ou gestor)
           if (currentUser.id_cargo !== 1) {
-            console.log('[DEBUG] Gerir_Categoria: Usuário não é administrador. Redirecionando...');
-            toast.error('Acesso negado.  não tem permissão para acessar esta página.');
+            toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
             navigate('/');
             return;
           }
         }
         
-        console.log('[DEBUG] Gerir_Categoria: Autenticação verificada com sucesso. A buscar dados...');
-        
-        // Buscar categorias iniciais
-        await buscarCategorias(1, filtros);
+        // Carregar dados iniciais
+        await buscarCategorias(1, { nome: '' });
         
       } catch (error) {
-        console.error('[DEBUG] Gerir_Categoria: Erro ao carregar dados:', error);
-        
         if (error.response && error.response.status === 401) {
-          console.log('[DEBUG] Gerir_Categoria: Erro 401 - Não autorizado. A redirecionar para login...');
-          toast.error('Não autorizado. Por favor, faça login novamente.');
+          toast.error('Não autorizado. Por favor, faz login novamente.');
           navigate('/login');
         } else {
-          toast.error('Erro ao carregar dados. Por favor, tente novamente mais tarde.');
+          toast.error('Erro ao carregar dados. Por favor, tenta novamente mais tarde.');
         }
         
         setLoading(false);
@@ -181,31 +213,29 @@ const Gerir_Categoria = () => {
     fetchData();
   }, [navigate, currentUser, buscarCategorias]);
 
-  // Handler para mudança de filtros com debounce
+  /**
+   * Gere alterações nos filtros com debounce para evitar muitas requisições
+   * @param {Event} e - Evento de mudança do input
+   */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
-    console.log(`[DEBUG] Gerir_Categoria: Filtro alterado: ${name} = ${value}`);
     
-    // Limpar qualquer temporizador existente
+    // Cancelar timeout anterior se existir
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
-    // Atualizar o estado dos filtros
     setFiltros(prev => {
       const novosFiltros = {
         ...prev,
         [name]: value
       };
       
-      console.log('[DEBUG] Gerir_Categoria: Novos filtros:', novosFiltros);
-      
-      // Ativar o indicador de carregamento imediatamente
       setLoading(true);
       
-      // Configurar novo temporizador de debounce
+      // Aplicar debounce de 600ms antes de fazer a busca
       filterTimeoutRef.current = setTimeout(() => {
-        // Quando o temporizador disparar, usar os valores atuais dos filtros
+        setPaginaAtual(1);
         buscarCategorias(1, novosFiltros);
       }, 600);
       
@@ -213,11 +243,10 @@ const Gerir_Categoria = () => {
     });
   };
 
-  // Handler para limpar filtros
+  /**
+   * Limpa todos os filtros aplicados e recarrega as categorias
+   */
   const handleLimparFiltros = () => {
-    console.log('[DEBUG] Gerir_Categoria: A limpar filtros');
-    
-    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
@@ -226,129 +255,139 @@ const Gerir_Categoria = () => {
     
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
-    
-    // Buscar dados com filtros limpos
     buscarCategorias(1, filtrosLimpos);
   };
 
-  // Funções de navegação
+  /**
+   * Navega para a página anterior
+   */
   const handlePaginaAnterior = () => {
-    console.log('[DEBUG] Gerir_Categoria: A navegar para página anterior');
-    if (paginaAtual > 1) {
-      buscarCategorias(paginaAtual - 1, filtros);
+    if (paginaAtual > 1 && !loading) {
+      const novaPagina = paginaAtual - 1;
+      buscarCategorias(novaPagina, filtros);
     }
   };
 
+  /**
+   * Navega para a próxima página
+   */
   const handleProximaPagina = () => {
-    console.log('[DEBUG] Gerir_Categoria: A navegar para próxima página');
-    const totalPaginas = Math.ceil(totalCategorias / categoriasPorPagina);
-    if (paginaAtual < totalPaginas) {
-      buscarCategorias(paginaAtual + 1, filtros);
+    const totalPaginas = Math.max(1, Math.ceil(totalCategorias / categoriasPorPagina));
+    if (paginaAtual < totalPaginas && !loading) {
+      const novaPagina = paginaAtual + 1;
+      buscarCategorias(novaPagina, filtros);
     }
   };
 
-  // Funções para criar nova categoria
+  /**
+   * Abre o modal para criar nova categoria
+   */
   const handleOpenCategoriaForm = () => {
     setShowCategoriaForm(true);
     setEditCategoria(null);
     setNewCategoriaNome('');
   };
 
+  /**
+   * Fecha o modal de criação/edição de categoria
+   */
   const handleCloseCategoriaForm = () => {
     setShowCategoriaForm(false);
     setEditCategoria(null);
     setNewCategoriaNome('');
   };
 
+  /**
+   * Grava uma nova categoria ou atualiza uma existente
+   */
   const handleSaveCategoria = async () => {
     try {
       const token = localStorage.getItem('token');
       
+      // Validar dados obrigatórios
       if (!newCategoriaNome.trim()) {
-        toast.error('Por favor, insira um nome para a categoria.');
+        toast.error('Por favor, insere um nome para a categoria.');
         return;
       }
       
-      // Modo edição
+      const dadosCategoria = {
+        nome: newCategoriaNome
+      };
+      
+      // Decidir se é edição ou criação
       if (editCategoria) {
-        console.log(`[DEBUG] Gerir_Categoria: A atualizar categoria ID ${editCategoria.id_categoria}`);
-        
-        await axios.put(`${API_BASE}/categorias/${editCategoria.id_categoria}`, {
-          nome: newCategoriaNome
-        }, {
+        await axios.put(`${API_BASE}/categorias/${editCategoria.id_categoria}`, dadosCategoria, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        toast.success('Categoria atualizada com sucesso!');
-      } 
-      // Modo criação
-      else {
-        console.log('[DEBUG] Gerir_Categoria: A criar nova categoria');
-        
-        await axios.post(`${API_BASE}/categorias`, {
-          nome: newCategoriaNome
-        }, {
+        toast.success('Categoria actualizada com sucesso!');
+      } else {
+        await axios.post(`${API_BASE}/categorias`, dadosCategoria, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         toast.success('Categoria criada com sucesso!');
       }
       
-      // Fechar o formulário e atualizar a lista
       handleCloseCategoriaForm();
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('[DEBUG] Gerir_Categoria: Erro ao salvar categoria:', error);
-      
       if (error.response) {
         toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
       }
     }
   };
 
-  // Funções para editar categoria
+  /**
+   * Prepara uma categoria para edição
+   * @param {object} categoria - Categoria a ser editada
+   */
   const handleEditarCategoria = (categoria) => {
-    console.log(`[DEBUG] Gerir_Categoria: A editar categoria ID ${categoria.id_categoria}`);
     setEditCategoria(categoria);
     setNewCategoriaNome(categoria.nome);
     setShowCategoriaForm(true);
   };
 
-  // Funções para excluir categoria
+  /**
+   * Confirma a exclusão de uma categoria
+   * @param {object} categoria - Categoria a ser excluída
+   */
   const handleConfirmarExclusao = (categoria) => {
-    console.log(`[DEBUG] Gerir_Categoria: A confirmar exclusão da categoria ID ${categoria.id_categoria}`);
     setCategoriaParaExcluir(categoria);
     setShowDeleteConfirmation(true);
   };
 
+  /**
+   * Executa a exclusão de uma categoria
+   */
   const handleExcluirCategoria = async () => {
     if (!categoriaParaExcluir) return;
     
     try {
       const token = localStorage.getItem('token');
-      console.log(`[DEBUG] Gerir_Categoria: A excluir categoria ID ${categoriaParaExcluir.id_categoria}`);
       
       await axios.delete(`${API_BASE}/categorias/${categoriaParaExcluir.id_categoria}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      toast.success('Categoria excluída com sucesso!');
+      toast.success('Categoria eliminada com sucesso!');
       setShowDeleteConfirmation(false);
       setCategoriaParaExcluir(null);
       
-      // Atualizar a lista
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('[DEBUG] Gerir_Categoria: Erro ao excluir categoria:', error);
-      
       if (error.response) {
-        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+        if (error.response.status === 404) {
+          toast.error('Categoria não encontrada. Pode já ter sido eliminada.');
+        } else {
+          toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+        }
       } else {
-        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
       }
       
       setShowDeleteConfirmation(false);
@@ -356,15 +395,27 @@ const Gerir_Categoria = () => {
     }
   };
 
-  // Função para navegar para a página de áreas
+  /**
+   * Navega para a página de gestão de áreas
+   */
   const handleIrParaAreas = () => {
     navigate('/admin/areas');
   };
 
-  // Calcular número total de páginas
-  const totalPaginas = Math.ceil(totalCategorias / categoriasPorPagina);
+  // Cálculos para paginação e apresentação
+  const totalPaginas = Math.max(1, Math.ceil(totalCategorias / categoriasPorPagina));
+  const categoriasParaMostrar = Array.isArray(categorias) ? categorias : [];
+  
+  // Criar linhas vazias para manter altura consistente da tabela
+  const linhasVazias = [];
+  const linhasNecessarias = Math.max(0, categoriasPorPagina - categoriasParaMostrar.length);
+  for (let i = 0; i < linhasNecessarias; i++) {
+    linhasVazias.push(i);
+  }
 
-  // Limpar timeout quando o componente for desmontado
+  /**
+   * Cleanup do timeout ao desmontar o componente
+   */
   useEffect(() => {
     return () => {
       if (filterTimeoutRef.current) {
@@ -373,14 +424,14 @@ const Gerir_Categoria = () => {
     };
   }, []);
 
-  // Interface de carregamento
+  // Ecrã de carregamento inicial
   if (loading && categorias.length === 0) {
     return (
-      <div className="gerenciar-categorias-container">
+      <div className="gerenciar-categorias-container-gerir-categorias">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className="main-content">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
+        <div className="main-content-gerir-categorias">
+          <div className="loading-container-gerir-categorias">
+            <div className="loading-spinner-gerir-categorias"></div>
             <p>A carregar categorias...</p>
           </div>
         </div>
@@ -388,23 +439,26 @@ const Gerir_Categoria = () => {
     );
   }
 
-  // Renderização principal
   return (
-    <div className="gerenciar-categorias-container">
+    <div className="gerenciar-categorias-container-gerir-categorias">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
-      <div className="main-content">
-        <div className="categorias-header">
-          <h1>Gestão de Categorias</h1>
-          <div className="header-actions">
+      <div className="main-content-gerir-categorias">
+        {/* Cabeçalho com título e acções principais */}
+        <div className="categorias-header-gerir-categorias">
+          <h1>
+            Gestão de Categorias 
+            <span className="total-count-gerir-categorias">({totalCategorias})</span>
+          </h1>
+          <div className="header-actions-gerir-categorias">
             <button 
-              className="btn-navegacao"
+              className="btn-navegacao-gerir-categorias"
               onClick={handleIrParaAreas}
             >
               Gerir Áreas
             </button>
             <button 
-              className="criar-btn"
+              className="criar-btn-gerir-categorias"
               onClick={handleOpenCategoriaForm}
             >
               Criar Nova Categoria
@@ -412,22 +466,25 @@ const Gerir_Categoria = () => {
           </div>
         </div>
         
-        <div className="filtros-container">
-          <div className="filtro">
-            <label htmlFor="nome">Nome da Categoria:</label>
-            <input 
-              type="text"
-              id="nome"
-              name="nome"
-              value={filtros.nome}
-              onChange={handleFiltroChange}
-              placeholder="Filtrar por nome"
-            />
+        {/* Secção de filtros */}
+        <div className="filtros-container-gerir-categorias">
+          <div className="filtros-principais-gerir-categorias">
+            <div className="filtro-gerir-categorias">
+              <label htmlFor="nome">Nome da Categoria:</label>
+              <input 
+                type="text"
+                id="nome"
+                name="nome"
+                value={filtros.nome}
+                onChange={handleFiltroChange}
+                placeholder="Filtrar por nome"
+              />
+            </div>
           </div>
           
-          <div className="filtro-acoes limpar-filtros-container">
+          <div className="filtro-acoes-gerir-categorias">
             <button 
-              className="btn-limpar"
+              className="btn-limpar-gerir-categorias"
               onClick={handleLimparFiltros}
               disabled={loading}
             >
@@ -436,92 +493,116 @@ const Gerir_Categoria = () => {
           </div>
         </div>
         
-        <div className="categorias-table-container">
+        {/* Tabela de categorias e controlos de paginação */}
+        <div className="categorias-table-container-gerir-categorias">
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
+            <div className="loading-container-gerir-categorias">
+              <div className="loading-spinner-gerir-categorias"></div>
               <p>A carregar categorias...</p>
             </div>
-          ) : categorias.length === 0 ? (
-            <div className="no-items">
+          ) : !Array.isArray(categoriasParaMostrar) || categoriasParaMostrar.length === 0 ? (
+            <div className="no-items-gerir-categorias">
               <p>Nenhuma categoria encontrada com os filtros aplicados.</p>
             </div>
           ) : (
             <>
-              <table className="categorias-table">
+              {/* Tabela com os dados das categorias */}
+              <table className="categorias-table-gerir-categorias">
                 <thead>
                   <tr>
                     <th>ID</th>
                     <th>Nome da Categoria</th>
                     <th>Total de Áreas</th>
-                    <th>Ações</th>
+                    <th>Acções</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categorias.map(categoria => (
-                    <tr key={categoria.id_categoria}>
-                      <td>{categoria.id_categoria}</td>
-                      <td className="categoria-nome">{categoria.nome}</td>
-                      <td>{categoria.areas_count || 0}</td>
-                      <td className="acoes">
-                        <button 
-                          className="btn-icon btn-editar"
-                          onClick={() => handleEditarCategoria(categoria)}
-                          title="Editar"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          className="btn-icon btn-excluir"
-                          onClick={() => handleConfirmarExclusao(categoria)}
-                          title="Excluir"
-                          disabled={categoria.areas_count > 0}
-                        >
-                          🗑️
-                        </button>
-                      </td>
+                  {categoriasParaMostrar.map((categoria, index) => {
+                    if (!categoria || typeof categoria !== 'object') {
+                      return null;
+                    }
+                    
+                    const categoriaId = categoria.id_categoria || categoria.id || index;
+                    
+                    return (
+                      <tr key={categoriaId}>
+                        <td>{categoriaId}</td>
+                        <td className="categoria-nome-gerir-categorias">{categoria.nome || 'Nome não disponível'}</td>
+                        <td>{categoria.areas_count || 0}</td>
+                        <td className="acoes-gerir-categorias">
+                          <button 
+                            className="btn-icon-gerir-categorias btn-editar-gerir-categorias"
+                            onClick={() => handleEditarCategoria(categoria)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className="btn-icon-gerir-categorias btn-excluir-gerir-categorias"
+                            onClick={() => handleConfirmarExclusao(categoria)}
+                            title="Eliminar"
+                            disabled={(categoria.areas_count || 0) > 0}
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  
+                  {/* Linhas vazias para manter altura consistente */}
+                  {linhasVazias.map((_, index) => (
+                    <tr key={`empty-${index}`} className="linha-vazia-gerir-categorias">
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               
-              {/* Paginação */}
-              {totalPaginas > 1 && (
-                <div className="paginacao">
-                  <button 
-                    onClick={handlePaginaAnterior} 
-                    disabled={paginaAtual === 1 || loading}
-                    className="btn-pagina"
-                    aria-label="Página anterior"
-                  >
-                    <span className="pagination-icon">&#10094;</span>
-                  </button>
-                  
-                  <span className="pagina-atual">
-                    {paginaAtual}/{totalPaginas}
+              {/* Controlos de paginação */}
+              <div className="paginacao-gerir-categorias">
+                <button 
+                  onClick={handlePaginaAnterior} 
+                  disabled={paginaAtual === 1 || loading}
+                  className="btn-pagina-gerir-categorias btn-anterior-gerir-categorias"
+                  aria-label="Página anterior"
+                  title="Página anterior"
+                >
+                  <span className="pagination-icon-gerir-categorias">&#8249;</span>
+                  <span className="btn-text-gerir-categorias">Anterior</span>
+                </button>
+                
+                <div className="pagina-info-gerir-categorias">
+                  <span className="pagina-atual-gerir-categorias">
+                    {loading ? 'A carregar...' : `Página ${paginaAtual} de ${totalPaginas}`}
                   </span>
-                  
-                  <button 
-                    onClick={handleProximaPagina}
-                    disabled={paginaAtual === totalPaginas || loading}
-                    className="btn-pagina"
-                    aria-label="Próxima página"
-                  >
-                    <span className="pagination-icon">&#10095;</span>
-                  </button>
                 </div>
-              )}
+                
+                <button 
+                  onClick={handleProximaPagina}
+                  disabled={paginaAtual >= totalPaginas || loading}
+                  className="btn-pagina-gerir-categorias btn-seguinte-gerir-categorias"
+                  aria-label="Próxima página"
+                  title="Próxima página"
+                >
+                  <span className="btn-text-gerir-categorias">Seguinte</span>
+                  <span className="pagination-icon-gerir-categorias">&#8250;</span>
+                </button>
+              </div>
             </>
           )}
         </div>
       </div>
       
-      {/* Modal de formulário de categoria */}
+      {/* Modal para criar/editar categoria */}
       {showCategoriaForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className="modal-overlay-gerir-categorias">
+          <div className="modal-content-gerir-categorias">
             <h3>{editCategoria ? 'Editar Categoria' : 'Nova Categoria'}</h3>
-            <div className="form-group">
+            <div className="form-group-gerir-categorias">
               <label htmlFor="newCategoriaNome">Nome da Categoria:</label>
               <input 
                 type="text" 
@@ -531,45 +612,45 @@ const Gerir_Categoria = () => {
                 placeholder="Digite o nome da categoria"
               />
             </div>
-            <div className="modal-actions">
+            <div className="modal-actions-gerir-categorias">
               <button 
-                className="btn-cancelar"
+                className="btn-cancelar-gerir-categorias"
                 onClick={handleCloseCategoriaForm}
               >
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar"
+                className="btn-confirmar-gerir-categorias"
                 onClick={handleSaveCategoria}
               >
-                {editCategoria ? 'Atualizar' : 'Criar'}
+                {editCategoria ? 'Actualizar' : 'Criar'}
               </button>
             </div>
           </div>
         </div>
       )}
       
-      {/* Modal de confirmação de exclusão */}
+      {/* Modal de confirmação de eliminação */}
       {showDeleteConfirmation && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Confirmar Exclusão</h3>
+        <div className="modal-overlay-gerir-categorias">
+          <div className="modal-content-gerir-categorias">
+            <h3>Confirmar Eliminação</h3>
             <p>
-              Tem certeza que deseja excluir a categoria "{categoriaParaExcluir?.nome}"?
-              Esta ação não pode ser desfeita.
+              Tens a certeza que queres eliminar a categoria "{categoriaParaExcluir?.nome}"?
+              Esta acção não pode ser desfeita.
             </p>
-            <div className="modal-actions">
+            <div className="modal-actions-gerir-categorias">
               <button 
-                className="btn-cancelar"
+                className="btn-cancelar-gerir-categorias"
                 onClick={() => setShowDeleteConfirmation(false)}
               >
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar"
+                className="btn-confirmar-gerir-categorias"
                 onClick={handleExcluirCategoria}
               >
-                Confirmar Exclusão
+                Confirmar Eliminação
               </button>
             </div>
           </div>

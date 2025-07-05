@@ -8,24 +8,34 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
-// Configuração base do servidor Express e HTTP
+/**
+ * Servidor Express principal da plataforma de formação
+ * 
+ * Fornece uma API REST completa com funcionalidades de WebSocket
+ * para comunicação em tempo real, gestão de uploads e autenticação JWT.
+ */
+
+// Configuração base do servidor
 const app = express();
 const server = http.createServer(app);
 
-// Configurar pasta de uploads predefinida se não estiver especificada
+// Garantir configuração da pasta de uploads
 if (!process.env.CAMINHO_PASTA_UPLOADS) {
   process.env.CAMINHO_PASTA_UPLOADS = 'uploads';
 }
 
-// Garantir que as pastas de upload existem e configurar middleware
+// Configuração de uploads e garantir que as pastas existem
 const uploadUtils = require("./src/middleware/upload");
 uploadUtils.ensureBaseDirs();
 
 /**
  * Configuração do Socket.IO para comunicação em tempo real
  * 
- * Permite envio instantâneo de notificações e chat entre utilizadores.
- * Configurado com CORS permissivo para desenvolvimento.
+ * Funcionalidades:
+ * - Notificações instantâneas
+ * - Chat em tempo real
+ * - Actualizações automáticas de estado
+ * - Notificações de novos conteúdos
  */
 const io = socketIo(server, {
   cors: {
@@ -39,24 +49,22 @@ const io = socketIo(server, {
 
 /**
  * Middleware de autenticação para ligações WebSocket
+ * Valida o token JWT antes de permitir ligação
  * 
- * Valida o token JWT antes de permitir ligação via socket,
- * garantindo que apenas utilizadores autenticados acedem às notificações.
+ * @param {Socket} socket - Instância do socket do cliente
+ * @param {Function} next - Callback para continuar ou rejeitar
  */
 io.use((socket, next) => {
   const token = socket.handshake.query.token;
   if (!token) {
-    console.warn('⚠️ [WEBSOCKET] Tentativa de ligação sem token de autenticação');
     return next(new Error("Autenticação necessária"));
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
-    console.log(`🔑 [WEBSOCKET] Utilizador autenticado: ${decoded.id_utilizador || decoded.id}`);
     next();
   } catch (error) {
-    console.error('❌ [WEBSOCKET] Token inválido:', error.message);
     next(new Error("Token inválido"));
   }
 });
@@ -64,20 +72,17 @@ io.use((socket, next) => {
 /**
  * Gestão principal de ligações WebSocket
  * 
- * Quando um utilizador se liga, é automaticamente adicionado à sua sala pessoal
- * para receber notificações. Suporta também salas de tópicos e temas para chat.
+ * Organiza utilizadores em salas para:
+ * - Notificações pessoais (user_${userId})
+ * - Discussões de tópicos (topico_${topicoId})
+ * - Fóruns temáticos (tema_${temaId})
  */
 io.on("connection", (socket) => {
   const userId = socket.user ? socket.user.id_utilizador || socket.user.id : 'anónimo';
-  
-  console.log(`✅ [WEBSOCKET] Utilizador ${userId} ligado com sucesso`);
 
-  // Adicionar utilizador à sua sala pessoal para notificações
+  // Adicionar utilizador à sua sala pessoal
   if (userId !== 'anónimo') {
     socket.join(`user_${userId}`);
-    console.log(`🔔 [WEBSOCKET] Utilizador ${userId} adicionado à sala de notificações pessoais`);
-    
-    // Confirmar ligação bem-sucedida ao cliente
     socket.emit('connection_success', {
       message: 'Ligado com sucesso ao sistema de notificações',
       userId: userId,
@@ -85,131 +90,68 @@ io.on("connection", (socket) => {
     });
   }
 
-  /**
-   * Juntar-se a sala de tópico específico para discussões
-   * Usado para chat em contexto de cursos ou áreas temáticas
-   */
+  // Gestão de salas de tópicos para discussões
   socket.on("joinTopic", (topicoId) => {
-    if (!topicoId) {
-      console.warn(`⚠️ [WEBSOCKET] ID de tópico inválido fornecido por ${userId}`);
-      return;
-    }
-
+    if (!topicoId) return;
     socket.join(`topico_${topicoId}`);
-    console.log(`📚 [WEBSOCKET] Utilizador ${userId} juntou-se ao tópico ${topicoId}`);
-    
     socket.emit('topic_joined', {
       topicoId: topicoId,
       message: `Juntaste-te ao tópico ${topicoId}`
     });
   });
 
-  /**
-   * Sair de sala de tópico
-   */
   socket.on("leaveTopic", (topicoId) => {
     if (!topicoId) return;
-
     socket.leave(`topico_${topicoId}`);
-    console.log(`📚 [WEBSOCKET] Utilizador ${userId} saiu do tópico ${topicoId}`);
-    
     socket.emit('topic_left', {
       topicoId: topicoId,
       message: `Saíste do tópico ${topicoId}`
     });
   });
 
-  /**
-   * Juntar-se a sala de tema do fórum
-   * Para discussões gerais em temas específicos do fórum
-   */
+  // Gestão de salas de temas do fórum
   socket.on("joinTema", (temaId) => {
-    if (!temaId) {
-      console.warn(`⚠️ [WEBSOCKET] ID de tema inválido fornecido por ${userId}`);
-      return;
-    }
-
+    if (!temaId) return;
     socket.join(`tema_${temaId}`);
-    console.log(`💬 [WEBSOCKET] Utilizador ${userId} juntou-se ao tema ${temaId}`);
-    
     socket.emit('tema_joined', {
       temaId: temaId,
       message: `Juntaste-te ao tema ${temaId}`
     });
   });
 
-  /**
-   * Sair de sala de tema do fórum
-   */
   socket.on("leaveTema", (temaId) => {
     if (!temaId) return;
-
     socket.leave(`tema_${temaId}`);
-    console.log(`💬 [WEBSOCKET] Utilizador ${userId} saiu do tema ${temaId}`);
-    
     socket.emit('tema_left', {
       temaId: temaId,
       message: `Saíste do tema ${temaId}`
     });
   });
 
-  /**
-   * Teste de conectividade WebSocket
-   * Permite verificar se a ligação está ativa e funcional
-   */
+  // Teste de conectividade
   socket.on("ping", () => {
-    const responseTime = Date.now();
     socket.emit("pong", { 
-      message: "Ligação WebSocket ativa e funcional",
+      message: "Ligação WebSocket activa e funcional",
       userId: userId,
-      timestamp: new Date(responseTime),
-      responseTime: responseTime
+      timestamp: new Date(),
+      responseTime: Date.now()
     });
-    console.log(`🏓 [WEBSOCKET] Ping/Pong com utilizador ${userId}`);
   });
 
-  /**
-   * Teste de notificações personalizado
-   * Permite aos clientes testarem a receção de notificações
-   */
+  // Sistema de teste para notificações
   socket.on("test_notification", (data) => {
-    console.log(`🧪 [WEBSOCKET] Teste de notificação solicitado por ${userId}`);
-    
     socket.emit("nova_notificacao", {
       titulo: "🧪 Teste de Notificação",
-      mensagem: "Esta é uma notificação de teste. O sistema está a funcionar corretamente!",
+      mensagem: "Esta é uma notificação de teste. O sistema está a funcionar correctamente!",
       tipo: "teste",
       data: new Date(),
       isTest: true
     });
   });
-
-  /**
-   * Gestão de desconexão
-   * Limpeza automática quando utilizador sai da aplicação
-   */
-  socket.on("disconnect", (reason) => {
-    console.log(`❌ [WEBSOCKET] Utilizador ${userId} desligado. Motivo: ${reason}`);
-  });
-
-  /**
-   * Captura de erros do socket para debugging
-   */
-  socket.on("error", (error) => {
-    console.error(`💥 [WEBSOCKET] Erro no socket do utilizador ${userId}:`, error.message);
-  });
 });
 
-// Monitorização periódica de ligações ativas
-setInterval(() => {
-  const connectedSockets = io.engine.clientsCount;
-  if (connectedSockets > 0) {
-    console.log(`📊 [WEBSOCKET] ${connectedSockets} ligações WebSocket ativas`);
-  }
-}, 300000); // A cada 5 minutos
-
 /**
- * Configuração CORS permissiva para desenvolvimento
+ * Configuração CORS permissiva
  * Em produção deve ser restringida a domínios específicos
  */
 app.use(cors({
@@ -224,35 +166,38 @@ app.use(cors({
 app.use(express.json());
 
 /**
- * Middleware crítico: disponibilizar instância Socket.IO em todas as rotas
- * 
+ * Disponibilizar instância Socket.IO em todas as rotas
  * Permite que qualquer controlador envie notificações em tempo real
- * através de req.io. Essencial para o funcionamento das notificações.
  */
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Configuração para suporte a ficheiros grandes (até 15GB)
+// Configuração para ficheiros grandes (uploads de vídeos/documentos)
 app.use(express.json({ limit: '15GB' }));
 app.use(express.urlencoded({ extended: true, limit: '15GB' }));
-server.timeout = 3600000; // Timeout de 1 hora para uploads grandes
+server.timeout = 3600000; // Timeout de 1 hora
 
 /**
  * Carregamento dinâmico e seguro de rotas
  * 
- * Carrega cada rota com tratamento de erros e fallbacks para
- * serviços indisponíveis.
+ * Funcionalidades:
+ * - Verificação de existência de ficheiros
+ * - Validação de rotas funcionais
+ * - Criação de fallbacks para serviços indisponíveis
+ * - Limpeza de cache para hot-reload
+ * 
+ * @param {string} caminho - Caminho para o ficheiro da rota
+ * @param {string} prefixo - Prefixo URL da rota na API
+ * @returns {boolean} - True se a rota foi carregada com sucesso
  */
 function carregarRota(caminho, prefixo) {
   try {
     const rotaPath = path.resolve(caminho);
 
-    // Verificar se o ficheiro da rota existe
+    // Verificar existência do ficheiro
     if (!fs.existsSync(`${rotaPath}.js`)) {
-      console.error(`❌ [ROTAS] Ficheiro não encontrado: ${rotaPath}.js`);
-      
       // Criar rota de fallback
       app.use(prefixo, (req, res) =>
         res.status(503).json({ 
@@ -263,14 +208,12 @@ function carregarRota(caminho, prefixo) {
       return false;
     }
 
-    // Limpar cache para permitir hot-reload em desenvolvimento
+    // Limpar cache para hot-reload
     delete require.cache[require.resolve(rotaPath)];
     const rota = require(rotaPath);
     
-    // Validar se é uma rota válida do Express
-    if (!rota || typeof rota !== "function" || !rota.stack) {
-      console.error(`❌ [ROTAS] Rota mal formada: ${prefixo}`);
-      
+    // Validar se é uma rota válida
+    if (!rota || typeof rota !== "function") {
       app.use(prefixo, (req, res) =>
         res.status(503).json({ 
           message: "Rota mal configurada",
@@ -280,14 +223,11 @@ function carregarRota(caminho, prefixo) {
       return false;
     }
 
-    // Registar rota funcional no Express
+    // Registar rota funcional
     app.use(prefixo, rota);
-    console.log(`✅ [ROTAS] Rota carregada com sucesso: ${prefixo}`);
     return true;
     
   } catch (error) {
-    console.error(`💥 [ROTAS] Erro ao carregar ${prefixo}:`, error.message);
-    
     app.use(prefixo, (req, res) =>
       res.status(503).json({ 
         message: "Erro ao carregar rota",
@@ -301,13 +241,13 @@ function carregarRota(caminho, prefixo) {
 
 /**
  * Definição de todas as rotas do sistema
- * Cada entrada representa um módulo funcional da aplicação
+ * Organizadas por área de responsabilidade
  */
 const rotas = [
   // Painel de controlo e estatísticas
   { caminho: "./src/routes/dashboard/dashboard_route", prefixo: "/api/dashboard" },
 
-  // Gestão de utilizadores e autenticação
+  // Sistema de autenticação e utilizadores
   { caminho: "./src/routes/users/auth_route", prefixo: "/api/auth" },
   { caminho: "./src/routes/users/users_route", prefixo: "/api/users" },
   { caminho: "./src/routes/users/areas_route", prefixo: "/api/areas" },
@@ -315,7 +255,7 @@ const rotas = [
   { caminho: "./src/routes/users/presencas_route", prefixo: "/api/presencas" },
   { caminho: "./src/routes/users/Percurso_Formandos_routes", prefixo: "/api/percurso-formandos" },
 
-  // Sistema de cursos com notificações
+  // Sistema de cursos
   { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },
   { caminho: "./src/routes/cursos/cursos_route", prefixo: "/api/cursos" },
   { caminho: "./src/routes/cursos/associar_cursos_route", prefixo: "/api/associar-cursos" },
@@ -332,7 +272,7 @@ const rotas = [
   { caminho: "./src/routes/avaliacoes/avaliar_submissoes_routes", prefixo: "/api/avaliar" },
   { caminho: "./src/routes/avaliacoes/avaliacoes_routes", prefixo: "/api/avaliacoes" },
 
-  // Chat, fóruns e comunicação em tempo real
+  // Chat, fóruns e comunicação
   { caminho: "./src/routes/ocorrencias/ocorrencias_route", prefixo: "/api/ocorrencias" },
   { caminho: "./src/routes/chat/chat_routes", prefixo: "/api/chat" },
   { caminho: "./src/routes/chat/Topico_area_routes", prefixo: "/api/topicos-area" },
@@ -347,22 +287,18 @@ const rotas = [
   { caminho: "./src/routes/notificacoes/notificacoes_route", prefixo: "/api/notificacoes" },
 ];
 
-// Carregar associações da base de dados antes de inicializar rotas
+// Carregar associações da base de dados
 require("./src/database/associations");
 
-// Carregar todas as rotas e gerar relatório de sucessos
+// Processar carregamento de todas as rotas
 const rotasCarregadas = rotas.filter(({ caminho, prefixo }) => carregarRota(caminho, prefixo));
-console.log(`📊 [ROTAS] Estatísticas: ${rotasCarregadas.length}/${rotas.length} rotas carregadas com sucesso`);
 
-// Servir ficheiros estáticos (uploads)
+// Servir ficheiros estáticos de uploads
 app.use("/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
 app.use("/api/uploads", express.static(path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)));
 
-console.log(`📁 [FICHEIROS] Servindo uploads de: ${path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOADS)}`);
-
 /**
  * Rota principal da API com informações de estado
- * Fornece diagnóstico sobre a saúde do sistema
  */
 app.get("/api", (req, res) => {
   const uptimeSeconds = process.uptime();
@@ -386,7 +322,6 @@ app.get("/api", (req, res) => {
 
 /**
  * Rota de diagnóstico das variáveis de ambiente
- * Útil para verificar configuração em diferentes ambientes
  */
 app.get("/api/debug/env", (req, res) => {
   res.json({
@@ -404,8 +339,7 @@ app.get("/api/debug/env", (req, res) => {
 });
 
 /**
- * Teste do sistema WebSocket
- * Verifica se o sistema de notificações está operacional
+ * Diagnóstico do sistema WebSocket
  */
 app.get("/api/test/websocket", (req, res) => {
   const connectionsCount = io.engine.clientsCount;
@@ -431,7 +365,6 @@ app.get("/api/test/websocket", (req, res) => {
 
 /**
  * Endpoint para testar envio de notificações WebSocket
- * Permite aos administradores testarem o sistema
  */
 app.post("/api/test/websocket/send", (req, res) => {
   const { userId, message } = req.body;
@@ -457,28 +390,23 @@ app.post("/api/test/websocket/send", (req, res) => {
   });
 });
 
-// Inicialização de agendamentos automáticos (se disponível)
+// Inicialização de agendamentos automáticos
 try {
   const schedPath = path.join(__dirname, "src/utils/schedulers.js");
   if (fs.existsSync(schedPath)) {
     const { iniciarAgendamentos } = require(schedPath);
     iniciarAgendamentos();
-    console.log("⏰ [SCHEDULER] Agendamentos automáticos iniciados com sucesso");
-  } else {
-    console.log("ℹ️ [SCHEDULER] Ficheiro de agendamentos não encontrado - funcionalidade opcional");
   }
 } catch (error) {
-  console.warn(`⚠️ [SCHEDULER] Falha ao iniciar agendamentos: ${error.message}`);
+  // Agendamentos falhados são opcionais
 }
 
 /**
- * Servir aplicação React compilada (produção)
- * Suporte para Single Page Application com client-side routing
+ * Servir aplicação React compilada em produção
  */
 const clienteBuildPath = path.join(__dirname, "../front/build");
 
 if (fs.existsSync(clienteBuildPath)) {
-  console.log(`⚛️ [FRONTEND] Frontend React disponível em: ${clienteBuildPath}`);
   app.use(express.static(clienteBuildPath));
 
   // Rota catch-all para SPA routing
@@ -495,10 +423,7 @@ if (fs.existsSync(clienteBuildPath)) {
     res.sendFile(path.join(clienteBuildPath, "index.html"));
   });
 } else {
-  console.warn(`⚠️ [FRONTEND] Build do React não encontrada em: ${clienteBuildPath}`);
-  console.log(`ℹ️ [FRONTEND] A correr apenas API. Para servir frontend, executa: npm run build`);
-  
-  // Rota de fallback quando não há frontend
+  // Fallback quando não há frontend compilado
   app.get("*", (req, res) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
       return res.status(404).json({ message: "Endpoint não encontrado" });
@@ -518,14 +443,8 @@ if (fs.existsSync(clienteBuildPath)) {
 
 /**
  * Middleware global de tratamento de erros
- * Captura erros não tratados e fornece respostas consistentes
  */
 app.use((err, req, res, next) => {
-  console.error("💥 [ERROR] Erro interno do servidor:", err.message);
-  console.error("📍 [ERROR] Stack trace:", err.stack);
-  console.error("🌐 [ERROR] URL:", req.url);
-  console.error("📝 [ERROR] Método:", req.method);
-  
   res.status(500).json({ 
     message: "Erro interno do servidor",
     timestamp: new Date().toISOString(),
@@ -538,8 +457,6 @@ app.use((err, req, res, next) => {
  * Handler para rotas não encontradas (404)
  */
 app.use((req, res) => {
-  console.warn(`⚠️ [404] Rota não encontrada: ${req.method} ${req.url}`);
-  
   res.status(404).json({
     message: "Rota não encontrada",
     path: req.url,
@@ -549,86 +466,38 @@ app.use((req, res) => {
   });
 });
 
-// Inicialização do servidor
+/**
+ * Inicialização do servidor HTTP com Socket.IO
+ */
 const PORT = process.env.PORT || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
-  console.log(`
-🚀===========================================
-   🎯 Servidor iniciado com sucesso!
-   🔢 Porta: ${PORT}
-   🏠 Host: ${HOST}
-   🌐 API: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api
-   🔌 WebSocket: ATIVO (Socket.IO)
-   🔔 Notificações: TEMPO REAL
-   📁 Uploads: ${process.env.CAMINHO_PASTA_UPLOADS}
-   📊 Rotas: ${rotasCarregadas.length}/${rotas.length} (${((rotasCarregadas.length / rotas.length) * 100).toFixed(1)}%)
-   🌍 Ambiente: ${process.env.NODE_ENV || 'development'}
-🚀===========================================
-  `);
-
-  // Mostrar IPs disponíveis para ligação
-  const os = require('os');
-  const networkInterfaces = os.networkInterfaces();
-  
-  console.log('\n🌐 IPs disponíveis para ligação:');
-  console.log(`🏠 Local: http://localhost:${PORT}`);
-  
-  Object.keys(networkInterfaces).forEach((interfaceName) => {
-    const addresses = networkInterfaces[interfaceName];
-    addresses.forEach((address) => {
-      if (address.family === 'IPv4' && !address.internal) {
-        console.log(`🌍 Rede (${interfaceName}): http://${address.address}:${PORT}`);
-      }
-    });
-  });
-  
-  // Informações de desenvolvimento
-  if (process.env.NODE_ENV === 'development') {
-    console.log('\n🛠️ Informações de desenvolvimento:');
-    console.log(`📡 WebSocket: ws://localhost:${PORT}/socket.io`);
-    console.log(`🧪 Teste WebSocket: http://localhost:${PORT}/api/test/websocket`);
-    console.log(`🔧 Debug ambiente: http://localhost:${PORT}/api/debug/env`);
-  }
-  
-  console.log('\n🚀===========================================\n');
+  // Servidor iniciado
 });
 
 /**
  * Gestão graceful de shutdown
- * Garante encerramento limpo de ligações WebSocket
  */
 process.on('SIGTERM', () => {
-  console.log('🛑 [SHUTDOWN] SIGTERM recebido, a iniciar shutdown graceful...');
-  
   server.close(() => {
-    console.log('✅ [SHUTDOWN] Servidor HTTP fechado.');
-    
     io.close(() => {
-      console.log('✅ [SHUTDOWN] WebSocket fechado.');
       process.exit(0);
     });
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('\n🛑 [SHUTDOWN] SIGINT recebido (Ctrl+C), a encerrar servidor...');
-  
   server.close(() => {
-    console.log('✅ [SHUTDOWN] Servidor encerrado com sucesso.');
     process.exit(0);
   });
 });
 
-// Capturar erros não tratados para evitar crashes
+// Capturar erros críticos
 process.on('uncaughtException', (error) => {
-  console.error('💥 [FATAL] Erro não capturado:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 [FATAL] Promise rejeitada não tratada:', reason);
-  console.error('🔍 [FATAL] Promise:', promise);
   process.exit(1);
 });

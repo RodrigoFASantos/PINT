@@ -13,33 +13,67 @@ const {
 } = require("../../controllers/users/presencas_ctrl");
 
 /**
- * Rotas para gestão de presenças
- * Permite criar, consultar e atualizar presenças de formandos nos cursos
+ * ROTAS PARA GESTÃO COMPLETA DE PRESENÇAS EM CURSOS
+ * 
+ * Sistema que permite criar sessões de presença, marcar presenças 
+ * e consultar estatísticas de participação nos cursos
  */
 
-// === CONSULTA DE PRESENÇAS ===
+// =============================================================================
+// CONSULTA DE PRESENÇAS E ESTATÍSTICAS
+// =============================================================================
 
-// Obter todas as presenças de um curso específico
+/**
+ * Obter todas as presenças de um curso específico
+ * Retorna lista completa com estatísticas de participação
+ * Formadores veem todas as presenças, formandos apenas as que já começaram
+ */
 router.get("/curso/:id", verificarToken, getPresencasByCurso);
 
-// Obter presenças de um formando num curso específico
+/**
+ * Obter presenças marcadas por um formando específico num curso
+ * Permite consultar o histórico de participação individual
+ * Útil para relatórios de frequência e cálculo de horas
+ */
 router.get("/formando/:cursoId/:userId", verificarToken, getPresencasByFormando);
 
-// Obter horas disponíveis de um curso para marcar presenças
+/**
+ * Obter informações sobre horas disponíveis de um curso
+ * Calcula horas utilizadas vs horas totais do curso
+ * Essencial para validar se ainda é possível criar mais presenças
+ */
 router.get("/horas-disponiveis/:id", verificarToken, getHorasDisponiveisCurso);
 
-// Obter lista de formandos para uma presença específica (apenas formadores e admins)
+/**
+ * Obter lista detalhada de formandos para uma presença específica
+ * Mostra quem estava presente/ausente numa sessão
+ * Acesso restrito a formadores e administradores
+ */
 router.get("/formandos/:presencaId", verificarToken, autorizar([1, 2]), getFormandosPresenca);
 
-// === GESTÃO DE PRESENÇAS ===
+// =============================================================================
+// GESTÃO DE PRESENÇAS
+// =============================================================================
 
-// Criar nova presença (formadores)
+/**
+ * Criar nova sessão de presença
+ * Apenas formadores podem criar presenças para os seus cursos
+ * Inclui validações de horários e limites de duração do curso
+ */
 router.post("/criar", verificarToken, criarPresenca);
 
-// Marcar presença (formandos)
+/**
+ * Marcar presença numa sessão ativa
+ * Todos os utilizadores inscritos podem marcar presença
+ * Requer código válido e sessão dentro do período permitido
+ */
 router.post("/marcar", verificarToken, marcarPresenca);
 
-// Atualizar presença existente (apenas administradores)
+/**
+ * Atualizar dados de uma presença existente
+ * Funcionalidade administrativa para correção de horários ou códigos
+ * Acesso restrito apenas a administradores
+ */
 router.put("/atualizar/:id", verificarToken, autorizar([1]), atualizarPresenca);
 
 module.exports = router;

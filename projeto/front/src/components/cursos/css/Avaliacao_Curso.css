@@ -1,3 +1,4 @@
+/* Estilos principais para a secção de avaliação */
 .avaliacao-container {
   margin-top: 20px;
   padding-bottom: 30px;
@@ -11,13 +12,17 @@
 }
 
 .topico-actions .btn-add-topico {
-  background-color: #27ae60;
-  color: white;
+  background-color: #28a745 !important;
+  color: white !important;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
+}
+
+.topico-actions .btn-add-topico:hover {
+  background-color: #1e7e34 !important;
 }
 
 .avaliacao-titulo {
@@ -27,6 +32,7 @@
   margin: 0;
 }
 
+/* Estados de carregamento e erro */
 .avaliacao-loading,
 .avaliacao-erro {
   text-align: center;
@@ -75,7 +81,7 @@
   background-color: #2980b9;
 }
 
-/* Estilos para as seções expandidas */
+/* Estilos para conteúdo expandido das pastas */
 .pasta-expanded-content {
   padding: 10px 0;
   margin-left: 20px;
@@ -97,7 +103,7 @@
   font-size: 0.9rem;
 }
 
-/* Estilos para submissões */
+/* Estilos para listas de submissões */
 .submissoes-list,
 .minhas-submissoes {
   margin-top: 15px;
@@ -106,6 +112,7 @@
 .submissao-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 8px 10px;
   background-color: #f8f9fa;
   margin-bottom: 8px;
@@ -123,6 +130,7 @@
   font-size: 0.9rem;
 }
 
+/* Botão de download padrão para formadores */
 .btn-download {
   background: none;
   border: none;
@@ -134,10 +142,106 @@
   color: #2980b9;
 }
 
-/* Botão para submeter trabalho */
+/* Botão de download verde para formandos */
+.btn-download-verde {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+.btn-download-verde:hover {
+  background-color: #1e7e34 !important;
+}
+
+.btn-download-verde i {
+  color: white !important;
+  margin: 0;
+}
+
+/* Botão de remover submissão para formandos */
+.btn-remover-submissao {
+  background-color: #dc3545 !important;
+  color: white !important;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  margin-left: 8px;
+}
+
+.btn-remover-submissao:hover {
+  background-color: #c82333 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-remover-submissao:disabled {
+  background-color: #95a5a6 !important;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-remover-submissao i {
+  color: white !important;
+  margin: 0;
+}
+
+/* Botão de submeter trabalho - versão grande e verde para formandos */
+.btn-submeter-grande {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none;
+  padding: 12px 15px;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+}
+
+.btn-submeter-grande:hover {
+  background-color: #1e7e34 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+.btn-submeter-grande:disabled {
+  background-color: #95a5a6 !important;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-submeter-grande i {
+  color: white !important;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+/* Botão de submeter tradicional - mantido para compatibilidade */
 .btn-submeter {
-  background-color: #27ae60;
-  color: white;
+  background-color: #28a745 !important;
+  color: white !important;
   border: none;
   padding: 5px 10px;
   border-radius: 4px;
@@ -149,13 +253,14 @@
 
 .btn-submeter i {
   margin-right: 5px;
+  color: white !important;
 }
 
 .btn-submeter:hover {
-  background-color: #2ecc71;
+  background-color: #1e7e34 !important;
 }
 
-/* Modal de confirmação */
+/* Estilos para modais */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -196,6 +301,7 @@
   gap: 10px;
 }
 
+/* Botões de ação nos modais */
 .btn-cancelar,
 .btn-confirmar,
 .btn-enviar {
@@ -226,7 +332,7 @@
   background-color: #2980b9;
 }
 
-/* Form para envio de submissão */
+/* Formulário para envio de submissões */
 .form-group {
   margin-bottom: 15px;
 }
@@ -251,12 +357,12 @@
   color: #3498db;
 }
 
-/* Estilos para botões de ação específicos */
+/* Botão para adicionar pastas */
 .btn-add-pasta {
   display: inline-flex;
   align-items: center;
-  background-color: #3498db;
-  color: white;
+  background-color: #28a745 !important;
+  color: white !important;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -267,13 +373,20 @@
 
 .btn-add-pasta i {
   margin-right: 8px;
+  color: white !important;
 }
 
 .btn-add-pasta:hover {
-  background-color: #2980b9;
+  background-color: #1e7e34 !important;
 }
 
-/* Estilos para os botões da pasta */
+/* Ações nas pastas - layout melhorado */
+.pasta-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 .pasta-header .btn-add,
 .pasta-header .btn-edit,
 .pasta-header .btn-delete {
@@ -308,32 +421,22 @@
   color: #c0392b;
 }
 
-/* Desativar botões quando processando */
+/* Estado desativado para botões */
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-
-
+/* Ações nas submissões - layout horizontal melhorado */
 .submissao-acoes {
   display: flex;
   gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
-.btn-detalhes {
-  background-color: #17a2b8;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-
-.btn-detalhes:hover {
-  background-color: #138496;
-}
-
+/* Botão para voltar */
 .btn-voltar {
   background-color: #6c757d;
   color: white;
@@ -351,9 +454,7 @@ button:disabled {
   background-color: #5a6268;
 }
 
-
-
-
+/* Estilos para datas limite */
 .data-limite {
   display: flex;
   align-items: center;
@@ -372,6 +473,7 @@ button:disabled {
   font-weight: bold;
 }
 
+/* Estilos para submissões atrasadas */
 .submissao-atrasada {
   background-color: rgba(231, 76, 60, 0.1);
   border-left: 3px solid #e74c3c;
@@ -391,7 +493,7 @@ button:disabled {
   display: inline-block;
 }
 
-
+/* Wrapper para detalhes de submissão */
 .detalhes-wrapper {
   position: relative;
   background-color: #f9f9f9;
@@ -418,7 +520,7 @@ button:disabled {
   background-color: #d32f2f;
 }
 
-
+/* Botão para ver submissões */
 .btn-ver-submissoes-pasta {
   display: inline-flex;
   align-items: center;
@@ -438,8 +540,7 @@ button:disabled {
   background-color: #3a5fc2;
 }
 
-
-/* Botão Criar Quiz */
+/* Estilos para quizzes em cursos assíncronos */
 .btn-criar-quiz {
   background: #3b82f6;
   color: white;
@@ -465,7 +566,7 @@ button:disabled {
   font-size: 1rem;
 }
 
-/* Seção de Quizzes */
+/* Secção de quizzes */
 .quiz-section {
   padding: 24px;
   background: #f8fafc;
@@ -489,7 +590,7 @@ button:disabled {
   font-size: 1.5rem;
 }
 
-/* Lista de Quizzes */
+/* Lista de quizzes */
 .quizzes-list {
   display: grid;
   gap: 16px;
@@ -547,7 +648,7 @@ button:disabled {
   font-size: 0.75rem;
 }
 
-/* Ações do Quiz */
+/* Ações dos quizzes */
 .quiz-actions {
   display: flex;
   gap: 8px;
@@ -592,7 +693,7 @@ button:disabled {
   transform: translateY(-1px);
 }
 
-/* Estado vazio - sem quizzes */
+/* Estado quando não há quizzes */
 .sem-quizzes {
   text-align: center;
   padding: 40px 20px;
@@ -608,7 +709,23 @@ button:disabled {
   margin: 0 auto;
 }
 
-/* Estados específicos dos quizzes */
+/* Aviso sobre submissão atrasada */
+.aviso-atrasado {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aviso-atrasado i {
+  color: #f39c12;
+}
+
 .quiz-item.quiz-ativo {
   border-left: 4px solid #10b981;
 }
@@ -644,7 +761,7 @@ button:disabled {
   color: #991b1b;
 }
 
-/* Responsividade para quizzes */
+/* Responsividade para dispositivos móveis */
 @media (max-width: 768px) {
   .quiz-item {
     flex-direction: column;
@@ -664,9 +781,22 @@ button:disabled {
     flex: 1;
     justify-content: center;
   }
+  
+  /* Responsividade para ações de submissão */
+  .submissao-acoes {
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+  }
+  
+  .btn-download-verde,
+  .btn-remover-submissao {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-/* Animações */
+/* Animações para quizzes */
 @keyframes quizPulse {
   0%, 100% {
     transform: scale(1);
@@ -681,7 +811,7 @@ button:disabled {
   border-color: #10b981;
 }
 
-/* Melhorias na interface para distinguir cursos assíncronos */
+/* Melhorias visuais para cursos assíncronos */
 .curso-assincrono .avaliacao-titulo::after {
   content: " (Quiz)";
   color: #3b82f6;
@@ -689,7 +819,6 @@ button:disabled {
   font-weight: 500;
 }
 
-/* Destaque para curso assíncrono */
 .curso-assincrono {
   position: relative;
 }
@@ -705,7 +834,7 @@ button:disabled {
   border-radius: 4px 4px 0 0;
 }
 
-/* Estilos para mobile */
+/* Responsividade para telemóveis */
 @media (max-width: 640px) {
   .quiz-section {
     padding: 16px;
@@ -723,5 +852,20 @@ button:disabled {
   
   .quiz-info h4 {
     font-size: 1rem;
+  }
+  
+  .btn-submeter-grande {
+    padding: 10px 12px;
+    font-size: 1rem;
+  }
+  
+  .btn-submeter-grande i {
+    font-size: 1.1rem;
+  }
+  
+  .btn-download-verde,
+  .btn-remover-submissao {
+    padding: 6px 10px;
+    min-width: 36px;
   }
 }

@@ -305,7 +305,7 @@ export default function Home() {
                 className={`filtro-btn ${filtroAtivo === 'ativos' ? 'ativo' : ''}`}
                 onClick={() => setFiltroAtivo('ativos')}
               >
-                Ativos ({totalAtivos})
+                Planeados ({totalAtivos})
               </button>
             </div>
           </div>

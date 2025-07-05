@@ -55,6 +55,7 @@ const getAllInscricoes = async (req, res) => {
  * 
  * Confirma o estado de inscrição de um utilizador autenticado
  * num curso particular, retornando detalhes da inscrição se existir.
+ * Esta função é essencial para determinar permissões de acesso.
  */
 const verificarInscricao = async (req, res) => {
   try {
@@ -128,6 +129,7 @@ const getInscricoesPorCurso = async (req, res) => {
  * 
  * Retorna todas as inscrições do utilizador atual com detalhes
  * dos cursos, incluindo informações de avaliação e progresso.
+ * Calcula automaticamente as horas de presença quando necessário.
  */
 const getMinhasInscricoes = async (req, res) => {
   try {
@@ -330,11 +332,11 @@ const createInscricao = async (req, res) => {
       ]
     });
 
-    // Enviar email de confirmação
+    // Enviar email de confirmação (não falha a inscrição se houver erro)
     try {
       await emailService.sendCourseInscricaoEmail(utilizador, cursoCompleto);
     } catch (emailError) {
-      // Não falhar a inscrição por erro no email
+      // Email é opcional - continua mesmo com erro
     }
 
     res.status(201).json({
@@ -474,7 +476,7 @@ const cancelarInscricao = async (req, res) => {
         try {
           await transaction.rollback();
         } catch (rollbackError) {
-          // Log do erro mas não falhar a resposta
+          // Falha no rollback é registada mas não impede resposta
         }
       }
       throw error;

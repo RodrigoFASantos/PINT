@@ -4,35 +4,44 @@ import API_BASE from '../../api';
 import CriarPastaModal from './Criar_Pasta_Modal';
 import CriarConteudoModal from './Criar_Conteudo_Modal';
 import Curso_Conteudo_ficheiro_Modal from './Curso_Conteudo_Ficheiro_Modal';
-import DetalhesSubmissao from './Detalhes_Submissao';
 import QuizzesAvaliacao from './QuizzesAvaliacao';
 import { Link } from 'react-router-dom';
 import './css/Curso_Conteudos.css';
 import './css/Avaliacao_Curso.css';
 
+/**
+ * Descodifica tokens JWT para extrair informações do utilizador
+ * Valida a estrutura do token e retorna os dados do payload
+ * 
+ * @param {string} token - Token JWT a descodificar
+ * @returns {Object|null} - Dados do payload ou null se inválido
+ */
 const decodeJWT = (token) => {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.error('Token JWT inválido: formato incorreto');
       return null;
     }
+    
     const payload = parts[1];
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    
     try {
       const decoded = atob(padded);
       return JSON.parse(decoded);
     } catch (e) {
-      console.error('Erro ao decodificar payload JWT:', e);
       return null;
     }
   } catch (error) {
-    console.error('Erro ao processar token JWT:', error);
     return null;
   }
 };
 
+/**
+ * Modal reutilizável para confirmar ações destrutivas
+ * Usado para eliminar pastas, conteúdos, tópicos e submissões
+ */
 const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel = "Confirmar" }) => {
   if (!show) return null;
 
@@ -54,21 +63,52 @@ const ConfirmModal = ({ show, title, message, onCancel, onConfirm, confirmLabel 
   );
 };
 
+/**
+ * Componente principal para gestão de avaliações de curso
+ * 
+ * Funcionalidades por tipo de utilizador:
+ * - Formador do curso: Criar/gerir pastas, ver todas as submissões, adicionar materiais
+ * - Formandos: Submeter/remover trabalhos, ver as suas submissões, aceder a materiais
+ * 
+ * Suporta dois tipos de curso:
+ * - Síncronos: Sistema tradicional de submissão de ficheiros
+ * - Assíncronos: Sistema de quizzes interativos
+ * 
+ * Regras de segurança:
+ * - Apenas o formador específico do curso pode gerir conteúdos
+ * - Formandos só podem remover as suas próprias submissões até ao prazo
+ * - Gestores/admins não podem interferir em cursos de outros formadores
+ * - Controlo rigoroso de prazos de submissão
+ * 
+ * @param {number} cursoId - ID único do curso
+ * @param {number} userRole - Papel do utilizador (1=admin, 2=formador, 3=formando)
+ * @param {number} formadorId - ID do formador responsável pelo curso
+ * @param {string} tipoCurso - Tipo do curso ('sincrono' ou 'assincrono')
+ */
 const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
+  // Estado principal para dados do tópico de avaliação
   const [topicoAvaliacao, setTopicoAvaliacao] = useState(null);
+  
+  // Estados da interface
   const [expandedPastas, setExpandedPastas] = useState([]);
   const [selectedConteudo, setSelectedConteudo] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
+  
+  // Estados para modais de gestão (formador apenas)
   const [showCriarConteudoModal, setShowCriarConteudoModal] = useState(false);
   const [showCriarPastaModal, setShowCriarPastaModal] = useState(false);
   const [pastaSelecionada, setPastaSelecionada] = useState(null);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(null);
+  
+  // Estados para confirmação de ações perigosas
   const [confirmModal, setConfirmModal] = useState({
     show: false,
     message: '',
     action: null,
     targetId: null
   });
+  
+  // Estados para submissão de trabalhos
   const [enviarSubmissaoModal, setEnviarSubmissaoModal] = useState({
     show: false,
     pastaId: null
@@ -76,34 +116,46 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
   const [submissoes, setSubmissoes] = useState({});
   const [arquivo, setArquivo] = useState(null);
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
-  const [submissaoSelecionada, setSubmissaoSelecionada] = useState(null);
-  const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
 
-  // Verifica se o utilizador é formador
-  const isFormador = () => {
+  /**
+   * Verifica se o utilizador atual é o formador específico deste curso
+   * Esta é a verificação de segurança fundamental do sistema
+   * Apenas o formador do curso pode gerir os conteúdos - nem admins podem
+   * 
+   * @returns {boolean} - True se é o formador deste curso específico
+   */
+  const isFormadorDoCurso = () => {
     const token = localStorage.getItem('token');
-    if (!token) return false;
+    if (!token || !formadorId) return false;
 
     try {
       const payload = decodeJWT(token);
-
       if (!payload) return false;
 
-      return payload.id_utilizador === formadorId ||
-        payload.id_cargo === 1 ||
-        payload.id_cargo === 2;
+      return payload.id_utilizador === formadorId;
     } catch (e) {
-      console.error('Erro ao verificar permissões:', e);
       return false;
     }
   };
 
-  // Verificar se o curso é assíncrono
+  /**
+   * Verifica se o curso é do tipo assíncrono
+   * Cursos assíncronos usam quizzes em vez de submissões tradicionais
+   * 
+   * @returns {boolean} - True se o curso é assíncrono
+   */
   const isCursoAssincrono = () => {
     return tipoCurso === 'assincrono';
   };
 
-  // Função para verificar se uma submissão está atrasada
+  /**
+   * Verifica se uma submissão foi entregue após o prazo
+   * Compara a data de entrega com a data limite da pasta
+   * 
+   * @param {Object} submissao - Dados da submissão
+   * @param {Object} pasta - Dados da pasta com data limite
+   * @returns {boolean} - True se a submissão está atrasada
+   */
   const isSubmissaoAtrasada = (submissao, pasta) => {
     if (!pasta.data_limite || !submissao.data_entrega) return false;
 
@@ -113,7 +165,13 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     return dataSubmissao > dataLimite;
   };
 
-  // Função para formatar data para exibição
+  /**
+   * Formata datas para apresentação amigável
+   * Usa formato português com dia/mês/ano e hora:minuto
+   * 
+   * @param {string} dataString - Data em formato ISO
+   * @returns {string} - Data formatada para exibição
+   */
   const formatarData = (dataString) => {
     if (!dataString) return "Sem data";
 
@@ -127,7 +185,13 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     });
   };
 
-  // Função para verificar se uma data limite já expirou
+  /**
+   * Verifica se o prazo de uma pasta já passou
+   * Compara a data limite com a data/hora atual
+   * 
+   * @param {string} dataLimite - Data limite em formato ISO
+   * @returns {boolean} - True se o prazo já expirou
+   */
   const isDataLimiteExpirada = (dataLimite) => {
     if (!dataLimite) return false;
 
@@ -137,20 +201,23 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     return agora > limite;
   };
 
-  // Função para carregar submissões iniciais de todas as pastas
+  /**
+   * Inicializa o sistema de submissões para todas as pastas
+   * Cria estruturas vazias e carrega dados das pastas já expandidas
+   * 
+   * @param {Object} topico - Dados do tópico de avaliação
+   */
   const carregarSubmissoes = async (topico) => {
     try {
       if (topico && topico.pastas) {
-        // Inicializar o estado de submissões com arrays vazios para cada pasta
         const submissoesData = {};
         for (const pasta of topico.pastas) {
           submissoesData[pasta.id_pasta] = [];
         }
 
-        // Definir o estado inicial
         setSubmissoes(submissoesData);
 
-        // Carregar dados para as pastas já expandidas
+        // Carregar dados para pastas que já estavam abertas
         for (const pasta of topico.pastas) {
           if (expandedPastas.includes(pasta.id_pasta)) {
             await carregarSubmissoesDaPasta(pasta.id_pasta);
@@ -158,11 +225,14 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar submissões iniciais:', error);
+      // Falha silenciosa para não quebrar o carregamento
     }
   };
 
-  // Função para recarregar todas as submissões após envio
+  /**
+   * Atualiza todas as submissões após uma nova entrega ou remoção
+   * Garante que a interface mostra os dados mais recentes
+   */
   const recarregarSubmissoes = async () => {
     try {
       if (topicoAvaliacao && topicoAvaliacao.pastas) {
@@ -171,79 +241,77 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         }
       }
     } catch (error) {
-      console.error('Erro ao recarregar todas as submissões:', error);
+      // Falha silenciosa para manter a experiência fluida
     }
   };
 
-  // Função otimizada para carregar submissões de uma pasta específica
+  /**
+   * Carrega submissões de uma pasta específica
+   * Comportamento diferente conforme o tipo de utilizador:
+   * - Formador: vê todas as submissões da pasta
+   * - Formando: vê apenas as suas próprias submissões
+   * 
+   * @param {number} pastaId - ID da pasta a carregar
+   */
   const carregarSubmissoesDaPasta = async (pastaId) => {
     if (!pastaId) return;
 
     try {
       const token = localStorage.getItem('token');
       let submissoesAtualizadas = { ...submissoes };
-      const isFormadorUser = isFormador(); // Verificar se é formador
+      const isFormadorUser = isFormadorDoCurso();
 
-      // Obter informações da pasta
       const pasta = topicoAvaliacao.pastas.find(p => p.id_pasta === pastaId);
       if (!pasta) {
-        console.error(`Pasta com ID ${pastaId} não encontrada`);
         return;
       }
 
-      // Obter dados do user do token
       const dadosUsuario = decodeJWT(token);
       if (!dadosUsuario || !dadosUsuario.id_utilizador) {
-        console.error('Não foi possível obter dados do user do token');
         return;
       }
 
       const idUsuario = dadosUsuario.id_utilizador;
 
       try {
-        // Construir parâmetros baseados no cargo do user
         const params = {
           id_curso: cursoId,
           id_pasta: pastaId
         };
 
-        // Adicionar filtro de user apenas se for formando
+        // Filtrar por utilizador apenas se não for o formador
         if (!isFormadorUser) {
           params.id_utilizador = idUsuario;
         }
 
-        console.log(`Obter submissões com parâmetros:`, params);
-
-        // Chamada única à API
         const response = await axios.get(`${API_BASE}/avaliacoes/submissoes`, {
           params: params,
           headers: { Authorization: `Bearer ${token}` }
         });
 
         if (response.status === 200) {
-          console.log(`Sucesso! Encontradas ${response.data.length} submissões.`);
           submissoesAtualizadas[pastaId] = response.data;
           setSubmissoes(submissoesAtualizadas);
           return;
         }
       } catch (err) {
-        console.error(`Erro ao buscar submissões:`, err);
+        // Em caso de erro, inicializar com array vazio
       }
 
-      // Caso falhe, inicializar com array vazio
-      console.log("Falha ao carregar submissões. Inicializando array vazio.");
       submissoesAtualizadas[pastaId] = [];
       setSubmissoes(submissoesAtualizadas);
 
     } catch (error) {
-      console.error('Erro ao carregar submissões:', error);
       let submissoesAtualizadas = { ...submissoes };
       submissoesAtualizadas[pastaId] = [];
       setSubmissoes(submissoesAtualizadas);
     }
   };
 
-  // Carregar tópicos do curso
+  /**
+   * Carrega todos os tópicos do curso e encontra o de avaliação
+   * Filtra e prepara os dados específicos para esta secção
+   */
   const carregarTopicos = async () => {
     try {
       setCarregando(true);
@@ -256,10 +324,8 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       const topico = data.find(t => t.nome.toLowerCase() === 'avaliação');
 
       if (topico) {
-        // Clonar o tópico para evitar referências
         const topicoAvaliacao = { ...topico };
 
-        // Marcar cada pasta como pertencente à avaliação
         if (topicoAvaliacao.pastas) {
           topicoAvaliacao.pastas = topicoAvaliacao.pastas.map(pasta => ({
             ...pasta,
@@ -275,20 +341,24 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
 
       setCarregando(false);
     } catch (error) {
-      console.error('Erro ao carregar tópicos:', error);
-      setErro('Não foi possível carregar os tópicos. Por favor, tente novamente.');
+      setErro('Não foi possível carregar os tópicos. Tenta novamente.');
       setCarregando(false);
     }
   };
 
-  // Carregar dados iniciais
+  // Carregamento inicial quando o componente é criado
   useEffect(() => {
     if (cursoId) {
       carregarTopicos();
     }
   }, [cursoId, tipoCurso]);
 
-  // Expandir/colapsar pasta
+  /**
+   * Alterna entre expandir/colapsar uma pasta
+   * Carrega as submissões quando expande pela primeira vez
+   * 
+   * @param {number} idPasta - ID da pasta a expandir/colapsar
+   */
   const toggleExpandPasta = (idPasta) => {
     const expandindo = !expandedPastas.includes(idPasta);
 
@@ -296,18 +366,26 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       prev.includes(idPasta) ? prev.filter((id) => id !== idPasta) : [...prev, idPasta]
     );
 
-    // Se está expandindo a pasta, carregue as submissões
+    // Carregar submissões quando abre a pasta
     if (expandindo) {
       carregarSubmissoesDaPasta(idPasta);
     }
   };
 
-  // Abrir modal para criar pasta
+  /**
+   * Abre o modal para criar nova pasta de avaliação
+   * Apenas disponível para o formador do curso
+   */
   const abrirModalCriarPasta = () => {
     setShowCriarPastaModal(true);
   };
 
-  // Abrir modal para adicionar conteúdo
+  /**
+   * Abre o modal para adicionar conteúdo a uma pasta
+   * Apenas disponível para o formador do curso
+   * 
+   * @param {Object} pasta - Dados da pasta selecionada
+   */
   const abrirModalAdicionarConteudo = (pasta) => {
     setPastaSelecionada({
       id_pasta: pasta.id_pasta,
@@ -317,12 +395,19 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     setShowCriarConteudoModal(true);
   };
 
-  // Abrir modal para visualizar conteúdo
+  /**
+   * Abre o modal para visualizar um ficheiro
+   * 
+   * @param {Object} conteudo - Dados do conteúdo selecionado
+   */
   const abrirModalFicheiro = (conteudo) => {
     setSelectedConteudo(conteudo);
   };
 
-  // Criar tópico de avaliação
+  /**
+   * Cria o tópico de avaliação no curso
+   * Apenas o formador do curso pode criar tópicos
+   */
   const criarTopicoAvaliacao = async () => {
     try {
       setCarregando(true);
@@ -331,7 +416,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       const dadosEnvio = {
         nome: 'Avaliação',
         id_curso: cursoId,
-        ordem: 1  // Posição do tópico na lista
+        ordem: 1
       };
 
       const response = await axios.post(`${API_BASE}/topicos-curso`, dadosEnvio, {
@@ -345,29 +430,36 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         await carregarTopicos();
       }
     } catch (error) {
-      console.error('Erro ao criar tópico de avaliação:', error);
-      setErro('Erro ao criar tópico de avaliação. Por favor, tente novamente.');
+      setErro('Erro ao criar tópico de avaliação. Tenta novamente.');
       setCarregando(false);
     }
   };
 
-  // Remover tópico de avaliação
+  /**
+   * Remove completamente o tópico de avaliação
+   * Ação destrutiva que elimina todas as pastas e conteúdos
+   * Apenas o formador do curso pode fazer isto
+   */
   const removerTopicoAvaliacao = async () => {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await axios.delete(`${API_BASE}/topicos-curso/${topicoAvaliacao.id_topico}`, {
+      await axios.delete(`${API_BASE}/topicos-curso/${topicoAvaliacao.id_topico}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setTopicoAvaliacao(null);
     } catch (error) {
-      console.error('Erro ao remover tópico:', error);
-      setErro('Erro ao remover tópico de avaliação. Por favor, tente novamente.');
+      setErro('Erro ao remover tópico de avaliação. Tenta novamente.');
     }
   };
 
-  // Remover pasta
+  /**
+   * Remove uma pasta e todo o seu conteúdo
+   * Apenas o formador do curso pode fazer isto
+   * 
+   * @param {number} pastaId - ID da pasta a remover
+   */
   const removerPasta = async (pastaId) => {
     try {
       const token = localStorage.getItem('token');
@@ -378,12 +470,16 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
 
       await carregarTopicos();
     } catch (error) {
-      console.error('Erro ao remover pasta:', error);
-      setErro('Erro ao remover pasta. Por favor, tente novamente.');
+      setErro('Erro ao remover pasta. Tenta novamente.');
     }
   };
 
-  // Remover conteúdo
+  /**
+   * Remove um conteúdo específico de uma pasta
+   * Apenas o formador do curso pode fazer isto
+   * 
+   * @param {number} conteudoId - ID do conteúdo a remover
+   */
   const removerConteudo = async (conteudoId) => {
     try {
       const token = localStorage.getItem('token');
@@ -394,12 +490,45 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
 
       await carregarTopicos();
     } catch (error) {
-      console.error('Erro ao remover conteúdo:', error);
-      setErro('Erro ao remover conteúdo. Por favor, tente novamente.');
+      setErro('Erro ao remover conteúdo. Tenta novamente.');
     }
   };
 
-  // Modal de confirmação para ações
+  /**
+   * Remove uma submissão específica do formando
+   * Apenas o próprio formando pode remover a sua submissão e só antes do prazo
+   * 
+   * @param {number} submissaoId - ID da submissão a remover
+   */
+  const removerSubmissao = async (submissaoId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      await axios.delete(`${API_BASE}/avaliacoes/submissoes/${submissaoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Recarregar as submissões para atualizar a interface
+      await recarregarSubmissoes();
+      alert('Submissão removida com sucesso!');
+    } catch (error) {
+      let errorMsg = 'Erro ao remover a submissão. Tenta novamente.';
+
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      alert(errorMsg);
+    }
+  };
+
+  /**
+   * Mostra modal de confirmação para ações perigosas
+   * 
+   * @param {string} mensagem - Texto de confirmação
+   * @param {string} acao - Tipo de ação a executar
+   * @param {number} id - ID do item afetado
+   */
   const mostrarModalConfirmacao = (mensagem, acao, id) => {
     setConfirmModal({
       show: true,
@@ -409,7 +538,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     });
   };
 
-  // Executar ação confirmada
+  /**
+   * Executa a ação confirmada pelo utilizador
+   * Chama a função apropriada conforme o tipo de ação
+   */
   const executarAcaoConfirmada = () => {
     if (confirmModal.action === 'removerTopico') {
       removerTopicoAvaliacao();
@@ -417,12 +549,18 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       removerPasta(confirmModal.targetId);
     } else if (confirmModal.action === 'removerConteudo') {
       removerConteudo(confirmModal.targetId);
+    } else if (confirmModal.action === 'removerSubmissao') {
+      removerSubmissao(confirmModal.targetId);
     }
 
     setConfirmModal({ show: false, message: '', action: null, targetId: null });
   };
 
-  // Abrir modal para enviar submissão
+  /**
+   * Abre o modal para submeter trabalho numa pasta
+   * 
+   * @param {number} pastaId - ID da pasta para submissão
+   */
   const abrirModalEnviarSubmissao = (pastaId) => {
     setEnviarSubmissaoModal({
       show: true,
@@ -431,19 +569,28 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     setArquivo(null);
   };
 
-  // Selecionar arquivo para submissão
+  /**
+   * Gere a seleção de ficheiro para submissão
+   * 
+   * @param {Event} e - Evento de mudança do input de ficheiro
+   */
   const handleArquivoChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setArquivo(e.target.files[0]);
     }
   };
 
-  // Enviar submissão do formando
+  /**
+   * Processa o envio de uma submissão
+   * Valida o ficheiro, envia para o servidor e atualiza a interface
+   * 
+   * @param {Event} e - Evento de submissão do formulário
+   */
   const enviarSubmissao = async (e) => {
     e.preventDefault();
 
     if (!arquivo) {
-      alert('Por favor, selecione um ficheiro.');
+      alert('Seleciona um ficheiro primeiro.');
       return;
     }
 
@@ -456,29 +603,21 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
       formData.append('id_pasta', enviarSubmissaoModal.pastaId);
       formData.append('id_curso', parseInt(cursoId));
 
-      const response = await axios.post(`${API_BASE}/avaliacoes/submissoes`, formData, {
+      await axios.post(`${API_BASE}/avaliacoes/submissoes`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      // Fechar modal
       setEnviarSubmissaoModal({ show: false, pastaId: null });
-
-      // recarregar submissões APÓS o envio bem-sucedido
       await recarregarSubmissoes();
-
       alert('Trabalho submetido com sucesso!');
     } catch (error) {
-      console.error('Erro ao enviar trabalho:', error);
+      let errorMsg = 'Erro ao submeter o trabalho. Tenta novamente.';
 
-      let errorMsg = 'Erro ao submeter o trabalho. Por favor, tente novamente.';
-
-      if (error.response) {
-        if (error.response.data?.message) {
-          errorMsg = error.response.data.message;
-        }
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
       }
 
       alert(errorMsg);
@@ -487,13 +626,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     }
   };
 
-  // Abrir os detalhes da submissão
-  const verSubmissaoDetalhes = (submissao) => {
-    setSubmissaoSelecionada(submissao);
-    setMostrarDetalhes(true);
-  };
-
-  // Renderização condicional para carregamento
+  // Estados de carregamento
   if (carregando) {
     return (
       <div className="avaliacao-loading">
@@ -503,7 +636,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
     );
   }
 
-  // Renderização condicional para erro
+  // Estados de erro
   if (erro) {
     return (
       <div className="avaliacao-erro">
@@ -517,15 +650,15 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
 
   return (
     <div className="curso-conteudos-container avaliacao-container">
+      {/* Cabeçalho da secção de avaliação */}
       <div className="conteudos-header-avaliacao">
         <h2 className="avaliacao-titulo">Avaliação</h2>
 
-        {/* Botões de ação apenas para cursos síncronos */}
-        {!isCursoAssincrono() && isFormador() && (
+        {/* Botões de gestão - apenas para formador em cursos síncronos */}
+        {!isCursoAssincrono() && isFormadorDoCurso() && (
           <div className="topico-actions">
             {topicoAvaliacao ? (
               <>
-                {/* Criar pastas */}
                 <button
                   className="btn-add"
                   onClick={abrirModalCriarPasta}
@@ -534,7 +667,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
                   <i className="fas fa-folder-plus"></i>
                 </button>
 
-                {/* Ver submissões */}
                 <Link
                   to={`/curso/${cursoId}/avaliar-trabalhos`}
                   className="btn-ver-submissoes-pasta"
@@ -543,11 +675,10 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
                   <i className="fas fa-list"></i> Ver submissões
                 </Link>
 
-                {/* Remover avaliação */}
                 <button
                   className="btn-delete"
                   onClick={() => mostrarModalConfirmacao(
-                    'Tem certeza que deseja remover o tópico de Avaliação e todo o seu conteúdo?',
+                    'Tens a certeza que queres remover o tópico de Avaliação e todo o seu conteúdo?',
                     'removerTopico',
                     null
                   )}
@@ -568,15 +699,15 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         )}
       </div>
 
-      {/* ========== SEÇÃO DE QUIZZES (APENAS PARA CURSOS ASSÍNCRONOS) ========== */}
+      {/* Secção de quizzes para cursos assíncronos */}
       <QuizzesAvaliacao
         cursoId={cursoId}
         userRole={userRole}
-        inscrito={true} // Assumindo que está inscrito se chegou até aqui
+        inscrito={true}
         tipoCurso={tipoCurso}
       />
 
-      {/* ========== SEPARADOR VISUAL (SE HOUVER QUIZZES) ========== */}
+      {/* Separador visual para cursos assíncronos */}
       {isCursoAssincrono() && (
         <div style={{
           height: '2px',
@@ -585,239 +716,224 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         }} />
       )}
 
-      {/* ========== SEÇÃO DE SUBMISSÕES/AVALIAÇÕES TRADICIONAIS ========== */}
+      {/* Secção de submissões tradicionais para cursos síncronos */}
       {!isCursoAssincrono() && (
         <>
           <hr />
 
-          {/* Conteúdo do tópico de avaliação para cursos síncronos */}
+          {/* Lista de pastas de avaliação */}
           {topicoAvaliacao && (
             <div className="pastas-list">
               {topicoAvaliacao.pastas && topicoAvaliacao.pastas.length > 0 ? (
-                topicoAvaliacao.pastas.map((pasta) => (
-                  <div key={pasta.id_pasta} className="pasta-item">
-                    <div className="pasta-header">
-                      <button
-                        className="btn-toggle"
-                        onClick={() => toggleExpandPasta(pasta.id_pasta)}
-                      >
-                        {expandedPastas.includes(pasta.id_pasta) ? (
-                          <i className="fas fa-chevron-down"></i>
-                        ) : (
-                          <i className="fas fa-chevron-right"></i>
-                        )}
-                      </button>
-                      <i className="fas fa-folder"></i>
-                      <span className="pasta-nome">{pasta.nome}</span>
-
-                      {/* Exibir data limite junto ao nome da pasta */}
-                      {pasta.data_limite && (
-                        <div className={`data-limite ${isDataLimiteExpirada(pasta.data_limite) ? 'data-limite-expirada' : ''}`}>
-                          <i className="fas fa-clock"></i>
-                          Prazo: {formatarData(pasta.data_limite)}
-                          {isDataLimiteExpirada(pasta.data_limite) && " (Expirado)"}
-                        </div>
-                      )}
-
-                      {isFormador() ? (
-                        <div className="pasta-actions">
-                          <button
-                            className="btn-add-conteudo"
-                            onClick={() => abrirModalAdicionarConteudo(pasta)}
-                            title="Adicionar conteúdo"
-                          >
-                            <i className="fas fa-file-medical"></i>
-                          </button>
-
-                          <button
-                            className="btn-delete"
-                            onClick={() => mostrarModalConfirmacao(
-                              'Tem certeza que deseja remover esta pasta e todo o seu conteúdo?',
-                              'removerPasta',
-                              pasta.id_pasta
-                            )}
-                            title="Remover pasta"
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-
-                          {/* Botão de submissão*/}
-                          <button
-                            className="btn-submeter"
-                            onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
-                            title="Submeter trabalho (como administrador)"
-                            disabled={isDataLimiteExpirada(pasta.data_limite)}
-                            style={{ marginLeft: '10px' }}
-                          >
-                            <i className="fas fa-upload"></i> Submeter
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="pasta-actions">
-                          <button
-                            className="btn-submeter"
-                            onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
-                            title="Submeter trabalho"
-                            disabled={isDataLimiteExpirada(pasta.data_limite)}
-                          >
-                            <i className="fas fa-upload"></i> Submeter
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {expandedPastas.includes(pasta.id_pasta) && (
-                      <div className="pasta-expanded-content">
-                        {/* Conteúdos */}
-                        <div className="conteudos-list">
-                          <h4 className="secao-titulo">Conteúdos</h4>
-                          {pasta.conteudos && pasta.conteudos.length > 0 ? (
-                            pasta.conteudos.map((conteudo) => {
-                              return (
-                                <div key={conteudo.id_conteudo} className="conteudo-item">
-                                  <i className={`fas ${conteudo.tipo === 'video' ? 'fa-video' : 'fa-file'}`}></i>
-                                  <span className="conteudo-nome" onClick={() => abrirModalFicheiro(conteudo)}>
-                                    {conteudo.titulo || conteudo.arquivo_path?.split('/').pop() || "Ficheiro sem nome"}
-                                  </span>
-
-                                  {isFormador() && (
-                                    <button
-                                      className="btn-delete"
-                                      onClick={() => mostrarModalConfirmacao(
-                                        'Tem certeza que deseja remover este conteúdo?',
-                                        'removerConteudo',
-                                        conteudo.id_conteudo
-                                      )}
-                                      title="Remover conteúdo"
-                                    >
-                                      <i className="fas fa-trash"></i>
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })
+                topicoAvaliacao.pastas.map((pasta) => {
+                  const prazoExpirado = isDataLimiteExpirada(pasta.data_limite);
+                  
+                  return (
+                    <div key={pasta.id_pasta} className="pasta-item">
+                      {/* Cabeçalho da pasta com info do prazo */}
+                      <div className="pasta-header">
+                        <button
+                          className="btn-toggle"
+                          onClick={() => toggleExpandPasta(pasta.id_pasta)}
+                        >
+                          {expandedPastas.includes(pasta.id_pasta) ? (
+                            <i className="fas fa-chevron-down"></i>
                           ) : (
-                            <div className="secao-vazia">Sem conteúdos disponíveis</div>
+                            <i className="fas fa-chevron-right"></i>
                           )}
-                        </div>
+                        </button>
+                        <i className="fas fa-folder"></i>
+                        <span className="pasta-nome">{pasta.nome}</span>
 
-                        {/* Submissões dos formandos */}
-                        {isFormador() && (
-                          <div className="submissoes-list">
-                            <h4 className="secao-titulo">Submissões dos Formandos</h4>
-                            {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
-                              submissoes[pasta.id_pasta].map((submissao, index) => {
-                                const atrasada = isSubmissaoAtrasada(submissao, pasta);
-                                return (
-                                  <div
-                                    key={submissao.id || index}
-                                    className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
-                                  >
-                                    <i className="fas fa-file-upload"></i>
-                                    <span className="submissao-info">
-                                      <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
-                                        formatarData(submissao.data_submissao || submissao.data_entrega)
-                                      }
-                                      {atrasada && (
-                                        <span className="submissao-atrasada-badge">Atrasada</span>
-                                      )}
-                                    </span>
-                                    <button
-                                      className="btn-download"
-                                      onClick={() => {
-                                        if (submissao.ficheiro_path) {
-                                          window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
-                                        } else {
-                                          alert('Caminho do ficheiro não disponível');
-                                        }
-                                      }}
-                                      title="Descarregar submissão"
-                                    >
-                                      <i className="fas fa-download"></i>
-                                    </button>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="secao-vazia">Nenhuma submissão recebida</div>
-                            )}
+                        {/* Mostrar prazo limite se existir */}
+                        {pasta.data_limite && (
+                          <div className={`data-limite ${prazoExpirado ? 'data-limite-expirada' : ''}`}>
+                            <i className="fas fa-clock"></i>
+                            Prazo: {formatarData(pasta.data_limite)}
+                            {prazoExpirado && " (Expirado)"}
                           </div>
                         )}
 
-                        {/* Para formandos, mostrar suas próprias submissões */}
-                        {!isFormador() && (
-                          <div className="minhas-submissoes">
-                            <h4 className="secao-titulo">Minhas Submissões</h4>
-                            {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
-                              // Se existem submissões
-                              submissoes[pasta.id_pasta].map((submissao, index) => {
-                                const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                        {/* Ações disponíveis conforme o tipo de utilizador */}
+                        {isFormadorDoCurso() ? (
+                          <div className="pasta-actions">
+                            <button
+                              className="btn-add-conteudo"
+                              onClick={() => abrirModalAdicionarConteudo(pasta)}
+                              title="Adicionar conteúdo"
+                            >
+                              <i className="fas fa-file-medical"></i>
+                            </button>
+
+                            <button
+                              className="btn-delete"
+                              onClick={() => mostrarModalConfirmacao(
+                                'Tens a certeza que queres remover esta pasta e todo o seu conteúdo?',
+                                'removerPasta',
+                                pasta.id_pasta
+                              )}
+                              title="Remover pasta"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="pasta-actions">
+                            <button
+                              className="btn-submeter-grande"
+                              onClick={() => abrirModalEnviarSubmissao(pasta.id_pasta)}
+                              title={prazoExpirado ? "Prazo de submissão expirado" : "Submeter trabalho"}
+                              disabled={prazoExpirado}
+                            >
+                              <i className="fas fa-upload"></i>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Conteúdo expandido da pasta */}
+                      {expandedPastas.includes(pasta.id_pasta) && (
+                        <div className="pasta-expanded-content">
+                          {/* Lista de conteúdos da pasta */}
+                          <div className="conteudos-list">
+                            <h4 className="secao-titulo">Conteúdos</h4>
+                            {pasta.conteudos && pasta.conteudos.length > 0 ? (
+                              pasta.conteudos.map((conteudo) => {
                                 return (
-                                  <div key={submissao.id || index}>
-                                    {(submissaoSelecionada && submissaoSelecionada.id === submissao.id && mostrarDetalhes) ? (
-                                      // Mostrar detalhes completos quando selecionado
-                                      <div className="detalhes-wrapper">
-                                        <DetalhesSubmissao
-                                          submissao={submissao}
-                                          cursoId={cursoId}
-                                          pastaId={pasta.id_pasta}
-                                          atrasada={atrasada}
-                                        />
-                                        <button
-                                          className="btn-fechar-detalhes"
-                                          onClick={() => setMostrarDetalhes(false)}
-                                        >
-                                          <i className="fas fa-times"></i> Fechar
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      // Mostrar versão resumida com opção para expandir
-                                      <div className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
-                                        <i className="fas fa-file-upload"></i>
-                                        <span className="submissao-info">
-                                          {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
-                                            formatarData(submissao.data_submissao || submissao.data_entrega)
-                                          }
-                                          {atrasada && (
-                                            <span className="submissao-atrasada-badge">Atrasada</span>
-                                          )}
-                                        </span>
-                                        <div className="submissao-acoes">
-                                          {submissao.ficheiro_path && (
-                                            <button
-                                              className="btn-download"
-                                              onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
-                                              title="Descarregar submissão"
-                                            >
-                                              <i className="fas fa-download"></i>
-                                            </button>
-                                          )}
-                                          <button
-                                            className="btn-detalhes"
-                                            onClick={() => verSubmissaoDetalhes(submissao)}
-                                            title="Ver detalhes"
-                                          >
-                                            <i className="fas fa-info-circle"></i>
-                                          </button>
-                                        </div>
-                                      </div>
+                                  <div key={conteudo.id_conteudo} className="conteudo-item">
+                                    <i className={`fas ${conteudo.tipo === 'video' ? 'fa-video' : 'fa-file'}`}></i>
+                                    <span className="conteudo-nome" onClick={() => abrirModalFicheiro(conteudo)}>
+                                      {conteudo.titulo || conteudo.arquivo_path?.split('/').pop() || "Ficheiro sem nome"}
+                                    </span>
+
+                                    {/* Botão de remoção apenas para formador */}
+                                    {isFormadorDoCurso() && (
+                                      <button
+                                        className="btn-delete"
+                                        onClick={() => mostrarModalConfirmacao(
+                                          'Tens a certeza que queres remover este conteúdo?',
+                                          'removerConteudo',
+                                          conteudo.id_conteudo
+                                        )}
+                                        title="Remover conteúdo"
+                                      >
+                                        <i className="fas fa-trash"></i>
+                                      </button>
                                     )}
                                   </div>
                                 );
                               })
                             ) : (
-                              <div className="secao-vazia">Nenhuma submissão enviada</div>
+                              <div className="secao-vazia">Sem conteúdos disponíveis</div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))
+
+                          {/* Lista de submissões - apenas para formador */}
+                          {isFormadorDoCurso() && (
+                            <div className="submissoes-list">
+                              <h4 className="secao-titulo">Submissões dos Formandos</h4>
+                              {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
+                                submissoes[pasta.id_pasta].map((submissao, index) => {
+                                  const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                                  return (
+                                    <div
+                                      key={submissao.id || index}
+                                      className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}
+                                    >
+                                      <i className="fas fa-file-upload"></i>
+                                      <span className="submissao-info">
+                                        <strong>{submissao.nome_formando || submissao.utilizador?.nome || "Formando"}</strong> - {
+                                          formatarData(submissao.data_submissao || submissao.data_entrega)
+                                        }
+                                        {atrasada && (
+                                          <span className="submissao-atrasada-badge">Atrasada</span>
+                                        )}
+                                      </span>
+                                      <button
+                                        className="btn-download"
+                                        onClick={() => {
+                                          if (submissao.ficheiro_path) {
+                                            window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank');
+                                          } else {
+                                            alert('Caminho do ficheiro não disponível');
+                                          }
+                                        }}
+                                        title="Descarregar submissão"
+                                      >
+                                        <i className="fas fa-download"></i>
+                                      </button>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="secao-vazia">Nenhuma submissão recebida</div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Submissões próprias para formandos */}
+                          {!isFormadorDoCurso() && (
+                            <div className="minhas-submissoes">
+                              <h4 className="secao-titulo">Minhas Submissões</h4>
+                              {submissoes[pasta.id_pasta] && submissoes[pasta.id_pasta].length > 0 ? (
+                                submissoes[pasta.id_pasta].map((submissao, index) => {
+                                  const atrasada = isSubmissaoAtrasada(submissao, pasta);
+                                  return (
+                                    <div key={submissao.id || index} className={`submissao-item ${atrasada ? 'submissao-atrasada' : ''}`}>
+                                      <i className="fas fa-file-upload"></i>
+                                      <span className="submissao-info">
+                                        {submissao.nome_ficheiro || submissao.ficheiro_path.split('/').pop() || "Ficheiro"} - {
+                                          formatarData(submissao.data_submissao || submissao.data_entrega)
+                                        }
+                                        {atrasada && (
+                                          <span className="submissao-atrasada-badge">Atrasada</span>
+                                        )}
+                                      </span>
+                                      <div className="submissao-acoes">
+                                        {/* Botão de download */}
+                                        {submissao.ficheiro_path && (
+                                          <button
+                                            className="btn-download-verde"
+                                            onClick={() => window.open(`${API_BASE}/${submissao.ficheiro_path}`, '_blank')}
+                                            title="Descarregar submissão"
+                                          >
+                                            <i className="fas fa-download"></i>
+                                          </button>
+                                        )}
+                                        
+                                        {/* Botão de remover - apenas se o prazo não expirou */}
+                                        {!prazoExpirado && (
+                                          <button
+                                            className="btn-remover-submissao"
+                                            onClick={() => mostrarModalConfirmacao(
+                                              'Tens a certeza que queres remover esta submissão? Esta ação não pode ser desfeita.',
+                                              'removerSubmissao',
+                                              submissao.id
+                                            )}
+                                            title="Remover submissão"
+                                          >
+                                            <i className="fas fa-trash"></i>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="secao-vazia">Nenhuma submissão enviada</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="topico-empty">
                   <p>Sem pastas no tópico de avaliação</p>
-                  {isFormador() && (
+                  {/* Botão apenas para formador */}
+                  {isFormadorDoCurso() && (
                     <button onClick={abrirModalCriarPasta} className="btn-add-pasta">
                       <i className="fas fa-folder-plus"></i> Adicionar pasta
                     </button>
@@ -827,7 +943,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
             </div>
           )}
 
-          {/* Mostrar mensagem se não houver tópico de avaliação para cursos síncronos */}
+          {/* Mensagem quando não há tópico de avaliação */}
           {!topicoAvaliacao && (
             <div className="sem-avaliacao">
               <div style={{
@@ -840,8 +956,9 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
               }}>
                 <div style={{ fontSize: '48px', marginBottom: '15px' }}>📂</div>
                 <p>Nenhum tópico de avaliação criado ainda.</p>
-                {isFormador() && (
-                  <p style={{ fontSize: '14px' }}>Clique em "Criar Avaliação" para começar.</p>
+                {/* Mensagem apenas para formador */}
+                {isFormadorDoCurso() && (
+                  <p style={{ fontSize: '14px' }}>Clica em "Criar Avaliação" para começar.</p>
                 )}
               </div>
             </div>
@@ -849,7 +966,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         </>
       )}
 
-      {/* Modal para criar pastas */}
+      {/* Modais para gestão de conteúdos - apenas formador pode aceder */}
       {showCriarPastaModal && topicoAvaliacao && (
         <CriarPastaModal
           topico={topicoAvaliacao}
@@ -861,7 +978,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         />
       )}
 
-      {/* Modal para adicionar conteúdos */}
       {showCriarConteudoModal && pastaSelecionada && (
         <CriarConteudoModal
           pasta={pastaSelecionada}
@@ -873,7 +989,6 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         />
       )}
 
-      {/* Modal para visualizar conteúdo */}
       {selectedConteudo && (
         <Curso_Conteudo_ficheiro_Modal
           conteudo={selectedConteudo}
@@ -882,7 +997,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         />
       )}
 
-      {/* Modal de confirmação para ações */}
+      {/* Modal de confirmação para ações perigosas */}
       <ConfirmModal
         show={confirmModal.show}
         title="Confirmação"
@@ -891,13 +1006,13 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
         onConfirm={executarAcaoConfirmada}
       />
 
-      {/* Modal para enviar submissão */}
+      {/* Modal para submissão de trabalhos */}
       {enviarSubmissaoModal.show && (
         <div className="modal-overlay">
           <div className="modal-submissao">
             <h3>Enviar Submissão</h3>
 
-            {/* Verificar se a pasta selecionada possui data limite expirada */}
+            {/* Aviso sobre prazo expirado */}
             {enviarSubmissaoModal.pastaId &&
               topicoAvaliacao &&
               topicoAvaliacao.pastas &&
@@ -911,7 +1026,7 @@ const Avaliacao_curso = ({ cursoId, userRole, formadorId, tipoCurso }) => {
 
             <form onSubmit={enviarSubmissao}>
               <div className="form-group">
-                <label htmlFor="arquivo-submissao">Selecione o ficheiro:</label>
+                <label htmlFor="arquivo-submissao">Seleciona o ficheiro:</label>
                 <input
                   type="file"
                   id="arquivo-submissao"

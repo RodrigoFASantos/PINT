@@ -1,781 +1,981 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import '@fortawesome/fontawesome-free/css/all.min.css';
 import API_BASE from "../../api";
-import axios from 'axios';
-import Sidebar from '../../components/Sidebar';
+import { useAuth } from '../../contexts/AuthContext';
 import './css/gerir_Topicos.css';
+import Sidebar from '../../components/Sidebar';
 
-// Modal para criar/editar tópicos
-const TopicoModal = ({ isOpen, onClose, topico, categorias, areas, onSave }) => {
-    const [formData, setFormData] = useState({
-        id_categoria: '',
-        id_area: '',
-        titulo: '',
-        descricao: ''
-    });
-    const [areasFiltradas, setAreasFiltradas] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Limpar formulário quando o modal abre/fecha ou recebe novo tópico
-    useEffect(() => {
-        if (isOpen) {
-            if (topico) {
-                // Modo edição - preencher com dados do tópico
-                setFormData({
-                    id_categoria: topico.id_categoria || '',
-                    id_area: topico.id_area || '',
-                    titulo: topico.titulo || '',
-                    descricao: topico.descricao || ''
-                });
-
-                // Filtrar áreas baseadas na categoria do tópico
-                if (topico.id_categoria && categorias.length > 0) {
-                    const areasFiltered = areas.filter(area =>
-                        area.id_categoria === parseInt(topico.id_categoria)
-                    );
-                    setAreasFiltradas(areasFiltered);
-                }
-            } else {
-                // Modo criação - formulário em branco
-                setFormData({
-                    id_categoria: '',
-                    id_area: '',
-                    titulo: '',
-                    descricao: ''
-                });
-                setAreasFiltradas([]);
-            }
-        }
-    }, [isOpen, topico, areas, categorias]);
-
-    // Filtrar áreas quando a categoria muda
-    useEffect(() => {
-        if (formData.id_categoria) {
-            const areasFiltered = areas.filter(area =>
-                area.id_categoria === parseInt(formData.id_categoria)
-            );
-            setAreasFiltradas(areasFiltered);
-
-            // Limpar área selecionada se a categoria mudou
-            if (topico?.id_categoria !== formData.id_categoria) {
-                setFormData(prev => ({ ...prev, id_area: '' }));
-            }
-        } else {
-            setAreasFiltradas([]);
-        }
-    }, [formData.id_categoria, areas, topico]);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // Validação básica
-        if (!formData.id_categoria || !formData.id_area || !formData.titulo) {
-            toast.error("Preencha todos os campos obrigatórios");
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            // Construir objeto para enviar
-            const topicoData = {
-                id_categoria: formData.id_categoria,
-                id_area: formData.id_area,
-                titulo: formData.titulo,
-                descricao: formData.descricao || ''
-            };
-
-            // Salvar tópico (criar novo ou atualizar existente)
-            if (topico && topico.id) {
-                // Modo edição
-                await onSave({ ...topicoData, id: topico.id });
-            } else {
-                // Modo criação
-                await onSave(topicoData);
-            }
-
-            // Limpar formulário
-            setFormData({
-                id_categoria: '',
-                id_area: '',
-                titulo: '',
-                descricao: ''
-            });
-
-            // Fechar modal
-            onClose();
-        } catch (error) {
-            console.error('Erro ao salvar tópico:', error);
-            toast.error(error.message || 'Erro ao salvar tópico');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="modal-background">
-            <div className="modal-container">
-                <div className="modal-header">
-                    <h2>{topico ? 'Editar Tópico' : 'Novo Tópico'}</h2>
-                    <button className="close-button" onClick={onClose}>
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="modal-body">
-                        <div className="form-group">
-                            <label>Categoria:</label>
-                            <select
-                                name="id_categoria"
-                                value={formData.id_categoria}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Selecione uma categoria</option>
-                                {categorias.map(categoria => (
-                                    <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                                        {categoria.nome}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Área:</label>
-
-                            <select
-                                name="id_area"
-                                value={formData.id_area}
-                                onMouseDown={e => {
-                                    if (!formData.id_categoria) {
-                                        e.preventDefault();
-                                        toast.error('Selecione uma categoria primeiro');
-                                    }
-                                }}
-                                onChange={e => {
-                                    if (!formData.id_categoria) {
-                                        toast.error('Selecione uma categoria primeiro');
-                                        return;
-                                    }
-                                    handleChange(e);
-                                }}
-                                required
-                            >
-
-                                <option value="">
-                                    {!formData.id_categoria
-                                        ? "Selecione uma categoria primeiro"
-                                        : "Selecione uma área"}
-                                </option>
-                                {areasFiltradas.map(area => (
-                                    <option key={area.id_area} value={area.id_area}>
-                                        {area.nome}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Título:</label>
-                            <input
-                                type="text"
-                                name="titulo"
-                                value={formData.titulo}
-                                onChange={handleChange}
-                                required
-                                maxLength={100}
-                                placeholder="Digite o título do tópico"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Descrição:</label>
-                            <textarea
-                                name="descricao"
-                                value={formData.descricao}
-                                onChange={handleChange}
-                                rows="4"
-                                maxLength={500}
-                                placeholder="Digite uma descrição para o tópico (opcional)"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Modificado o estilo do footer e garantindo que os botões sejam exibidos */}
-                    <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '15px', gap: '10px' }}>
-                        <button
-                            type="button"
-                            className="cancel-button"
-                            onClick={onClose}
-                            disabled={isLoading}
-                            style={{
-                                padding: '0.6rem 1.2rem',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                backgroundColor: '#f5f5f5',
-                                border: '1px solid #ddd'
-                            }}
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            className="save-button"
-                            disabled={isLoading}
-                            style={{
-                                display: 'inline-block',
-                                visibility: 'visible',
-                                opacity: 1,
-                                backgroundColor: '#4b6ba5',
-                                color: 'white',
-                                padding: '0.6rem 1.2rem',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                minWidth: '120px',
-                                position: 'relative',
-                                zIndex: 10 // Garantir que o botão fique acima de outros elementos
-                            }}
-                        >
-                            {isLoading ? 'A guardar...' : topico ? 'Guardar alterações' : 'Criar tópico'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// Modal de confirmação para eliminar tópicos
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, topico }) => {
-    if (!isOpen || !topico) return null;
-
-    // Obter o ID correto do tópico, tentando diferentes propriedades possíveis
-    const topicoId = topico.id_topico || topico.id || topico.id_categoria_topico;
-
-    console.log('Objeto tópico na modal de confirmação:', topico);
-    console.log('ID identificado para exclusão:', topicoId);
-
-    return (
-        <div className="modal-background">
-            <div className="modal-container confirm-delete">
-                <div className="modal-header">
-                    <h2>Confirmar Eliminação</h2>
-                    <button className="close-button" onClick={onClose}>
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-
-                <div className="modal-body">
-                    <p>Tem a certeza que deseja eliminar o tópico <strong>"{topico?.titulo}"</strong>?</p>
-                    <p className="warning">Esta ação não pode ser desfeita.</p>
-                </div>
-
-                <div className="modal-footer">
-                    <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={onClose}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="button"
-                        className="delete-button"
-                        onClick={() => {
-                            // Captura e log explícito do ID antes da ação
-                            const idToDelete = topico.id_topico || topico.id || topico.id_categoria_topico;
-                            console.log('Detalhes completos do tópico para exclusão:', topico);
-                            console.log('ID identificado para exclusão:', idToDelete);
-
-                            if (idToDelete) {
-                                onConfirm(idToDelete);
-                                onClose();
-                            } else {
-                                console.error('Detalhes do objeto tópico:', JSON.stringify(topico));
-                                toast.error('Não foi possível identificar o ID do tópico para exclusão');
-                            }
-                        }}
-                    >
-                        Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Componente principal
+/**
+ * Componente para gestão de tópicos de discussão
+ * 
+ * Permite aos administradores e formadores:
+ * - Ver todos os tópicos organizados por categorias e áreas
+ * - Criar novos tópicos de discussão
+ * - Editar tópicos existentes
+ * - Eliminar tópicos
+ * - Filtrar tópicos por nome, categoria e área
+ * - Navegar entre páginas (10 itens por página)
+ * 
+ * Acesso restrito: apenas utilizadores com id_cargo === 1 (administradores) ou id_cargo === 2 (formadores)
+ */
 const Gerir_Topicos = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  
+  // Estados para controlo da interface
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados para dados dos tópicos
+  const [topicos, setTopicos] = useState([]);
+  const [todosOsTopicos, setTodosOsTopicos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [totalTopicos, setTotalTopicos] = useState(0);
+  
+  // Estados para paginação e filtros
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const topicosPorPagina = 10;
+  const [filtros, setFiltros] = useState({ nome: '', idCategoria: '', idArea: '' });
+  
+  // Estados para modais de confirmação e edição
+  const [topicoParaExcluir, setTopicoParaExcluir] = useState(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [editTopico, setEditTopico] = useState(null);
+  const [newTopicoTitulo, setNewTopicoTitulo] = useState('');
+  const [newTopicoDescricao, setNewTopicoDescricao] = useState('');
+  const [newTopicoCategoria, setNewTopicoCategoria] = useState('');
+  const [newTopicoArea, setNewTopicoArea] = useState('');
+  const [showTopicoForm, setShowTopicoForm] = useState(false);
+  
+  // Estados para gestão das áreas filtradas
+  const [areasFiltradas, setAreasFiltradas] = useState([]);
+  
+  // Referência para timeout de filtros (evita muitas requisições)
+  const filterTimeoutRef = useRef(null);
 
-    const [topicos, setTopicos] = useState([]);
-    const [categorias, setCategorias] = useState([]);
-    const [areas, setAreas] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+  /**
+   * Alterna a visibilidade da barra lateral
+   */
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
-    // Estados para filtros
-    const [filtroCategoria, setFiltroCategoria] = useState('');
-    const [filtroArea, setFiltroArea] = useState('');
-    const [filtroPesquisa, setFiltroPesquisa] = useState('');
+  /**
+   * Busca os tópicos da API com paginação e filtros
+   * Implementa paginação automática no frontend quando a API retorna todos os tópicos
+   * @param {number} pagina - Número da página a buscar
+   * @param {object} filtrosAtuais - Filtros a aplicar na busca
+   */
+  const buscarTopicos = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      
+      // Preparar parâmetros da requisição
+      const params = {
+        page: pagina,
+        limit: topicosPorPagina,
+      };
+      
+      // Adicionar filtro de nome se especificado
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        params.search = filtrosAtuais.nome.trim();
+      }
+      
+      // Adicionar filtro de categoria se especificado
+      if (filtrosAtuais.idCategoria) {
+        params.categoria = filtrosAtuais.idCategoria;
+      }
+      
+      // Adicionar filtro de área se especificado
+      if (filtrosAtuais.idArea) {
+        params.area = filtrosAtuais.idArea;
+      }
+      
+      // Limpar parâmetros vazios
+      Object.keys(params).forEach(key => 
+        (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
+      );
+      
+      // Fazer requisição à API
+      const response = await axios.get(`${API_BASE}/topicos-area`, {
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Processar diferentes formatos de resposta da API
+      let topicosData = [];
+      let total = 0;
+      let processouComSucesso = false;
 
-    // Estados para modais
-    const [modalAberto, setModalAberto] = useState(false);
-    const [topicoEditando, setTopicoEditando] = useState(null);
-    const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
-    const [topicoParaExcluir, setTopicoParaExcluir] = useState(null);
-
-    const [areasFiltradas, setAreasFiltradas] = useState([]);
-    // Carregar dados iniciais: tópicos, categorias e áreas
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                // Carregar categorias
-                const categoriasRes = await axios.get(`${API_BASE}/categorias`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                // Carregar áreas
-                const areasRes = await axios.get(`${API_BASE}/areas`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                // Carregar tópicos
-                const topicosRes = await axios.get(`${API_BASE}/topicos-area/todos`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-
-
-
-                console.log('Tópicos carregados com sucesso:', topicosRes.data.length);
-                setCategorias(Array.isArray(categoriasRes.data) ? categoriasRes.data : []);
-                setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
-                setTopicos(topicosRes.data);
-
-
-            } catch (error) {
-                console.error('Erro ao carregar dados:', error);
-                console.error('Detalhes do erro:', error.response?.data || error.message);
-                toast.error('Erro ao carregar dados. Por favor, tenta novamente.');
-
-                // Definir arrays vazios para evitar erros de nulo
-                setCategorias([]);
-                setAreas([]);
-                setTopicos([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    useEffect(() => {
-        if (filtroCategoria) {
-            // Filtrar áreas que pertencem à categoria selecionada
-            const areasFiltered = areas.filter(area =>
-                area.id_categoria === parseInt(filtroCategoria)
+      if (response.data && response.data.success) {
+        // Formato padrão: {success: true, data: [...], total: 12}
+        if (Array.isArray(response.data.data)) {
+          const todosOsTopicosRecebidos = response.data.data;
+          
+          // Aplicar filtros manualmente
+          let topicosFiltrados = todosOsTopicosRecebidos;
+          
+          // Filtro por nome
+          if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+            const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+            topicosFiltrados = topicosFiltrados.filter(topico => 
+              topico.titulo?.toLowerCase().includes(termoBusca) ||
+              topico.descricao?.toLowerCase().includes(termoBusca)
             );
-            setAreasFiltradas(areasFiltered);
-            console.log(`Categoria ${filtroCategoria} selecionada: ${areasFiltered.length} áreas disponíveis`);
+          }
+          
+          // Filtro por categoria
+          if (filtrosAtuais.idCategoria) {
+            topicosFiltrados = topicosFiltrados.filter(topico => 
+              topico.id_categoria == filtrosAtuais.idCategoria
+            );
+          }
+          
+          // Filtro por área
+          if (filtrosAtuais.idArea) {
+            topicosFiltrados = topicosFiltrados.filter(topico => 
+              topico.id_area == filtrosAtuais.idArea
+            );
+          }
+          
+          total = topicosFiltrados.length;
+          
+          // Implementar paginação manual no frontend
+          const startIndex = (pagina - 1) * topicosPorPagina;
+          const endIndex = startIndex + topicosPorPagina;
+          topicosData = topicosFiltrados.slice(startIndex, endIndex);
+          
+          // Armazenar todos os tópicos para futuras operações
+          setTodosOsTopicos(todosOsTopicosRecebidos);
+          
+          processouComSucesso = true;
+        }
+      } else if (Array.isArray(response.data)) {
+        // Formato alternativo: array direto [{...}, {...}, ...]
+        const todosOsTopicosRecebidos = response.data;
+        
+        // Aplicar filtros manualmente
+        let topicosFiltrados = todosOsTopicosRecebidos;
+        
+        // Filtro por nome
+        if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+          const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+          topicosFiltrados = topicosFiltrados.filter(topico => 
+            topico.titulo?.toLowerCase().includes(termoBusca) ||
+            topico.descricao?.toLowerCase().includes(termoBusca)
+          );
+        }
+        
+        // Filtro por categoria
+        if (filtrosAtuais.idCategoria) {
+          topicosFiltrados = topicosFiltrados.filter(topico => 
+            topico.id_categoria == filtrosAtuais.idCategoria
+          );
+        }
+        
+        // Filtro por área
+        if (filtrosAtuais.idArea) {
+          topicosFiltrados = topicosFiltrados.filter(topico => 
+            topico.id_area == filtrosAtuais.idArea
+          );
+        }
+        
+        total = topicosFiltrados.length;
+        
+        // Implementar paginação manual no frontend
+        const startIndex = (pagina - 1) * topicosPorPagina;
+        const endIndex = startIndex + topicosPorPagina;
+        topicosData = topicosFiltrados.slice(startIndex, endIndex);
+        
+        // Armazenar todos os tópicos para futuras operações
+        setTodosOsTopicos(todosOsTopicosRecebidos);
+        
+        processouComSucesso = true;
+      }
 
-            // Limpar filtro de área somente se a categoria mudou e não há correspondência
-            if (filtroArea && !areasFiltered.some(a => a.id_area === parseInt(filtroArea))) {
-                setFiltroArea('');
-            }
+      if (processouComSucesso) {
+        // Verificar se os dados são válidos
+        if (Array.isArray(topicosData)) {
+          setTopicos(topicosData);
+          setTotalTopicos(total || 0);
+          setPaginaAtual(pagina);
         } else {
-            // Se nenhuma categoria estiver selecionada, não mostrar áreas
-            setAreasFiltradas([]);
-            setFiltroArea('');
+          toast.error('Formato de dados inválido recebido do servidor.');
+          setTopicos([]);
+          setTotalTopicos(0);
         }
-    }, [filtroCategoria, areas, filtroArea]);
+      } else {
+        console.error('Formato de resposta não reconhecido:', response.data);
+        toast.error('Erro ao carregar tópicos do servidor.');
+        setTopicos([]);
+        setTotalTopicos(0);
+      }
+      
+    } catch (error) {
+      console.error('Erro ao buscar tópicos:', error);
+      // Gestão de erros específicos
+      if (error.response) {
+        if (error.response.status === 401) {
+          toast.error('Não autorizado. Faz login novamente.');
+          navigate('/login');
+        } else {
+          toast.error(`Erro ao carregar tópicos: ${error.response.data?.message || 'Erro desconhecido'}`);
+        }
+      } else {
+        toast.error('Erro ao processar a requisição.');
+      }
+      
+      setTopicos([]);
+      setTotalTopicos(0);
+    } finally {
+      // Garantir que o loading é sempre removido
+      setLoading(false);
+    }
+  }, [topicosPorPagina, navigate]); // Remover filtros das dependências
 
-    // Função para filtrar tópicos com base nos filtros atuais
-    const filtrarTopicos = () => {
-        return topicos.filter(topico => {
-            // Filtro por categoria
-            if (filtroCategoria && topico.id_categoria !== parseInt(filtroCategoria)) {
-                return false;
-            }
+  /**
+   * Busca todas as categorias disponíveis para os filtros
+   */
+  const buscarCategorias = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(`${API_BASE}/categorias`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data) {
+        let categoriasData = [];
+        
+        // Processar resposta da API - diferentes formatos possíveis
+        if (Array.isArray(response.data.categorias)) {
+          categoriasData = response.data.categorias;
+        } else if (Array.isArray(response.data)) {
+          categoriasData = response.data;
+        } else {
+          console.error('Formato de resposta não reconhecido para categorias:', response.data);
+          toast.error('Erro ao carregar categorias para o filtro.');
+          setCategorias([]);
+          return;
+        }
+        
+        console.log('Categorias carregadas:', categoriasData.length);
+        setCategorias(categoriasData);
+      } else {
+        toast.error('Erro ao carregar categorias para o filtro.');
+        setCategorias([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      toast.error('Erro ao carregar categorias para o filtro.');
+      setCategorias([]);
+    }
+  }, []);
 
-            // Filtro por área
-            if (filtroArea && topico.id_area !== parseInt(filtroArea)) {
-                return false;
-            }
+  /**
+   * Busca todas as áreas disponíveis para os filtros
+   */
+  const buscarAreas = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(`${API_BASE}/areas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data) {
+        let areasData = [];
+        
+        // Processar resposta da API - diferentes formatos possíveis
+        if (Array.isArray(response.data.areas)) {
+          areasData = response.data.areas;
+        } else if (Array.isArray(response.data)) {
+          areasData = response.data;
+        } else {
+          console.error('Formato de resposta não reconhecido para áreas:', response.data);
+          toast.error('Erro ao carregar áreas para o filtro.');
+          setAreas([]);
+          return;
+        }
+        
+        console.log('Áreas carregadas:', areasData.length);
+        setAreas(areasData);
+      } else {
+        toast.error('Erro ao carregar áreas para o filtro.');
+        setAreas([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar áreas:', error);
+      toast.error('Erro ao carregar áreas para o filtro.');
+      setAreas([]);
+    }
+  }, []);
 
-            // Filtro por pesquisa de texto
-            if (filtroPesquisa) {
-                const termoPesquisa = filtroPesquisa.toLowerCase();
-                return (
-                    topico.titulo?.toLowerCase().includes(termoPesquisa) ||
-                    topico.descricao?.toLowerCase().includes(termoPesquisa)
-                );
-            }
+  /**
+   * Filtrar áreas baseadas na categoria selecionada
+   */
+  useEffect(() => {
+    if (filtros.idCategoria) {
+      const areasFiltered = areas.filter(area =>
+        area.id_categoria === parseInt(filtros.idCategoria)
+      );
+      setAreasFiltradas(areasFiltered);
+      
+      // Limpar filtro de área se a categoria mudou e a área não corresponde
+      if (filtros.idArea && !areasFiltered.some(a => a.id_area === parseInt(filtros.idArea))) {
+        setFiltros(prev => ({ ...prev, idArea: '' }));
+      }
+    } else {
+      setAreasFiltradas([]);
+      setFiltros(prev => ({ ...prev, idArea: '' }));
+    }
+  }, [filtros.idCategoria, areas, filtros.idArea]);
 
-            return true;
+  /**
+   * Carrega dados iniciais quando o componente é montado
+   */
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        // Verificar se o utilizador está autenticado
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+        
+        // Verificar permissões de acesso
+        if (currentUser && currentUser.id_cargo !== 1 && currentUser.id_cargo !== 2) {
+          toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
+          navigate('/');
+          return;
+        }
+        
+        // Carregar dados iniciais sequencialmente
+        await buscarCategorias();
+        await buscarAreas();
+        await buscarTopicos(1, { nome: '', idCategoria: '', idArea: '' });
+        
+      } catch (error) {
+        console.error('Erro no carregamento inicial:', error);
+        if (error.response && error.response.status === 401) {
+          toast.error('Não autorizado. Por favor, faz login novamente.');
+          navigate('/login');
+        } else {
+          toast.error('Erro ao carregar dados. Por favor, tenta novamente mais tarde.');
+        }
+        setLoading(false);
+      }
+    };
+
+    // Só carregar uma vez quando o componente monta
+    fetchData();
+  }, [navigate, currentUser]); // Dependências mínimas
+
+  /**
+   * Gere alterações nos filtros com debounce para evitar muitas requisições
+   * @param {Event} e - Evento de mudança do input
+   */
+  const handleFiltroChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Cancelar timeout anterior se existir
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    // Atualizar filtros imediatamente
+    const novosFiltros = {
+      ...filtros,
+      [name]: value
+    };
+    setFiltros(novosFiltros);
+    
+    // Mostrar loading apenas se houve mudança real
+    if (filtros[name] !== value) {
+      setLoading(true);
+      
+      // Aplicar debounce de 600ms antes de fazer a busca
+      filterTimeoutRef.current = setTimeout(() => {
+        setPaginaAtual(1);
+        buscarTopicos(1, novosFiltros);
+      }, 600);
+    }
+  };
+
+  /**
+   * Limpa todos os filtros aplicados e recarrega os tópicos
+   */
+  const handleLimparFiltros = () => {
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    const filtrosLimpos = { nome: '', idCategoria: '', idArea: '' };
+    
+    setFiltros(filtrosLimpos);
+    setPaginaAtual(1);
+    buscarTopicos(1, filtrosLimpos);
+  };
+
+  /**
+   * Navega para a página anterior
+   */
+  const handlePaginaAnterior = () => {
+    if (paginaAtual > 1 && !loading) {
+      const novaPagina = paginaAtual - 1;
+      buscarTopicos(novaPagina, filtros);
+    }
+  };
+
+  /**
+   * Navega para a próxima página
+   */
+  const handleProximaPagina = () => {
+    const totalPaginas = Math.max(1, Math.ceil(totalTopicos / topicosPorPagina));
+    if (paginaAtual < totalPaginas && !loading) {
+      const novaPagina = paginaAtual + 1;
+      buscarTopicos(novaPagina, filtros);
+    }
+  };
+
+  /**
+   * Abre o modal para criar novo tópico
+   */
+  const handleOpenTopicoForm = () => {
+    setShowTopicoForm(true);
+    setEditTopico(null);
+    setNewTopicoTitulo('');
+    setNewTopicoDescricao('');
+    setNewTopicoCategoria('');
+    setNewTopicoArea('');
+  };
+
+  /**
+   * Fecha o modal de criação/edição de tópico
+   */
+  const handleCloseTopicoForm = () => {
+    setShowTopicoForm(false);
+    setEditTopico(null);
+    setNewTopicoTitulo('');
+    setNewTopicoDescricao('');
+    setNewTopicoCategoria('');
+    setNewTopicoArea('');
+  };
+
+  /**
+   * Grava um novo tópico ou atualiza um existente
+   */
+  const handleSaveTopico = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Validar dados obrigatórios
+      if (!newTopicoTitulo.trim()) {
+        toast.error('Por favor, insere um título para o tópico.');
+        return;
+      }
+      
+      if (!newTopicoCategoria) {
+        toast.error('Por favor, selecciona uma categoria para o tópico.');
+        return;
+      }
+      
+      if (!newTopicoArea) {
+        toast.error('Por favor, selecciona uma área para o tópico.');
+        return;
+      }
+      
+      const dadosTopico = {
+        titulo: newTopicoTitulo,
+        descricao: newTopicoDescricao,
+        id_categoria: newTopicoCategoria,
+        id_area: newTopicoArea
+      };
+      
+      // Decidir se é edição ou criação
+      if (editTopico) {
+        await axios.put(`${API_BASE}/topicos-area/${editTopico.id_topico || editTopico.id}`, dadosTopico, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-    };
-
-    // Obter tópicos filtrados
-    const topicosFiltrados = filtrarTopicos();
-
-    // Funções para modais
-    const abrirModalCriar = () => {
-        setTopicoEditando(null);
-        setModalAberto(true);
-    };
-
-    const abrirModalEditar = (topico) => {
-        setTopicoEditando(topico);
-        setModalAberto(true);
-    };
-
-    const abrirModalExcluir = (topico) => {
-        setTopicoParaExcluir(topico);
-        setConfirmDeleteModal(true);
-    };
-
-    // Funções CRUD
-    const salvarTopico = async (topicoData) => {
-        try {
-            if (topicoData.id) {
-                // Modo edição
-                const response = await axios.put(`${API_BASE}/topicos-area/${topicoData.id}`, topicoData, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                console.log('Resposta da API (edição):', response.data);
-
-                // Extrair os dados atualizados do tópico
-                const topicoAtualizado = response.data.data || response.data;
-
-                // Atualizar lista de tópicos localmente
-                setTopicos(prevTopicos =>
-                    prevTopicos.map(t =>
-                        t.id === topicoData.id ? { ...t, ...topicoAtualizado } : t
-                    )
-                );
-
-                toast.success('Tópico atualizado com sucesso!');
-            } else {
-                // Modo criação
-                const response = await axios.post(`${API_BASE}/topicos-area`, topicoData, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                console.log('Resposta da API (criação):', response.data);
-
-                // Extrair dados do novo tópico
-                const novoTopico = response.data.data || response.data;
-
-                // Se o retorno não tiver um ID explícito, pode ser necessário fazer outra requisição
-                // para obter a lista atualizada de tópicos
-                if (!novoTopico.id) {
-                    const topicosAtualizados = await axios.get(`${API_BASE}/topicos-area/todos`, {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    });
-
-                    setTopicos(Array.isArray(topicosAtualizados.data)
-                        ? topicosAtualizados.data
-                        : (topicosAtualizados.data.data || []));
-                } else {
-                    // Adicionar novo tópico à lista
-                    setTopicos(prevTopicos => [...prevTopicos, novoTopico]);
-                }
-
-                toast.success('Tópico criado com sucesso!');
-            }
-        } catch (error) {
-            console.error('Erro ao salvar tópico:', error);
-            toast.error(error.response?.data?.message || 'Erro ao salvar tópico');
-            throw new Error(error.response?.data?.message || 'Erro ao salvar tópico');
-        }
-    };
-
-    // Encontrar nome da categoria ou área pelo ID
-    const getCategoriaName = (id) => {
-        if (!id) return 'N/A';
-        const categoria = categorias.find(c => c.id_categoria === id || c.id === id);
-        return categoria ? categoria.nome : 'N/A';
-    };
-
-    const getAreaName = (id) => {
-        if (!id) return 'N/A';
-        const area = areas.find(a => a.id_area === id || a.id === id);
-        return area ? area.nome : 'N/A';
-    };
-
-    // Função para excluir tópico mais robusta
-    // Modificar a função excluirTopico para ser mais robusta:
-    const excluirTopico = async (id) => {
-        try {
-            setIsLoading(true);
-
-            // Verificação mais rigorosa do ID
-            if (!id) {
-                console.error('ID do tópico é inválido ou nulo');
-                toast.error('Erro ao eliminar tópico: ID inválido');
-                setIsLoading(false);
-                return;
-            }
-
-            // Mostrar toast informativo antes da operação
-            toast.info('A eliminar tópico...');
-
-            console.log('Tentando eliminar tópico com ID:', id);
-
-            // Verificar se o token está disponível
-            const token = localStorage.getItem('token');
-            if (!token) {
-                toast.error('Autenticação expirada. Por favor, faça login novamente.');
-                setIsLoading(false);
-                return;
-            }
-
-            // Realizar a chamada à API com tratamento de erros mais detalhado
-            const response = await axios.delete(`${API_BASE}/topicos-area/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            console.log('Resposta da API (eliminação):', response.data);
-
-            // Atualizar lista de tópicos localmente de forma mais segura
-            setTopicos(prevTopicos => prevTopicos.filter(t => {
-                // Verificar todas as propriedades possíveis de ID
-                const topicoId = t.id_topico || t.id || t.id_categoria_topico;
-                console.log(`Comparando IDs: ${topicoId} vs ${id}`);
-                return String(topicoId) !== String(id); // Converter para string para comparação segura
-            }));
-
-            toast.success('Tópico eliminado com sucesso!');
-        } catch (error) {
-            console.error('Erro detalhado ao eliminar tópico:', error.response || error);
-
-            // Mensagens de erro mais informativas
-            if (error.response) {
-                if (error.response.status === 403) {
-                    toast.error('Permissão negada para eliminar este tópico');
-                } else if (error.response.status === 404) {
-                    toast.error('Tópico não encontrado ou já foi removido');
-                    // Atualizar a lista mesmo assim, assumindo que o tópico não existe mais
-                    setTopicos(prev => prev.filter(t => (t.id_topico || t.id) !== id));
-                } else {
-                    toast.error(`Erro ao eliminar tópico: ${error.response.data?.message || error.message}`);
-                }
-            } else {
-                toast.error(`Erro ao eliminar tópico: ${error.message}`);
-            }
-        } finally {
-            setIsLoading(false);
-            setConfirmDeleteModal(false);
-            setTopicoParaExcluir(null);
-        }
-    };
-
-
-
-
-
-    // Formatar data para exibição
-    const formatarData = (dataString) => {
-        if (!dataString) return 'N/A';
-
-        const data = new Date(dataString);
-        return data.toLocaleDateString('pt-PT', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        
+        toast.success('Tópico actualizado com sucesso!');
+      } else {
+        await axios.post(`${API_BASE}/topicos-area`, dadosTopico, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-    };
+        
+        toast.success('Tópico criado com sucesso!');
+      }
+      
+      handleCloseTopicoForm();
+      buscarTopicos(paginaAtual, filtros);
+      
+    } catch (error) {
+      if (error.response) {
+        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+      } else {
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
+      }
+    }
+  };
 
+  /**
+   * Prepara um tópico para edição
+   * @param {object} topico - Tópico a ser editado
+   */
+  const handleEditarTopico = (topico) => {
+    setEditTopico(topico);
+    setNewTopicoTitulo(topico.titulo);
+    setNewTopicoDescricao(topico.descricao || '');
+    setNewTopicoCategoria(topico.id_categoria);
+    setNewTopicoArea(topico.id_area);
+    setShowTopicoForm(true);
+  };
+
+  /**
+   * Confirma a exclusão de um tópico
+   * @param {object} topico - Tópico a ser excluído
+   */
+  const handleConfirmarExclusao = (topico) => {
+    setTopicoParaExcluir(topico);
+    setShowDeleteConfirmation(true);
+  };
+
+  /**
+   * Executa a exclusão de um tópico
+   */
+  const handleExcluirTopico = async () => {
+    if (!topicoParaExcluir) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const topicoId = topicoParaExcluir.id_topico || topicoParaExcluir.id;
+      
+      await axios.delete(`${API_BASE}/topicos-area/${topicoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Tópico eliminado com sucesso!');
+      setShowDeleteConfirmation(false);
+      setTopicoParaExcluir(null);
+      
+      buscarTopicos(paginaAtual, filtros);
+      
+    } catch (error) {
+      if (error.response) {
+        if (error.response.status === 404) {
+          toast.error('Tópico não encontrado. Pode já ter sido eliminado.');
+        } else {
+          toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+        }
+      } else {
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
+      }
+      
+      setShowDeleteConfirmation(false);
+      setTopicoParaExcluir(null);
+    }
+  };
+
+  /**
+   * Encontrar nome da categoria pelo ID
+   */
+  const getCategoriaName = (id) => {
+    if (!id) return 'N/A';
+    const categoria = categorias.find(c => c.id_categoria === id || c.id === id);
+    return categoria ? categoria.nome : 'N/A';
+  };
+
+  /**
+   * Encontrar nome da área pelo ID
+   */
+  const getAreaName = (id) => {
+    if (!id) return 'N/A';
+    const area = areas.find(a => a.id_area === id || a.id === id);
+    return area ? area.nome : 'N/A';
+  };
+
+  // Cálculos para paginação e apresentação
+  const totalPaginas = Math.max(1, Math.ceil(totalTopicos / topicosPorPagina));
+  const topicosParaMostrar = Array.isArray(topicos) ? topicos : [];
+  
+  // Criar linhas vazias para manter altura consistente da tabela
+  const linhasVazias = [];
+  const linhasNecessarias = Math.max(0, topicosPorPagina - topicosParaMostrar.length);
+  for (let i = 0; i < linhasNecessarias; i++) {
+    linhasVazias.push(i);
+  }
+
+  /**
+   * Cleanup do timeout ao desmontar o componente
+   */
+  useEffect(() => {
+    return () => {
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Ecrã de carregamento inicial
+  if (loading && topicos.length === 0 && totalTopicos === 0) {
     return (
-        <div className="gerir-topicos-container">
-            <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      <div className="gerenciar-topicos-container-gerir-topicos">
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="main-content-gerir-topicos">
+          <div className="loading-container-gerir-topicos">
+            <div className="loading-spinner-gerir-topicos"></div>
+            <p>A carregar tópicos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-            <div className="content-container">
-                <h1>Gestão de Tópicos</h1>
-
-                {/* Filtros e botão de criar */}
-                <div className="filters-container">
-                    <div className="filter-group">
-                        <select
-                            value={filtroCategoria}
-                            onChange={(e) => setFiltroCategoria(e.target.value)}
-                            className="filter-select"
-                        >
-                            <option value="">Todas as categorias</option>
-                            {categorias.map(categoria => (
-                                <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                                    {categoria.nome}
-                                </option>
-                            ))}
-                        </select>
-
-                        {/* Filtrar por área */}
-                        <select
-                            value={filtroArea}
-                            onMouseDown={e => {
-                                if (!filtroCategoria) {
-                                    e.preventDefault();
-                                    toast.error('Selecione uma categoria primeiro');
-                                }
-                            }}
-                            onChange={e => {
-                                if (!filtroCategoria) {
-                                    toast.error('Selecione uma categoria primeiro');
-                                    return;
-                                }
-                                setFiltroArea(e.target.value);
-                            }}
-                            className="filter-select"
-                        >
-                            <option value="">
-                                {areasFiltradas.length === 0
-                                    ? "Sem áreas disponíveis"
-                                    : "Todas as áreas"}
-                            </option>
-                            {areasFiltradas.map(area => (
-                                <option key={area.id_area} value={area.id_area}>
-                                    {area.nome}
-                                </option>
-                            ))}
-                        </select>
-
-                        <div className="search-box">
-                            <input
-                                type="text"
-                                placeholder="Pesquisar por título ou descrição..."
-                                value={filtroPesquisa}
-                                onChange={(e) => setFiltroPesquisa(e.target.value)}
-                                className="search-input"
-                            />
-                            <button className="search-btn">
-                                <i className="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button
-                        className="create-btn"
-                        onClick={abrirModalCriar}
-                        disabled={isLoading}
-                    >
-                        <i className="fas fa-plus"></i> Novo Tópico
-                    </button>
-                </div>
-
-                {/* Tabela de tópicos */}
-                {isLoading ? (
-                    <div className="loading">
-                        <i className="fas fa-spinner fa-spin"></i> A carregar tópicos...
-                    </div>
-                ) : topicosFiltrados.length > 0 ? (
-                    <div className="table-responsive">
-                        <table className="topicos-table">
-                            <thead>
-                                <tr>
-                                    <th>Título</th>
-                                    <th>Categoria</th>
-                                    <th>Área</th>
-                                    <th>Data de Criação</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {topicosFiltrados.map(topico => {
-                                    // Identificar o ID correto do tópico
-                                    const topicoId = topico.id_topico || topico.id || topico.id_categoria_topico;
-
-                                    return (
-                                        <tr key={topicoId}>
-                                            <td className="titulo-cell">{topico.titulo}</td>
-                                            <td>{getCategoriaName(topico.id_categoria)}</td>
-                                            <td>{getAreaName(topico.id_area)}</td>
-                                            <td>{formatarData(topico.data_criacao || topico.dataCriacao)}</td>
-                                            <td className="acoes">
-                                                <button
-                                                    className="edit-btn"
-                                                    onClick={() => abrirModalEditar(topico)}
-                                                    title="Editar"
-                                                >
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button
-                                                    className="delete-btn"
-                                                    onClick={() => {
-                                                        console.log('Abrindo modal para excluir tópico:', topico);
-                                                        abrirModalExcluir(topico);
-                                                    }}
-                                                    title="Eliminar"
-                                                >
-                                                    <i className="fas fa-trash-alt"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="no-results">
-                        <i className="fas fa-info-circle"></i>
-                        {filtroPesquisa || filtroCategoria ? (
-                            <p>Nenhum tópico corresponde aos filtros atuais. Tente outros critérios de pesquisa.</p>
-                        ) : (
-                            <p>Nenhum tópico encontrado. Clique em "Novo Tópico" para criar um.</p>
-                        )}
-                    </div>
-                )}
+  return (
+    <div className="gerenciar-topicos-container-gerir-topicos">
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      
+      <div className="main-content-gerir-topicos">
+        {/* Cabeçalho com título e acções principais */}
+        <div className="topicos-header-gerir-topicos">
+          <h1>
+            Gestão de Tópicos 
+            <span className="total-count-gerir-topicos">({totalTopicos})</span>
+          </h1>
+          <div className="header-actions-gerir-topicos">
+            <button 
+              className="criar-btn-gerir-topicos"
+              onClick={handleOpenTopicoForm}
+            >
+              Criar Novo Tópico
+            </button>
+          </div>
+        </div>
+        
+        {/* Secção de filtros */}
+        <div className="filtros-container-gerir-topicos">
+          <div className="filtros-principais-gerir-topicos">
+            <div className="filtro-gerir-topicos">
+              <label htmlFor="nome">Nome do Tópico:</label>
+              <input 
+                type="text"
+                id="nome"
+                name="nome"
+                value={filtros.nome}
+                onChange={handleFiltroChange}
+                placeholder="Filtrar por título"
+              />
+            </div>
+            
+            <div className="filtro-gerir-topicos">
+              <label htmlFor="idCategoria">Categoria:</label>
+              <select
+                id="idCategoria"
+                name="idCategoria"
+                value={filtros.idCategoria}
+                onChange={handleFiltroChange}
+              >
+                <option value="">Todas as categorias</option>
+                {categorias.map(categoria => (
+                  <option 
+                    key={categoria.id_categoria} 
+                    value={categoria.id_categoria}
+                  >
+                    {categoria.nome}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Modais */}
-            <TopicoModal
-                isOpen={modalAberto}
-                onClose={() => setModalAberto(false)}
-                topico={topicoEditando}
-                categorias={categorias}
-                areas={areas}
-                onSave={salvarTopico}
-            />
-
-            <ConfirmDeleteModal
-                isOpen={confirmDeleteModal}
-                onClose={() => setConfirmDeleteModal(false)}
-                onConfirm={excluirTopico}
-                topico={topicoParaExcluir}
-            />
-
-            <ToastContainer />
+            <div className="filtro-gerir-topicos">
+              <label htmlFor="idArea">Área:</label>
+              <select
+                id="idArea"
+                name="idArea"
+                value={filtros.idArea}
+                onChange={handleFiltroChange}
+                disabled={!filtros.idCategoria}
+              >
+                <option value="">
+                  {!filtros.idCategoria 
+                    ? "Selecciona uma categoria primeiro" 
+                    : "Todas as áreas"}
+                </option>
+                {areasFiltradas.map(area => (
+                  <option 
+                    key={area.id_area} 
+                    value={area.id_area}
+                  >
+                    {area.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="filtro-acoes-gerir-topicos">
+            <button 
+              className="btn-limpar-gerir-topicos"
+              onClick={handleLimparFiltros}
+              disabled={loading}
+            >
+              Limpar Filtros
+            </button>
+          </div>
         </div>
-    );
+        
+        {/* Tabela de tópicos e controlos de paginação */}
+        <div className="topicos-table-container-gerir-topicos">
+          {loading && topicos.length === 0 ? (
+            <div className="loading-container-gerir-topicos">
+              <div className="loading-spinner-gerir-topicos"></div>
+              <p>A carregar tópicos...</p>
+            </div>
+          ) : !Array.isArray(topicosParaMostrar) || topicosParaMostrar.length === 0 ? (
+            <div className="no-items-gerir-topicos">
+              <p>Nenhum tópico encontrado com os filtros aplicados.</p>
+            </div>
+          ) : (
+            <>
+              {/* Tabela com os dados dos tópicos */}
+              <table className="topicos-table-gerir-topicos">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Categoria</th>
+                    <th>Área</th>
+                    <th>Data de Criação</th>
+                    <th>Acções</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topicosParaMostrar.map((topico, index) => {
+                    if (!topico || typeof topico !== 'object') {
+                      return null;
+                    }
+                    
+                    const topicoId = topico.id_topico || topico.id || index;
+                    
+                    return (
+                      <tr key={topicoId}>
+                        <td>{topicoId}</td>
+                        <td className="topico-titulo-gerir-topicos">{topico.titulo || 'Título não disponível'}</td>
+                        <td>{getCategoriaName(topico.id_categoria)}</td>
+                        <td>{getAreaName(topico.id_area)}</td>
+                        <td>
+                          {topico.data_criacao ? 
+                            new Date(topico.data_criacao).toLocaleDateString('pt-PT') : 
+                            'N/A'
+                          }
+                        </td>
+                        <td className="acoes-gerir-topicos">
+                          <button 
+                            className="btn-icon-gerir-topicos btn-editar-gerir-topicos"
+                            onClick={() => handleEditarTopico(topico)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className="btn-icon-gerir-topicos btn-excluir-gerir-topicos"
+                            onClick={() => handleConfirmarExclusao(topico)}
+                            title="Eliminar"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  
+                  {/* Linhas vazias para manter altura consistente */}
+                  {linhasVazias.map((_, index) => (
+                    <tr key={`empty-${index}`} className="linha-vazia-gerir-topicos">
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {/* Controlos de paginação */}
+              <div className="paginacao-gerir-topicos">
+                <button 
+                  onClick={handlePaginaAnterior} 
+                  disabled={paginaAtual === 1 || loading}
+                  className="btn-pagina-gerir-topicos btn-anterior-gerir-topicos"
+                  aria-label="Página anterior"
+                  title="Página anterior"
+                >
+                  <span className="pagination-icon-gerir-topicos">&#8249;</span>
+                  <span className="btn-text-gerir-topicos">Anterior</span>
+                </button>
+                
+                <div className="pagina-info-gerir-topicos">
+                  <span className="pagina-atual-gerir-topicos">
+                    {loading ? 'A carregar...' : `Página ${paginaAtual} de ${totalPaginas}`}
+                  </span>
+                </div>
+                
+                <button 
+                  onClick={handleProximaPagina}
+                  disabled={paginaAtual >= totalPaginas || loading}
+                  className="btn-pagina-gerir-topicos btn-seguinte-gerir-topicos"
+                  aria-label="Próxima página"
+                  title="Próxima página"
+                >
+                  <span className="btn-text-gerir-topicos">Seguinte</span>
+                  <span className="pagination-icon-gerir-topicos">&#8250;</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Modal para criar/editar tópico */}
+      {showTopicoForm && (
+        <div className="modal-overlay-gerir-topicos">
+          <div className="modal-content-gerir-topicos">
+            <h3>{editTopico ? 'Editar Tópico' : 'Novo Tópico'}</h3>
+            
+            <div className="form-group-gerir-topicos">
+              <label htmlFor="newTopicoTitulo">Título do Tópico:</label>
+              <input 
+                type="text" 
+                id="newTopicoTitulo" 
+                value={newTopicoTitulo}
+                onChange={(e) => setNewTopicoTitulo(e.target.value)}
+                placeholder="Digite o título do tópico"
+              />
+            </div>
+
+            <div className="form-group-gerir-topicos">
+              <label htmlFor="newTopicoDescricao">Descrição:</label>
+              <textarea 
+                id="newTopicoDescricao" 
+                value={newTopicoDescricao}
+                onChange={(e) => setNewTopicoDescricao(e.target.value)}
+                placeholder="Digite uma descrição para o tópico (opcional)"
+                rows="4"
+              />
+            </div>
+            
+            <div className="form-group-gerir-topicos">
+              <label htmlFor="newTopicoCategoria">Categoria:</label>
+              <select
+                id="newTopicoCategoria"
+                value={newTopicoCategoria}
+                onChange={(e) => {
+                  setNewTopicoCategoria(e.target.value);
+                  setNewTopicoArea(''); // Limpar área quando categoria muda
+                }}
+              >
+                <option value="">Selecciona uma categoria</option>
+                {categorias.map(categoria => (
+                  <option 
+                    key={categoria.id_categoria} 
+                    value={categoria.id_categoria}
+                  >
+                    {categoria.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group-gerir-topicos">
+              <label htmlFor="newTopicoArea">Área:</label>
+              <select
+                id="newTopicoArea"
+                value={newTopicoArea}
+                onChange={(e) => setNewTopicoArea(e.target.value)}
+                disabled={!newTopicoCategoria}
+              >
+                <option value="">
+                  {!newTopicoCategoria 
+                    ? "Selecciona uma categoria primeiro" 
+                    : "Selecciona uma área"}
+                </option>
+                {areas
+                  .filter(area => area.id_categoria === parseInt(newTopicoCategoria))
+                  .map(area => (
+                    <option 
+                      key={area.id_area} 
+                      value={area.id_area}
+                    >
+                      {area.nome}
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+            
+            <div className="modal-actions-gerir-topicos">
+              <button 
+                className="btn-cancelar-gerir-topicos"
+                onClick={handleCloseTopicoForm}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-confirmar-gerir-topicos"
+                onClick={handleSaveTopico}
+              >
+                {editTopico ? 'Actualizar' : 'Criar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de confirmação de eliminação */}
+      {showDeleteConfirmation && (
+        <div className="modal-overlay-gerir-topicos">
+          <div className="modal-content-gerir-topicos">
+            <h3>Confirmar Eliminação</h3>
+            <p>
+              Tens a certeza que queres eliminar o tópico "{topicoParaExcluir?.titulo}"?
+              Esta acção não pode ser desfeita.
+            </p>
+            <div className="modal-actions-gerir-topicos">
+              <button 
+                className="btn-cancelar-gerir-topicos"
+                onClick={() => setShowDeleteConfirmation(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-confirmar-gerir-topicos"
+                onClick={handleExcluirTopico}
+              >
+                Confirmar Eliminação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <ToastContainer />
+    </div>
+  );
 };
 
 export default Gerir_Topicos;

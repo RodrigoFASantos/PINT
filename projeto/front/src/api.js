@@ -1,48 +1,43 @@
 /**
- * Configuração centralizada da API - Deteção automática de ambiente
+ * Configuração centralizada da API - Detecção automática de ambiente
  * 
  * Este módulo configura automaticamente a URL base da API baseado no ambiente
- * de execução (desenvolvimento ou produção) e fornece funções auxiliares
- * para formatação de URLs e gestão de recursos de imagem.
+ * de execução e fornece funções auxiliares para formatação de URLs e gestão
+ * de recursos de imagem de forma consistente em toda a aplicação.
  */
 
 /**
- * Determina automaticamente a URL base da API
+ * Determina automaticamente a URL base da API baseada no ambiente
  * 
  * Hierarquia de prioridades:
  * 1. Variável de ambiente REACT_APP_API_URL (configuração manual)
  * 2. localhost:4000 para ambiente de desenvolvimento local
  * 3. Mesmo hostname/IP do frontend para produção
  * 
- * @returns {string} URL base da API completa
+ * @returns {string} URL base da API completa com protocolo
  */
 const getApiBase = () => {
-  // Verificar se existe configuração manual via variável de ambiente
+  // Verificar configuração manual via variável de ambiente
   if (process.env.REACT_APP_API_URL) {
-    console.log('🔧 A usar URL da API definida manualmente:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
   
-  // Obter informações do ambiente atual
-  const protocol = window.location.protocol; // http: ou https:
-  const hostname = window.location.hostname; // localhost, IP ou domínio
+  // Obter informações do ambiente actual
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
   const port = 4000; // Porta padrão do servidor backend
   
-  // Determinar ambiente baseado no hostname
+  // Determinar URL baseada no hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Ambiente de desenvolvimento local
-    const apiUrl = `${protocol}//${hostname}:${port}/api`;
-    console.log('🏠 Ambiente de desenvolvimento detetado. API:', apiUrl);
-    return apiUrl;
+    return `${protocol}//${hostname}:${port}/api`;
   }
   
-  // Ambiente de produção - usar o mesmo hostname/IP do frontend
-  const apiUrl = `${protocol}//${hostname}:${port}/api`;
-  console.log('🚀 Ambiente de produção detetado. API:', apiUrl);
-  return apiUrl;
+  // Ambiente de produção - usar o mesmo hostname do frontend
+  return `${protocol}//${hostname}:${port}/api`;
 };
 
-// URL base da API detetada automaticamente
+// URL base da API detectada automaticamente
 const API_BASE = getApiBase();
 
 /**
@@ -56,7 +51,7 @@ const API_BASE = getApiBase();
  */
 const formatarEmailParaURL = (email) => {
   if (!email || typeof email !== 'string') {
-    console.warn('⚠️ Email inválido fornecido para formatação:', email);
+    console.warn('Email inválido fornecido para formatação:', email);
     return '';
   }
   
@@ -67,7 +62,6 @@ const formatarEmailParaURL = (email) => {
     .replace(/\+/g, '_plus_') // + → _plus_
     .toLowerCase();           // Normalizar para minúsculas
   
-  console.log('📧 Email formatado para URL:', email, '→', emailFormatado);
   return emailFormatado;
 };
 
@@ -87,23 +81,20 @@ const IMAGES = {
   /**
    * Gera URL do avatar de um utilizador específico
    * 
-   * Inclui timestamp para evitar problemas de cache quando o avatar é atualizado.
+   * Inclui timestamp para evitar problemas de cache quando o avatar é actualizado.
    * 
    * @param {string} email - Email do utilizador
    * @returns {string} URL completa do avatar com cache busting
    */
   USER_AVATAR: (email) => {
     if (!email) {
-      console.warn('⚠️ Email não fornecido para avatar, a usar imagem padrão');
+      console.warn('Email não fornecido para avatar, a usar imagem padrão');
       return IMAGES.DEFAULT_AVATAR;
     }
     
     const timestamp = Date.now();
     const emailFormatado = formatarEmailParaURL(email);
-    const avatarUrl = `${API_BASE}/uploads/users/${emailFormatado}/${email}_AVATAR.png?t=${timestamp}`;
-    
-    console.log('👤 URL do avatar gerada:', avatarUrl);
-    return avatarUrl;
+    return `${API_BASE}/uploads/users/${emailFormatado}/${email}_AVATAR.png?t=${timestamp}`;
   },
 
   /**
@@ -116,29 +107,26 @@ const IMAGES = {
    */
   USER_CAPA: (email) => {
     if (!email) {
-      console.warn('⚠️ Email não fornecido para capa, a usar imagem padrão');
+      console.warn('Email não fornecido para capa, a usar imagem padrão');
       return IMAGES.DEFAULT_CAPA;
     }
     
     const timestamp = Date.now();
     const emailFormatado = formatarEmailParaURL(email);
-    const capaUrl = `${API_BASE}/uploads/users/${emailFormatado}/${email}_CAPA.png?t=${timestamp}`;
-    
-    console.log('🖼️ URL da capa gerada:', capaUrl);
-    return capaUrl;
+    return `${API_BASE}/uploads/users/${emailFormatado}/${email}_CAPA.png?t=${timestamp}`;
   },
 
   /**
    * Gera URL da imagem de capa de um curso
    * 
-   * Para imagens principais dos cursos organizadas por nome do curso.
+   * Para imagens principais dos cursos organizadas por nome normalizado.
    * 
    * @param {string} nomeCurso - Nome do curso (será normalizado automaticamente)
    * @returns {string} URL completa da imagem do curso
    */
   CURSO: (nomeCurso) => {
     if (!nomeCurso) {
-      console.warn('⚠️ Nome do curso não fornecido para imagem');
+      console.warn('Nome do curso não fornecido para imagem');
       return `${API_BASE}/uploads/cursos/default/capa.png`;
     }
     
@@ -149,10 +137,7 @@ const IMAGES = {
       .replace(/\s+/g, '_')        // Espaços → underscores
       .trim();
     
-    const cursoUrl = `${API_BASE}/uploads/cursos/${nomeNormalizado}/capa.png`;
-    
-    console.log('📚 URL da imagem do curso gerada:', cursoUrl);
-    return cursoUrl;
+    return `${API_BASE}/uploads/cursos/${nomeNormalizado}/capa.png`;
   },
 
   /**
@@ -165,16 +150,13 @@ const IMAGES = {
    */
   CONTEUDO: (path) => {
     if (!path) {
-      console.warn('⚠️ Caminho não fornecido para imagem de conteúdo');
+      console.warn('Caminho não fornecido para imagem de conteúdo');
       return `${API_BASE}/uploads/default.png`;
     }
     
     // Garantir que o path não começa com /
     const pathLimpo = path.startsWith('/') ? path.slice(1) : path;
-    const conteudoUrl = `${API_BASE}/uploads/${pathLimpo}`;
-    
-    console.log('📄 URL de conteúdo gerada:', conteudoUrl);
-    return conteudoUrl;
+    return `${API_BASE}/uploads/${pathLimpo}`;
   }
 };
 
@@ -193,7 +175,7 @@ const URL_HELPERS = {
       const response = await fetch(url, { method: 'HEAD' });
       return response.ok;
     } catch (error) {
-      console.warn('⚠️ URL não acessível:', url, error.message);
+      console.warn('URL não acessível:', url, error.message);
       return false;
     }
   },
@@ -236,7 +218,7 @@ const API_CONFIG = {
 };
 
 /**
- * Headers padrão para requisições
+ * Headers padrão para requisições HTTP
  */
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
@@ -244,18 +226,10 @@ const DEFAULT_HEADERS = {
   'X-Requested-With': 'XMLHttpRequest'
 };
 
-// Log da configuração carregada
-console.log('🔧 Configuração da API carregada:');
-console.log('   URL Base:', API_BASE);
-console.log('   Timeout padrão:', API_CONFIG.TIMEOUT_DEFAULT, 'ms');
-console.log('   Ambiente:', 
-  API_BASE.includes('localhost') ? 'Desenvolvimento' : 'Produção'
-);
-
 // Exportar configuração principal
 export default API_BASE;
 
-// Exportar módulos auxiliares
+// Exportar módulos auxiliares para uso em outros componentes
 export { 
   IMAGES, 
   URL_HELPERS, 

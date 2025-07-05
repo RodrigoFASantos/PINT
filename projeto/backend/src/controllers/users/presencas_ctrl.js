@@ -5,18 +5,22 @@ const Utilizador = require("../../database/models/User");
 const Curso = require("../../database/models/Curso");
 const { Op } = require("sequelize");
 
-// Obter presenças de um curso
+/**
+ * Obtém todas as presenças de um curso específico com estatísticas
+ * Calcula quantos utilizadores estão presentes vs total de inscritos
+ * Verifica se cada presença ainda está ativa (dentro do período válido)
+ */
 exports.getPresencasByCurso = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar todas as presenças do curso
+    // Buscar todas as presenças do curso ordenadas por data/hora mais recente primeiro
     const presencas = await Curso_Presenca.findAll({
       where: { id_curso: id },
       order: [['data_inicio', 'DESC'], ['hora_inicio', 'DESC']]
     });
 
-    // Para cada presença, calcular estatísticas (para formadores)
+    // Para cada presença, calcular estatísticas e disponibilidade
     const presencasComEstatisticas = await Promise.all(
       presencas.map(async (presenca) => {
         const presencaObj = presenca.toJSON();
@@ -29,19 +33,19 @@ exports.getPresencasByCurso = async (req, res) => {
           }
         });
 
-        // Contar total de formandos inscritos no curso
+        // Contar total de utilizadores inscritos no curso
         const total = await Inscricao_Curso.count({
           where: { id_curso: id }
         });
 
-        // Verificar se a presença ainda está ativa
+        // Verificar se a presença ainda está ativa (disponível para marcar)
         const agora = new Date();
         
         try {
           const dataHoraInicio = new Date(`${presencaObj.data_inicio}T${presencaObj.hora_inicio}`);
           const dataHoraFim = new Date(`${presencaObj.data_fim}T${presencaObj.hora_fim}`);
           
-          // Uma presença está disponível se a hora de início já passou e a hora de fim ainda não passou
+          // Uma presença está disponível se já começou e ainda não terminou
           const disponivel = dataHoraInicio <= agora && dataHoraFim > agora;
           const minutos_restantes = Math.max(0, Math.floor((dataHoraFim - agora) / (1000 * 60)));
           
@@ -68,7 +72,11 @@ exports.getPresencasByCurso = async (req, res) => {
   }
 };
 
-// Obter lista de formandos para uma presença específica
+/**
+ * Obtém lista detalhada de formandos para uma presença específica
+ * Mostra quem estava presente e quem estava ausente numa sessão
+ * Funcionalidade disponível apenas para formadores e administradores
+ */
 exports.getFormandosPresenca = async (req, res) => {
   try {
     const { presencaId } = req.params;
@@ -79,7 +87,7 @@ exports.getFormandosPresenca = async (req, res) => {
       return res.status(404).json({ message: "Presença não encontrada" });
     }
 
-    // Obter todos os formandos inscritos no curso
+    // Obter todos os utilizadores inscritos no curso
     const inscricoes = await Inscricao_Curso.findAll({
       where: { id_curso: presenca.id_curso },
       include: [
@@ -91,7 +99,7 @@ exports.getFormandosPresenca = async (req, res) => {
       ]
     });
 
-    // Obter os registros de presença para esta sessão específica
+    // Obter os registos de presença para esta sessão específica
     const presencasFormandos = await Formando_Presenca.findAll({
       where: { id_curso_presenca: presencaId }
     });
@@ -104,7 +112,7 @@ exports.getFormandosPresenca = async (req, res) => {
       return acc;
     }, {});
 
-    // Criar lista final de formandos com status de presença
+    // Criar lista final de formandos com estado de presença
     const listaFormandos = inscricoes.map(inscricao => {
       const { utilizador } = inscricao;
       return {
@@ -115,7 +123,7 @@ exports.getFormandosPresenca = async (req, res) => {
       };
     });
 
-    // Ordenar por nome
+    // Ordenar por nome para facilitar a consulta
     listaFormandos.sort((a, b) => a.nome.localeCompare(b.nome));
 
     res.status(200).json(listaFormandos);
@@ -125,23 +133,27 @@ exports.getFormandosPresenca = async (req, res) => {
   }
 };
 
-// Obter as horas disponíveis em um curso
+/**
+ * Calcula as horas disponíveis, utilizadas e totais de um curso
+ * Essencial para controlar se ainda é possível criar mais presenças
+ * sem exceder a duração prevista do curso
+ */
 exports.getHorasDisponiveisCurso = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Buscar duração total do curso
+    // Buscar dados básicos do curso
     const curso = await Curso.findByPk(id);
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Buscar todas as presenças do curso
+    // Buscar todas as presenças já criadas para o curso
     const presencas = await Curso_Presenca.findAll({
       where: { id_curso: id }
     });
 
-    // Calcular total de horas já utilizadas
+    // Calcular total de horas já utilizadas em presenças
     let horasUtilizadas = 0;
 
     for (const presenca of presencas) {
@@ -152,7 +164,7 @@ exports.getHorasDisponiveisCurso = async (req, res) => {
       horasUtilizadas += diferencaHoras;
     }
 
-    // Calcular horas disponíveis
+    // Calcular horas ainda disponíveis (não pode ser negativo)
     const horasDisponiveis = Math.max(0, curso.duracao - horasUtilizadas);
 
     res.status(200).json({
@@ -166,7 +178,10 @@ exports.getHorasDisponiveisCurso = async (req, res) => {
   }
 };
 
-// Obter presenças de um formando em um curso
+/**
+ * Obtém todas as presenças marcadas por um formando específico num curso
+ * Retorna apenas os registos onde o utilizador efetivamente marcou presença
+ */
 exports.getPresencasByFormando = async (req, res) => {
   try {
     const { cursoId, userId } = req.params;
@@ -179,7 +194,7 @@ exports.getPresencasByFormando = async (req, res) => {
 
     const idsPresencasCurso = presencasCurso.map(p => p.id_curso_presenca);
 
-    // Buscar registros de presença do formando
+    // Buscar registos de presença do utilizador específico
     const presencasFormando = await Formando_Presenca.findAll({
       where: {
         id_curso_presenca: { [Op.in]: idsPresencasCurso },
@@ -194,13 +209,17 @@ exports.getPresencasByFormando = async (req, res) => {
   }
 };
 
-// Criar nova presença (formador)
+/**
+ * Cria uma nova presença para um curso
+ * Inclui validações de horários, horas disponíveis e conflitos
+ * Apenas formadores podem criar presenças
+ */
 exports.criarPresenca = async (req, res) => {
   try {
     const { id_curso, data_inicio, hora_inicio, data_fim, hora_fim, codigo } = req.body;
     const id_formador = req.user.id_utilizador;
 
-    // Verificar se data/hora_fim > data/hora_inicio
+    // Validar se data/hora de fim é posterior ao início
     const inicioTime = new Date(`${data_inicio}T${hora_inicio}`);
     const fimTime = new Date(`${data_fim}T${hora_fim}`);
 
@@ -211,10 +230,9 @@ exports.criarPresenca = async (req, res) => {
       });
     }
 
-    // Validação para verificar se existe presença ativa
+    // Verificar se já existe uma presença ativa para este curso
     const agora = new Date();
 
-    // Buscar presenças que ainda não terminaram
     const presencaAtiva = await Curso_Presenca.findOne({
       where: {
         id_curso,
@@ -239,20 +257,18 @@ exports.criarPresenca = async (req, res) => {
       });
     }
 
-    // Verificar horas disponíveis
+    // Verificar se a nova presença não excede as horas disponíveis do curso
     const curso = await Curso.findByPk(id_curso);
     if (!curso) {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Buscar todas as presenças do curso
+    // Calcular horas já utilizadas
     const presencas = await Curso_Presenca.findAll({
       where: { id_curso }
     });
 
-    // Calcular total de horas já utilizadas
     let horasUtilizadas = 0;
-
     for (const presenca of presencas) {
       const inicio = new Date(`${presenca.data_inicio}T${presenca.hora_inicio}`);
       const fim = new Date(`${presenca.data_fim}T${presenca.hora_fim}`);
@@ -265,7 +281,7 @@ exports.criarPresenca = async (req, res) => {
     const diferencaMsNovo = fimTime - inicioTime;
     const diferencaHorasNovo = diferencaMsNovo / (1000 * 60 * 60);
 
-    // Verificar se ultrapassa a duração do curso
+    // Verificar se ultrapassa a duração total do curso
     if (horasUtilizadas + diferencaHorasNovo > curso.duracao) {
       return res.status(400).json({
         message: "A presença não pode ser criada",
@@ -273,7 +289,7 @@ exports.criarPresenca = async (req, res) => {
       });
     }
 
-    // Criar nova presença
+    // Criar a nova presença
     const novaPresenca = await Curso_Presenca.create({
       id_curso,
       data_inicio,
@@ -283,7 +299,7 @@ exports.criarPresenca = async (req, res) => {
       codigo
     });
 
-    // Marcar presença do formador automaticamente
+    // Marcar presença automaticamente para o formador que criou
     await Formando_Presenca.create({
       id_curso_presenca: novaPresenca.id_curso_presenca,
       id_utilizador: id_formador,
@@ -298,17 +314,18 @@ exports.criarPresenca = async (req, res) => {
   }
 };
 
-// Marcar presença com correção para permitir reutilização de códigos
+/**
+ * Permite a um utilizador marcar presença numa sessão ativa
+ * Suporta reutilização de códigos entre diferentes sessões
+ * Verifica se a presença está dentro do período válido
+ */
 exports.marcarPresenca = async (req, res) => {
   try {
     const { id_curso, id_utilizador, codigo } = req.body;
 
-    console.log('Marcação de presença - dados recebidos:', { id_curso, id_utilizador, codigo });
-
     const agoraServidor = new Date();
-    console.log('Hora do servidor:', agoraServidor.toISOString());
 
-    // Buscar todas as presenças válidas com o código fornecido no curso específico
+    // Buscar todas as presenças com o código fornecido no curso específico
     const presencasComCodigo = await Curso_Presenca.findAll({
       where: {
         id_curso,
@@ -320,22 +337,16 @@ exports.marcarPresenca = async (req, res) => {
     if (presencasComCodigo.length === 0) {
       return res.status(400).json({
         message: "Código inválido ou presença não encontrada",
-        detalhes: "Verifique se o código está correto e se pertence ao curso atual"
+        detalhes: "Verifica se o código está correto e se pertence ao curso atual"
       });
     }
 
-    console.log(`Encontradas ${presencasComCodigo.length} presenças com o código: ${codigo}`);
-
-    // Encontrar a presença que está ativa no momento (início já passou e fim ainda não passou)
+    // Encontrar a presença que está ativa no momento
     let presencaValida = null;
 
     for (const presenca of presencasComCodigo) {
       const dataHoraInicio = new Date(`${presenca.data_inicio}T${presenca.hora_inicio}`);
       const dataHoraFim = new Date(`${presenca.data_fim}T${presenca.hora_fim}`);
-      
-      console.log(`Verificando presença ${presenca.id_curso_presenca}:`);
-      console.log('Início da presença:', dataHoraInicio.toISOString());
-      console.log('Fim da presença:', dataHoraFim.toISOString());
 
       // Verificar se a presença está no período válido
       if (dataHoraInicio <= agoraServidor && dataHoraFim > agoraServidor) {
@@ -349,15 +360,8 @@ exports.marcarPresenca = async (req, res) => {
 
         if (!presencaExistente) {
           presencaValida = presenca;
-          console.log(`Presença válida encontrada: ${presenca.id_curso_presenca}`);
           break;
-        } else {
-          console.log(`Utilizador já marcou presença na sessão: ${presenca.id_curso_presenca}`);
         }
-      } else if (dataHoraInicio > agoraServidor) {
-        console.log(`Presença ainda não começou: ${presenca.id_curso_presenca}`);
-      } else {
-        console.log(`Presença já expirou: ${presenca.id_curso_presenca}`);
       }
     }
 
@@ -377,8 +381,8 @@ exports.marcarPresenca = async (req, res) => {
 
       if (todasMarcadas.every(marcada => marcada)) {
         return res.status(400).json({
-          message: "Presença já registrada",
-          detalhes: " já marcou presença em todas as sessões com este código"
+          message: "Presença já registada",
+          detalhes: "Já marcou presença em todas as sessões com este código"
         });
       }
 
@@ -397,25 +401,23 @@ exports.marcarPresenca = async (req, res) => {
 
       return res.status(400).json({
         message: "Nenhuma presença ativa encontrada",
-        detalhes: "Todas as presenças com este código já expiraram ou  já marcou presença"
+        detalhes: "Todas as presenças com este código já expiraram ou já marcou presença"
       });
     }
 
-    // Calcular a duração da presença
+    // Calcular a duração da presença para estatísticas
     const dataHoraInicio = new Date(`${presencaValida.data_inicio}T${presencaValida.hora_inicio}`);
     const dataHoraFim = new Date(`${presencaValida.data_fim}T${presencaValida.hora_fim}`);
     const diferencaMs = dataHoraFim - dataHoraInicio;
     const diferencaHoras = diferencaMs / (1000 * 60 * 60);
 
-    // Registrar a presença
+    // Registar a presença na base de dados
     const novaPresenca = await Formando_Presenca.create({
       id_curso_presenca: presencaValida.id_curso_presenca,
       id_utilizador,
       presenca: true,
       duracao: diferencaHoras
     });
-
-    console.log('Presença marcada com sucesso!');
 
     const minutosRestantes = Math.floor((dataHoraFim - agoraServidor) / (1000 * 60));
 
@@ -443,7 +445,11 @@ exports.marcarPresenca = async (req, res) => {
   }
 };
 
-// Atualizar presença (apenas admin)
+/**
+ * Atualiza dados de uma presença existente
+ * Funcionalidade restrita a administradores
+ * Valida horários antes de aplicar alterações
+ */
 exports.atualizarPresenca = async (req, res) => {
   try {
     const { id } = req.params;
@@ -455,7 +461,7 @@ exports.atualizarPresenca = async (req, res) => {
       return res.status(404).json({ message: "Presença não encontrada" });
     }
 
-    // verificar se data/hora_fim > data/hora_inicio
+    // Validar se data/hora de fim é posterior ao início
     const inicioTime = new Date(`${data_inicio}T${hora_inicio}`);
     const fimTime = new Date(`${data_fim}T${hora_fim}`);
 
@@ -466,7 +472,7 @@ exports.atualizarPresenca = async (req, res) => {
       });
     }
 
-    // Atualizar a presença
+    // Aplicar as alterações
     await presenca.update({
       codigo,
       data_inicio,

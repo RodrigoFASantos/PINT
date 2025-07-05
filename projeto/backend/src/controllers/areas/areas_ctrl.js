@@ -5,18 +5,33 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
 
 /**
- * Obter todas as áreas com paginação e filtros
+ * Controlador para gestão de áreas de formação
+ * 
+ * Contém todas as funções para manipular áreas de formação,
+ * incluindo operações CRUD com validações e gestão de transacções
+ * para garantir a integridade dos dados.
+ */
+
+/**
+ * Obter todas as áreas com paginação, filtros e contagem de cursos
+ * 
+ * @param {Request} req - Requisição HTTP
+ * @param {Response} res - Resposta HTTP
  */
 exports.getAllAreas = async (req, res) => {
   try {
     const { page = 1, limit = 10, search, categoria } = req.query;
     
-    // Calcular offset para paginação
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    // Converter para números e garantir valores válidos
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
     
-    // Construir opções de consulta
+    // Calcular offset para paginação
+    const offset = (pageNum - 1) * limitNum;
+    
+    // Configurar opções base da consulta
     const options = {
-      limit: parseInt(limit),
+      limit: limitNum,
       offset,
       order: [['nome', 'ASC']],
       include: [{
@@ -26,27 +41,30 @@ exports.getAllAreas = async (req, res) => {
       }]
     };
     
-    // Adicionar filtros se fornecidos
+    // Construir filtros dinâmicos
     const where = {};
     
-    if (search) {
+    // Filtro por nome - busca parcial e insensível a maiúsculas
+    if (search && search.trim()) {
       where.nome = {
-        [Op.iLike]: `%${search}%`
+        [Op.iLike]: `%${search.trim()}%`
       };
     }
     
-    if (categoria) {
-      where.id_categoria = categoria;
+    // Filtro por categoria específica
+    if (categoria && categoria.trim()) {
+      where.id_categoria = categoria.trim();
     }
     
+    // Aplicar filtros se existirem
     if (Object.keys(where).length > 0) {
       options.where = where;
     }
     
-    // Realizar a consulta
+    // Executar consulta com contagem total para paginação
     const { count, rows } = await Area.findAndCountAll(options);
     
-    // Se solicitado, incluir contagem de cursos para cada área
+    // Adicionar contagem de cursos para cada área
     const areasComContagem = await Promise.all(rows.map(async (area) => {
       const cursosCount = await Curso.count({
         where: {
@@ -60,15 +78,25 @@ exports.getAllAreas = async (req, res) => {
       };
     }));
     
-    // Enviar resposta
+    // Calcular informações de paginação
+    const totalPaginas = Math.ceil(count / limitNum);
+    
+    // Retornar resposta estruturada
     res.status(200).json({
+      success: true,
       total: count,
-      pages: Math.ceil(count / parseInt(limit)),
-      current_page: parseInt(page),
-      areas: areasComContagem
+      pages: totalPaginas,
+      current_page: pageNum,
+      areas: areasComContagem,
+      pagination_info: {
+        has_previous: pageNum > 1,
+        has_next: pageNum < totalPaginas,
+        items_per_page: limitNum,
+        total_items: count,
+        showing_items: areasComContagem.length
+      }
     });
   } catch (error) {
-    console.error('Erro ao buscar áreas:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Erro ao buscar áreas', 
@@ -79,6 +107,9 @@ exports.getAllAreas = async (req, res) => {
 
 /**
  * Obter todas as áreas de uma categoria específica
+ * 
+ * @param {Request} req - Requisição HTTP com id_categoria nos parâmetros
+ * @param {Response} res - Resposta HTTP
  */
 exports.getAreasByCategoria = async (req, res) => {
   try {
@@ -94,7 +125,7 @@ exports.getAreasByCategoria = async (req, res) => {
       });
     }
     
-    // Buscar áreas da categoria
+    // Buscar áreas da categoria ordenadas por nome
     const areas = await Area.findAll({
       where: {
         id_categoria
@@ -105,10 +136,10 @@ exports.getAreasByCategoria = async (req, res) => {
     res.status(200).json({
       success: true,
       categoria,
-      areas
+      areas,
+      total_areas: areas.length
     });
   } catch (error) {
-    console.error('Erro ao buscar áreas por categoria:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar áreas por categoria',
@@ -118,12 +149,16 @@ exports.getAreasByCategoria = async (req, res) => {
 };
 
 /**
- * Obter uma área específica pelo ID
+ * Obter dados detalhados de uma área específica
+ * 
+ * @param {Request} req - Requisição HTTP com id da área
+ * @param {Response} res - Resposta HTTP
  */
 exports.getAreaById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Buscar área com informações da categoria
     const area = await Area.findByPk(id, {
       include: [{
         model: Categoria,
@@ -139,23 +174,24 @@ exports.getAreaById = async (req, res) => {
       });
     }
     
-    // Obter cursos associados
+    // Obter cursos associados à área
     const cursos = await Curso.findAll({
       where: {
         id_area: id
       },
-      attributes: ['id_curso', 'nome', 'estado']
+      attributes: ['id_curso', 'nome', 'estado'],
+      order: [['nome', 'ASC']]
     });
     
     res.status(200).json({
       success: true,
       area: {
         ...area.toJSON(),
-        cursos
+        cursos,
+        total_cursos: cursos.length
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar área:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar área',
@@ -165,7 +201,10 @@ exports.getAreaById = async (req, res) => {
 };
 
 /**
- * Criar uma nova área
+ * Criar uma nova área de formação
+ * 
+ * @param {Request} req - Requisição HTTP com dados da nova área
+ * @param {Response} res - Resposta HTTP
  */
 exports.createArea = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -173,12 +212,12 @@ exports.createArea = async (req, res) => {
   try {
     const { nome, id_categoria } = req.body;
     
-    // Validar dados de entrada
+    // Validação dos dados obrigatórios
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'O nome da área é obrigatório'
+        message: 'O nome da área é obrigatório e não pode estar vazio'
       });
     }
     
@@ -197,15 +236,15 @@ exports.createArea = async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Categoria não encontrada'
+        message: 'Categoria especificada não foi encontrada'
       });
     }
     
-    // Verificar se já existe uma área com o mesmo nome na mesma categoria
+    // Verificar duplicação de nome na mesma categoria
     const areaExistente = await Area.findOne({
       where: {
         nome: {
-          [Op.iLike]: nome
+          [Op.iLike]: nome.trim()
         },
         id_categoria
       }
@@ -219,15 +258,18 @@ exports.createArea = async (req, res) => {
       });
     }
     
-    // Criar a área
+    // Criar a nova área
     const novaArea = await Area.create(
-      { nome, id_categoria },
+      { 
+        nome: nome.trim(),
+        id_categoria 
+      },
       { transaction }
     );
     
     await transaction.commit();
     
-    // Buscar a área com a relação de categoria para retornar
+    // Buscar área criada com informações da categoria
     const areaComCategoria = await Area.findByPk(novaArea.id_area, {
       include: [{
         model: Categoria,
@@ -243,7 +285,6 @@ exports.createArea = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao criar área:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar área',
@@ -253,7 +294,10 @@ exports.createArea = async (req, res) => {
 };
 
 /**
- * Atualizar uma área existente
+ * Actualizar uma área existente
+ * 
+ * @param {Request} req - Requisição HTTP com ID da área e novos dados
+ * @param {Response} res - Resposta HTTP
  */
 exports.updateArea = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -262,12 +306,12 @@ exports.updateArea = async (req, res) => {
     const { id } = req.params;
     const { nome, id_categoria } = req.body;
     
-    // Validar dados de entrada
+    // Validação dos dados obrigatórios
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'O nome da área é obrigatório'
+        message: 'O nome da área é obrigatório e não pode estar vazio'
       });
     }
     
@@ -290,22 +334,22 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Verificar se a categoria existe
+    // Verificar se a nova categoria existe
     const categoria = await Categoria.findByPk(id_categoria);
     
     if (!categoria) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Categoria não encontrada'
+        message: 'Nova categoria especificada não foi encontrada'
       });
     }
     
-    // Verificar se já existe outra área com o mesmo nome na mesma categoria
+    // Verificar duplicação de nome (excluindo a própria área)
     const areaExistente = await Area.findOne({
       where: {
         nome: {
-          [Op.iLike]: nome
+          [Op.iLike]: nome.trim()
         },
         id_categoria,
         id_area: {
@@ -322,15 +366,18 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Atualizar a área
+    // Actualizar a área
     await area.update(
-      { nome, id_categoria },
+      { 
+        nome: nome.trim(),
+        id_categoria 
+      },
       { transaction }
     );
     
     await transaction.commit();
     
-    // Buscar a área atualizada com a relação de categoria para retornar
+    // Buscar área actualizada com informações da categoria
     const areaAtualizada = await Area.findByPk(id, {
       include: [{
         model: Categoria,
@@ -341,22 +388,24 @@ exports.updateArea = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Área atualizada com sucesso',
+      message: 'Área actualizada com sucesso',
       area: areaAtualizada
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao atualizar área:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao atualizar área',
+      message: 'Erro ao actualizar área',
       error: error.message
     });
   }
 };
 
 /**
- * Excluir uma área
+ * Eliminar uma área de formação
+ * 
+ * @param {Request} req - Requisição HTTP com ID da área a eliminar
+ * @param {Response} res - Resposta HTTP
  */
 exports.deleteArea = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -375,7 +424,7 @@ exports.deleteArea = async (req, res) => {
       });
     }
     
-    // Verificar se existem cursos associados a esta área
+    // Verificar se existem cursos associados
     const cursosAssociados = await Curso.count({
       where: {
         id_area: id
@@ -386,25 +435,27 @@ exports.deleteArea = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Não é possível excluir a área pois existem cursos associados'
+        message: `Não é possível eliminar a área pois existem ${cursosAssociados} curso(s) associado(s). Remove primeiro os cursos desta área.`
       });
     }
     
-    // Excluir a área
+    // Guardar nome da área para confirmação
+    const nomeArea = area.nome;
+    
+    // Eliminar a área
     await area.destroy({ transaction });
     
     await transaction.commit();
     
     res.status(200).json({
       success: true,
-      message: 'Área excluída com sucesso'
+      message: `Área "${nomeArea}" eliminada com sucesso`
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao excluir área:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao excluir área',
+      message: 'Erro ao eliminar área',
       error: error.message
     });
   }

@@ -116,7 +116,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
                 <li className={isActive('/admin/denuncias') ? 'active' : ''}>
                   <Link to="/admin/denuncias" onClick={toggleSidebar}>
-                    <i className="fas fa-flag"></i> Gerenciar Denúncias
+                    <i className="fas fa-flag"></i> Gerir Denúncias
                   </Link>
                 </li>
 

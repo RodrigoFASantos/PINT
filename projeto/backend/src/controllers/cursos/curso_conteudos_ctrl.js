@@ -7,83 +7,127 @@ const fs = require('fs');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
-// Excluir um conteúdo (exclusão lógica)
+/**
+ * Controller para gestão de conteúdos de cursos
+ * Responsável por todas as operações CRUD relacionadas com materiais didáticos
+ * Inclui gestão de ficheiros físicos e organização hierárquica
+ */
+
+/**
+ * Elimina um conteúdo (exclusão lógica com remoção do ficheiro físico)
+ * CORRIGIDO: Agora remove o ficheiro físico além da exclusão lógica na base de dados
+ * Isto resolve o problema de ficheiros ficarem órfãos no sistema
+ * 
+ * @param {Object} req - Requisição HTTP com ID do conteúdo
+ * @param {Object} res - Resposta HTTP
+ */
 const deleteConteudo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Procurar o conteúdo
+    // Procurar o conteúdo na base de dados
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Realizar exclusão lógica
+    // CORRIGIDO: Remover o ficheiro físico antes da exclusão lógica
+    if (conteudo.arquivo_path) {
+      const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
+      
+      // Verificar se o ficheiro existe e removê-lo
+      if (fs.existsSync(arquivoPath)) {
+        try {
+          fs.unlinkSync(arquivoPath);
+          console.log(`Ficheiro físico removido com sucesso: ${arquivoPath}`);
+        } catch (fileError) {
+          console.error(`Erro ao remover ficheiro físico: ${fileError.message}`);
+          // Continuar com a exclusão lógica mesmo se não conseguir remover o ficheiro
+        }
+      } else {
+        console.warn(`Ficheiro não encontrado para remoção: ${arquivoPath}`);
+      }
+    }
+
+    // Realizar exclusão lógica na base de dados
     await conteudo.update({ ativo: false });
 
     res.status(200).json({
-      message: 'Conteúdo excluído com sucesso'
+      message: 'Conteúdo eliminado com sucesso'
     });
   } catch (error) {
-    console.error('Erro ao excluir conteúdo:', error);
+    console.error('Erro ao eliminar conteúdo:', error);
     res.status(500).json({
-      message: 'Erro ao excluir conteúdo',
+      message: 'Erro ao eliminar conteúdo',
       error: error.message
     });
   }
 };
 
-// Excluir permanentemente um conteúdo
+/**
+ * Elimina permanentemente um conteúdo da base de dados
+ * Remove completamente o registo e ficheiros associados
+ * Operação irreversível - apenas para administradores
+ * 
+ * @param {Object} req - Requisição HTTP com ID do conteúdo
+ * @param {Object} res - Resposta HTTP
+ */
 const deleteConteudoPermanently = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Procurar o conteúdo
+    // Procurar o conteúdo na base de dados
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Se for um ficheiro, remover do sistema de ficheiros
+    // Remover ficheiro físico se existir
     if (conteudo.arquivo_path) {
       const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
       if (fs.existsSync(arquivoPath)) {
         try {
           fs.unlinkSync(arquivoPath);
-          console.log(`Ficheiro físico removido: ${arquivoPath}`);
+          console.log(`Ficheiro físico removido permanentemente: ${arquivoPath}`);
         } catch (fileError) {
           console.error(`Erro ao remover ficheiro físico: ${fileError.message}`);
         }
       }
     }
 
-    // Excluir o registo da base de dados
+    // Eliminar o registo completamente da base de dados
     await conteudo.destroy();
 
     res.status(200).json({
-      message: 'Conteúdo excluído permanentemente'
+      message: 'Conteúdo eliminado permanentemente'
     });
   } catch (error) {
-    console.error('Erro ao excluir permanentemente o conteúdo:', error);
+    console.error('Erro ao eliminar permanentemente o conteúdo:', error);
     res.status(500).json({
-      message: 'Erro ao excluir permanentemente o conteúdo',
+      message: 'Erro ao eliminar permanentemente o conteúdo',
       error: error.message
     });
   }
 };
 
-// Restaurar um conteúdo excluído logicamente
+/**
+ * Restaura um conteúdo previamente eliminado logicamente
+ * Reativa o conteúdo na base de dados (não recupera ficheiros físicos removidos)
+ * 
+ * @param {Object} req - Requisição HTTP com ID do conteúdo
+ * @param {Object} res - Resposta HTTP
+ */
 const restoreConteudo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Procurar o conteúdo
+    // Procurar o conteúdo na base de dados
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Restaurar conteúdo
+    // Restaurar conteúdo marcando como ativo
     await conteudo.update({ ativo: true });
 
     res.status(200).json({
@@ -98,10 +142,17 @@ const restoreConteudo = async (req, res) => {
   }
 };
 
-// Corrigir conteúdos sem id_curso
+/**
+ * Ferramenta administrativa para corrigir conteúdos sem associação a curso
+ * Identifica e corrige conteúdos órfãos associando-os aos cursos corretos
+ * Útil para manutenção e integridade dos dados
+ * 
+ * @param {Object} req - Requisição HTTP
+ * @param {Object} res - Resposta HTTP com relatório da correção
+ */
 const corrigirConteudosSemCurso = async (req, res) => {
   try {
-    // Identificar conteúdos sem id_curso
+    // Identificar conteúdos sem id_curso definido
     const conteudosSemCurso = await ConteudoCurso.findAll({
       where: {
         id_curso: {
@@ -122,14 +173,15 @@ const corrigirConteudosSemCurso = async (req, res) => {
       ]
     });
 
-    // Contadores para o resultado
+    // Contadores para o resultado da operação
     let atualizados = 0;
     let naoAtualizados = 0;
     const erros = [];
 
-    // Atualizar cada conteúdo
+    // Processar cada conteúdo órfão
     for (const conteudo of conteudosSemCurso) {
       try {
+        // Verificar se conseguimos determinar o curso através da hierarquia
         if (conteudo.pasta && conteudo.pasta.topico && conteudo.pasta.topico.id_curso) {
           await conteudo.update({
             id_curso: conteudo.pasta.topico.id_curso
@@ -161,12 +213,19 @@ const corrigirConteudosSemCurso = async (req, res) => {
   }
 };
 
-// Reordenar conteúdos em uma pasta
+/**
+ * Reordena conteúdos dentro duma pasta específica
+ * Permite reorganizar a sequência de apresentação dos materiais
+ * 
+ * @param {Object} req - Requisição HTTP com ID da pasta e nova ordem
+ * @param {Object} res - Resposta HTTP com conteúdos reordenados
+ */
 const reordenarConteudos = async (req, res) => {
   try {
     const { pastaId } = req.params;
     const { ordens } = req.body;
 
+    // Validar estrutura dos dados recebidos
     if (!Array.isArray(ordens)) {
       return res.status(400).json({
         message: 'O parâmetro "ordens" deve ser um array de objetos {id_conteudo, ordem}'
@@ -179,7 +238,7 @@ const reordenarConteudos = async (req, res) => {
       return res.status(404).json({ message: 'Pasta não encontrada' });
     }
 
-    // Atualizar a ordem de cada conteúdo
+    // Aplicar nova ordem a cada conteúdo
     for (const item of ordens) {
       if (!item.id_conteudo || !Number.isInteger(item.ordem)) {
         continue;
@@ -196,7 +255,7 @@ const reordenarConteudos = async (req, res) => {
       );
     }
 
-    // Procurar os conteúdos atualizados
+    // Buscar os conteúdos atualizados com a nova ordem
     const conteudosAtualizados = await ConteudoCurso.findAll({
       where: { id_pasta: pastaId },
       order: [['ordem', 'ASC']]
@@ -215,7 +274,13 @@ const reordenarConteudos = async (req, res) => {
   }
 };
 
-// Obter todos os conteúdos
+/**
+ * Lista todos os conteúdos do sistema com informações hierárquicas
+ * Inclui dados do curso, tópico e pasta para contexto completo
+ * 
+ * @param {Object} req - Requisição HTTP
+ * @param {Object} res - Resposta HTTP com lista de conteúdos
+ */
 const getAllConteudos = async (req, res) => {
   try {
     const conteudos = await ConteudoCurso.findAll({
@@ -245,6 +310,7 @@ const getAllConteudos = async (req, res) => {
       ]
     });
 
+    // Formatar dados para resposta consistente
     const formattedConteudos = conteudos.map(conteudo => {
       const plainConteudo = conteudo.get({ plain: true });
       return {
@@ -266,15 +332,21 @@ const getAllConteudos = async (req, res) => {
 
     res.status(200).json(formattedConteudos);
   } catch (error) {
-    console.error('Erro ao procurar todos os conteúdos:', error);
+    console.error('Erro ao buscar todos os conteúdos:', error);
     res.status(500).json({
-      message: 'Erro ao procurar conteúdos',
+      message: 'Erro ao buscar conteúdos',
       error: error.message
     });
   }
 };
 
-// Obter um conteúdo específico pelo ID
+/**
+ * Busca um conteúdo específico pelo seu ID
+ * Inclui informações contextuais da hierarquia (curso, tópico, pasta)
+ * 
+ * @param {Object} req - Requisição HTTP com ID do conteúdo
+ * @param {Object} res - Resposta HTTP com dados do conteúdo
+ */
 const getConteudoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -309,6 +381,7 @@ const getConteudoById = async (req, res) => {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
+    // Formatar resposta com informações completas
     const plainConteudo = conteudo.get({ plain: true });
     const formattedConteudo = {
       id_conteudo: plainConteudo.id_conteudo,
@@ -328,15 +401,21 @@ const getConteudoById = async (req, res) => {
 
     res.status(200).json(formattedConteudo);
   } catch (error) {
-    console.error('Erro ao procurar conteúdo por ID:', error);
+    console.error('Erro ao buscar conteúdo por ID:', error);
     res.status(500).json({
-      message: 'Erro ao procurar conteúdo',
+      message: 'Erro ao buscar conteúdo',
       error: error.message
     });
   }
 };
 
-// Obter todos os conteúdos de um curso específico
+/**
+ * Lista todos os conteúdos dum curso específico
+ * Usado para exibir materiais disponíveis num curso
+ * 
+ * @param {Object} req - Requisição HTTP com ID do curso
+ * @param {Object} res - Resposta HTTP com conteúdos do curso
+ */
 const getConteudosByCurso = async (req, res) => {
   try {
     const cursoId = req.params.cursoId;
@@ -347,7 +426,7 @@ const getConteudosByCurso = async (req, res) => {
       return res.status(404).json({ message: 'Curso não encontrado' });
     }
 
-    // Procurar conteúdos sem usar associações
+    // Buscar conteúdos ativos do curso
     const conteudos = await ConteudoCurso.findAll({
       where: {
         id_curso: cursoId,
@@ -370,12 +449,12 @@ const getConteudosByCurso = async (req, res) => {
       ]
     });
 
-    // Se não houver conteúdos, retornar array vazio
+    // Retornar lista vazia se não há conteúdos
     if (conteudos.length === 0) {
       return res.status(200).json([]);
     }
 
-    // Em seguida, procurar as informações das pastas separadamente
+    // Buscar informações das pastas associadas
     const pastaIds = [...new Set(conteudos.map(c => c.id_pasta))];
     const pastas = await PastaCurso.findAll({
       where: {
@@ -384,7 +463,7 @@ const getConteudosByCurso = async (req, res) => {
       attributes: ['id_pasta', 'nome', 'id_topico']
     });
 
-    // Criar um mapa de pastas para facilitar o acesso
+    // Criar mapeamento das pastas para acesso rápido
     const pastasMap = {};
     pastas.forEach(pasta => {
       pastasMap[pasta.id_pasta] = {
@@ -394,7 +473,7 @@ const getConteudosByCurso = async (req, res) => {
       };
     });
 
-    // Formatar os conteúdos com informações das pastas
+    // Formatar conteúdos com informações das pastas
     const formattedConteudos = conteudos.map(conteudo => {
       const plainConteudo = conteudo.get({ plain: true });
       const pasta = pastasMap[plainConteudo.id_pasta] || { nome: 'Sem pasta' };
@@ -416,15 +495,21 @@ const getConteudosByCurso = async (req, res) => {
 
     res.status(200).json(formattedConteudos);
   } catch (error) {
-    console.error('Erro ao procurar conteúdos do curso:', error);
+    console.error('Erro ao buscar conteúdos do curso:', error);
     res.status(500).json({
-      message: 'Erro ao procurar conteúdos do curso',
+      message: 'Erro ao buscar conteúdos do curso',
       error: error.message
     });
   }
 };
 
-// Obter conteúdos de uma pasta específica
+/**
+ * Lista conteúdos duma pasta específica
+ * Usado para exibir materiais organizados por pasta
+ * 
+ * @param {Object} req - Requisição HTTP com ID da pasta
+ * @param {Object} res - Resposta HTTP com conteúdos da pasta
+ */
 const getConteudosByPasta = async (req, res) => {
   try {
     const pastaId = req.params.pastaId;
@@ -435,6 +520,7 @@ const getConteudosByPasta = async (req, res) => {
       return res.status(404).json({ message: 'Pasta não encontrada' });
     }
 
+    // Buscar conteúdos ativos da pasta ordenados
     const conteudos = await ConteudoCurso.findAll({
       where: {
         id_pasta: pastaId,
@@ -447,15 +533,22 @@ const getConteudosByPasta = async (req, res) => {
 
     res.status(200).json(conteudos);
   } catch (error) {
-    console.error('Erro ao procurar conteúdos da pasta:', error);
+    console.error('Erro ao buscar conteúdos da pasta:', error);
     res.status(500).json({
-      message: 'Erro ao procurar conteúdos da pasta',
+      message: 'Erro ao buscar conteúdos da pasta',
       error: error.message
     });
   }
 };
 
-// Verificar se já existe conteúdo com mesmo título na pasta
+/**
+ * Verifica se já existe conteúdo com o mesmo título numa pasta
+ * Previne duplicação de nomes na mesma pasta
+ * 
+ * @param {string} titulo - Título do conteúdo a verificar
+ * @param {number} id_pasta - ID da pasta onde verificar
+ * @returns {boolean} True se já existe, false caso contrário
+ */
 const existeConteudoNaPasta = async (titulo, id_pasta) => {
   const conteudoExistente = await ConteudoCurso.findOne({
     where: {
@@ -465,14 +558,22 @@ const existeConteudoNaPasta = async (titulo, id_pasta) => {
     }
   });
 
-  return !!conteudoExistente; // true se existir, false se não existir
+  return !!conteudoExistente;
 };
 
-// Criar um novo conteúdo - MODIFICADO para estrutura simplificada
+/**
+ * Cria um novo conteúdo com gestão de ficheiros
+ * Suporta diferentes tipos: file, link, video
+ * Organiza ficheiros na estrutura hierárquica correta
+ * 
+ * @param {Object} req - Requisição HTTP com dados do conteúdo e ficheiro
+ * @param {Object} res - Resposta HTTP com conteúdo criado
+ */
 const createConteudo = async (req, res) => {
   try {
     const { titulo, descricao, tipo, url, id_pasta, id_curso, ordem } = req.body;
 
+    // Validações básicas
     if (!id_pasta) {
       return res.status(400).json({ message: 'ID da pasta é obrigatório' });
     }
@@ -485,37 +586,37 @@ const createConteudo = async (req, res) => {
       return res.status(400).json({ message: 'Título é obrigatório' });
     }
 
+    // Verificar se pasta e curso existem
     const pasta = await PastaCurso.findByPk(id_pasta);
     if (!pasta) return res.status(404).json({ message: 'Pasta não encontrada' });
 
     const curso = await Curso.findByPk(id_curso);
     if (!curso) return res.status(404).json({ message: 'Curso não encontrado' });
 
+    // Verificar se a pasta pertence ao curso
     const topico = await Curso_Topicos.findByPk(pasta.id_topico);
     if (!topico || topico.id_curso !== parseInt(id_curso)) {
       return res.status(400).json({ message: 'A pasta selecionada não pertence a este curso' });
     }
 
-    // Verificação de avaliação
+    // Identificar se é tópico de avaliação
     const isAvaliacaoTopico =
       topico.nome.toLowerCase() === 'avaliação' ||
       topico.nome.toLowerCase() === 'avaliacao' ||
       topico.nome.toLowerCase().includes('avalia');
 
-    console.log(`Tópico "${topico.nome}" ${isAvaliacaoTopico ? 'identificado como avaliação' : 'não é de avaliação'}`);
-
-    // Aceitar os tipos corretos incluindo 'video'
+    // Validar tipo de conteúdo
     if (!['file', 'link', 'video'].includes(tipo)) {
       return res.status(400).json({ message: 'Tipo de conteúdo inválido. Use: file, link ou video' });
     }
 
-    // Verifica se já existe conteúdo com mesmo título na pasta
+    // Verificar se já existe conteúdo com mesmo título na pasta
     const conteudoExistente = await existeConteudoNaPasta(titulo, id_pasta);
     if (conteudoExistente) {
       return res.status(409).json({ message: 'Já existe um conteúdo com esse título nesta pasta' });
     }
 
-    // === MODIFICADO: Usar a estrutura de diretórios correta ===
+    // Determinar estrutura de diretorias baseada no tipo de tópico
     const cursoSlug = uploadUtils.normalizarNome(curso.nome);
     const topicoSlug = uploadUtils.normalizarNome(topico.nome);
     const pastaSlug = uploadUtils.normalizarNome(pasta.nome);
@@ -523,23 +624,23 @@ const createConteudo = async (req, res) => {
     let conteudosDir, conteudosPath;
 
     if (isAvaliacaoTopico) {
-      // Para tópicos de avaliação - salvar na pasta conteudos
+      // Para tópicos de avaliação - estrutura especial
       conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug, 'conteudos');
       conteudosPath = `uploads/cursos/${cursoSlug}/avaliacao/${pastaSlug}/conteudos`;
     } else {
+      // Para tópicos normais
       conteudosDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug, 'Conteudos');
       conteudosPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}/Conteudos`;
     }
 
-    console.log(`Diretório para conteúdos: ${conteudosDir}`);
-
-    // Garantir que o diretório de conteúdos existe
+    // Garantir que o diretório existe
     uploadUtils.ensureDir(conteudosDir);
 
+    // Preparar dados do conteúdo
     let conteudoData = {
       titulo,
       descricao: descricao || '',
-      tipo, // Usar o tipo recebido diretamente
+      tipo,
       id_pasta,
       id_curso,
       ativo: true,
@@ -547,19 +648,18 @@ const createConteudo = async (req, res) => {
     };
 
     const timestamp = Date.now();
-    // Usar a função uploadUtils.normalizarNome para normalização consistente
     const tituloBase = uploadUtils.normalizarNome(titulo);
 
-    // Tratar 'video' e 'file' como tipos de arquivo
+    // Processar baseado no tipo de conteúdo
     if (tipo === 'file' || tipo === 'video') {
+      // Tipos que requerem ficheiro
       if (!req.file) return res.status(400).json({ message: 'Ficheiro não enviado' });
 
       const tempPath = req.file.path;
       const fileName = `${timestamp}-${tituloBase}${path.extname(req.file.originalname)}`;
       const destPath = path.join(conteudosDir, fileName);
 
-      // Mover o ficheiro
-      console.log(`A mover ficheiro de ${tempPath} para ${destPath}`);
+      // Mover ficheiro da pasta temporária para destino final
       const movido = uploadUtils.moverArquivo(tempPath, destPath);
       if (!movido) {
         return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
@@ -567,13 +667,13 @@ const createConteudo = async (req, res) => {
 
       conteudoData.arquivo_path = `${conteudosPath}/${fileName}`;
     } else if (tipo === 'link') {
+      // Tipo link requer URL
       if (!url) return res.status(400).json({ message: 'URL é obrigatória para tipo link' });
 
-      // Para links, criar um ficheiro de referência
+      // Criar ficheiro de referência para consistência
       const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
       const fakeFilePath = path.join(conteudosDir, fakeFileName);
 
-      // Escrever a URL no ficheiro
       try {
         fs.writeFileSync(fakeFilePath, url);
       } catch (error) {
@@ -585,10 +685,11 @@ const createConteudo = async (req, res) => {
       conteudoData.arquivo_path = `${conteudosPath}/${fakeFileName}`;
     }
 
-    // Definir a ordem do conteúdo
+    // Definir ordem do conteúdo
     if (ordem) {
       conteudoData.ordem = ordem;
     } else {
+      // Buscar última ordem existente e incrementar
       const ultimoConteudo = await ConteudoCurso.findOne({
         where: { id_pasta: id_pasta },
         order: [['ordem', 'DESC']]
@@ -596,7 +697,7 @@ const createConteudo = async (req, res) => {
       conteudoData.ordem = ultimoConteudo ? ultimoConteudo.ordem + 1 : 1;
     }
 
-    // Criar o conteúdo na base de dados
+    // Criar registo na base de dados
     const novoConteudo = await ConteudoCurso.create(conteudoData);
 
     res.status(201).json({
@@ -613,21 +714,26 @@ const createConteudo = async (req, res) => {
   }
 };
 
-// Atualizar um conteúdo existente - MODIFICADO para estrutura simplificada
+/**
+ * Atualiza um conteúdo existente com gestão de ficheiros
+ * Permite alteração de tipo, localização e ficheiros associados
+ * Gere movimentação de ficheiros entre diretorias quando necessário
+ * 
+ * @param {Object} req - Requisição HTTP com dados atualizados e possível ficheiro
+ * @param {Object} res - Resposta HTTP com conteúdo atualizado
+ */
 const updateConteudo = async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, descricao, tipo, url, id_pasta, id_curso, ordem, ativo } = req.body;
 
-    console.log(`A iniciar atualização do conteúdo ID ${id}`);
-
-    // Procurar o conteúdo existente
+    // Buscar conteúdo existente
     const conteudo = await ConteudoCurso.findByPk(id);
     if (!conteudo) {
       return res.status(404).json({ message: 'Conteúdo não encontrado' });
     }
 
-    // Procurar informações para o diretório
+    // Buscar informações da estrutura atual
     const pastaAtual = await PastaCurso.findByPk(conteudo.id_pasta);
     const topicoAtual = pastaAtual ? await Curso_Topicos.findByPk(pastaAtual.id_topico) : null;
     const cursoAtual = await Curso.findByPk(conteudo.id_curso);
@@ -636,13 +742,13 @@ const updateConteudo = async (req, res) => {
       return res.status(404).json({ message: 'Dados associados ao conteúdo não encontrados' });
     }
 
-    // Variáveis para controlar a mudança de localização
+    // Determinar estrutura de destino se houver mudanças
     let pastaAlvo = pastaAtual;
     let topicoAlvo = topicoAtual;
     let cursoAlvo = cursoAtual;
     let precisaMoverArquivo = false;
 
-    // Verificar se está a mudar de pasta
+    // Verificar mudança de pasta
     if (id_pasta && id_pasta !== conteudo.id_pasta) {
       pastaAlvo = await PastaCurso.findByPk(id_pasta);
       if (!pastaAlvo) {
@@ -661,14 +767,14 @@ const updateConteudo = async (req, res) => {
 
       precisaMoverArquivo = true;
     }
-    // Verificar se está a mudar de curso (e a pasta não foi alterada)
+    // Verificar mudança de curso
     else if (id_curso && id_curso !== conteudo.id_curso) {
       cursoAlvo = await Curso.findByPk(id_curso);
       if (!cursoAlvo) {
         return res.status(404).json({ message: 'Curso não encontrado' });
       }
 
-      // Se a pasta atual pertence ao novo curso
+      // Validar se pasta atual pertence ao novo curso
       if (topicoAtual && topicoAtual.id_curso !== parseInt(id_curso)) {
         return res.status(400).json({
           message: 'A pasta atual não pertence ao novo curso'
@@ -676,7 +782,7 @@ const updateConteudo = async (req, res) => {
       }
     }
 
-    // Preparar o objeto para atualização
+    // Preparar dados para atualização
     let dadosAtualizacao = {};
 
     // Atualizar campos básicos se fornecidos
@@ -687,15 +793,12 @@ const updateConteudo = async (req, res) => {
     if (ordem !== undefined) dadosAtualizacao.ordem = ordem;
     if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
 
-    // MODIFICADO: Determinar a estrutura de diretórios correta
-
-    // Verificar se o tópico atual é de avaliação
+    // Determinar estruturas de diretórios
     const isAvaliacaoAtual =
       topicoAtual.nome.toLowerCase() === 'avaliação' ||
       topicoAtual.nome.toLowerCase() === 'avaliacao' ||
       topicoAtual.nome.toLowerCase().includes('avalia');
 
-    // Verificar se o tópico alvo é de avaliação
     const isAvaliacaoAlvo =
       topicoAlvo.nome.toLowerCase() === 'avaliação' ||
       topicoAlvo.nome.toLowerCase() === 'avaliacao' ||
@@ -708,41 +811,33 @@ const updateConteudo = async (req, res) => {
     const topicoSlugAtual = uploadUtils.normalizarNome(topicoAtual.nome);
     const topicoSlugAlvo = uploadUtils.normalizarNome(topicoAlvo.nome);
 
-    // Diretórios atuais e alvo com estrutura correta
+    // Construir caminhos de diretórios
     let conteudoDirAtual, conteudoPathAtual, conteudoDirAlvo, conteudoPathAlvo;
 
     if (isAvaliacaoAtual) {
-      // Para avaliação - armazenar na pasta conteudos
       conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'avaliacao', pastaSlugAtual, 'conteudos');
       conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/avaliacao/${pastaSlugAtual}/conteudos`;
     } else {
-      // Para tópicos normais: manter a estrutura atual
       conteudoDirAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual, 'topicos', topicoSlugAtual, pastaSlugAtual, 'Conteudos');
       conteudoPathAtual = `uploads/cursos/${cursoSlugAtual}/topicos/${topicoSlugAtual}/${pastaSlugAtual}/Conteudos`;
     }
 
     if (isAvaliacaoAlvo) {
-      // Para avaliação - armazenar na pasta conteudos
       conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'avaliacao', pastaSlugAlvo, 'conteudos');
       conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/avaliacao/${pastaSlugAlvo}/conteudos`;
     } else {
-      // Para tópicos normais: manter a estrutura atual
       conteudoDirAlvo = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAlvo, 'topicos', topicoSlugAlvo, pastaSlugAlvo, 'Conteudos');
       conteudoPathAlvo = `uploads/cursos/${cursoSlugAlvo}/topicos/${topicoSlugAlvo}/${pastaSlugAlvo}/Conteudos`;
     }
 
-    console.log(`Diretório atual: ${conteudoDirAtual}, Diretório alvo: ${conteudoDirAlvo}`);
-
-    // Garantir que os diretórios existam
+    // Garantir que diretório de destino existe
     uploadUtils.ensureDir(conteudoDirAlvo);
 
-    // Se precisa mover o ficheiro ou estamos a mudar o tipo
+    // Gerir ficheiros se necessário
     if (precisaMoverArquivo || (tipo !== undefined && tipo !== conteudo.tipo)) {
-      console.log('A mover ficheiro ou alterar tipo de conteúdo');
-
-      // Se estiver a mudar o tipo, verificar os campos necessários
+      // Mudança de tipo ou localização
       if (tipo !== undefined && tipo !== conteudo.tipo) {
-        // Aceitar os tipos corretos incluindo 'video'
+        // Validar novo tipo
         if (!['file', 'link', 'video'].includes(tipo)) {
           return res.status(400).json({
             message: 'Tipo de conteúdo inválido. Use: file, link ou video'
@@ -751,11 +846,9 @@ const updateConteudo = async (req, res) => {
 
         dadosAtualizacao.tipo = tipo;
 
-        // Limpar campos não usados pelo novo tipo
         const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
         const timestamp = Date.now();
 
-        // Tratar 'video' e 'file' como tipos de arquivo
         if (tipo === 'file' || tipo === 'video') {
           if (!req.file && !conteudo.arquivo_path) {
             return res.status(400).json({
@@ -765,25 +858,23 @@ const updateConteudo = async (req, res) => {
           dadosAtualizacao.url = null;
 
           if (req.file) {
-            // Se já existe um ficheiro, remover o antigo
+            // Remover ficheiro antigo se existe
             if (conteudo.arquivo_path) {
               const arquivoAntigoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
               if (fs.existsSync(arquivoAntigoPath)) {
                 try {
                   fs.unlinkSync(arquivoAntigoPath);
-                  console.log(`Ficheiro antigo removido: ${arquivoAntigoPath}`);
                 } catch (fileError) {
                   console.error(`Erro ao remover ficheiro antigo: ${fileError.message}`);
                 }
               }
             }
 
-            // Mover o novo ficheiro para o diretório correto
+            // Mover novo ficheiro
             const tempPath = req.file.path;
             const fileName = `${timestamp}-${tituloBase}${path.extname(req.file.originalname)}`;
             const destPath = path.join(conteudoDirAlvo, fileName);
 
-            console.log(`A mover ficheiro de ${tempPath} para ${destPath}`);
             const movido = uploadUtils.moverArquivo(tempPath, destPath);
             if (!movido) {
               return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
@@ -791,12 +882,11 @@ const updateConteudo = async (req, res) => {
 
             dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fileName}`;
           } else if (precisaMoverArquivo && conteudo.arquivo_path) {
-            // Mover o ficheiro existente para nova localização
+            // Mover ficheiro existente
             const fileName = path.basename(conteudo.arquivo_path);
             const arquivoOrigem = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
             const arquivoDestino = path.join(conteudoDirAlvo, fileName);
 
-            console.log(`A mover ficheiro existente de ${arquivoOrigem} para ${arquivoDestino}`);
             const movido = uploadUtils.moverArquivo(arquivoOrigem, arquivoDestino);
             if (!movido) {
               return res.status(500).json({ message: 'Erro ao mover o ficheiro existente' });
@@ -811,13 +901,12 @@ const updateConteudo = async (req, res) => {
             });
           }
 
-          // Se tinha ficheiro, remover
+          // Remover ficheiro antigo se existia
           if (conteudo.arquivo_path) {
             const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
             if (fs.existsSync(arquivoPath)) {
               try {
                 fs.unlinkSync(arquivoPath);
-                console.log(`Ficheiro removido: ${arquivoPath}`);
               } catch (fileError) {
                 console.error(`Erro ao remover ficheiro: ${fileError.message}`);
               }
@@ -828,20 +917,18 @@ const updateConteudo = async (req, res) => {
           const fakeFileName = `${timestamp}-${tipo}-${tituloBase}.txt`;
           const fakeFilePath = path.join(conteudoDirAlvo, fakeFileName);
 
-          // Escrever a URL no ficheiro
           fs.writeFileSync(fakeFilePath, url || conteudo.url || '');
 
           dadosAtualizacao.arquivo_path = `${conteudoPathAlvo}/${fakeFileName}`;
           if (url) dadosAtualizacao.url = url;
         }
       } else {
-        // Mesmo tipo, mas precisa mover o ficheiro
+        // Mesmo tipo, mas mover ficheiro
         if (conteudo.arquivo_path) {
           const fileName = path.basename(conteudo.arquivo_path);
           const arquivoOrigem = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
           const arquivoDestino = path.join(conteudoDirAlvo, fileName);
 
-          console.log(`A mover ficheiro existente de ${arquivoOrigem} para ${arquivoDestino}`);
           const movido = uploadUtils.moverArquivo(arquivoOrigem, arquivoDestino);
           if (!movido) {
             return res.status(500).json({ message: 'Erro ao mover o ficheiro existente' });
@@ -851,31 +938,26 @@ const updateConteudo = async (req, res) => {
         }
       }
     } else if (req.file) {
-      // Mesmo local, mas ficheiro atualizado
-      console.log('A atualizar ficheiro no mesmo local');
-
-      // Aceitar tanto 'file' quanto 'video' para upload de arquivo
+      // Atualizar ficheiro no mesmo local
       if (conteudo.tipo === 'file' || conteudo.tipo === 'video') {
-        // Se já existe um ficheiro, remover o antigo
+        // Remover ficheiro antigo
         if (conteudo.arquivo_path) {
           const arquivoAntigoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
           if (fs.existsSync(arquivoAntigoPath)) {
             try {
               fs.unlinkSync(arquivoAntigoPath);
-              console.log(`Ficheiro antigo removido: ${arquivoAntigoPath}`);
             } catch (fileError) {
               console.error(`Erro ao remover ficheiro antigo: ${fileError.message}`);
             }
           }
         }
 
-        // Mover o novo ficheiro
+        // Processar novo ficheiro
         const tempPath = req.file.path;
         const tituloBase = uploadUtils.normalizarNome(titulo || conteudo.titulo);
         const fileName = `${Date.now()}-${tituloBase}${path.extname(req.file.originalname)}`;
         const destPath = path.join(conteudoDirAtual, fileName);
 
-        console.log(`A mover novo ficheiro de ${tempPath} para ${destPath}`);
         const movido = uploadUtils.moverArquivo(tempPath, destPath);
         if (!movido) {
           return res.status(500).json({ message: 'Erro ao mover o ficheiro do conteúdo' });
@@ -884,16 +966,13 @@ const updateConteudo = async (req, res) => {
         dadosAtualizacao.arquivo_path = `${conteudoPathAtual}/${fileName}`;
       }
     } else if (url !== undefined && conteudo.tipo === 'link') {
-      // Atualizar URL e ficheiro de referência
-      console.log('A atualizar URL para conteúdo tipo link');
-
+      // Atualizar URL para tipo link
       if (conteudo.arquivo_path) {
-        // Atualizar o conteúdo do ficheiro de referência
+        // Atualizar ficheiro de referência existente
         const arquivoPath = path.join(uploadUtils.BASE_UPLOAD_DIR, conteudo.arquivo_path.replace(/^\/?(uploads|backend\/uploads)\//, ''));
         if (fs.existsSync(arquivoPath)) {
           try {
             fs.writeFileSync(arquivoPath, url);
-            console.log(`Ficheiro de referência atualizado: ${arquivoPath}`);
           } catch (fileError) {
             console.error(`Erro ao atualizar ficheiro de referência: ${fileError.message}`);
           }
@@ -905,7 +984,6 @@ const updateConteudo = async (req, res) => {
 
           try {
             fs.writeFileSync(fakeFilePath, url);
-            console.log(`Novo ficheiro de referência criado: ${fakeFilePath}`);
           } catch (fileError) {
             console.error(`Erro ao criar novo ficheiro de referência: ${fileError.message}`);
           }
@@ -917,16 +995,15 @@ const updateConteudo = async (req, res) => {
       dadosAtualizacao.url = url;
     }
 
-    // Atualizar o diretório de conteúdo se mudou de local
+    // Atualizar caminho se mudou de local
     if (precisaMoverArquivo) {
       dadosAtualizacao.dir_path = conteudoPathAlvo;
     }
 
-    // Atualizar o conteúdo
-    console.log('A atualizar registo na base de dados:', dadosAtualizacao);
+    // Aplicar atualizações na base de dados
     await conteudo.update(dadosAtualizacao);
 
-    // Procurar o conteúdo atualizado com dados relacionados
+    // Buscar conteúdo atualizado com informações completas
     const conteudoAtualizado = await ConteudoCurso.findByPk(id, {
       include: [
         {
@@ -949,7 +1026,7 @@ const updateConteudo = async (req, res) => {
       ]
     });
 
-    // Formatar a resposta
+    // Formatar resposta
     const plainConteudo = conteudoAtualizado.get({ plain: true });
     const formattedConteudo = {
       id_conteudo: plainConteudo.id_conteudo,
@@ -981,14 +1058,7 @@ const updateConteudo = async (req, res) => {
   }
 };
 
-// Middleware de upload
-const uploadMiddleware = (req, res, next) => {
-  // Middleware foi substituído pelo middleware uploadCursoConteudo em upload_middleware.js
-  next();
-};
-
 module.exports = {
-  uploadMiddleware,
   getAllConteudos,
   getConteudoById,
   getConteudosByCurso,

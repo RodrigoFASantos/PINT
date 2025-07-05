@@ -8,22 +8,39 @@ import { useAuth } from '../../contexts/AuthContext';
 import './css/gerir_Area.css';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * Componente para gestão de áreas de formação
+ * 
+ * Permite aos administradores:
+ * - Ver todas as áreas organizadas por categorias
+ * - Criar novas áreas de formação
+ * - Editar áreas existentes
+ * - Eliminar áreas (só se não tiverem cursos)
+ * - Filtrar áreas por nome e categoria
+ * - Navegar entre páginas (10 itens por página)
+ * 
+ * Acesso restrito: apenas utilizadores com id_cargo === 1 (administradores)
+ */
 const Gerir_Area = () => {
   const navigate = useNavigate();
-  
-  // Auth context
   const { currentUser } = useAuth();
   
-  // Estados para sidebar
+  // Estados para controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // Estados para áreas
+  // Estados para dados das áreas
   const [areas, setAreas] = useState([]);
+  const [todasAsAreas, setTodasAsAreas] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [totalAreas, setTotalAreas] = useState(0);
+  
+  // Estados para paginação e filtros
   const [paginaAtual, setPaginaAtual] = useState(1);
   const areasPorPagina = 10;
   const [filtros, setFiltros] = useState({ nome: '', idCategoria: '' });
+  
+  // Estados para modais de confirmação e edição
   const [areaParaExcluir, setAreaParaExcluir] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [editArea, setEditArea] = useState(null);
@@ -31,93 +48,134 @@ const Gerir_Area = () => {
   const [newAreaCategoria, setNewAreaCategoria] = useState('');
   const [showAreaForm, setShowAreaForm] = useState(false);
   
-  // Estado de carregamento
-  const [loading, setLoading] = useState(true);
-  
-  // Ref para debounce
+  // Referência para timeout de filtros (evita muitas requisições)
   const filterTimeoutRef = useRef(null);
 
-  // Toggle para a sidebar
+  /**
+   * Alterna a visibilidade da barra lateral
+   */
   const toggleSidebar = () => {
-    console.log('[DEBUG] Gerir_Area: Toggling sidebar');
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Função para buscar áreas com paginação e filtros
+  /**
+   * Busca as áreas da API com paginação e filtros
+   * Implementa paginação automática no frontend quando a API retorna todas as áreas
+   * @param {number} pagina - Número da página a buscar
+   * @param {object} filtrosAtuais - Filtros a aplicar na busca
+   */
   const buscarAreas = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
-      console.log('[DEBUG] Gerir_Area: A iniciar busca de áreas - Página:', pagina);
-      console.log('[DEBUG] Gerir_Area: Filtros aplicados:', filtrosAtuais);
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Criar objeto de parâmetros para a requisição
+      // Preparar parâmetros da requisição
       const params = {
         page: pagina,
         limit: areasPorPagina,
       };
       
-      // Adicionar filtros válidos
-      if (filtrosAtuais.nome) {
-        params.search = filtrosAtuais.nome;
+      // Adicionar filtro de nome se especificado
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        params.search = filtrosAtuais.nome.trim();
       }
       
+      // Adicionar filtro de categoria se especificado
       if (filtrosAtuais.idCategoria) {
         params.categoria = filtrosAtuais.idCategoria;
       }
       
-      // Remover parâmetros vazios
+      // Limpar parâmetros vazios
       Object.keys(params).forEach(key => 
         (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
       );
       
-      console.log('[DEBUG] Gerir_Area: A buscar áreas com os parâmetros finais:', params);
-      
+      // Fazer requisição à API
       const response = await axios.get(`${API_BASE}/areas`, {
         params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Area: Resposta da API (áreas):', response.data);
-      
-      if (response.data) {
-        if (Array.isArray(response.data.areas)) {
-          setAreas(response.data.areas);
-          setTotalAreas(response.data.total || response.data.areas.length);
-        } else if (Array.isArray(response.data)) {
-          setAreas(response.data);
-          setTotalAreas(response.data.length);
+      // Processar diferentes formatos de resposta da API
+      let areasData = [];
+      let total = 0;
+      let processouComSucesso = false;
+      let usarPaginacaoFrontend = false;
+
+      if (response.data && response.data.success) {
+        // Formato padrão: {success: true, areas: [...], total: 12} - API com paginação
+        areasData = response.data.areas;
+        total = response.data.total || 0;
+        processouComSucesso = true;
+      } else if (Array.isArray(response.data)) {
+        // Formato alternativo: array directo [{...}, {...}, ...] - API sem paginação
+        const todasAsAreasRecebidas = response.data;
+        
+        // Aplicar filtros manualmente
+        let areasFiltradas = todasAsAreasRecebidas;
+        
+        // Filtro por nome
+        if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+          const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+          areasFiltradas = areasFiltradas.filter(area => 
+            area.nome?.toLowerCase().includes(termoBusca)
+          );
+        }
+        
+        // Filtro por categoria
+        if (filtrosAtuais.idCategoria) {
+          areasFiltradas = areasFiltradas.filter(area => 
+            area.id_categoria == filtrosAtuais.idCategoria
+          );
+        }
+        
+        total = areasFiltradas.length;
+        
+        // Implementar paginação manual no frontend
+        const startIndex = (pagina - 1) * areasPorPagina;
+        const endIndex = startIndex + areasPorPagina;
+        areasData = areasFiltradas.slice(startIndex, endIndex);
+        
+        // Armazenar todas as áreas para futuras operações
+        setTodasAsAreas(todasAsAreasRecebidas);
+        
+        processouComSucesso = true;
+        usarPaginacaoFrontend = true;
+      } else if (response.data && Array.isArray(response.data.areas)) {
+        // Formato alternativo: {areas: [...]} sem success
+        areasData = response.data.areas;
+        total = response.data.total || response.data.areas.length;
+        processouComSucesso = true;
+      }
+
+      if (processouComSucesso) {
+        // Verificar se os dados são válidos
+        if (Array.isArray(areasData)) {
+          setAreas(areasData);
+          setTotalAreas(total || 0);
+          setPaginaAtual(pagina);
         } else {
-          console.error('[DEBUG] Gerir_Area: Formato de resposta inesperado:', response.data);
           toast.error('Formato de dados inválido recebido do servidor.');
           setAreas([]);
           setTotalAreas(0);
         }
       } else {
-        console.error('[DEBUG] Gerir_Area: Resposta vazia ou inválida');
-        toast.error('Nenhum dado recebido do servidor.');
+        toast.error('Erro ao carregar áreas do servidor.');
         setAreas([]);
         setTotalAreas(0);
       }
       
-      setPaginaAtual(pagina);
       setLoading(false);
     } catch (error) {
-      console.error('[DEBUG] Gerir_Area: Erro ao buscar áreas:', error);
-      
+      // Gestão de erros específicos
       if (error.response) {
-        console.error('[DEBUG] Gerir_Area: Dados do erro:', error.response.data);
-        console.error('[DEBUG] Gerir_Area: Status:', error.response.status);
-        
         if (error.response.status === 401) {
-          console.log('[DEBUG] Gerir_Area: Erro 401 - Não autorizado. A redirecionar para login...');
-          toast.error('Não autorizado. Faça login novamente.');
+          toast.error('Não autorizado. Faz login novamente.');
           navigate('/login');
         } else {
           toast.error(`Erro ao carregar áreas: ${error.response.data?.message || 'Erro desconhecido'}`);
         }
       } else {
-        console.error('[DEBUG] Gerir_Area: Erro:', error.message);
         toast.error('Erro ao processar a requisição.');
       }
       
@@ -125,88 +183,78 @@ const Gerir_Area = () => {
       setTotalAreas(0);
       setLoading(false);
     }
-  }, [areasPorPagina, navigate]);
+  }, [areasPorPagina, navigate, filtros]);
 
-  // Função para buscar categorias para o select
+  /**
+   * Busca todas as categorias disponíveis para os filtros
+   */
   const buscarCategorias = useCallback(async () => {
     try {
-      console.log('[DEBUG] Gerir_Area: A buscar categorias para o filtro');
       const token = localStorage.getItem('token');
       
       const response = await axios.get(`${API_BASE}/categorias`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('[DEBUG] Gerir_Area: Categorias carregadas:', response.data);
-      
-      if (response.data && (Array.isArray(response.data.categorias) || Array.isArray(response.data))) {
-        setCategorias(Array.isArray(response.data.categorias) ? response.data.categorias : response.data);
+      if (response.data) {
+        let categoriasData = [];
+        
+        // Processar resposta da API - diferentes formatos possíveis
+        if (Array.isArray(response.data.categorias)) {
+          categoriasData = response.data.categorias;
+        } else if (Array.isArray(response.data)) {
+          categoriasData = response.data;
+        } else {
+          toast.error('Erro ao carregar categorias para o filtro.');
+          setCategorias([]);
+          return;
+        }
+        
+        setCategorias(categoriasData);
       } else {
-        console.error('[DEBUG] Gerir_Area: Formato de resposta inesperado:', response.data);
         toast.error('Erro ao carregar categorias para o filtro.');
         setCategorias([]);
       }
     } catch (error) {
-      console.error('[DEBUG] Gerir_Area: Erro ao buscar categorias:', error);
       toast.error('Erro ao carregar categorias para o filtro.');
       setCategorias([]);
     }
   }, []);
 
-  // Efeito para carregar dados iniciais
+  /**
+   * Carrega dados iniciais quando o componente é montado
+   */
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('[DEBUG] Gerir_Area: ===== A INICIAR VERIFICAÇÕES DE AUTENTICAÇÃO =====');
         setLoading(true);
         const token = localStorage.getItem('token');
         
-        console.log('[DEBUG] Gerir_Area: Token no localStorage:', token ? 'SIM' : 'NÃO');
-        
+        // Verificar se o utilizador está autenticado
         if (!token) {
-          console.log('[DEBUG] Gerir_Area: Token não encontrado. A redirecionar para login...');
           navigate('/login');
           return;
         }
         
-        // Log do utilizador atual do AuthContext
-        console.log('[DEBUG] Gerir_Area: Utilizador atual do AuthContext:', currentUser);
-        
+        // Verificar permissões de acesso
         if (currentUser) {
-          console.log('[DEBUG] Gerir_Area: Dados do utilizador do AuthContext:', {
-            id_utilizador: currentUser.id_utilizador,
-            nome: currentUser.nome,
-            id_cargo: currentUser.id_cargo,
-            email: currentUser.email,
-            cargo: currentUser.cargo
-          });
-          
-          // Verificar se o utilizador tem permissão (admin ou gestor)
           if (currentUser.id_cargo !== 1) {
-            console.log('[DEBUG] Gerir_Area: utilizador não é administrador. Redirecionando...');
-            toast.error('Acesso negado. Não tem permissão para acessar esta página.');
+            toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
             navigate('/');
             return;
           }
         }
         
-        console.log('[DEBUG] Gerir_Area: Autenticação verificada com sucesso. A buscar dados...');
-        
-        // Buscar categorias para o filtro
+        // Carregar dados iniciais
         await buscarCategorias();
-        
-        // Buscar áreas iniciais
-        await buscarAreas(1, filtros);
+        await buscarAreas(1, { nome: '', idCategoria: '' });
         
       } catch (error) {
-        console.error('[DEBUG] Gerir_Area: Erro ao carregar dados:', error);
-        
         if (error.response && error.response.status === 401) {
-          console.log('[DEBUG] Gerir_Area: Erro 401 - Não autorizado. A redirecionar para login...');
-          toast.error('Não autorizado. Por favor, faça login novamente.');
+          toast.error('Não autorizado. Por favor, faz login novamente.');
           navigate('/login');
         } else {
-          toast.error('Erro ao carregar dados. Por favor, tente novamente mais tarde.');
+          toast.error('Erro ao carregar dados. Por favor, tenta novamente mais tarde.');
         }
         
         setLoading(false);
@@ -216,31 +264,29 @@ const Gerir_Area = () => {
     fetchData();
   }, [navigate, currentUser, buscarAreas, buscarCategorias]);
 
-  // Handler para mudança de filtros com debounce
+  /**
+   * Gere alterações nos filtros com debounce para evitar muitas requisições
+   * @param {Event} e - Evento de mudança do input
+   */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
-    console.log(`[DEBUG] Gerir_Area: Filtro alterado: ${name} = ${value}`);
     
-    // Limpar qualquer temporizador existente
+    // Cancelar timeout anterior se existir
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
     
-    // Atualizar o estado dos filtros
     setFiltros(prev => {
       const novosFiltros = {
         ...prev,
         [name]: value
       };
       
-      console.log('[DEBUG] Gerir_Area: Novos filtros:', novosFiltros);
-      
-      // Ativar o indicador de carregamento imediatamente
       setLoading(true);
       
-      // Configurar novo temporizador de debounce
+      // Aplicar debounce de 600ms antes de fazer a busca
       filterTimeoutRef.current = setTimeout(() => {
-        // Quando o temporizador disparar, usar os valores atuais dos filtros
+        setPaginaAtual(1);
         buscarAreas(1, novosFiltros);
       }, 600);
       
@@ -248,11 +294,10 @@ const Gerir_Area = () => {
     });
   };
 
-  // Handler para limpar filtros
+  /**
+   * Limpa todos os filtros aplicados e recarrega as áreas
+   */
   const handleLimparFiltros = () => {
-    console.log('[DEBUG] Gerir_Area: A limpar filtros');
-    
-    // Limpar qualquer temporizador existente
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
@@ -261,28 +306,33 @@ const Gerir_Area = () => {
     
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
-    
-    // Buscar dados com filtros limpos
     buscarAreas(1, filtrosLimpos);
   };
 
-  // Funções de navegação
+  /**
+   * Navega para a página anterior
+   */
   const handlePaginaAnterior = () => {
-    console.log('[DEBUG] Gerir_Area: A navegar para página anterior');
-    if (paginaAtual > 1) {
-      buscarAreas(paginaAtual - 1, filtros);
+    if (paginaAtual > 1 && !loading) {
+      const novaPagina = paginaAtual - 1;
+      buscarAreas(novaPagina, filtros);
     }
   };
 
+  /**
+   * Navega para a próxima página
+   */
   const handleProximaPagina = () => {
-    console.log('[DEBUG] Gerir_Area: A navegar para próxima página');
-    const totalPaginas = Math.ceil(totalAreas / areasPorPagina);
-    if (paginaAtual < totalPaginas) {
-      buscarAreas(paginaAtual + 1, filtros);
+    const totalPaginas = Math.max(1, Math.ceil(totalAreas / areasPorPagina));
+    if (paginaAtual < totalPaginas && !loading) {
+      const novaPagina = paginaAtual + 1;
+      buscarAreas(novaPagina, filtros);
     }
   };
 
-  // Funções para criar nova área
+  /**
+   * Abre o modal para criar nova área
+   */
   const handleOpenAreaForm = () => {
     setShowAreaForm(true);
     setEditArea(null);
@@ -290,6 +340,9 @@ const Gerir_Area = () => {
     setNewAreaCategoria('');
   };
 
+  /**
+   * Fecha o modal de criação/edição de área
+   */
   const handleCloseAreaForm = () => {
     setShowAreaForm(false);
     setEditArea(null);
@@ -297,103 +350,104 @@ const Gerir_Area = () => {
     setNewAreaCategoria('');
   };
 
+  /**
+   * Grava uma nova área ou atualiza uma existente
+   */
   const handleSaveArea = async () => {
     try {
       const token = localStorage.getItem('token');
       
+      // Validar dados obrigatórios
       if (!newAreaNome.trim()) {
-        toast.error('Por favor, insira um nome para a área.');
+        toast.error('Por favor, insere um nome para a área.');
         return;
       }
       
       if (!newAreaCategoria) {
-        toast.error('Por favor, selecione uma categoria para a área.');
+        toast.error('Por favor, selecciona uma categoria para a área.');
         return;
       }
       
-      // Modo edição
+      const dadosArea = {
+        nome: newAreaNome,
+        id_categoria: newAreaCategoria
+      };
+      
+      // Decidir se é edição ou criação
       if (editArea) {
-        console.log(`[DEBUG] Gerir_Area: A atualizar área ID ${editArea.id_area}`);
-        
-        await axios.put(`${API_BASE}/areas/${editArea.id_area}`, {
-          nome: newAreaNome,
-          id_categoria: newAreaCategoria
-        }, {
+        await axios.put(`${API_BASE}/areas/${editArea.id_area}`, dadosArea, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        toast.success('Área atualizada com sucesso!');
-      } 
-      // Modo criação
-      else {
-        console.log('[DEBUG] Gerir_Area: A criar nova área');
-        
-        await axios.post(`${API_BASE}/areas`, {
-          nome: newAreaNome,
-          id_categoria: newAreaCategoria
-        }, {
+        toast.success('Área actualizada com sucesso!');
+      } else {
+        await axios.post(`${API_BASE}/areas`, dadosArea, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         toast.success('Área criada com sucesso!');
       }
       
-      // Fechar o formulário e atualizar a lista
       handleCloseAreaForm();
       buscarAreas(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('[DEBUG] Gerir_Area: Erro ao salvar área:', error);
-      
       if (error.response) {
         toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
-        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
       }
     }
   };
 
-  // Funções para editar área
+  /**
+   * Prepara uma área para edição
+   * @param {object} area - Área a ser editada
+   */
   const handleEditarArea = (area) => {
-    console.log(`[DEBUG] Gerir_Area: A editar área ID ${area.id_area}`);
     setEditArea(area);
     setNewAreaNome(area.nome);
     setNewAreaCategoria(area.id_categoria || (area.categoria ? area.categoria.id_categoria : ''));
     setShowAreaForm(true);
   };
 
-  // Funções para excluir área
+  /**
+   * Confirma a exclusão de uma área
+   * @param {object} area - Área a ser excluída
+   */
   const handleConfirmarExclusao = (area) => {
-    console.log(`[DEBUG] Gerir_Area: A confirmar exclusão da área ID ${area.id_area}`);
     setAreaParaExcluir(area);
     setShowDeleteConfirmation(true);
   };
 
+  /**
+   * Executa a exclusão de uma área
+   */
   const handleExcluirArea = async () => {
     if (!areaParaExcluir) return;
     
     try {
       const token = localStorage.getItem('token');
-      console.log(`[DEBUG] Gerir_Area: A excluir área ID ${areaParaExcluir.id_area}`);
       
       await axios.delete(`${API_BASE}/areas/${areaParaExcluir.id_area}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      toast.success('Área excluída com sucesso!');
+      toast.success('Área eliminada com sucesso!');
       setShowDeleteConfirmation(false);
       setAreaParaExcluir(null);
       
-      // Atualizar a lista
       buscarAreas(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('[DEBUG] Gerir_Area: Erro ao excluir área:', error);
-      
       if (error.response) {
-        toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+        if (error.response.status === 404) {
+          toast.error('Área não encontrada. Pode já ter sido eliminada.');
+        } else {
+          toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
+        }
       } else {
-        toast.error('Erro ao processar a requisição. Por favor, tente novamente.');
+        toast.error('Erro ao processar a requisição. Por favor, tenta novamente.');
       }
       
       setShowDeleteConfirmation(false);
@@ -401,15 +455,27 @@ const Gerir_Area = () => {
     }
   };
 
-  // Função para navegar para a página de categorias
+  /**
+   * Navega para a página de gestão de categorias
+   */
   const handleIrParaCategorias = () => {
     navigate('/admin/categorias');
   };
 
-  // Calcular número total de páginas
-  const totalPaginas = Math.ceil(totalAreas / areasPorPagina);
+  // Cálculos para paginação e apresentação
+  const totalPaginas = Math.max(1, Math.ceil(totalAreas / areasPorPagina));
+  const areasParaMostrar = Array.isArray(areas) ? areas : [];
+  
+  // Criar linhas vazias para manter altura consistente da tabela
+  const linhasVazias = [];
+  const linhasNecessarias = Math.max(0, areasPorPagina - areasParaMostrar.length);
+  for (let i = 0; i < linhasNecessarias; i++) {
+    linhasVazias.push(i);
+  }
 
-  // Limpar timeout quando o componente for desmontado
+  /**
+   * Cleanup do timeout ao desmontar o componente
+   */
   useEffect(() => {
     return () => {
       if (filterTimeoutRef.current) {
@@ -418,14 +484,14 @@ const Gerir_Area = () => {
     };
   }, []);
 
-  // Interface de carregamento
+  // Ecrã de carregamento inicial
   if (loading && areas.length === 0) {
     return (
-      <div className="gerenciar-areas-container">
+      <div className="gerenciar-areas-container-gerir-area">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className="main-content">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
+        <div className="main-content-gerir-area">
+          <div className="loading-container-gerir-area">
+            <div className="loading-spinner-gerir-area"></div>
             <p>A carregar áreas...</p>
           </div>
         </div>
@@ -433,23 +499,26 @@ const Gerir_Area = () => {
     );
   }
 
-  // Renderização principal
   return (
-    <div className="gerenciar-areas-container">
+    <div className="gerenciar-areas-container-gerir-area">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
-      <div className="main-content">
-        <div className="areas-header">
-          <h1>Gestão de Áreas</h1>
-          <div className="header-actions">
+      <div className="main-content-gerir-area">
+        {/* Cabeçalho com título e acções principais */}
+        <div className="areas-header-gerir-area">
+          <h1>
+            Gestão de Áreas 
+            <span className="total-count-gerir-area">({totalAreas})</span>
+          </h1>
+          <div className="header-actions-gerir-area">
             <button 
-              className="btn-navegacao"
+              className="btn-navegacao-gerir-area"
               onClick={handleIrParaCategorias}
             >
               Gerir Categorias
             </button>
             <button 
-              className="criar-btn"
+              className="criar-btn-gerir-area"
               onClick={handleOpenAreaForm}
             >
               Criar Nova Área
@@ -457,162 +526,30 @@ const Gerir_Area = () => {
           </div>
         </div>
         
-        <div className="filtros-container">
-          <div className="filtro">
-            <label htmlFor="nome">Nome da Área:</label>
-            <input 
-              type="text"
-              id="nome"
-              name="nome"
-              value={filtros.nome}
-              onChange={handleFiltroChange}
-              placeholder="Filtrar por nome"
-            />
-          </div>
-          
-          <div className="filtro">
-            <label htmlFor="idCategoria">Categoria:</label>
-            <select
-              id="idCategoria"
-              name="idCategoria"
-              value={filtros.idCategoria}
-              onChange={handleFiltroChange}
-            >
-              <option value="">Todas as categorias</option>
-              {categorias.map(categoria => (
-                <option 
-                  key={categoria.id_categoria} 
-                  value={categoria.id_categoria}
-                >
-                  {categoria.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="filtro-acoes limpar-filtros-container">
-            <button 
-              className="btn-limpar"
-              onClick={handleLimparFiltros}
-              disabled={loading}
-            >
-              Limpar Filtros
-            </button>
-          </div>
-        </div>
-        
-        <div className="areas-table-container">
-          {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>A carregar áreas...</p>
-            </div>
-          ) : areas.length === 0 ? (
-            <div className="no-items">
-              <p>Nenhuma área encontrada com os filtros aplicados.</p>
-            </div>
-          ) : (
-            <>
-              <table className="areas-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nome da Área</th>
-                    <th>Categoria</th>
-                    <th>Cursos</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {areas.map(area => {
-                    // Obter o nome da categoria de maneira segura
-                    const categoriaNome = area.categoria ? 
-                      (typeof area.categoria === 'object' ? area.categoria.nome : area.categoria) : 
-                      "Não especificada";
-                    
-                    return (
-                      <tr key={area.id_area}>
-                        <td>{area.id_area}</td>
-                        <td className="area-nome">{area.nome}</td>
-                        <td>{categoriaNome}</td>
-                        <td>{area.cursos_count || 0}</td>
-                        <td className="acoes">
-                          <button 
-                            className="btn-icon btn-editar"
-                            onClick={() => handleEditarArea(area)}
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="btn-icon btn-excluir"
-                            onClick={() => handleConfirmarExclusao(area)}
-                            title="Excluir"
-                            disabled={area.cursos_count > 0}
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              
-              {/* Paginação */}
-              {totalPaginas > 1 && (
-                <div className="paginacao">
-                  <button 
-                    onClick={handlePaginaAnterior} 
-                    disabled={paginaAtual === 1 || loading}
-                    className="btn-pagina"
-                    aria-label="Página anterior"
-                  >
-                    <span className="pagination-icon">&#10094;</span>
-                  </button>
-                  
-                  <span className="pagina-atual">
-                    {paginaAtual}/{totalPaginas}
-                  </span>
-                  
-                  <button 
-                    onClick={handleProximaPagina}
-                    disabled={paginaAtual === totalPaginas || loading}
-                    className="btn-pagina"
-                    aria-label="Próxima página"
-                  >
-                    <span className="pagination-icon">&#10095;</span>
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-      
-      {/* Modal de formulário de área */}
-      {showAreaForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>{editArea ? 'Editar Área' : 'Nova Área'}</h3>
-            <div className="form-group">
-              <label htmlFor="newAreaNome">Nome da Área:</label>
+        {/* Secção de filtros */}
+        <div className="filtros-container-gerir-area">
+          <div className="filtros-principais-gerir-area">
+            <div className="filtro-gerir-area">
+              <label htmlFor="nome">Nome da Área:</label>
               <input 
-                type="text" 
-                id="newAreaNome" 
-                value={newAreaNome}
-                onChange={(e) => setNewAreaNome(e.target.value)}
-                placeholder="Digite o nome da área"
+                type="text"
+                id="nome"
+                name="nome"
+                value={filtros.nome}
+                onChange={handleFiltroChange}
+                placeholder="Filtrar por nome"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="newAreaCategoria">Categoria:</label>
+            
+            <div className="filtro-gerir-area">
+              <label htmlFor="idCategoria">Categoria:</label>
               <select
-                id="newAreaCategoria"
-                value={newAreaCategoria}
-                onChange={(e) => setNewAreaCategoria(e.target.value)}
+                id="idCategoria"
+                name="idCategoria"
+                value={filtros.idCategoria}
+                onChange={handleFiltroChange}
               >
-                <option value="">Selecione uma categoria</option>
+                <option value="">Todas as categorias</option>
                 {categorias.map(categoria => (
                   <option 
                     key={categoria.id_categoria} 
@@ -623,45 +560,203 @@ const Gerir_Area = () => {
                 ))}
               </select>
             </div>
-            <div className="modal-actions">
+          </div>
+          
+          <div className="filtro-acoes-gerir-area">
+            <button 
+              className="btn-limpar-gerir-area"
+              onClick={handleLimparFiltros}
+              disabled={loading}
+            >
+              Limpar Filtros
+            </button>
+          </div>
+        </div>
+        
+        {/* Tabela de áreas e controlos de paginação */}
+        <div className="areas-table-container-gerir-area">
+          {loading ? (
+            <div className="loading-container-gerir-area">
+              <div className="loading-spinner-gerir-area"></div>
+              <p>A carregar áreas...</p>
+            </div>
+          ) : !Array.isArray(areasParaMostrar) || areasParaMostrar.length === 0 ? (
+            <div className="no-items-gerir-area">
+              <p>Nenhuma área encontrada com os filtros aplicados.</p>
+            </div>
+          ) : (
+            <>
+              {/* Tabela com os dados das áreas */}
+              <table className="areas-table-gerir-area">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nome da Área</th>
+                    <th>Categoria</th>
+                    <th>Cursos</th>
+                    <th>Acções</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {areasParaMostrar.map((area, index) => {
+                    if (!area || typeof area !== 'object') {
+                      return null;
+                    }
+                    
+                    // Processar nome da categoria de forma segura
+                    const categoriaNome = area.categoria ? 
+                      (typeof area.categoria === 'object' ? area.categoria.nome : area.categoria) : 
+                      "Não especificada";
+                    
+                    const areaId = area.id_area || area.id || index;
+                    
+                    return (
+                      <tr key={areaId}>
+                        <td>{areaId}</td>
+                        <td className="area-nome-gerir-area">{area.nome || 'Nome não disponível'}</td>
+                        <td>{categoriaNome}</td>
+                        <td>{area.cursos_count || area.cursosCount || 0}</td>
+                        <td className="acoes-gerir-area">
+                          <button 
+                            className="btn-icon-gerir-area btn-editar-gerir-area"
+                            onClick={() => handleEditarArea(area)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className="btn-icon-gerir-area btn-excluir-gerir-area"
+                            onClick={() => handleConfirmarExclusao(area)}
+                            title="Eliminar"
+                            disabled={(area.cursos_count || area.cursosCount || 0) > 0}
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  
+                  {/* Linhas vazias para manter altura consistente */}
+                  {linhasVazias.map((_, index) => (
+                    <tr key={`empty-${index}`} className="linha-vazia-gerir-area">
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {/* Controlos de paginação */}
+              <div className="paginacao-gerir-area">
+                <button 
+                  onClick={handlePaginaAnterior} 
+                  disabled={paginaAtual === 1 || loading}
+                  className="btn-pagina-gerir-area btn-anterior-gerir-area"
+                  aria-label="Página anterior"
+                  title="Página anterior"
+                >
+                  <span className="pagination-icon-gerir-area">&#8249;</span>
+                  <span className="btn-text-gerir-area">Anterior</span>
+                </button>
+                
+                <div className="pagina-info-gerir-area">
+                  <span className="pagina-atual-gerir-area">
+                    {loading ? 'A carregar...' : `Página ${paginaAtual} de ${totalPaginas}`}
+                  </span>
+                </div>
+                
+                <button 
+                  onClick={handleProximaPagina}
+                  disabled={paginaAtual >= totalPaginas || loading}
+                  className="btn-pagina-gerir-area btn-seguinte-gerir-area"
+                  aria-label="Próxima página"
+                  title="Próxima página"
+                >
+                  <span className="btn-text-gerir-area">Seguinte</span>
+                  <span className="pagination-icon-gerir-area">&#8250;</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Modal para criar/editar área */}
+      {showAreaForm && (
+        <div className="modal-overlay-gerir-area">
+          <div className="modal-content-gerir-area">
+            <h3>{editArea ? 'Editar Área' : 'Nova Área'}</h3>
+            <div className="form-group-gerir-area">
+              <label htmlFor="newAreaNome">Nome da Área:</label>
+              <input 
+                type="text" 
+                id="newAreaNome" 
+                value={newAreaNome}
+                onChange={(e) => setNewAreaNome(e.target.value)}
+                placeholder="Digite o nome da área"
+              />
+            </div>
+            <div className="form-group-gerir-area">
+              <label htmlFor="newAreaCategoria">Categoria:</label>
+              <select
+                id="newAreaCategoria"
+                value={newAreaCategoria}
+                onChange={(e) => setNewAreaCategoria(e.target.value)}
+              >
+                <option value="">Selecciona uma categoria</option>
+                {categorias.map(categoria => (
+                  <option 
+                    key={categoria.id_categoria} 
+                    value={categoria.id_categoria}
+                  >
+                    {categoria.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions-gerir-area">
               <button 
-                className="btn-cancelar"
+                className="btn-cancelar-gerir-area"
                 onClick={handleCloseAreaForm}
               >
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar"
+                className="btn-confirmar-gerir-area"
                 onClick={handleSaveArea}
               >
-                {editArea ? 'Atualizar' : 'Criar'}
+                {editArea ? 'Actualizar' : 'Criar'}
               </button>
             </div>
           </div>
         </div>
       )}
       
-      {/* Modal de confirmação de exclusão */}
+      {/* Modal de confirmação de eliminação */}
       {showDeleteConfirmation && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Confirmar Exclusão</h3>
+        <div className="modal-overlay-gerir-area">
+          <div className="modal-content-gerir-area">
+            <h3>Confirmar Eliminação</h3>
             <p>
-              Tem certeza que deseja excluir a área "{areaParaExcluir?.nome}"?
-              Esta ação não pode ser desfeita.
+              Tens a certeza que queres eliminar a área "{areaParaExcluir?.nome}"?
+              Esta acção não pode ser desfeita.
             </p>
-            <div className="modal-actions">
+            <div className="modal-actions-gerir-area">
               <button 
-                className="btn-cancelar"
+                className="btn-cancelar-gerir-area"
                 onClick={() => setShowDeleteConfirmation(false)}
               >
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar"
+                className="btn-confirmar-gerir-area"
                 onClick={handleExcluirArea}
               >
-                Confirmar Exclusão
+                Confirmar Eliminação
               </button>
             </div>
           </div>

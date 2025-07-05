@@ -7,6 +7,13 @@ const crypto = require('crypto');
  * Sistema completo de upload de ficheiros para a plataforma
  * Gere uploads de utilizadores, cursos, conteúdos e chat
  * Inclui validação de tipos, organização de pastas e segurança
+ * 
+ * Funcionalidades principais:
+ * - Gestão hierárquica de diretorias por curso/tópico/pasta
+ * - Validação robusta de tipos de ficheiros
+ * - Normalização de nomes para evitar conflitos
+ * - Storage temporário e definitivo
+ * - Suporte para diferentes contextos (utilizadores, cursos, chat)
  */
 
 // Configuração do caminho base para uploads
@@ -14,7 +21,8 @@ const BASE_UPLOAD_DIR = path.join(process.cwd(), process.env.CAMINHO_PASTA_UPLOA
 
 /**
  * Garante que a estrutura básica de diretorias existe
- * Cria pastas essenciais se não existirem
+ * Cria as pastas essenciais do sistema se não existirem
+ * Chamada automaticamente na inicialização do módulo
  */
 const ensureBaseDirs = () => {
   const baseDirs = [
@@ -45,25 +53,28 @@ const ensureBaseDirs = () => {
 };
 
 /**
- * Normaliza nomes de ficheiros e pastas
- * Remove acentos, espaços e caracteres especiais
- * @param {string} nome - Nome a ser normalizado
- * @returns {string} Nome normalizado
+ * Normaliza nomes de ficheiros e pastas para uso seguro no sistema
+ * Remove acentos, espaços e caracteres especiais que podem causar problemas
+ * 
+ * @param {string} nome - Nome original a ser normalizado
+ * @returns {string} Nome normalizado e seguro para uso em caminhos
  */
 const normalizarNome = (nome) => {
   if (!nome) return '';
   return nome
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9]+/g, '_')     // Substitui por underscores
-    .replace(/^_+|_+$/g, '');        // Remove underscores nas extremidades
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos e diacríticos
+    .replace(/[^a-z0-9]+/g, '_')     // Substitui caracteres especiais por underscores
+    .replace(/^_+|_+$/g, '');        // Remove underscores das extremidades
 };
 
 /**
- * Gera nome único para ficheiro
+ * Gera nome único para ficheiro baseado no nome original
+ * Mantém a extensão original mas normaliza o nome base
+ * 
  * @param {string} originalname - Nome original do ficheiro
- * @returns {string} Nome único normalizado
+ * @returns {string} Nome único normalizado com extensão preservada
  */
 const gerarNomeUnico = (originalname) => {
   const extension = path.extname(originalname);
@@ -73,16 +84,17 @@ const gerarNomeUnico = (originalname) => {
 
 /**
  * Garante que um directório existe, criando-o se necessário
- * @param {string} dirPath - Caminho do directório
- * @returns {boolean} True se o directório foi criado ou já existia
+ * Inclui validações de segurança para evitar criação de estruturas inválidas
+ * 
+ * @param {string} dirPath - Caminho completo do directório
+ * @returns {boolean} True se o directório foi criado ou já existia, false se foi bloqueado
  */
 const ensureDir = (dirPath) => {
-  // Verificar e bloquear criação de pastas indesejadas
+  // Validações de segurança para evitar estruturas problemáticas
   if (dirPath.includes('avaliacao')) {
     if ((dirPath.includes('submissoes') && dirPath.includes('Submissoes')) ||
         (dirPath.includes('conteudos') && dirPath.includes('Conteudos')) ||
         dirPath.includes('enunciado')) {
-      console.log(`Pasta bloqueada: ${dirPath}`);
       return false;
     }
   }
@@ -96,9 +108,11 @@ const ensureDir = (dirPath) => {
 };
 
 /**
- * Determina o tipo de ficheiro baseado no MIME type
+ * Determina a categoria dum ficheiro baseado no seu MIME type
+ * Usado para classificação e validação de uploads
+ * 
  * @param {string} mimetype - Tipo MIME do ficheiro
- * @returns {string} Categoria do ficheiro
+ * @returns {string} Categoria legível do ficheiro
  */
 const getFileType = (mimetype) => {
   if (mimetype && mimetype.startsWith('image/')) return 'imagem';
@@ -110,19 +124,22 @@ const getFileType = (mimetype) => {
 };
 
 /**
- * Filtro robusto para validação de tipos de ficheiros
+ * Filtro robusto para validação de tipos de ficheiros permitidos
+ * Inclui verificação por MIME type e extensão como fallback
+ * Essencial para segurança do sistema
+ * 
  * @param {Object} req - Requisição HTTP
- * @param {Object} file - Ficheiro enviado
- * @param {Function} cb - Callback de resposta
+ * @param {Object} file - Ficheiro enviado pelo multer
+ * @param {Function} cb - Callback de resposta (null, boolean)
  */
 const fileFilter = (req, file, cb) => {
-  // Verificar se o mimetype está presente
+  // Verificar se o mimetype está presente e válido
   if (!file.mimetype || file.mimetype === 'undefined' || file.mimetype === 'null') {
-    // Tentar determinar tipo pela extensão
+    // Tentar determinar tipo pela extensão como fallback
     if (file.originalname) {
       const ext = path.extname(file.originalname).toLowerCase();
       
-      // Mapeamento de extensões para mimetypes
+      // Mapeamento de extensões para mimetypes conhecidos
       const extensionToMimetype = {
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
@@ -158,7 +175,7 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-  // Lista de tipos MIME permitidos
+  // Lista abrangente de tipos MIME permitidos no sistema
   const allowedMimeTypes = [
     // Imagens
     'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml', 
@@ -181,7 +198,7 @@ const fileFilter = (req, file, cb) => {
     'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/x-wav'
   ];
 
-  // Verificar se o mimetype está permitido
+  // Verificar se o mimetype está na lista permitida
   if (allowedMimeTypes.includes(file.mimetype)) {
     return cb(null, true);
   }
@@ -195,7 +212,7 @@ const fileFilter = (req, file, cb) => {
       return cb(null, true);
     }
     
-    // Casos específicos de browsers
+    // Casos específicos de browsers que não reportam mimetype corretamente
     if (imageExtensions.includes(ext) && (
       file.mimetype === 'application/octet-stream' || 
       file.mimetype === 'binary/octet-stream' ||
@@ -205,24 +222,21 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-  // Rejeitar ficheiro
+  // Rejeitar ficheiro se não passou nas validações
   const errorMessage = `Tipo de ficheiro não permitido: "${file.mimetype}".`;
   return cb(new Error(errorMessage), false);
 };
 
-// Limites de upload
+// Configuração de limites para uploads
 const limits = {
-  fileSize: 15 * 1024 * 1024, // 15MB
-  files: 1,
-  fields: 50
+  fileSize: 15 * 1024 * 1024, // 15MB máximo por ficheiro
+  files: 1,                   // Apenas 1 ficheiro por vez
+  fields: 50                  // Máximo 50 campos no formulário
 };
 
-// ==========================================
-// CONFIGURAÇÕES DE STORAGE
-// ==========================================
-
 /**
- * Storage para ficheiros de utilizadores (avatares e capas)
+ * Storage para ficheiros de utilizadores (avatares e capas de perfil)
+ * Organiza por email do utilizador para isolamento
  */
 const userStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -230,6 +244,7 @@ const userStorage = multer.diskStorage({
       return cb(new Error('Utilizador não identificado'), null);
     }
 
+    // Normalizar email para nome de pasta seguro
     const userSlug = req.utilizador.email.replace(/@/g, '_at_').replace(/\./g, '_');
     const userDir = path.join(BASE_UPLOAD_DIR, 'utilizadores', userSlug);
 
@@ -250,6 +265,7 @@ const userStorage = multer.diskStorage({
 
 /**
  * Storage para capas de cursos
+ * Organiza por nome do curso normalizado
  */
 const cursoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -272,6 +288,7 @@ const cursoStorage = multer.diskStorage({
 
 /**
  * Storage temporário para conteúdos
+ * Todos os uploads são inicialmente guardados aqui antes de serem movidos
  */
 const conteudoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -285,7 +302,7 @@ const conteudoStorage = multer.diskStorage({
 });
 
 /**
- * Storage temporário para chat
+ * Storage temporário para ficheiros de chat
  */
 const chatStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -298,10 +315,7 @@ const chatStorage = multer.diskStorage({
   }
 });
 
-// ==========================================
-// CONFIGURAÇÕES MULTER
-// ==========================================
-
+// Configurações do multer para diferentes contextos
 const upload = multer({
   storage: multer.memoryStorage(),
   limits,
@@ -332,14 +346,12 @@ const uploadChat = multer({
   fileFilter
 });
 
-// ==========================================
-// FUNÇÕES DE GESTÃO DE DIRETORIAS
-// ==========================================
-
 /**
  * Cria estrutura completa de diretorias para um curso
- * @param {Object} curso - Dados do curso
- * @returns {Object} Caminhos criados
+ * Estabelece a hierarquia base: curso > tópicos e avaliacao
+ * 
+ * @param {Object} curso - Dados do curso com nome
+ * @returns {Object} Caminhos físicos e URLs criados
  */
 const criarDiretoriosCurso = (curso) => {
   const cursoSlug = normalizarNome(curso.nome);
@@ -364,7 +376,9 @@ const criarDiretoriosCurso = (curso) => {
 };
 
 /**
- * Cria diretorias para tópicos de curso
+ * Cria diretorias para tópicos normais de curso
+ * Estrutura: curso > topicos > nome_do_topico
+ * 
  * @param {Object} curso - Dados do curso
  * @param {Object} topico - Dados do tópico
  * @returns {Object} Caminhos criados
@@ -386,7 +400,9 @@ const criarDiretoriosTopico = (curso, topico) => {
 };
 
 /**
- * Cria diretorias para avaliações
+ * Cria diretorias para tópicos de avaliação
+ * Estrutura especial: curso > avaliacao > nome_do_topico
+ * 
  * @param {Object} curso - Dados do curso
  * @param {Object} topico - Dados do tópico de avaliação
  * @returns {Object} Caminhos criados
@@ -408,10 +424,12 @@ const criarDiretoriosTopicoAvaliacao = (curso, topico) => {
 };
 
 /**
- * Cria diretorias especiais para pastas de avaliação
- * @param {string} cursoSlug - Slug do curso
- * @param {string} pastaSlug - Slug da pasta
- * @returns {Object} Caminhos criados
+ * Cria estrutura especial para pastas de avaliação
+ * Inclui subpastas para submissões e conteúdos
+ * 
+ * @param {string} cursoSlug - Nome normalizado do curso
+ * @param {string} pastaSlug - Nome normalizado da pasta
+ * @returns {Object} Caminhos completos criados
  */
 const criarPastasAvaliacao = (cursoSlug, pastaSlug) => {
   const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'avaliacao', pastaSlug);
@@ -434,11 +452,13 @@ const criarPastasAvaliacao = (cursoSlug, pastaSlug) => {
 };
 
 /**
- * Cria diretorias para pastas genéricas
+ * Cria diretorias para pastas genéricas baseado no tipo de tópico
+ * Diferencia entre tópicos normais e de avaliação
+ * 
  * @param {Object} curso - Dados do curso
- * @param {Object} topico - Dados do tópico
+ * @param {Object} topico - Dados do tópico pai
  * @param {Object} pasta - Dados da pasta
- * @returns {Object} Caminhos criados
+ * @returns {Object} Caminhos criados conforme o tipo
  */
 const criarDiretoriosPasta = (curso, topico, pasta) => {
   if (!curso?.nome || !topico?.nome || !pasta?.nome) {
@@ -449,6 +469,7 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   const topicoSlug = normalizarNome(topico.nome);
   const pastaSlug = normalizarNome(pasta.nome);
   
+  // Identificar se é tópico de avaliação
   const isAvaliacao = 
     topico.nome.toLowerCase() === 'avaliação' || 
     topico.nome.toLowerCase() === 'avaliacao' ||
@@ -458,6 +479,7 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
   if (isAvaliacao) {
     return criarPastasAvaliacao(cursoSlug, pastaSlug);
   } else {
+    // Estrutura para tópicos normais
     const pastaDir = path.join(BASE_UPLOAD_DIR, 'cursos', cursoSlug, 'topicos', topicoSlug, pastaSlug);
     const urlPath = `uploads/cursos/${cursoSlug}/topicos/${topicoSlug}/${pastaSlug}`;
     
@@ -475,9 +497,10 @@ const criarDiretoriosPasta = (curso, topico, pasta) => {
 };
 
 /**
- * Cria diretorias para chat
- * @param {string} categoria - Nome da categoria
- * @param {string} topico - Nome do tópico
+ * Cria diretorias para ficheiros de chat organizados por categoria e tópico
+ * 
+ * @param {string} categoria - Nome da categoria de chat
+ * @param {string} topico - Nome do tópico de chat
  * @returns {Object} Caminhos criados
  */
 const criarDiretoriosChat = (categoria, topico) => {
@@ -499,9 +522,11 @@ const criarDiretoriosChat = (categoria, topico) => {
 };
 
 /**
- * Move ficheiro de origem para destino
- * @param {string} origem - Caminho de origem
- * @param {string} destino - Caminho de destino
+ * Move ficheiro de uma localização para outra
+ * Operação segura com verificações e limpeza
+ * 
+ * @param {string} origem - Caminho completo do ficheiro de origem
+ * @param {string} destino - Caminho completo do destino
  * @returns {boolean} True se a operação foi bem-sucedida
  */
 const moverArquivo = (origem, destino) => {
@@ -509,43 +534,44 @@ const moverArquivo = (origem, destino) => {
     const origemPath = path.resolve(origem);
     const destinoPath = path.resolve(destino);
     
+    // Se origem e destino são iguais, não fazer nada
     if (origemPath === destinoPath) {
       return true;
     }
 
+    // Verificar se ficheiro de origem existe
     if (!fs.existsSync(origemPath)) {
-      console.error(`Ficheiro de origem não existe: ${origemPath}`);
       return false;
     }
 
+    // Garantir que directório de destino existe
     const destDir = path.dirname(destino);
     ensureDir(destDir);
 
+    // Remover ficheiro de destino se já existe
     if (fs.existsSync(destino)) {
       fs.unlinkSync(destino);
     }
 
+    // Copiar ficheiro para destino
     fs.copyFileSync(origem, destino);
 
+    // Verificar se cópia foi bem-sucedida
     if (!fs.existsSync(destino)) {
-      console.error(`Falha na cópia: ${destino}`);
       return false;
     }
 
+    // Remover ficheiro original
     fs.unlinkSync(origem);
     return true;
   } catch (error) {
-    console.error('Erro ao mover ficheiro:', error.message);
     return false;
   }
 };
 
-// ==========================================
-// CONFIGURAÇÕES ADICIONAIS
-// ==========================================
-
 /**
  * Storage modificado para utilizadores com timestamp
+ * Usado em contextos que precisam de versionamento
  */
 const userStorageModificado = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -579,7 +605,7 @@ const uploadUserModificado = multer({
 });
 
 /**
- * Storage temporário com timestamp único
+ * Storage temporário com timestamp único para evitar colisões
  */
 const uploadTemporario = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -591,6 +617,7 @@ const uploadTemporario = multer.diskStorage({
     const timestamp = Date.now();
     const randomString = crypto.randomBytes(4).toString('hex');
 
+    // Determinar tipo baseado na rota
     let tipoFicheiro = 'temp';
     if (req.path && req.path.includes('/img/perfil')) {
       tipoFicheiro = 'AVATAR';
@@ -606,7 +633,7 @@ const uploadTemporario = multer.diskStorage({
 const uploadTemp = multer({
   storage: uploadTemporario,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 10 * 1024 * 1024, // 10MB para imagens temporárias
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('image/')) {
@@ -618,7 +645,8 @@ const uploadTemp = multer({
 });
 
 /**
- * Middleware para garantir directório de utilizador
+ * Middleware para garantir que directório do utilizador existe
+ * Usado antes de operações que precisam do directório criado
  */
 const ensureUserDir = (req, res, next) => {
   if (!req.utilizador || !req.utilizador.email) {
@@ -638,6 +666,7 @@ const ensureUserDir = (req, res, next) => {
 
 /**
  * Storage para registo de novos utilizadores
+ * Usado durante o processo de criação de conta
  */
 const registerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -668,7 +697,7 @@ const registerStorage = multer.diskStorage({
 const uploadRegister = multer({
   storage: registerStorage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 10 * 1024 * 1024, // 10MB para avatares de registo
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('image/')) {
@@ -679,7 +708,7 @@ const uploadRegister = multer({
   }
 });
 
-// Inicializar sistema na importação
+// Inicializar sistema automaticamente quando o módulo é carregado
 ensureBaseDirs();
 
 module.exports = {

@@ -4,35 +4,56 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
 
 /**
- * Obter todas as categorias com paginação e filtros
+ * Controlador para gestão de categorias de formação
+ * 
+ * Contém todas as funções para manipular categorias de formação,
+ * incluindo operações CRUD com validações e gestão de transacções
+ * para garantir a integridade dos dados.
+ */
+
+/**
+ * Obter todas as categorias com paginação, filtros e contagem de áreas
+ * 
+ * @param {Request} req - Requisição HTTP
+ * @param {Response} res - Resposta HTTP
  */
 exports.getAllCategorias = async (req, res) => {
   try {
     const { page = 1, limit = 10, search } = req.query;
     
-    // Calcular offset para paginação
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    // Converter para números e garantir valores válidos
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
     
-    // Construir opções de consulta
+    // Calcular offset para paginação
+    const offset = (pageNum - 1) * limitNum;
+    
+    // Configurar opções base da consulta
     const options = {
-      limit: parseInt(limit),
+      limit: limitNum,
       offset,
       order: [['nome', 'ASC']]
     };
     
-    // Adicionar filtragem por nome, se fornecido
-    if (search) {
-      options.where = {
-        nome: {
-          [Op.iLike]: `%${search}%`
-        }
+    // Construir filtros dinâmicos
+    const where = {};
+    
+    // Filtro por nome - busca parcial e insensível a maiúsculas
+    if (search && search.trim()) {
+      where.nome = {
+        [Op.iLike]: `%${search.trim()}%`
       };
     }
     
-    // Realizar a consulta
+    // Aplicar filtros se existirem
+    if (Object.keys(where).length > 0) {
+      options.where = where;
+    }
+    
+    // Executar consulta com contagem total para paginação
     const { count, rows } = await Categoria.findAndCountAll(options);
     
-    // Se solicitado, incluir contagem de áreas para cada categoria
+    // Adicionar contagem de áreas para cada categoria
     const categoriasComContagem = await Promise.all(rows.map(async (categoria) => {
       const areasCount = await Area.count({
         where: {
@@ -46,12 +67,23 @@ exports.getAllCategorias = async (req, res) => {
       };
     }));
     
-    // Enviar resposta
+    // Calcular informações de paginação
+    const totalPaginas = Math.ceil(count / limitNum);
+    
+    // Retornar resposta estruturada
     res.status(200).json({
+      success: true,
       total: count,
-      pages: Math.ceil(count / parseInt(limit)),
-      current_page: parseInt(page),
-      categorias: categoriasComContagem
+      pages: totalPaginas,
+      current_page: pageNum,
+      categorias: categoriasComContagem,
+      pagination_info: {
+        has_previous: pageNum > 1,
+        has_next: pageNum < totalPaginas,
+        items_per_page: limitNum,
+        total_items: count,
+        showing_items: categoriasComContagem.length
+      }
     });
   } catch (error) {
     console.error('Erro ao buscar categorias:', error);
@@ -64,12 +96,16 @@ exports.getAllCategorias = async (req, res) => {
 };
 
 /**
- * Obter uma categoria específica pelo ID
+ * Obter dados detalhados de uma categoria específica
+ * 
+ * @param {Request} req - Requisição HTTP com id da categoria
+ * @param {Response} res - Resposta HTTP
  */
 exports.getCategoriaById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Buscar categoria pelo ID
     const categoria = await Categoria.findByPk(id);
     
     if (!categoria) {
@@ -79,18 +115,21 @@ exports.getCategoriaById = async (req, res) => {
       });
     }
     
-    // Obter áreas associadas
+    // Obter áreas associadas à categoria
     const areas = await Area.findAll({
       where: {
         id_categoria: id
-      }
+      },
+      attributes: ['id_area', 'nome'],
+      order: [['nome', 'ASC']]
     });
     
     res.status(200).json({
       success: true,
       categoria: {
         ...categoria.toJSON(),
-        areas
+        areas,
+        total_areas: areas.length
       }
     });
   } catch (error) {
@@ -104,7 +143,10 @@ exports.getCategoriaById = async (req, res) => {
 };
 
 /**
- * Criar uma nova categoria
+ * Criar uma nova categoria de formação
+ * 
+ * @param {Request} req - Requisição HTTP com dados da nova categoria
+ * @param {Response} res - Resposta HTTP
  */
 exports.createCategoria = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -112,20 +154,20 @@ exports.createCategoria = async (req, res) => {
   try {
     const { nome } = req.body;
     
-    // Validar dados de entrada
+    // Validação dos dados obrigatórios
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'O nome da categoria é obrigatório'
+        message: 'O nome da categoria é obrigatório e não pode estar vazio'
       });
     }
     
-    // Verificar se já existe uma categoria com o mesmo nome
+    // Verificar duplicação de nome
     const categoriaExistente = await Categoria.findOne({
       where: {
         nome: {
-          [Op.iLike]: nome
+          [Op.iLike]: nome.trim()
         }
       }
     });
@@ -138,9 +180,9 @@ exports.createCategoria = async (req, res) => {
       });
     }
     
-    // Criar a categoria
+    // Criar a nova categoria
     const novaCategoria = await Categoria.create(
-      { nome },
+      { nome: nome.trim() },
       { transaction }
     );
     
@@ -149,7 +191,10 @@ exports.createCategoria = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Categoria criada com sucesso',
-      categoria: novaCategoria
+      categoria: {
+        ...novaCategoria.toJSON(),
+        areas_count: 0
+      }
     });
   } catch (error) {
     await transaction.rollback();
@@ -163,7 +208,10 @@ exports.createCategoria = async (req, res) => {
 };
 
 /**
- * Atualizar uma categoria existente
+ * Actualizar uma categoria existente
+ * 
+ * @param {Request} req - Requisição HTTP com ID da categoria e novos dados
+ * @param {Response} res - Resposta HTTP
  */
 exports.updateCategoria = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -172,12 +220,12 @@ exports.updateCategoria = async (req, res) => {
     const { id } = req.params;
     const { nome } = req.body;
     
-    // Validar dados de entrada
+    // Validação dos dados obrigatórios
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'O nome da categoria é obrigatório'
+        message: 'O nome da categoria é obrigatório e não pode estar vazio'
       });
     }
     
@@ -192,11 +240,11 @@ exports.updateCategoria = async (req, res) => {
       });
     }
     
-    // Verificar se já existe outra categoria com o mesmo nome
+    // Verificar duplicação de nome (excluindo a própria categoria)
     const categoriaExistente = await Categoria.findOne({
       where: {
         nome: {
-          [Op.iLike]: nome
+          [Op.iLike]: nome.trim()
         },
         id_categoria: {
           [Op.ne]: id
@@ -212,32 +260,45 @@ exports.updateCategoria = async (req, res) => {
       });
     }
     
-    // Atualizar a categoria
+    // Actualizar a categoria
     await categoria.update(
-      { nome },
+      { nome: nome.trim() },
       { transaction }
     );
     
     await transaction.commit();
     
+    // Obter contagem de áreas para a resposta
+    const areasCount = await Area.count({
+      where: {
+        id_categoria: id
+      }
+    });
+    
     res.status(200).json({
       success: true,
-      message: 'Categoria atualizada com sucesso',
-      categoria
+      message: 'Categoria actualizada com sucesso',
+      categoria: {
+        ...categoria.toJSON(),
+        areas_count: areasCount
+      }
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao atualizar categoria:', error);
+    console.error('Erro ao actualizar categoria:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao atualizar categoria',
+      message: 'Erro ao actualizar categoria',
       error: error.message
     });
   }
 };
 
 /**
- * Excluir uma categoria
+ * Eliminar uma categoria de formação
+ * 
+ * @param {Request} req - Requisição HTTP com ID da categoria a eliminar
+ * @param {Response} res - Resposta HTTP
  */
 exports.deleteCategoria = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -256,7 +317,7 @@ exports.deleteCategoria = async (req, res) => {
       });
     }
     
-    // Verificar se existem áreas associadas a esta categoria
+    // Verificar se existem áreas associadas
     const areasAssociadas = await Area.count({
       where: {
         id_categoria: id
@@ -267,25 +328,28 @@ exports.deleteCategoria = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Não é possível excluir a categoria pois existem áreas associadas'
+        message: `Não é possível eliminar a categoria pois existem ${areasAssociadas} área(s) associada(s). Remove primeiro as áreas desta categoria.`
       });
     }
     
-    // Excluir a categoria
+    // Guardar nome da categoria para confirmação
+    const nomeCategoria = categoria.nome;
+    
+    // Eliminar a categoria
     await categoria.destroy({ transaction });
     
     await transaction.commit();
     
     res.status(200).json({
       success: true,
-      message: 'Categoria excluída com sucesso'
+      message: `Categoria "${nomeCategoria}" eliminada com sucesso`
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao excluir categoria:', error);
+    console.error('Erro ao eliminar categoria:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao excluir categoria',
+      message: 'Erro ao eliminar categoria',
       error: error.message
     });
   }
