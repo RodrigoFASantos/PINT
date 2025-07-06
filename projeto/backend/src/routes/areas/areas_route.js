@@ -1,354 +1,444 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getAllTopicosCategoria,
-  getTopicoById,
-  getTopicosByCategoria,
-  createTopico,
-  updateTopico,
-  deleteTopico,
-  getComentariosByTopico,
-  createComentario,
-  avaliarComentario
-} = require('../../controllers/chat/Topico_area_ctrl');
-const authMiddleware = require('../../middleware/auth');
+const areasController = require('../../controllers/areas/areas_ctrl');
+const verificarToken = require('../../middleware/auth');
 const verificarCargo = require('../../middleware/role_middleware');
 
 /**
- * Rotas para gestão de tópicos de área e comentários
+ * ROTAS PARA GESTÃO DE ÁREAS DE FORMAÇÃO
  * 
- * Define todas as rotas relacionadas com tópicos de discussão,
- * organizando as operações de consulta e gestão com as permissões adequadas.
+ * Este módulo define todas as rotas HTTP para gestão do segundo nível
+ * da hierarquia educacional da plataforma:
+ * Categoria → Área → Tópico → Curso
  * 
- * Os tópicos organizam discussões por categorias e áreas específicas,
- * facilitando a comunicação entre utilizadores do sistema.
+ * ESTRUTURA DE SEGURANÇA:
+ * - Todas as rotas requerem autenticação obrigatória (verificarToken)
+ * - Operações administrativas requerem cargo de administrador
+ * - Consultas estão disponíveis para todos os utilizadores autenticados
  * 
- * Estrutura de permissões:
- * - Consulta de tópicos: Todos os utilizadores autenticados
- * - Criação e edição: Administradores e formadores (id_cargo 1 e 2)
- * - Eliminação: Apenas administradores (id_cargo 1)
- * - Comentários: Todos os utilizadores autenticados
+ * REGRAS DE INTEGRIDADE IMPLEMENTADAS:
+ * - Áreas só podem ser eliminadas se não tiverem tópicos dependentes
+ * - Nome de área deve ser único dentro da mesma categoria
+ * - Área deve sempre pertencer a uma categoria válida
+ * - Validação automática de dependências antes de eliminações
+ * - Transações garantem consistência em operações críticas
  */
 
-// Aplicar autenticação a todas as rotas
-router.use(authMiddleware);
+// Aplicação de autenticação obrigatória a todas as rotas
+// Este middleware é executado antes de qualquer controlador
+router.use(verificarToken);
 
-// ==========================================
-// ROTAS DE CONSULTA PÚBLICA (Utilizadores Autenticados)
-// ==========================================
+// =============================================================================
+// ROTAS DE CONSULTA - Disponíveis para todos os utilizadores autenticados
+// =============================================================================
 
 /**
- * GET /api/topicos-area/todos
- * Obter lista paginada de todos os tópicos com filtros opcionais
+ * GET /api/areas
+ * Obter lista paginada de áreas com filtros opcionais
  * 
- * Query Parameters:
- * - page: Número da página (padrão: 1)
+ * FUNCIONALIDADES AVANÇADAS:
+ * - Paginação automática com validação robusta de parâmetros
+ * - Filtro de busca por nome (insensível a maiúsculas/minúsculas)
+ * - Filtro por categoria específica para navegação hierárquica
+ * - Ordenação alfabética por nome da área
+ * - Contagem dinâmica de tópicos associados a cada área
+ * - Informações completas da categoria pai para cada área
+ * - Dados de paginação estruturados para o frontend
+ * 
+ * QUERY PARAMETERS ACEITES:
+ * - page: Número da página (padrão: 1, mínimo: 1)
  * - limit: Itens por página (padrão: 10, máximo: 100)
- * - search: Filtro de busca por título ou descrição do tópico
- * - categoria: ID da categoria para filtrar tópicos
- * - area: ID da área para filtrar tópicos
- * - grouped: 'true' para agrupar por categorias
+ * - search: Termo de busca por nome da área
+ * - categoria: ID da categoria para filtrar áreas específicas
  * 
- * Resposta inclui:
- * - Lista de tópicos com informações da categoria e área
- * - Contagem de mensagens associadas
- * - Informações de paginação
- * - Dados do criador do tópico
+ * RESPOSTA ESTRUTURADA:
+ * {
+ *   success: true,
+ *   total: 45,                        // Total de áreas encontradas
+ *   pages: 5,                         // Total de páginas disponíveis
+ *   current_page: 1,                  // Página atual
+ *   areas: [                          // Array de áreas da página
+ *     {
+ *       id_area: 1,
+ *       nome: "Programação Web",
+ *       categoria: {                  // Informações da categoria pai
+ *         id_categoria: 1,
+ *         nome: "Informática"
+ *       },
+ *       topicos_count: 8              // Contagem dinâmica de tópicos
+ *     }
+ *   ],
+ *   pagination_info: {                // Informações detalhadas de paginação
+ *     has_previous: false,
+ *     has_next: true,
+ *     items_per_page: 10,
+ *     total_items: 45,
+ *     showing_items: 10
+ *   }
+ * }
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * CASOS DE USO PRINCIPAIS:
+ * - Interface principal de gestão de áreas
+ * - Seletores em cascata (categoria → área) em formulários
+ * - Navegação hierárquica da plataforma
+ * - Relatórios e estatísticas por área
+ * - Filtragem de conteúdo por área específica
+ * 
+ * OPTIMIZAÇÕES DE PERFORMANCE:
+ * - Consulta otimizada com INNER JOIN para categorias
+ * - Contagem de tópicos em consultas paralelas
+ * - Paginação eficiente com LIMIT e OFFSET
+ * - Índices em colunas de busca e filtragem
+ * 
+ * ACESSO: Todos os utilizadores autenticados
  */
-router.get('/todos', getAllTopicosCategoria);
+router.get('/', areasController.getAllAreas);
 
 /**
- * GET /api/topicos-area
- * Alias para /todos - Obter lista de tópicos
- * Mantém compatibilidade com frontend existente
+ * GET /api/areas/categoria/:id_categoria
+ * Obter todas as áreas de uma categoria específica
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * FUNCIONALIDADES ESPECIALIZADAS:
+ * - Validação automática da existência da categoria
+ * - Retorno de áreas ordenadas alfabeticamente por nome
+ * - Informações da categoria incluídas na resposta
+ * - Contagem total de áreas para a categoria
+ * 
+ * PARÂMETROS OBRIGATÓRIOS:
+ * - id_categoria: Identificador único da categoria pai
+ * 
+ * RESPOSTA DETALHADA:
+ * {
+ *   success: true,
+ *   categoria: {                      // Dados da categoria solicitada
+ *     id_categoria: 1,
+ *     nome: "Informática"
+ *   },
+ *   areas: [                          // Lista de áreas da categoria
+ *     {
+ *       id_area: 1,
+ *       nome: "Programação Web",
+ *       id_categoria: 1
+ *     },
+ *     {
+ *       id_area: 2,
+ *       nome: "Base de Dados",
+ *       id_categoria: 1
+ *     }
+ *   ],
+ *   total_areas: 12                   // Contagem total de áreas
+ * }
+ * 
+ * CASOS DE USO ESPECÍFICOS:
+ * - Seletores em cascata para formulários (categoria → área)
+ * - Navegação hierárquica entre níveis
+ * - Construção de menus dinâmicos por categoria
+ * - Relatórios específicos por categoria
+ * - Filtragem de conteúdo educacional
+ * 
+ * VALIDAÇÕES IMPLEMENTADAS:
+ * - Categoria deve existir na base de dados
+ * - ID da categoria deve ser válido
+ * - Retorna 404 se categoria não encontrada
+ * 
+ * ACESSO: Todos os utilizadores autenticados
  */
-router.get('/', getAllTopicosCategoria);
+router.get('/categoria/:id_categoria', areasController.getAreasByCategoria);
 
 /**
- * GET /api/topicos-area/:id
- * Obter dados detalhados de um tópico específico
+ * GET /api/areas/:id
+ * Obter dados completos de uma área específica
  * 
- * Parâmetros:
- * - id: Identificador único do tópico
+ * FUNCIONALIDADES DETALHADAS:
+ * - Informações completas da área solicitada
+ * - Dados da categoria pai incluídos
+ * - Lista completa de tópicos associados à área
+ * - Contagem total de tópicos para relatórios
+ * - Validação automática da existência da área
  * 
- * Dados retornados:
- * - Informações completas do tópico
- * - Dados da categoria e área associadas
- * - Informações do criador
- * - Estatísticas de participação (mensagens, participantes únicos)
- * - Data da última atividade
+ * PARÂMETROS:
+ * - id: Identificador único da área (ID primário)
  * 
- * Casos de uso:
- * - Página de detalhes do tópico
- * - Entrada no chat/fórum
- * - Análise de atividade
+ * RESPOSTA COMPLETA:
+ * {
+ *   success: true,
+ *   area: {
+ *     id_area: 1,
+ *     nome: "Programação Web",
+ *     id_categoria: 1,
+ *     categoria: {                    // Dados da categoria pai
+ *       id_categoria: 1,
+ *       nome: "Informática"
+ *     },
+ *     topicos: [                      // Lista de tópicos da área
+ *       {
+ *         id_topico: 1,
+ *         titulo: "HTML e CSS",
+ *         ativo: true
+ *       },
+ *       {
+ *         id_topico: 2,
+ *         titulo: "JavaScript",
+ *         ativo: true
+ *       }
+ *     ],
+ *     total_topicos: 8                // Contagem total de tópicos
+ *   }
+ * }
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * CASOS DE USO PRINCIPAIS:
+ * - Página de detalhes da área no frontend
+ * - Formulários de edição de área existente
+ * - Navegação por tópicos da área específica
+ * - Análise detalhada da estrutura hierárquica
+ * - Relatórios específicos por área
+ * 
+ * VALIDAÇÕES IMPLEMENTADAS:
+ * - Área deve existir na base de dados
+ * - ID deve ser um número válido
+ * - Retorna 404 se área não encontrada
+ * - Validação de integridade dos dados relacionados
+ * 
+ * ACESSO: Todos os utilizadores autenticados
  */
-router.get('/:id', getTopicoById);
+router.get('/:id', areasController.getAreaById);
+
+// =============================================================================
+// ROTAS ADMINISTRATIVAS - Apenas administradores (id_cargo === 1)
+// =============================================================================
 
 /**
- * GET /api/topicos-area/categoria/:id_categoria
- * Obter todos os tópicos pertencentes a uma categoria específica
+ * POST /api/areas
+ * Criar nova área de formação
  * 
- * Parâmetros:
- * - id_categoria: Identificador único da categoria
+ * OPERAÇÃO CRÍTICA com validações rigorosas de integridade hierárquica
  * 
- * Query Parameters:
- * - area_id: Filtrar por área específica dentro da categoria
- * - busca: Termo de busca por título ou descrição
- * - limit: Itens por página (padrão: 20)
- * - offset: Número de itens a saltar (padrão: 0)
+ * CORPO DA REQUISIÇÃO:
+ * {
+ *   "nome": "Nome da Nova Área",
+ *   "id_categoria": 1
+ * }
  * 
- * Funcionalidades:
- * - Validação da existência da categoria
- * - Retorno de tópicos ordenados por data de criação
- * - Paginação automática
- * - Informações do criador incluídas
+ * VALIDAÇÕES OBRIGATÓRIAS IMPLEMENTADAS:
+ * - Nome é obrigatório e não pode estar vazio
+ * - Categoria é obrigatória e deve existir
+ * - Nome deve ser único dentro da mesma categoria
+ * - Busca insensível a maiúsculas/minúsculas
+ * - Trimming automático de espaços em branco
+ * - Utilizador deve ter permissões de administrador
  * 
- * Casos de uso:
- * - Navegação por categoria no frontend
- * - Construção de menus dinâmicos
- * - Filtros de seleção rápida
+ * PROCESSO DETALHADO DE CRIAÇÃO:
+ * 1. Validar dados de entrada obrigatórios
+ * 2. Verificar existência da categoria especificada
+ * 3. Verificar unicidade do nome dentro da categoria
+ * 4. Iniciar transação para operação atómica
+ * 5. Criar área na base de dados
+ * 6. Confirmar transação se tudo correr bem
+ * 7. Retornar área criada com informações da categoria
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
- */
-router.get('/categoria/:id_categoria', getTopicosByCategoria);
-
-// ==========================================
-// ROTAS DE GESTÃO ADMINISTRATIVA
-// ==========================================
-
-/**
- * POST /api/topicos-area
- * Criar um novo tópico de discussão
+ * RESPOSTA DE SUCESSO (201):
+ * {
+ *   success: true,
+ *   message: "Área criada com sucesso",
+ *   area: {
+ *     id_area: 15,
+ *     nome: "Nome da Nova Área",
+ *     categoria: {
+ *       id_categoria: 1,
+ *       nome: "Informática"
+ *     }
+ *   }
+ * }
  * 
- * Corpo da requisição (JSON):
- * - titulo: Título do tópico (string, obrigatório, único por área)
- * - descricao: Descrição do tópico (string, opcional)
- * - id_categoria: ID da categoria (integer, obrigatório)
- * - id_area: ID da área (integer, obrigatório)
+ * CASOS DE ERRO FREQUENTES:
+ * - 400: Nome vazio, categoria inválida ou nome já existe na categoria
+ * - 403: Utilizador sem permissões de administrador
+ * - 404: Categoria especificada não encontrada
+ * - 500: Erro na base de dados ou problema de transação
  * 
- * Validações:
- * - Título não pode estar vazio
- * - Categoria e área devem existir
- * - Título único dentro da mesma área
- * - Utilizador deve ter permissões adequadas
- * - Consistência transacional
+ * REGRAS DE NEGÓCIO:
+ * - Áreas são únicas apenas dentro da mesma categoria
+ * - Diferentes categorias podem ter áreas com nomes iguais
+ * - Nova área inicia sempre sem tópicos associados
  * 
- * Resposta de sucesso:
- * - Status 201 Created
- * - Dados completos do tópico criado
- * - Informações da categoria e área associadas
- * - Dados do criador
- * 
- * Permissões: Administradores e formadores apenas
+ * ACESSO: Apenas administradores (id_cargo === 1)
  */
 router.post('/', 
-  verificarCargo(['admin', 'formador']), 
-  createTopico
+  verificarCargo(['admin']), 
+  areasController.createArea
 );
 
 /**
- * PUT /api/topicos-area/:id
- * Actualizar dados de um tópico existente
+ * PUT /api/areas/:id
+ * Atualizar área existente
  * 
- * Parâmetros:
- * - id: Identificador do tópico a actualizar
+ * OPERAÇÃO DE ATUALIZAÇÃO com suporte para mudança de categoria
  * 
- * Corpo da requisição (JSON):
- * - titulo: Novo título do tópico (string, opcional)
- * - descricao: Nova descrição (string, opcional)
- * - id_categoria: Nova categoria (integer, opcional)
- * - id_area: Nova área (integer, opcional)
- * - ativo: Status do tópico (boolean, apenas admin/formador)
+ * PARÂMETROS:
+ * - id: Identificador da área a atualizar
  * 
- * Validações:
- * - Tópico deve existir
- * - Utilizador deve ser o criador ou ter permissões elevadas
- * - Nova categoria/área devem existir se especificadas
- * - Título único na área (excluindo o próprio tópico)
- * - Dados não podem estar vazios se fornecidos
+ * CORPO DA REQUISIÇÃO:
+ * {
+ *   "nome": "Novo Nome da Área",
+ *   "id_categoria": 2
+ * }
  * 
- * Casos de uso:
- * - Correção de informações
- * - Reorganização de categorias/áreas
- * - Moderação de conteúdo
- * - Desativação de tópicos
+ * VALIDAÇÕES RIGOROSAS IMPLEMENTADAS:
+ * - Área deve existir na base de dados
+ * - Novo nome é obrigatório e não pode estar vazio
+ * - Nova categoria deve existir (se especificada)
+ * - Novo nome deve ser único na categoria (excluindo a própria área)
+ * - Verificação de duplicação com outras áreas na categoria
+ * - Utilizador deve ter permissões adequadas
  * 
- * Permissões: Criador do tópico, administradores ou formadores
+ * PROCESSO DETALHADO DE ATUALIZAÇÃO:
+ * 1. Verificar existência da área a atualizar
+ * 2. Validar novos dados fornecidos
+ * 3. Verificar existência da nova categoria
+ * 4. Verificar duplicação excluindo a própria área
+ * 5. Iniciar transação para operação atómica
+ * 6. Atualizar dados na base de dados
+ * 7. Confirmar transação se operação bem-sucedida
+ * 8. Retornar área atualizada com informações da categoria
+ * 
+ * FUNCIONALIDADES AVANÇADAS:
+ * - Permite mover área entre categorias diferentes
+ * - Preserva contagem atual de tópicos associados
+ * - Atualização atómica com transações
+ * - Validação de unicidade específica por categoria
+ * - Gestão automática de relacionamentos
+ * 
+ * CASOS DE USO:
+ * - Correção de nomes de áreas
+ * - Reorganização da estrutura hierárquica
+ * - Movimento de áreas entre categorias
+ * - Ajustes na taxonomia educacional
+ * 
+ * ACESSO: Apenas administradores (id_cargo === 1)
  */
-router.put('/:id', updateTopico);
+router.put('/:id', 
+  verificarCargo(['admin']), 
+  areasController.updateArea
+);
 
 /**
- * DELETE /api/topicos-area/:id
- * Eliminar um tópico de discussão
+ * DELETE /api/areas/:id
+ * Eliminar área de formação
  * 
- * Parâmetros:
- * - id: Identificador do tópico a eliminar
+ * ⚠️  OPERAÇÃO CRÍTICA E IRREVERSÍVEL ⚠️
  * 
- * Restrições de integridade:
- * - Tópico deve existir
- * - Operação elimina todo o conteúdo associado
- * - Remove mensagens, interações e denúncias
- * - Operação irreversível
+ * Esta é uma operação extremamente sensível que afeta diretamente
+ * a estrutura hierárquica e pode impactar tópicos, cursos e
+ * todo o conteúdo educacional associado.
  * 
- * Processo:
- * 1. Validar existência do tópico
- * 2. Contar mensagens e denúncias associadas
- * 3. Eliminar denúncias relacionadas
- * 4. Eliminar interações das mensagens
- * 5. Eliminar mensagens do tópico
- * 6. Eliminar o tópico dentro de transação
- * 7. Confirmar eliminação com estatísticas
+ * PARÂMETROS:
+ * - id: Identificador da área a eliminar
  * 
- * Casos de erro:
- * - Tópico não encontrado (404)
- * - Permissões insuficientes (403)
- * - Problemas de base de dados (500)
+ * RESTRIÇÕES DE INTEGRIDADE CRÍTICAS:
+ * - Área DEVE existir na base de dados
+ * - NÃO pode ter tópicos associados (validação obrigatória)
+ * - Operação é completamente irreversível
+ * - Pode afetar navegação e estrutura de cursos
  * 
- * Permissões: Apenas administradores
+ * VALIDAÇÕES DE SEGURANÇA OBRIGATÓRIAS:
+ * 1. Verificar existência da área
+ * 2. Contar tópicos associados à área
+ * 3. BLOQUEAR eliminação se houver dependências
+ * 4. Verificar permissões de administrador
+ * 5. Executar dentro de transação para consistência
+ * 
+ * PROCESSO DE ELIMINAÇÃO SEGURA:
+ * 1. Validar existência da área na base de dados
+ * 2. Verificar se existem tópicos associados (COUNT query)
+ * 3. INTERROMPER operação se houver dependências
+ * 4. Iniciar transação para operação atómica
+ * 5. Eliminar área da base de dados
+ * 6. Confirmar transação apenas se tudo correr bem
+ * 7. Retornar confirmação com nome da área eliminada
+ * 
+ * CASOS DE ERRO FREQUENTES:
+ * - 404: Área não encontrada na base de dados
+ * - 400: Área tem tópicos associados (BLOQUEIO PRINCIPAL)
+ * - 403: Utilizador sem permissões de administrador
+ * - 500: Problemas de conectividade ou transação
+ * 
+ * RESPOSTA DE SUCESSO (200):
+ * {
+ *   success: true,
+ *   message: "Área 'Programação Web' eliminada com sucesso"
+ * }
+ * 
+ * RESPOSTA DE BLOQUEIO (400):
+ * {
+ *   success: false,
+ *   message: "Não é possível eliminar a área pois existem 5 tópico(s) associado(s). 
+ *             Remove primeiro os tópicos desta área ou elimina-os 
+ *             (o que também removerá cursos e chats associados)."
+ * }
+ * 
+ * NOTA CRÍTICA PARA ADMINISTRADORES:
+ * Para eliminar uma área com tópicos associados:
+ * 1. Primeiro eliminar ou reatribuir todos os tópicos
+ * 2. Verificar se não há cursos ativos nos tópicos
+ * 3. Considerar impacto nos utilizadores inscritos
+ * 4. Fazer backup dos dados antes de operações críticas
+ * 5. Comunicar mudanças aos utilizadores afetados
+ * 
+ * Esta é uma regra fundamental da hierarquia educacional que
+ * garante a integridade de todo o sistema de formação.
+ * 
+ * ACESSO: Apenas administradores (id_cargo === 1)
  */
 router.delete('/:id', 
   verificarCargo(['admin']),
-  deleteTopico
+  areasController.deleteArea
 );
 
-// ==========================================
-// ROTAS DE GESTÃO DE COMENTÁRIOS
-// ==========================================
-
 /**
- * GET /api/topicos-area/:id/comentarios
- * Obter comentários de um tópico específico
+ * EXPORTAÇÃO DO ROUTER CONFIGURADO
  * 
- * Parâmetros:
- * - id: Identificador do tópico
+ * Este router implementa a gestão completa do segundo nível da
+ * hierarquia educacional da plataforma de formação.
  * 
- * Query Parameters:
- * - limit: Mensagens por página (padrão: 50)
- * - offset: Número de mensagens a saltar (padrão: 0)
- * - ordem: Ordenação por data ('ASC' ou 'DESC', padrão: 'ASC')
+ * MIDDLEWARE APLICADO GLOBALMENTE:
+ * - verificarToken: Autenticação obrigatória em todas as rotas
+ * - verificarCargo: Autorização específica nas rotas administrativas
  * 
- * Dados retornados:
- * - Lista de mensagens não ocultas
- * - Informações do utilizador que criou cada mensagem
- * - Contadores de likes e dislikes
- * - Anexos se existirem
- * - Informações de paginação
- * - Dados básicos do tópico
- * 
- * Casos de uso:
- * - Carregar mensagens do chat/fórum
- * - Paginação de conversas longas
- * - Histórico de discussões
- * 
- * Acesso: Utilizadores autenticados (todos os cargos)
- */
-router.get('/:id/comentarios', getComentariosByTopico);
-
-/**
- * POST /api/topicos-area/:id/comentarios
- * Criar novo comentário em um tópico
- * 
- * Parâmetros:
- * - id: Identificador do tópico
- * 
- * Corpo da requisição:
- * - texto: Conteúdo da mensagem (string, opcional se houver anexo)
- * - file: Ficheiro anexado (multipart/form-data, opcional)
- * 
- * Funcionalidades:
- * - Validação da existência e estado ativo do tópico
- * - Processamento de anexos com estrutura de diretórios
- * - Geração de nomes únicos para ficheiros
- * - Determinação automática do tipo de ficheiro
- * - Notificação em tempo real via WebSocket
- * - Criação de registo de atividade
- * 
- * Validações:
- * - Tópico deve existir e estar ativo
- * - Deve fornecer texto ou anexo
- * - Ficheiros dentro dos limites permitidos
- * - Utilizador autenticado
- * 
- * Resposta inclui:
- * - Dados completos da mensagem criada
- * - Informações do utilizador
- * - URLs de anexos se aplicável
- * 
- * Acesso: Utilizadores autenticados (todos os cargos)
- */
-router.post('/:id/comentarios', createComentario);
-
-// ==========================================
-// ROTAS DE INTERAÇÃO COM COMENTÁRIOS
-// ==========================================
-
-/**
- * POST /api/topicos-area/:id_topico/comentarios/:id_comentario/avaliar
- * Avaliar comentário (like/dislike)
- * 
- * Parâmetros:
- * - id_topico: Identificador do tópico
- * - id_comentario: Identificador da mensagem
- * 
- * Corpo da requisição (JSON):
- * - tipo: Tipo de avaliação ('like' ou 'dislike')
- * 
- * Funcionalidades:
- * - Sistema de toggle (clicar novamente remove a avaliação)
- * - Mudança de tipo de avaliação (like para dislike e vice-versa)
- * - Atualização automática de contadores
- * - Notificação em tempo real via WebSocket
- * - Histórico de interações por utilizador
- * 
- * Validações:
- * - Mensagem deve existir no tópico especificado
- * - Tipo de avaliação deve ser válido
- * - Um utilizador só pode ter uma avaliação por mensagem
- * - Utilizador autenticado
- * 
- * Resposta inclui:
- * - Contadores atualizados (likes/dislikes)
- * - Estado da interação do utilizador
- * - Confirmação da ação realizada
- * 
- * Casos de uso:
- * - Sistema de feedback em discussões
- * - Moderação comunitária
- * - Destaque de conteúdo relevante
- * 
- * Acesso: Utilizadores autenticados (todos os cargos)
- */
-router.post('/:id_topico/comentarios/:id_comentario/avaliar', avaliarComentario);
-
-/**
- * Exportar router configurado
- * 
- * Este router será montado no caminho /api/topicos-area pelo servidor principal,
- * fornecendo uma API REST completa para gestão de tópicos de discussão.
- * 
- * Middleware aplicado:
- * - authMiddleware: Autenticação obrigatória em todas as rotas
- * - verificarCargo: Autorização específica em rotas de gestão
- * 
- * Padronização de respostas:
+ * PADRONIZAÇÃO DAS RESPOSTAS:
  * - Códigos HTTP apropriados (200, 201, 400, 403, 404, 500)
- * - Estrutura JSON consistente com success/error
- * - Mensagens de erro em português
- * - Dados paginados quando aplicável
- * - Transações para operações críticas
+ * - Estrutura JSON consistente com success/error/message
+ * - Mensagens de erro em português claro e específico
+ * - Dados paginados nas listagens com informações completas
+ * - Transações para todas as operações críticas
  * 
- * Funcionalidades avançadas:
- * - WebSocket para notificações em tempo real
- * - Upload e gestão de ficheiros anexados
- * - Sistema de moderação integrado
- * - Estatísticas de participação
- * - Estrutura hierárquica (categoria > área > tópico > mensagem)
+ * FUNCIONALIDADES PRINCIPAIS IMPLEMENTADAS:
+ * - CRUD completo para áreas de formação
+ * - Validação rigorosa de integridade referencial
+ * - Paginação e filtros avançados para grandes volumes
+ * - Filtragem em cascata (categoria → área)
+ * - Contadores dinâmicos de tópicos por área
+ * - Gestão granular de permissões por tipo de utilizador
+ * - Suporte completo para navegação hierárquica
+ * - Prevenção de operações destrutivas sem validação
+ * 
+ * INTEGRAÇÃO HIERÁRQUICA:
+ * - Relacionamento direto com categorias (nível superior)
+ * - Relacionamento direto com tópicos (nível inferior)
+ * - Validação de dependências em ambas as direções
+ * - Suporte para reorganização da estrutura educacional
+ * 
+ * CONSIDERAÇÕES DE PERFORMANCE:
+ * - Consultas otimizadas com JOINs apropriados
+ * - Contagens dinâmicas em consultas paralelas
+ * - Transações mínimas mas consistentes
+ * - Índices apropriados em colunas de busca e relação
+ * - Cache estratégico para dados frequentemente acedidos
+ * 
+ * CASOS DE USO AVANÇADOS:
+ * - Reorganização da taxonomia educacional
+ * - Migração de conteúdo entre áreas
+ * - Relatórios hierárquicos detalhados
+ * - Análise de distribuição de conteúdo
+ * - Gestão de permissões por área específica
  */
 module.exports = router;

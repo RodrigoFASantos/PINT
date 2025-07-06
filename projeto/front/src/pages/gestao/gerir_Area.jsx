@@ -9,17 +9,18 @@ import './css/gerir_Area.css';
 import Sidebar from '../../components/Sidebar';
 
 /**
- * Componente para gestão de áreas de formação
+ * Componente para gestão de áreas de formação (2º nível da hierarquia)
  * 
  * Permite aos administradores:
- * - Ver todas as áreas organizadas por categorias
+ * - Visualizar todas as áreas organizadas por categorias
  * - Criar novas áreas de formação
  * - Editar áreas existentes
- * - Eliminar áreas (só se não tiverem cursos)
+ * - Eliminar áreas (apenas se não tiverem tópicos dependentes)
  * - Filtrar áreas por nome e categoria
- * - Navegar entre páginas (10 itens por página)
+ * - Navegar entre páginas
  * 
- * Acesso restrito: apenas utilizadores com id_cargo === 1 (administradores)
+ * HIERARQUIA: Categoria → Área → Tópico → Curso
+ * ACESSO: Apenas administradores (id_cargo === 1)
  */
 const Gerir_Area = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const Gerir_Area = () => {
   const [newAreaCategoria, setNewAreaCategoria] = useState('');
   const [showAreaForm, setShowAreaForm] = useState(false);
   
-  // Referência para timeout de filtros (evita muitas requisições)
+  // Referência para timeout de filtros (evita requisições excessivas)
   const filterTimeoutRef = useRef(null);
 
   /**
@@ -60,9 +61,7 @@ const Gerir_Area = () => {
 
   /**
    * Busca as áreas da API com paginação e filtros
-   * Implementa paginação automática no frontend quando a API retorna todas as áreas
-   * @param {number} pagina - Número da página a buscar
-   * @param {object} filtrosAtuais - Filtros a aplicar na busca
+   * Implementa paginação no frontend quando a API retorna todas as áreas
    */
   const buscarAreas = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
@@ -100,7 +99,6 @@ const Gerir_Area = () => {
       let areasData = [];
       let total = 0;
       let processouComSucesso = false;
-      let usarPaginacaoFrontend = false;
 
       if (response.data && response.data.success) {
         // Formato padrão: {success: true, areas: [...], total: 12} - API com paginação
@@ -108,7 +106,7 @@ const Gerir_Area = () => {
         total = response.data.total || 0;
         processouComSucesso = true;
       } else if (Array.isArray(response.data)) {
-        // Formato alternativo: array directo [{...}, {...}, ...] - API sem paginação
+        // Formato alternativo: array direto [{...}, {...}, ...] - API sem paginação
         const todasAsAreasRecebidas = response.data;
         
         // Aplicar filtros manualmente
@@ -138,9 +136,7 @@ const Gerir_Area = () => {
         
         // Armazenar todas as áreas para futuras operações
         setTodasAsAreas(todasAsAreasRecebidas);
-        
         processouComSucesso = true;
-        usarPaginacaoFrontend = true;
       } else if (response.data && Array.isArray(response.data.areas)) {
         // Formato alternativo: {areas: [...]} sem success
         areasData = response.data.areas;
@@ -149,9 +145,11 @@ const Gerir_Area = () => {
       }
 
       if (processouComSucesso) {
+console.log("API /areas response:", response.data);
         // Verificar se os dados são válidos
         if (Array.isArray(areasData)) {
           setAreas(areasData);
+          console.log("Áreas para mostrar na tabela:", areasData);
           setTotalAreas(total || 0);
           setPaginaAtual(pagina);
         } else {
@@ -167,7 +165,7 @@ const Gerir_Area = () => {
       
       setLoading(false);
     } catch (error) {
-      // Gestão de erros específicos
+      // Gestão específica de erros
       if (error.response) {
         if (error.response.status === 401) {
           toast.error('Não autorizado. Faz login novamente.');
@@ -184,6 +182,7 @@ const Gerir_Area = () => {
       setLoading(false);
     }
   }, [areasPorPagina, navigate, filtros]);
+
 
   /**
    * Busca todas as categorias disponíveis para os filtros
@@ -236,7 +235,7 @@ const Gerir_Area = () => {
           return;
         }
         
-        // Verificar permissões de acesso
+        // Verificar permissões de acesso (apenas administradores)
         if (currentUser) {
           if (currentUser.id_cargo !== 1) {
             toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
@@ -266,7 +265,6 @@ const Gerir_Area = () => {
 
   /**
    * Gere alterações nos filtros com debounce para evitar muitas requisições
-   * @param {Event} e - Evento de mudança do input
    */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -364,7 +362,7 @@ const Gerir_Area = () => {
       }
       
       if (!newAreaCategoria) {
-        toast.error('Por favor, selecciona uma categoria para a área.');
+        toast.error('Por favor, seleciona uma categoria para a área.');
         return;
       }
       
@@ -379,7 +377,7 @@ const Gerir_Area = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        toast.success('Área actualizada com sucesso!');
+        toast.success('Área atualizada com sucesso!');
       } else {
         await axios.post(`${API_BASE}/areas`, dadosArea, {
           headers: { Authorization: `Bearer ${token}` }
@@ -402,7 +400,6 @@ const Gerir_Area = () => {
 
   /**
    * Prepara uma área para edição
-   * @param {object} area - Área a ser editada
    */
   const handleEditarArea = (area) => {
     setEditArea(area);
@@ -413,7 +410,6 @@ const Gerir_Area = () => {
 
   /**
    * Confirma a exclusão de uma área
-   * @param {object} area - Área a ser excluída
    */
   const handleConfirmarExclusao = (area) => {
     setAreaParaExcluir(area);
@@ -422,6 +418,9 @@ const Gerir_Area = () => {
 
   /**
    * Executa a exclusão de uma área
+   * NOTA: A eliminação de áreas segue a regra de integridade:
+   * - Só pode ser eliminada se não tiver tópicos dependentes
+   * - O backend valida automaticamente esta restrição
    */
   const handleExcluirArea = async () => {
     if (!areaParaExcluir) return;
@@ -504,7 +503,7 @@ const Gerir_Area = () => {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className="main-content-gerir-area">
-        {/* Cabeçalho com título e acções principais */}
+        {/* Cabeçalho com título e ações principais */}
         <div className="areas-header-gerir-area">
           <h1>
             Gestão de Áreas 
@@ -593,8 +592,8 @@ const Gerir_Area = () => {
                     <th>ID</th>
                     <th>Nome da Área</th>
                     <th>Categoria</th>
-                    <th>Cursos</th>
-                    <th>Acções</th>
+                    <th>Tópicos</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -604,18 +603,20 @@ const Gerir_Area = () => {
                     }
                     
                     // Processar nome da categoria de forma segura
-                    const categoriaNome = area.categoria ? 
-                      (typeof area.categoria === 'object' ? area.categoria.nome : area.categoria) : 
-                      "Não especificada";
+                    const categoriaObj = categorias.find(cat => String(cat.id_categoria) === String(area.id_categoria));
+const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
+
+
                     
                     const areaId = area.id_area || area.id || index;
-                    
+                    console.log("Renderizar área:", area);
+
                     return (
                       <tr key={areaId}>
                         <td>{areaId}</td>
                         <td className="area-nome-gerir-area">{area.nome || 'Nome não disponível'}</td>
                         <td>{categoriaNome}</td>
-                        <td>{area.cursos_count || area.cursosCount || 0}</td>
+                        <td>{area.topicos_count || area.topicosCount || 0}</td>
                         <td className="acoes-gerir-area">
                           <button 
                             className="btn-icon-gerir-area btn-editar-gerir-area"
@@ -628,14 +629,17 @@ const Gerir_Area = () => {
                             className="btn-icon-gerir-area btn-excluir-gerir-area"
                             onClick={() => handleConfirmarExclusao(area)}
                             title="Eliminar"
-                            disabled={(area.cursos_count || area.cursosCount || 0) > 0}
+                            disabled={(area.topicos_count || area.topicosCount || 0) > 0}
                           >
                             🗑️
                           </button>
                         </td>
                       </tr>
                     );
-                  })}
+                  }
+                  
+                  
+                  )}
                   
                   {/* Linhas vazias para manter altura consistente */}
                   {linhasVazias.map((_, index) => (
@@ -707,7 +711,7 @@ const Gerir_Area = () => {
                 value={newAreaCategoria}
                 onChange={(e) => setNewAreaCategoria(e.target.value)}
               >
-                <option value="">Selecciona uma categoria</option>
+                <option value="">Seleciona uma categoria</option>
                 {categorias.map(categoria => (
                   <option 
                     key={categoria.id_categoria} 
@@ -729,7 +733,7 @@ const Gerir_Area = () => {
                 className="btn-confirmar-gerir-area"
                 onClick={handleSaveArea}
               >
-                {editArea ? 'Actualizar' : 'Criar'}
+                {editArea ? 'Atualizar' : 'Criar'}
               </button>
             </div>
           </div>
@@ -743,7 +747,7 @@ const Gerir_Area = () => {
             <h3>Confirmar Eliminação</h3>
             <p>
               Tens a certeza que queres eliminar a área "{areaParaExcluir?.nome}"?
-              Esta acção não pode ser desfeita.
+              Esta ação não pode ser desfeita.
             </p>
             <div className="modal-actions-gerir-area">
               <button 

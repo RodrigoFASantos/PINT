@@ -17,7 +17,7 @@ const verificarToken = require('../../middleware/auth');
  * Controla o acesso aos recursos conforme o tipo de utilizador autenticado
  * 
  * @param {Array} cargosPermitidos - Lista de cargos que podem aceder ao recurso
- * @returns {Function} Middleware que valida as permissões
+ * @returns {Function} Middleware que valida as permissões do utilizador
  */
 const verificarCargo = (cargosPermitidos) => {
   return async (req, res, next) => {
@@ -26,9 +26,9 @@ const verificarCargo = (cargosPermitidos) => {
       
       // Mapeamento dos identificadores numéricos para nomes legíveis
       const cargoMap = {
-        1: 'admin',
-        2: 'formador', 
-        3: 'formando'
+        1: 'admin',      // Administrador do sistema
+        2: 'formador',   // Formador certificado
+        3: 'formando'    // Formando/Estudante
       };
       
       const cargoNome = cargoMap[cargo] || 'desconhecido';
@@ -56,16 +56,35 @@ const verificarCargo = (cargosPermitidos) => {
 // =============================================================================
 
 /**
- * Rota para obter lista paginada de todos os formadores
- * Permite consulta pública dos formadores registados no sistema
- * Suporta parâmetros de paginação via query string
+ * GET /formadores
+ * Obtém lista paginada de todos os formadores registados no sistema
+ * 
+ * Permite consulta pública dos formadores disponíveis com suporte a paginação.
+ * Aceita parâmetros de query: page (número da página) e limit (itens por página).
+ * 
+ * @query {number} page - Número da página (padrão: 1)
+ * @query {number} limit - Itens por página (padrão: 10, máximo: 50)
+ * @returns {Object} Lista paginada de formadores com metadados
  */
 router.get('/', formadorController.getAllFormadores);
 
 /**
- * Rota para registo de novos formadores
- * Permite que qualquer pessoa se registe como formador (sujeito a aprovação)
- * Envia email de confirmação após registo bem-sucedido
+ * POST /formadores/register
+ * Regista novo candidato a formador no sistema
+ * 
+ * Permite que qualquer pessoa se candidate a formador. O registo fica pendente
+ * de aprovação e requer confirmação por email antes de ser ativado.
+ * 
+ * @body {string} nome - Nome completo do candidato
+ * @body {string} email - Email válido para contacto
+ * @body {string} password - Senha de acesso
+ * @body {number} idade - Idade (deve estar entre 18 e 100 anos)
+ * @body {string} telefone - Número de telefone
+ * @body {string} morada - Morada completa
+ * @body {string} codigo_postal - Código postal
+ * @body {Array} categorias - IDs das categorias de especialização (opcional)
+ * @body {Array} areas - IDs das áreas de conhecimento (opcional)
+ * @returns {Object} Confirmação de registo pendente
  */
 router.post('/register', formadorController.registerFormador);
 
@@ -74,26 +93,42 @@ router.post('/register', formadorController.registerFormador);
 // =============================================================================
 
 /**
- * Rota para obter dados detalhados de um formador específico
- * Inclui informações sobre especializações e cursos ministrados
- * Acessível publicamente para visualização de perfis
+ * GET /formadores/:id
+ * Obtém dados detalhados de um formador específico
+ * 
+ * Retorna informação completa sobre um formador incluindo especializações
+ * e cursos ministrados. Acessível publicamente para visualização de perfis.
+ * 
+ * @param {number} id - ID único do formador
+ * @returns {Object} Dados completos do formador
  */
 router.get('/:id', formadorController.getFormadorById);
 
 /**
- * Rota para obter lista de cursos ministrados por um formador
- * Mostra o histórico de cursos onde o formador foi responsável
+ * GET /formadores/:id/cursos
+ * Obtém lista de cursos ministrados por um formador específico
+ * 
+ * Apresenta o histórico completo de cursos onde o formador foi responsável,
+ * incluindo informações sobre categoria, área e datas.
+ * 
+ * @param {number} id - ID único do formador
+ * @returns {Array} Lista de cursos ministrados
  */
 router.get('/:id/cursos', formadorController.getCursosFormador);
 
 // =============================================================================
-// ROTAS PROTEGIDAS - Requerem autenticação
+// ROTAS PROTEGIDAS - Requerem autenticação válida
 // =============================================================================
 
 /**
- * Rota para obter perfil completo do formador autenticado
- * Retorna dados pessoais, especializações e cursos do utilizador atual
- * Apenas acessível pelo próprio formador após autenticação
+ * GET /formadores/profile
+ * Obtém perfil completo do formador autenticado
+ * 
+ * Retorna dados pessoais, especializações, cursos ministrados e inscrições
+ * do utilizador atual. Esta rota é utilizada para dashboards e áreas pessoais.
+ * 
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Perfil completo com dados pessoais e profissionais
  */
 router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 
@@ -102,15 +137,28 @@ router.get("/profile", verificarToken, formadorController.getFormadorProfile);
 // =============================================================================
 
 /**
- * Rota para consultar categorias associadas a um formador
- * Lista todas as áreas de conhecimento em que o formador tem competências
+ * GET /formadores/:id/categorias
+ * Consulta categorias associadas a um formador
+ * 
+ * Lista todas as áreas de conhecimento gerais em que o formador tem
+ * competências reconhecidas ou certificadas.
+ * 
+ * @param {number} id - ID único do formador
+ * @returns {Array} Lista de categorias de especialização
  */
 router.get('/:id/categorias', formadorController.getCategoriasFormador);
 
 /**
- * Rota para adicionar novas categorias a um formador
- * Restrita a administradores e ao próprio formador
- * Permite expansão das áreas de especialização
+ * POST /formadores/:id/categorias
+ * Adiciona novas categorias de especialização a um formador
+ * 
+ * Permite expandir as áreas de conhecimento do formador. Acesso restrito
+ * a administradores e ao próprio formador.
+ * 
+ * @param {number} id - ID único do formador
+ * @body {Array} categorias - Array com IDs das categorias a adicionar
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Confirmação das categorias adicionadas
  */
 router.post('/:id/categorias', 
   verificarToken, 
@@ -119,9 +167,16 @@ router.post('/:id/categorias',
 );
 
 /**
- * Rota para remover categoria específica de um formador
- * Permite remoção de especializações que já não são relevantes
- * Restrita a administradores e ao próprio formador
+ * DELETE /formadores/:id/categorias/:categoriaId
+ * Remove categoria específica de um formador
+ * 
+ * Permite remoção de especializações que já não são relevantes ou válidas.
+ * Acesso restrito a administradores e ao próprio formador.
+ * 
+ * @param {number} id - ID único do formador
+ * @param {number} categoriaId - ID da categoria a remover
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Confirmação da remoção
  */
 router.delete('/:id/categorias/:categoriaId', 
   verificarToken, 
@@ -134,15 +189,29 @@ router.delete('/:id/categorias/:categoriaId',
 // =============================================================================
 
 /**
- * Rota para consultar áreas específicas de um formador
- * Lista competências detalhadas dentro de cada categoria
+ * GET /formadores/:id/areas
+ * Consulta áreas específicas de conhecimento de um formador
+ * 
+ * Lista competências detalhadas dentro de cada categoria, incluindo
+ * a categoria pai de cada área especializada.
+ * 
+ * @param {number} id - ID único do formador
+ * @returns {Array} Lista de áreas específicas com categorias pai
  */
 router.get('/:id/areas', formadorController.getAreasFormador);
 
 /**
- * Rota para adicionar novas áreas específicas a um formador
- * Adiciona automaticamente a categoria pai se ainda não estiver associada
- * Restrita a administradores e ao próprio formador
+ * POST /formadores/:id/areas
+ * Adiciona novas áreas específicas a um formador
+ * 
+ * Permite especialização mais detalhada dentro das categorias existentes.
+ * Adiciona automaticamente a categoria pai se ainda não estiver associada.
+ * Acesso restrito a administradores e ao próprio formador.
+ * 
+ * @param {number} id - ID único do formador
+ * @body {Array} areas - Array com IDs das áreas a adicionar
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Confirmação das áreas adicionadas
  */
 router.post('/:id/areas', 
   verificarToken, 
@@ -151,9 +220,16 @@ router.post('/:id/areas',
 );
 
 /**
- * Rota para remover área específica de um formador
- * Remove competência específica mantendo outras na mesma categoria
- * Restrita a administradores e ao próprio formador
+ * DELETE /formadores/:id/areas/:areaId
+ * Remove área específica de conhecimento de um formador
+ * 
+ * Remove competência específica mantendo outras especializações na mesma categoria.
+ * Acesso restrito a administradores e ao próprio formador.
+ * 
+ * @param {number} id - ID único do formador
+ * @param {number} areaId - ID da área a remover
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Confirmação da remoção
  */
 router.delete('/:id/areas/:areaId', 
   verificarToken, 
@@ -166,9 +242,22 @@ router.delete('/:id/areas/:areaId',
 // =============================================================================
 
 /**
- * Rota para atualização completa de dados de um formador
- * Permite modificação de informações pessoais e profissionais
- * Acesso restrito apenas a administradores do sistema
+ * PUT /formadores/:id
+ * Atualização completa de dados de um formador
+ * 
+ * Permite modificação de informações pessoais e profissionais do formador.
+ * Inclui validações de formato e verificação de unicidade de email.
+ * Acesso restrito apenas a administradores do sistema.
+ * 
+ * @param {number} id - ID único do formador
+ * @body {string} nome - Novo nome (opcional)
+ * @body {string} email - Novo email (opcional)
+ * @body {string} foto_perfil - URL da foto de perfil (opcional)
+ * @body {string} telefone - Novo telefone (opcional)
+ * @body {string} data_nascimento - Nova data de nascimento (opcional)
+ * @body {string} biografia - Nova biografia (opcional)
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Dados atualizados do formador
  */
 router.put('/:id', 
   verificarToken, 
@@ -177,10 +266,16 @@ router.put('/:id',
 );
 
 /**
- * Rota para remoção de estatuto de formador
- * Converte formador para formando e remove especializações
- * Apenas possível se não houver cursos ativos associados
- * Acesso restrito apenas a administradores do sistema
+ * DELETE /formadores/:id
+ * Remoção de estatuto de formador
+ * 
+ * Converte formador para formando e remove todas as especializações associadas.
+ * Apenas possível se não houver cursos ativos associados ao formador.
+ * Acesso restrito apenas a administradores do sistema.
+ * 
+ * @param {number} id - ID único do formador
+ * @header {string} Authorization - Token Bearer para autenticação
+ * @returns {Object} Confirmação da alteração de estatuto
  */
 router.delete('/:id', 
   verificarToken, 

@@ -15,27 +15,40 @@ const authMiddleware = require('../../middleware/auth');
 const verificarCargo = require('../../middleware/role_middleware');
 
 /**
- * Rotas para gestão de tópicos de área e comentários
+ * ROTAS PARA GESTÃO DE TÓPICOS DE ÁREA E COMENTÁRIOS (3º nível da hierarquia)
  * 
- * Define todas as rotas relacionadas com tópicos de discussão,
- * organizando as operações de consulta e gestão com as permissões adequadas.
+ * Implementa a gestão completa do terceiro nível da estrutura educacional:
+ * Categoria → Área → Tópico → Curso (com chats de conversa)
  * 
- * Os tópicos organizam discussões por categorias e áreas específicas,
- * facilitando a comunicação entre utilizadores do sistema.
+ * FUNCIONALIDADES PRINCIPAIS:
+ * - Gestão de tópicos de discussão organizados por área
+ * - Sistema de chat/comentários em tempo real
+ * - Sistema de avaliações (likes/dislikes)
+ * - Upload de ficheiros anexados
+ * - Notificações WebSocket
  * 
- * Estrutura de permissões:
+ * REGRAS DE ACESSO:
  * - Consulta de tópicos: Todos os utilizadores autenticados
- * - Criação e edição: Administradores e formadores (id_cargo 1 e 2)
- * - Eliminação: Apenas administradores (id_cargo 1)
+ * - Criação e edição: Administradores (id_cargo === 1) e Formadores (id_cargo === 2)
+ * - Eliminação: Apenas administradores (id_cargo === 1)
  * - Comentários: Todos os utilizadores autenticados
+ * 
+ * REGRAS CRÍTICAS DE INTEGRIDADE:
+ * - Eliminar tópico remove automaticamente TODOS os elementos dependentes:
+ *   • Chats de conversa associados ao tópico
+ *   • Cursos associados ao tópico  
+ *   • Inscrições de formandos nesses cursos
+ *   • Associações de formadores
+ * 
+ * Esta é uma das operações mais críticas do sistema!
  */
 
-// Aplicar autenticação a todas as rotas
+// Aplicar autenticação obrigatória a todas as rotas
 router.use(authMiddleware);
 
-// ==========================================
+// =============================================================================
 // ROTAS DE CONSULTA PÚBLICA (Utilizadores Autenticados)
-// ==========================================
+// =============================================================================
 
 /**
  * GET /api/topicos-area/todos
@@ -49,13 +62,47 @@ router.use(authMiddleware);
  * - area: ID da área para filtrar tópicos
  * - grouped: 'true' para agrupar por categorias
  * 
- * Resposta inclui:
- * - Lista de tópicos com informações da categoria e área
- * - Contagem de mensagens associadas
- * - Informações de paginação
- * - Dados do criador do tópico
+ * Funcionalidades:
+ * - Busca insensível a maiúsculas em título e descrição
+ * - Filtragem hierárquica por categoria e área
+ * - Paginação automática com validação
+ * - Contagem de mensagens associadas a cada tópico
+ * - Informações do criador incluídas
+ * - Opção de agrupamento por categorias
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * Resposta normal:
+ * {
+ *   success: true,
+ *   total: 87,
+ *   pages: 9,
+ *   current_page: 1,
+ *   data: [
+ *     {
+ *       id_topico: 1,
+ *       titulo: "Discussão sobre React",
+ *       categoria: { nome: "Informática" },
+ *       area: { nome: "Programação Web" },
+ *       criador: { nome: "João Silva" },
+ *       mensagens_count: 23
+ *     }
+ *   ],
+ *   pagination_info: {...}
+ * }
+ * 
+ * Resposta agrupada (grouped=true):
+ * {
+ *   success: true,
+ *   data: [
+ *     {
+ *       id_categoria: 1,
+ *       nome: "Informática",
+ *       topicos_categoria: [...]
+ *     }
+ *   ],
+ *   total_categorias: 5
+ * }
+ * 
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.get('/todos', getAllTopicosCategoria);
 
@@ -64,7 +111,7 @@ router.get('/todos', getAllTopicosCategoria);
  * Alias para /todos - Obter lista de tópicos
  * Mantém compatibilidade com frontend existente
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.get('/', getAllTopicosCategoria);
 
@@ -78,16 +125,19 @@ router.get('/', getAllTopicosCategoria);
  * Dados retornados:
  * - Informações completas do tópico
  * - Dados da categoria e área associadas
- * - Informações do criador
- * - Estatísticas de participação (mensagens, participantes únicos)
- * - Data da última atividade
+ * - Informações do criador (nome, email, foto)
+ * - Estatísticas de participação:
+ *   • Total de mensagens
+ *   • Participantes únicos
+ *   • Data da última atividade
  * 
  * Casos de uso:
  * - Página de detalhes do tópico
  * - Entrada no chat/fórum
  * - Análise de atividade
+ * - Navegação hierárquica
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.get('/:id', getTopicoById);
 
@@ -106,47 +156,66 @@ router.get('/:id', getTopicoById);
  * 
  * Funcionalidades:
  * - Validação da existência da categoria
- * - Retorno de tópicos ordenados por data de criação
- * - Paginação automática
- * - Informações do criador incluídas
+ * - Filtragem opcional por área dentro da categoria
+ * - Busca textual em título e descrição
+ * - Contagem de mensagens por tópico
+ * - Ordenação por data de criação (mais recentes primeiro)
  * 
  * Casos de uso:
  * - Navegação por categoria no frontend
  * - Construção de menus dinâmicos
  * - Filtros de seleção rápida
+ * - Análise de atividade por categoria
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.get('/categoria/:id_categoria', getTopicosByCategoria);
 
-// ==========================================
+// =============================================================================
 // ROTAS DE GESTÃO ADMINISTRATIVA
-// ==========================================
+// =============================================================================
 
 /**
  * POST /api/topicos-area
  * Criar um novo tópico de discussão
  * 
  * Corpo da requisição (JSON):
- * - titulo: Título do tópico (string, obrigatório, único por área)
- * - descricao: Descrição do tópico (string, opcional)
- * - id_categoria: ID da categoria (integer, obrigatório)
- * - id_area: ID da área (integer, obrigatório)
+ * {
+ *   "titulo": "Título do Tópico",
+ *   "descricao": "Descrição opcional",
+ *   "id_categoria": 1,
+ *   "id_area": 5
+ * }
  * 
- * Validações:
+ * Validações rigorosas:
  * - Título não pode estar vazio
- * - Categoria e área devem existir
- * - Título único dentro da mesma área
+ * - Categoria e área devem existir na base de dados
+ * - Título deve ser único dentro da mesma área
  * - Utilizador deve ter permissões adequadas
- * - Consistência transacional
+ * - Consistência transacional garantida
  * 
- * Resposta de sucesso:
- * - Status 201 Created
- * - Dados completos do tópico criado
- * - Informações da categoria e área associadas
- * - Dados do criador
+ * Processo de criação:
+ * 1. Validar dados obrigatórios
+ * 2. Verificar existência de categoria e área
+ * 3. Verificar unicidade do título na área
+ * 4. Criar tópico com utilizador como criador
+ * 5. Confirmar transação
+ * 6. Retornar tópico completo com relacionamentos
  * 
- * Permissões: Administradores e formadores apenas
+ * Resposta de sucesso (201):
+ * {
+ *   success: true,
+ *   message: "Tópico criado com sucesso",
+ *   data: {
+ *     id_topico: 1,
+ *     titulo: "Discussão sobre React",
+ *     criador: {...},
+ *     categoria: {...},
+ *     area: {...}
+ *   }
+ * }
+ * 
+ * ACESSO: Administradores e formadores apenas
  */
 router.post('/', 
   verificarCargo(['admin', 'formador']), 
@@ -155,32 +224,39 @@ router.post('/',
 
 /**
  * PUT /api/topicos-area/:id
- * Actualizar dados de um tópico existente
+ * Atualizar dados de um tópico existente
  * 
  * Parâmetros:
- * - id: Identificador do tópico a actualizar
+ * - id: Identificador do tópico a atualizar
  * 
  * Corpo da requisição (JSON):
- * - titulo: Novo título do tópico (string, opcional)
- * - descricao: Nova descrição (string, opcional)
- * - id_categoria: Nova categoria (integer, opcional)
- * - id_area: Nova área (integer, opcional)
- * - ativo: Status do tópico (boolean, apenas admin/formador)
+ * {
+ *   "titulo": "Novo título",
+ *   "descricao": "Nova descrição",
+ *   "id_categoria": 2,
+ *   "id_area": 8,
+ *   "ativo": true
+ * }
  * 
- * Validações:
+ * Validações de permissões:
  * - Tópico deve existir
- * - Utilizador deve ser o criador ou ter permissões elevadas
+ * - Utilizador deve ser o criador OU ter permissões elevadas
  * - Nova categoria/área devem existir se especificadas
  * - Título único na área (excluindo o próprio tópico)
  * - Dados não podem estar vazios se fornecidos
  * 
+ * Regras especiais:
+ * - Apenas admin/formador podem alterar status 'ativo'
+ * - Criador pode editar título e descrição
+ * - Admin pode mover tópico entre áreas/categorias
+ * 
  * Casos de uso:
  * - Correção de informações
- * - Reorganização de categorias/áreas
+ * - Reorganização de categorias/áreas  
  * - Moderação de conteúdo
  * - Desativação de tópicos
  * 
- * Permissões: Criador do tópico, administradores ou formadores
+ * ACESSO: Criador do tópico, administradores ou formadores
  */
 router.put('/:id', updateTopico);
 
@@ -191,36 +267,47 @@ router.put('/:id', updateTopico);
  * Parâmetros:
  * - id: Identificador do tópico a eliminar
  * 
- * Restrições de integridade:
- * - Tópico deve existir
- * - Operação elimina todo o conteúdo associado
- * - Remove mensagens, interações e denúncias
- * - Operação irreversível
+ * ⚠️ OPERAÇÃO EXTREMAMENTE CRÍTICA ⚠️
  * 
- * Processo:
+ * EFEITOS EM CASCATA (automáticos):
+ * 1. Elimina TODAS as denúncias relacionadas com mensagens do tópico
+ * 2. Elimina TODAS as interações (likes/dislikes) das mensagens
+ * 3. Elimina TODAS as mensagens do chat do tópico
+ * 4. Elimina TODOS os cursos associados ao tópico
+ * 5. Remove TODAS as inscrições de formandos nesses cursos
+ * 6. Remove TODAS as associações de formadores
+ * 7. Elimina o próprio tópico
+ * 
+ * Processo detalhado:
  * 1. Validar existência do tópico
  * 2. Contar mensagens e denúncias associadas
- * 3. Eliminar denúncias relacionadas
- * 4. Eliminar interações das mensagens
- * 5. Eliminar mensagens do tópico
- * 6. Eliminar o tópico dentro de transação
- * 7. Confirmar eliminação com estatísticas
+ * 3. Dentro de uma transação:
+ *    a. Eliminar denúncias relacionadas
+ *    b. Eliminar interações das mensagens  
+ *    c. Eliminar mensagens do tópico
+ *    d. Eliminar cursos associados (CASCADE)
+ *    e. Eliminar o tópico
+ * 4. Confirmar transação
+ * 5. Retornar estatísticas da eliminação
  * 
- * Casos de erro:
- * - Tópico não encontrado (404)
- * - Permissões insuficientes (403)
- * - Problemas de base de dados (500)
+ * Resposta de sucesso (200):
+ * {
+ *   success: true,
+ *   message: "Tópico 'React' eliminado. 45 mensagens e 3 denúncias removidas."
+ * }
  * 
- * Permissões: Apenas administradores
+ * IMPORTANTE: Esta operação não pode ser desfeita!
+ * 
+ * ACESSO: Apenas administradores (id_cargo === 1)
  */
 router.delete('/:id', 
   verificarCargo(['admin']),
   deleteTopico
 );
 
-// ==========================================
-// ROTAS DE GESTÃO DE COMENTÁRIOS
-// ==========================================
+// =============================================================================
+// ROTAS DE GESTÃO DE COMENTÁRIOS E CHAT
+// =============================================================================
 
 /**
  * GET /api/topicos-area/:id/comentarios
@@ -238,16 +325,23 @@ router.delete('/:id',
  * - Lista de mensagens não ocultas
  * - Informações do utilizador que criou cada mensagem
  * - Contadores de likes e dislikes
- * - Anexos se existirem
+ * - URLs de anexos se existirem
  * - Informações de paginação
  * - Dados básicos do tópico
+ * 
+ * Funcionalidades:
+ * - Apenas mensagens visíveis (oculta = false)
+ * - Paginação para conversas longas
+ * - Ordenação cronológica configurável
+ * - Inclui anexos (imagens, vídeos, ficheiros)
  * 
  * Casos de uso:
  * - Carregar mensagens do chat/fórum
  * - Paginação de conversas longas
  * - Histórico de discussões
+ * - Scroll infinito no frontend
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.get('/:id/comentarios', getComentariosByTopico);
 
@@ -258,36 +352,49 @@ router.get('/:id/comentarios', getComentariosByTopico);
  * Parâmetros:
  * - id: Identificador do tópico
  * 
- * Corpo da requisição:
+ * Corpo da requisição (multipart/form-data):
  * - texto: Conteúdo da mensagem (string, opcional se houver anexo)
- * - file: Ficheiro anexado (multipart/form-data, opcional)
+ * - file: Ficheiro anexado (opcional)
  * 
- * Funcionalidades:
+ * Funcionalidades avançadas:
  * - Validação da existência e estado ativo do tópico
- * - Processamento de anexos com estrutura de diretórios
+ * - Processamento de anexos com estrutura organizada de diretórios
  * - Geração de nomes únicos para ficheiros
- * - Determinação automática do tipo de ficheiro
+ * - Determinação automática do tipo de ficheiro (imagem/video/file)
  * - Notificação em tempo real via WebSocket
  * - Criação de registo de atividade
  * 
+ * Estrutura de diretórios criada:
+ * uploads/chat/[categoria]/[topico]/[ficheiro]
+ * 
  * Validações:
  * - Tópico deve existir e estar ativo
- * - Deve fornecer texto ou anexo
+ * - Deve fornecer texto OU anexo (pelo menos um)
  * - Ficheiros dentro dos limites permitidos
  * - Utilizador autenticado
+ * 
+ * Processo de criação:
+ * 1. Validar tópico e dados
+ * 2. Processar anexo (se fornecido)
+ * 3. Criar estrutura de diretórios
+ * 4. Mover ficheiro para localização final
+ * 5. Criar registo na base de dados
+ * 6. Enviar notificação WebSocket
+ * 7. Retornar mensagem completa
  * 
  * Resposta inclui:
  * - Dados completos da mensagem criada
  * - Informações do utilizador
  * - URLs de anexos se aplicável
+ * - Contadores iniciais (likes: 0, dislikes: 0)
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.post('/:id/comentarios', createComentario);
 
-// ==========================================
+// =============================================================================
 // ROTAS DE INTERAÇÃO COM COMENTÁRIOS
-// ==========================================
+// =============================================================================
 
 /**
  * POST /api/topicos-area/:id_topico/comentarios/:id_comentario/avaliar
@@ -298,18 +405,28 @@ router.post('/:id/comentarios', createComentario);
  * - id_comentario: Identificador da mensagem
  * 
  * Corpo da requisição (JSON):
- * - tipo: Tipo de avaliação ('like' ou 'dislike')
+ * {
+ *   "tipo": "like" | "dislike"
+ * }
  * 
- * Funcionalidades:
- * - Sistema de toggle (clicar novamente remove a avaliação)
- * - Mudança de tipo de avaliação (like para dislike e vice-versa)
+ * Funcionalidades inteligentes:
+ * - Sistema de toggle: clicar novamente remove a avaliação
+ * - Mudança de tipo: like → dislike e vice-versa
  * - Atualização automática de contadores
  * - Notificação em tempo real via WebSocket
  * - Histórico de interações por utilizador
+ * - Prevenção de múltiplas avaliações pelo mesmo utilizador
+ * 
+ * Lógica de avaliação:
+ * 1. Se não há avaliação anterior: Criar nova
+ * 2. Se há avaliação igual: Remover (toggle off)
+ * 3. Se há avaliação diferente: Alterar tipo
+ * 4. Atualizar contadores appropriadamente
+ * 5. Notificar utilizadores conectados
  * 
  * Validações:
  * - Mensagem deve existir no tópico especificado
- * - Tipo de avaliação deve ser válido
+ * - Tipo deve ser 'like' ou 'dislike'
  * - Um utilizador só pode ter uma avaliação por mensagem
  * - Utilizador autenticado
  * 
@@ -318,37 +435,52 @@ router.post('/:id/comentarios', createComentario);
  * - Estado da interação do utilizador
  * - Confirmação da ação realizada
  * 
+ * WebSocket emitido:
+ * - Evento: 'comentarioAvaliado'
+ * - Para: todos na sala `topico_${id_topico}`
+ * - Dados: contadores atualizados + ação
+ * 
  * Casos de uso:
  * - Sistema de feedback em discussões
  * - Moderação comunitária
  * - Destaque de conteúdo relevante
+ * - Gamificação da participação
  * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * ACESSO: Todos os utilizadores autenticados
  */
 router.post('/:id_topico/comentarios/:id_comentario/avaliar', avaliarComentario);
 
 /**
  * Exportar router configurado
  * 
- * Este router será montado no caminho /api/topicos-area pelo servidor principal,
- * fornecendo uma API REST completa para gestão de tópicos de discussão.
+ * Este router implementa o sistema mais complexo da plataforma:
+ * - Gestão hierárquica de tópicos (3º nível)
+ * - Sistema de chat em tempo real
+ * - Upload e gestão de ficheiros
+ * - Sistema de avaliações e interações
+ * - Notificações WebSocket
+ * - Moderação de conteúdo
  * 
  * Middleware aplicado:
- * - authMiddleware: Autenticação obrigatória em todas as rotas
- * - verificarCargo: Autorização específica em rotas de gestão
+ * - authMiddleware: Autenticação obrigatória
+ * - verificarCargo: Autorização específica por operação
  * 
- * Padronização de respostas:
- * - Códigos HTTP apropriados (200, 201, 400, 403, 404, 500)
- * - Estrutura JSON consistente com success/error
- * - Mensagens de erro em português
- * - Dados paginados quando aplicável
+ * Tecnologias integradas:
+ * - Sequelize para base de dados
+ * - Socket.IO para tempo real
+ * - Multer para upload de ficheiros
+ * - Validação rigorosa de integridade
+ * 
+ * Padrões implementados:
+ * - RESTful API design
  * - Transações para operações críticas
+ * - Paginação consistente
+ * - Gestão de erros padronizada
+ * - Logging de atividades
  * 
- * Funcionalidades avançadas:
- * - WebSocket para notificações em tempo real
- * - Upload e gestão de ficheiros anexados
- * - Sistema de moderação integrado
- * - Estatísticas de participação
- * - Estrutura hierárquica (categoria > área > tópico > mensagem)
+ * REGRA CRÍTICA LEMBRETE:
+ * A eliminação de tópicos é a operação mais destrutiva do sistema,
+ * removendo cursos, inscrições e todo o histórico de chat.
+ * Usar apenas em casos extremos!
  */
 module.exports = router;

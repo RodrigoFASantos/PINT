@@ -12,361 +12,20 @@ const {
 /**
  * Rotas para gestão completa do sistema de cursos
  * 
- * Este módulo define todas as rotas HTTP para operações CRUD de cursos,
- * incluindo upload de imagens, gestão de tópicos e controlo de acesso
- * baseado em perfis de utilizador (administradores, formadores, estudantes).
- * 
- * Funcionalidades principais:
- * - Criação e edição de cursos com upload de imagens
- * - Listagem com filtros avançados e paginação
- * - Sistema de recomendações personalizadas
- * - Gestão de tópicos organizacionais
- * - Controlo de acesso granular por perfil
- * - Integração automática com notificações WebSocket
+ * Versão corrigida com tratamento robusto de erros e compatibilidade
+ * para resolver problemas de campos inexistentes na BD
  */
-
-/**
- * Middleware especializado para tratamento de erros de upload
- * 
- * Intercepta e processa erros específicos do Multer, fornecendo
- * mensagens de erro claras e detalhadas para diferentes tipos
- * de falhas no upload de ficheiros.
- * 
- * @param {Error} err - Erro capturado do middleware anterior
- * @param {Object} req - Objeto de requisição Express
- * @param {Object} res - Objeto de resposta Express
- * @param {Function} next - Função para passar para o próximo middleware
- */
-const tratarErrosUpload = (err, req, res, next) => {
-  console.log('🔍 [UPLOAD] A processar erro de upload:', err.code || err.message);
-  
-  // === ERROS ESPECÍFICOS DO MULTER ===
-  
-  // Ficheiro excede o tamanho máximo configurado (15MB)
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    console.error('❌ [UPLOAD] Ficheiro demasiado grande para o limite definido');
-    return res.status(400).json({
-      message: 'Ficheiro demasiado grande. O tamanho máximo permitido é 15MB.',
-      error: 'LIMIT_FILE_SIZE',
-      maxSize: '15MB',
-      hint: 'Tenta comprimir a imagem ou usar um formato mais eficiente como WebP.'
-    });
-  }
-  
-  // Campo de ficheiro não esperado na requisição
-  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-    console.error('❌ [UPLOAD] Campo de ficheiro inesperado:', err.field);
-    return res.status(400).json({
-      message: `Campo de ficheiro inesperado: "${err.field}". Apenas o campo "imagem" é aceite.`,
-      error: 'LIMIT_UNEXPECTED_FILE',
-      field: err.field,
-      expectedField: 'imagem'
-    });
-  }
-  
-  // Tipo de ficheiro não suportado (configurado no middleware de upload)
-  if (err.message && err.message.includes('Tipo de ficheiro não permitido')) {
-    console.error('❌ [UPLOAD] Tipo de ficheiro inválido');
-    return res.status(400).json({
-      message: err.message,
-      error: 'INVALID_FILE_TYPE',
-      allowedTypes: ['JPEG', 'PNG', 'GIF', 'WebP', 'SVG', 'BMP', 'TIFF'],
-      hint: 'Usa uma imagem nos formatos suportados: JPEG, PNG, GIF, WebP, SVG, BMP ou TIFF.'
-    });
-  }
-  
-  // Outros erros relacionados com limites do Multer
-  if (err.code && err.code.startsWith('LIMIT_')) {
-    console.error('❌ [UPLOAD] Erro de limite Multer:', err.code);
-    return res.status(400).json({
-      message: 'Erro no upload do ficheiro devido a limitações do servidor',
-      error: err.code,
-      details: err.message
-    });
-  }
-  
-  // === ERROS PERSONALIZADOS DO SISTEMA ===
-  
-  // Erros de validação de ficheiro personalizados
-  if (err.message && err.message.includes('formato não suportado')) {
-    console.error('❌ [UPLOAD] Formato de ficheiro não suportado');
-    return res.status(400).json({
-      message: 'Formato de ficheiro não suportado para imagens de curso',
-      error: 'UNSUPPORTED_FORMAT',
-      supportedFormats: ['JPEG', 'PNG', 'GIF', 'WebP']
-    });
-  }
-  
-  // Passar erros não relacionados com upload para o handler seguinte
-  console.log('⏭️ [UPLOAD] Erro não relacionado com upload, a passar adiante');
-  next(err);
-};
 
 // =============================================================================
-// OPERAÇÕES PRINCIPAIS DE GESTÃO DE CURSOS
-// =============================================================================
-
-/**
- * Criar novo curso com possibilidade de upload de imagem
- * 
- * POST /cursos
- * Acesso: Administradores (1) e Formadores (2)
- * 
- * Esta rota processa a criação completa de um curso:
- * - Aceita dados via multipart/form-data para upload de imagem
- * - Cria estrutura de diretórios no sistema de ficheiros
- * - Processa e armazena imagem de capa
- * - Envia notificações automáticas via WebSocket
- * - Suporta criação de tópicos organizacionais iniciais
- */
-router.post("/", 
-  verificarToken, 
-  autorizar([1, 2]), 
-  uploadUtils.uploadCurso.single("imagem"), 
-  tratarErrosUpload,
-  createCurso
-);
-
-/**
- * Listar todos os cursos disponíveis
- * 
- * GET /cursos
- * Acesso: Público (sem autenticação necessária)
- * 
- * Endpoint principal para visualização de cursos com capacidades avançadas:
- * 
- * Query parameters suportados:
- * - page, limit: Controlo de paginação
- * - categoria, area, formador: Filtros por relacionamentos
- * - search: Pesquisa textual no nome do curso
- * - tipo: sincrono/assincrono
- * - estado: planeado/em_curso/terminado
- * - ativo: true/false para cursos ativos/inativos
- * - vagas: número mínimo de vagas disponíveis
- * - topico: filtro por tópico de área específico
- * 
- * Exemplo: GET /cursos?categoria=1&tipo=sincrono&page=2&limit=20
- */
-router.get("/", getAllCursos);
-
-/**
- * Obter cursos filtrados por categoria específica
- * 
- * GET /cursos/por-categoria?categorias=1,2,3
- * Acesso: Público
- * 
- * Especializado para associação com formadores e filtros de categoria múltipla.
- * Aceita múltiplas categorias separadas por vírgula para consultas flexíveis.
- * Útil para construir interfaces de seleção baseadas em competências.
- */
-router.get("/por-categoria", getCursosByCategoria);
-
-/**
- * Obter sugestões personalizadas de cursos
- * 
- * GET /cursos/sugeridos
- * Acesso: Utilizadores autenticados
- * 
- * Sistema de recomendação inteligente que analisa:
- * - Histórico de inscrições do utilizador
- * - Padrões de interesse por categoria e área
- * - Disponibilidade atual dos cursos
- * 
- * Algoritmo de sugestão:
- * 1. Prioridade: categorias conhecidas em áreas novas
- * 2. Fallback: cursos aleatórios disponíveis
- */
-router.get("/sugeridos", verificarToken, getCursosSugeridos);
-
-/**
- * Obter informações de tópico de área específico
- * 
- * GET /cursos/topico-area/:id
- * Acesso: Público
- * 
- * Retorna dados detalhados de um tópico de área para:
- * - Validações em formulários
- * - Construção de hierarquias de navegação
- * - Verificação de existência antes de associações
- */
-router.get("/topico-area/:id", getTopicoArea);
-
-/**
- * Obter detalhes completos de um curso específico
- * 
- * GET /cursos/:id
- * Acesso: Público (com verificações de acesso para cursos terminados)
- * 
- * Endpoint principal para visualização de curso individual:
- * - Inclui informações de formador, tópicos e associações
- * - Aplica regras de acesso para cursos terminados
- * - Conta inscrições ativas para mostrar ocupação
- * - Carrega cursos associados para recomendações
- * 
- * Regras de acesso especiais:
- * - Cursos ativos: acesso livre
- * - Cursos terminados: apenas alunos inscritos podem ver detalhes
- */
-router.get("/:id", getCursoById);
-
-/**
- * Atualizar dados de curso existente
- * 
- * PUT /cursos/:id
- * Acesso: Administradores (1) e Formadores (2)
- * 
- * Funcionalidades avançadas de edição:
- * - Suporte a upload de nova imagem de capa
- * - Renomeação automática de diretórios se o nome mudou
- * - Detecção inteligente de alterações relevantes
- * - Envio automático de notificações específicas por tipo de alteração
- * - Atualização automática do estado baseado nas datas
- * 
- * Sistema de notificações inteligente:
- * - Alterações gerais (nome, descrição, tipo, etc.)
- * - Alterações específicas de formador
- * - Alterações críticas de cronograma (datas)
- */
-router.put("/:id", 
-  verificarToken, 
-  autorizar([1, 2]), 
-  uploadUtils.uploadCurso.single("imagem"), 
-  tratarErrosUpload,
-  updateCurso
-);
-
-/**
- * Eliminar curso do sistema
- * 
- * DELETE /cursos/:id
- * Acesso: Apenas Administradores (1)
- * 
- * Operação irreversível e destrutiva que remove:
- * - Registo do curso na base de dados
- * - Todas as inscrições relacionadas
- * - Estrutura completa de tópicos e conteúdos
- * - Associações com outros cursos
- * - Diretório completo no sistema de ficheiros
- * 
- * Processo de eliminação hierárquica:
- * 1. Associações com outros cursos
- * 2. Inscrições de utilizadores
- * 3. Conteúdos de pastas
- * 4. Pastas de tópicos
- * 5. Tópicos organizacionais
- * 6. Registo principal do curso
- * 7. Diretório físico e todos os ficheiros
- */
-router.delete("/:id", verificarToken, autorizar([1]), deleteCurso);
-
-/**
- * Obter lista de inscrições ativas num curso
- * 
- * GET /cursos/:id/inscricoes
- * Acesso: Utilizadores autenticados
- * 
- * Lista utilizadores inscritos para fins de:
- * - Gestão pedagógica por formadores
- * - Acompanhamento por administradores
- * - Comunicação e contacto direto
- * 
- * Inclui dados básicos de contacto dos inscritos.
- */
-router.get("/:id/inscricoes", verificarToken, getInscricoesCurso);
-
-// =============================================================================
-// GESTÃO DE TÓPICOS E ESTRUTURA ORGANIZACIONAL DO CURSO
-// =============================================================================
-
-/**
- * Obter estrutura completa de tópicos de um curso
- * 
- * GET /cursos/:id/topicos
- * Acesso: Público
- * 
- * Lista todos os tópicos organizacionais ordenados por sequência pedagógica.
- * Apenas tópicos ativos são retornados para construir a navegação do curso.
- * 
- * Utilizado para:
- * - Construção da estrutura de navegação
- * - Organização de conteúdos por tema
- * - Sequência pedagógica de aprendizagem
- */
-router.get("/:id/topicos", getTopicosCurso);
-
-/**
- * Criar novo tópico para organização do conteúdo
- * 
- * POST /cursos/:id/topicos
- * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
- * 
- * Adiciona nova secção temática à estrutura do curso:
- * - Ordenação automática ou manual via parâmetro 'ordem'
- * - Ativação automática para utilização imediata
- * - Validação de existência do curso pai
- * 
- * Útil para:
- * - Organizar materiais didáticos por tema
- * - Criar sequência lógica de aprendizagem
- * - Estruturação hierárquica de conteúdos
- */
-router.post("/:id/topicos", 
-  verificarToken, 
-  autorizar([1, 2, 3]), 
-  createCurso_Topicos
-);
-
-/**
- * Atualizar tópico existente
- * 
- * PUT /cursos/topicos/:id
- * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
- * 
- * Permite modificar:
- * - Nome do tópico para melhor identificação
- * - Ordem na sequência pedagógica
- * - Estado de ativação (ativo/inativo)
- * 
- * Suporta reordenação da estrutura sem afetar conteúdos associados.
- */
-router.put("/topicos/:id", 
-  verificarToken, 
-  autorizar([1, 2, 3]), 
-  updateCurso_Topicos
-);
-
-/**
- * Eliminar tópico específico
- * 
- * DELETE /cursos/topicos/:id
- * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
- * 
- * Comportamento inteligente baseado em dependências:
- * - Se tiver conteúdos associados: desativa em vez de eliminar
- * - Se não tiver dependências: elimina permanentemente
- * 
- * Esta abordagem preserva a integridade referencial e evita
- * perda acidental de dados importantes.
- */
-router.delete("/topicos/:id", 
-  verificarToken, 
-  autorizar([1, 2, 3]), 
-  deleteCurso_Topicos
-);
-
-// =============================================================================
-// MIDDLEWARES DE DEBUGGING E MONITORIZAÇÃO
+// MIDDLEWARE DE DEBUGGING PARA DESENVOLVIMENTO
 // =============================================================================
 
 /**
  * Middleware de logging para debug das rotas em desenvolvimento
- * 
- * Em ambiente de desenvolvimento, regista informações detalhadas
- * sobre cada requisição para facilitar debugging e monitorização.
  */
 if (process.env.NODE_ENV === 'development') {
   router.use((req, res, next) => {
-    const userId = req.user?.id_utilizador || 'Anónimo';
+    const userId = req.user?.id_utilizador || req.utilizador?.id_utilizador || 'Anónimo';
     const method = req.method;
     const path = req.path;
     const timestamp = new Date().toISOString();
@@ -387,71 +46,11 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // =============================================================================
-// MIDDLEWARE DE TRATAMENTO DE ERROS ESPECÍFICO PARA CURSOS
-// =============================================================================
-
-/**
- * Aplicar middleware de tratamento de erros de upload
- * 
- * Garante que todos os erros de upload são capturados e processados
- * adequadamente antes de chegarem ao handler global de erros.
- */
-router.use(tratarErrosUpload);
-
-/**
- * Handler de erro específico para operações de cursos
- * 
- * Captura erros não tratados nas operações de curso e fornece
- * respostas consistentes e informativas sem expor detalhes
- * internos sensíveis em produção.
- */
-router.use((err, req, res, next) => {
-  console.error('❌ [CURSOS] Erro não tratado na rota de cursos:', err.message);
-  console.error('📍 [CURSOS] Stack trace:', err.stack);
-  console.error('🌐 [CURSOS] URL:', req.url);
-  console.error('👤 [CURSOS] Utilizador:', req.user?.id_utilizador || 'Anónimo');
-  
-  // Classificar tipo de erro para resposta apropriada
-  let statusCode = 500;
-  let message = 'Erro interno do servidor';
-  
-  // Erros de validação
-  if (err.name === 'ValidationError' || err.name === 'SequelizeValidationError') {
-    statusCode = 400;
-    message = 'Dados inválidos fornecidos';
-  }
-  
-  // Erros de autorização
-  if (err.name === 'UnauthorizedError' || err.message.includes('authorization')) {
-    statusCode = 401;
-    message = 'Acesso não autorizado';
-  }
-  
-  // Erros de base de dados
-  if (err.name && err.name.startsWith('Sequelize')) {
-    statusCode = 500;
-    message = 'Erro na base de dados';
-  }
-  
-  res.status(statusCode).json({
-    message: message,
-    timestamp: new Date().toISOString(),
-    path: req.path,
-    method: req.method,
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
-
-// =============================================================================
 // MIDDLEWARE DE VALIDAÇÃO DE PARÂMETROS
 // =============================================================================
 
 /**
  * Middleware para validar IDs numéricos nos parâmetros
- * 
- * Valida que parâmetros de ID são números válidos antes de
- * passarem para os controladores, evitando erros desnecessários.
  */
 router.param('id', (req, res, next, id) => {
   // Verificar se o ID é um número válido
@@ -460,7 +59,8 @@ router.param('id', (req, res, next, id) => {
     return res.status(400).json({
       message: 'ID do curso deve ser um número válido',
       providedId: id,
-      expected: 'número inteiro positivo'
+      expected: 'número inteiro positivo',
+      timestamp: new Date().toISOString()
     });
   }
   
@@ -471,7 +71,8 @@ router.param('id', (req, res, next, id) => {
     return res.status(400).json({
       message: 'ID do curso fora do range válido',
       providedId: numericId,
-      validRange: '1 - 2147483647'
+      validRange: '1 - 2147483647',
+      timestamp: new Date().toISOString()
     });
   }
   
@@ -480,18 +81,331 @@ router.param('id', (req, res, next, id) => {
 });
 
 // =============================================================================
+// MIDDLEWARE ESPECIALIZADO PARA TRATAMENTO DE ERROS DE UPLOAD
+// =============================================================================
+
+/**
+ * Middleware especializado para tratamento de erros de upload
+ */
+const tratarErrosUpload = (err, req, res, next) => {
+  console.log('🔍 [UPLOAD] A processar erro de upload:', err.code || err.message);
+  
+  // === ERROS ESPECÍFICOS DO MULTER ===
+  
+  // Ficheiro excede o tamanho máximo configurado (15MB)
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    console.error('❌ [UPLOAD] Ficheiro demasiado grande para o limite definido');
+    return res.status(400).json({
+      message: 'Ficheiro demasiado grande. O tamanho máximo permitido é 15MB.',
+      error: 'LIMIT_FILE_SIZE',
+      maxSize: '15MB',
+      hint: 'Tenta comprimir a imagem ou usar um formato mais eficiente como WebP.',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Campo de ficheiro não esperado na requisição
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    console.error('❌ [UPLOAD] Campo de ficheiro inesperado:', err.field);
+    return res.status(400).json({
+      message: `Campo de ficheiro inesperado: "${err.field}". Apenas o campo "imagem" é aceite.`,
+      error: 'LIMIT_UNEXPECTED_FILE',
+      field: err.field,
+      expectedField: 'imagem',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Tipo de ficheiro não suportado
+  if (err.message && err.message.includes('Tipo de ficheiro não permitido')) {
+    console.error('❌ [UPLOAD] Tipo de ficheiro inválido');
+    return res.status(400).json({
+      message: err.message,
+      error: 'INVALID_FILE_TYPE',
+      allowedTypes: ['JPEG', 'PNG', 'GIF', 'WebP', 'SVG', 'BMP', 'TIFF'],
+      hint: 'Usa uma imagem nos formatos suportados: JPEG, PNG, GIF, WebP, SVG, BMP ou TIFF.',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Outros erros relacionados com limites do Multer
+  if (err.code && err.code.startsWith('LIMIT_')) {
+    console.error('❌ [UPLOAD] Erro de limite Multer:', err.code);
+    return res.status(400).json({
+      message: 'Erro no upload do ficheiro devido a limitações do servidor',
+      error: err.code,
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Erros personalizados do sistema
+  if (err.message && err.message.includes('formato não suportado')) {
+    console.error('❌ [UPLOAD] Formato de ficheiro não suportado');
+    return res.status(400).json({
+      message: 'Formato de ficheiro não suportado para imagens de curso',
+      error: 'UNSUPPORTED_FORMAT',
+      supportedFormats: ['JPEG', 'PNG', 'GIF', 'WebP'],
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Passar erros não relacionados com upload para o handler seguinte
+  console.log('⏭️ [UPLOAD] Erro não relacionado com upload, a passar adiante');
+  next(err);
+};
+
+// =============================================================================
+// MIDDLEWARE DE AUTENTICAÇÃO ROBUSTO
+// =============================================================================
+
+/**
+ * ✅ CORRIGIDO: Middleware personalizado para garantir autenticação robusta
+ */
+const verificarAutenticacaoRobusta = (req, res, next) => {
+  // Para rotas que não requerem autenticação, pular verificação
+  if (req.path === '/' || req.path.startsWith('/por-categoria') || req.path.includes('/topico-area/')) {
+    return next();
+  }
+
+  verificarToken(req, res, (err) => {
+    if (err) {
+      console.error('❌ [CURSOS-ROUTE] Erro no middleware de autenticação:', err.message);
+      return res.status(401).json({
+        message: "Erro de autenticação",
+        error: "TOKEN_VERIFICATION_FAILED",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // ✅ CORRIGIDO: Verificar ambos os formatos possíveis
+    const user = req.user || req.utilizador;
+    if (!user) {
+      console.error('❌ [CURSOS-ROUTE] Nenhum utilizador definido após verificação do token');
+      return res.status(401).json({
+        message: "Dados de utilizador não disponíveis após autenticação",
+        error: "USER_DATA_MISSING",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const userId = user.id_utilizador || user.id;
+    if (!userId) {
+      console.error('❌ [CURSOS-ROUTE] ID do utilizador não encontrado no token');
+      return res.status(401).json({
+        message: "ID do utilizador não encontrado no token de autenticação",
+        error: "USER_ID_MISSING",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // ✅ CORRIGIDO: Garantir compatibilidade dupla
+    if (!req.user && req.utilizador) {
+      req.user = req.utilizador;
+    }
+    if (!req.utilizador && req.user) {
+      req.utilizador = req.user;
+    }
+
+    console.log('✅ [CURSOS-ROUTE] Autenticação robusta confirmada para utilizador:', userId);
+    next();
+  });
+};
+
+// =============================================================================
+// MIDDLEWARE DE TIMEOUT PARA OPERAÇÕES PESADAS
+// =============================================================================
+
+/**
+ * Middleware para definir timeout em operações que podem demorar
+ */
+const setTimeoutForHeavyOperations = (req, res, next) => {
+  req.setTimeout(30000, () => {
+    console.error('❌ [CURSOS-ROUTE] Timeout na operação');
+    if (!res.headersSent) {
+      res.status(408).json({
+        message: "Operação demorou muito tempo para completar",
+        error: "REQUEST_TIMEOUT",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  next();
+};
+
+// =============================================================================
+// OPERAÇÕES PRINCIPAIS DE GESTÃO DE CURSOS
+// =============================================================================
+
+/**
+ * Listar todos os cursos disponíveis
+ * GET /cursos
+ * Acesso: Público (sem autenticação necessária)
+ */
+router.get("/", setTimeoutForHeavyOperations, getAllCursos);
+
+/**
+ * Obter cursos filtrados por categoria específica
+ * GET /cursos/por-categoria?categorias=1,2,3
+ * Acesso: Público
+ */
+router.get("/por-categoria", setTimeoutForHeavyOperations, getCursosByCategoria);
+
+/**
+ * ✅ ROTA CRÍTICA CORRIGIDA: Obter sugestões personalizadas de cursos
+ * GET /cursos/sugeridos
+ * Acesso: Utilizadores autenticados
+ */
+router.get("/sugeridos", 
+  verificarAutenticacaoRobusta, 
+  setTimeoutForHeavyOperations,
+  (req, res, next) => {
+    console.log('🎯 [CURSOS-ROUTE] Rota de sugestões chamada');
+    console.log('📋 [CURSOS-ROUTE] Utilizador:', {
+      id: req.user?.id_utilizador || req.utilizador?.id_utilizador || 'N/A',
+      cargo: req.user?.id_cargo || req.utilizador?.id_cargo || 'N/A'
+    });
+    next();
+  }, 
+  getCursosSugeridos
+);
+
+/**
+ * Obter informações de tópico de área específico
+ * GET /cursos/topico-area/:id
+ * Acesso: Público
+ */
+router.get("/topico-area/:id", getTopicoArea);
+
+/**
+ * Criar novo curso com possibilidade de upload de imagem
+ * POST /cursos
+ * Acesso: Administradores (1) e Formadores (2)
+ */
+router.post("/", 
+  verificarAutenticacaoRobusta, 
+  autorizar([1, 2]), 
+  uploadUtils.uploadCurso.single("imagem"), 
+  tratarErrosUpload,
+  createCurso
+);
+
+/**
+ * Obter detalhes completos de um curso específico
+ * GET /cursos/:id
+ * Acesso: Público (com verificações de acesso para cursos terminados)
+ */
+router.get("/:id", (req, res, next) => {
+  // Tentar autenticação, mas não falhar se não estiver autenticado
+  if (req.headers.authorization) {
+    verificarToken(req, res, (err) => {
+      if (err) {
+        console.warn('⚠️ [CURSOS-ROUTE] Falha na autenticação opcional:', err.message);
+        req.user = null; // Definir como null para continuar sem autenticação
+        req.utilizador = null;
+      } else {
+        // ✅ CORRIGIDO: Garantir compatibilidade dupla
+        const user = req.user || req.utilizador;
+        if (user) {
+          if (!req.user && req.utilizador) req.user = req.utilizador;
+          if (!req.utilizador && req.user) req.utilizador = req.user;
+        }
+      }
+      next();
+    });
+  } else {
+    req.user = null; // Sem token, continuar sem autenticação
+    req.utilizador = null;
+    next();
+  }
+}, getCursoById);
+
+/**
+ * Atualizar dados de curso existente
+ * PUT /cursos/:id
+ * Acesso: Administradores (1) e Formadores (2)
+ */
+router.put("/:id", 
+  verificarAutenticacaoRobusta, 
+  autorizar([1, 2]), 
+  uploadUtils.uploadCurso.single("imagem"), 
+  tratarErrosUpload,
+  updateCurso
+);
+
+/**
+ * Eliminar curso do sistema
+ * DELETE /cursos/:id
+ * Acesso: Apenas Administradores (1)
+ */
+router.delete("/:id", verificarAutenticacaoRobusta, autorizar([1]), deleteCurso);
+
+/**
+ * Obter lista de inscrições ativas num curso
+ * GET /cursos/:id/inscricoes
+ * Acesso: Utilizadores autenticados
+ */
+router.get("/:id/inscricoes", 
+  verificarAutenticacaoRobusta, 
+  setTimeoutForHeavyOperations,
+  getInscricoesCurso
+);
+
+// =============================================================================
+// GESTÃO DE TÓPICOS E ESTRUTURA ORGANIZACIONAL DO CURSO
+// =============================================================================
+
+/**
+ * Obter estrutura completa de tópicos de um curso
+ * GET /cursos/:id/topicos
+ * Acesso: Público
+ */
+router.get("/:id/topicos", getTopicosCurso);
+
+/**
+ * Criar novo tópico para organização do conteúdo
+ * POST /cursos/:id/topicos
+ * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
+ */
+router.post("/:id/topicos", 
+  verificarAutenticacaoRobusta, 
+  autorizar([1, 2, 3]), 
+  createCurso_Topicos
+);
+
+/**
+ * Atualizar tópico existente
+ * PUT /cursos/topicos/:id
+ * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
+ */
+router.put("/topicos/:id", 
+  verificarAutenticacaoRobusta, 
+  autorizar([1, 2, 3]), 
+  updateCurso_Topicos
+);
+
+/**
+ * Eliminar tópico específico
+ * DELETE /cursos/topicos/:id
+ * Acesso: Administradores (1), Formadores (2) e Estudantes (3)
+ */
+router.delete("/topicos/:id", 
+  verificarAutenticacaoRobusta, 
+  autorizar([1, 2, 3]), 
+  deleteCurso_Topicos
+);
+
+// =============================================================================
 // ROTAS DE TESTE E DIAGNÓSTICO (APENAS DESENVOLVIMENTO)
 // =============================================================================
 
 if (process.env.NODE_ENV === 'development') {
   /**
    * Rota de teste para verificar funcionalidade de upload
-   * 
-   * POST /cursos/test/upload
-   * Apenas disponível em desenvolvimento
    */
   router.post("/test/upload", 
-    verificarToken,
+    verificarAutenticacaoRobusta,
     uploadUtils.uploadCurso.single("imagem"),
     tratarErrosUpload,
     (req, res) => {
@@ -510,15 +424,13 @@ if (process.env.NODE_ENV === 'development') {
 
   /**
    * Rota de teste para notificações WebSocket
-   * 
-   * POST /cursos/test/notification
-   * Apenas disponível em desenvolvimento
    */
-  router.post("/test/notification", verificarToken, (req, res) => {
+  router.post("/test/notification", verificarAutenticacaoRobusta, (req, res) => {
     const { userId, message } = req.body;
+    const currentUserId = req.user?.id_utilizador || req.utilizador?.id_utilizador;
     
     if (req.io) {
-      req.io.to(`user_${userId || req.user.id_utilizador}`).emit('nova_notificacao', {
+      req.io.to(`user_${userId || currentUserId}`).emit('nova_notificacao', {
         titulo: "🧪 Teste de Notificação",
         mensagem: message || "Esta é uma notificação de teste do sistema de cursos!",
         tipo: "teste",
@@ -528,7 +440,7 @@ if (process.env.NODE_ENV === 'development') {
       
       res.json({
         message: "Notificação de teste enviada",
-        targetUser: userId || req.user.id_utilizador,
+        targetUser: userId || currentUserId,
         timestamp: new Date().toISOString()
       });
     } else {
@@ -538,6 +450,204 @@ if (process.env.NODE_ENV === 'development') {
       });
     }
   });
+
+  /**
+   * Rota de teste para verificar autenticação
+   */
+  router.get("/test/auth", verificarAutenticacaoRobusta, (req, res) => {
+    const user = req.user || req.utilizador;
+    res.json({
+      message: "Autenticação de cursos a funcionar corretamente",
+      timestamp: new Date().toISOString(),
+      authenticatedUser: {
+        id: user?.id_utilizador || user?.id,
+        role: user?.id_cargo,
+        name: user?.nome || 'N/A',
+        email: user?.email || 'N/A'
+      },
+      compatibility: {
+        hasReqUser: !!req.user,
+        hasReqUtilizador: !!req.utilizador,
+        bothSet: !!(req.user && req.utilizador)
+      }
+    });
+  });
+
+  /**
+   * Rota de teste para base de dados
+   */
+  router.get("/test/database", async (req, res) => {
+    try {
+      const { sequelize } = require("../../config/db");
+      
+      // Teste de conectividade
+      await sequelize.authenticate();
+      
+      // Teste de query simples
+      const result = await sequelize.query('SELECT 1 as test', { 
+        type: sequelize.QueryTypes.SELECT 
+      });
+      
+      res.json({
+        message: "Conexão com base de dados bem-sucedida",
+        timestamp: new Date().toISOString(),
+        database: "Conectado",
+        testQuery: result,
+        connectionInfo: {
+          dialect: sequelize.getDialect(),
+          version: sequelize.getDatabaseVersion ? await sequelize.getDatabaseVersion() : 'N/A'
+        }
+      });
+    } catch (error) {
+      console.error('❌ [CURSOS-ROUTE] Erro na conexão de teste:', error.message);
+      res.status(500).json({
+        message: "Erro na conexão com base de dados",
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  });
+
+  /**
+   * Rota para testar campos da base de dados
+   */
+  router.get("/test/fields", async (req, res) => {
+    try {
+      const { sequelize } = require("../../config/db");
+      const Curso = require("../../database/models/Curso");
+      const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
+      
+      // Obter informações sobre os campos das tabelas
+      const cursoFields = Object.keys(Curso.rawAttributes);
+      const inscricaoFields = Object.keys(Inscricao_Curso.rawAttributes);
+      
+      res.json({
+        message: "Informações dos campos das tabelas",
+        timestamp: new Date().toISOString(),
+        tables: {
+          curso: {
+            fields: cursoFields,
+            hasTimestamps: Curso.options.timestamps,
+            tableName: Curso.tableName
+          },
+          inscricao_curso: {
+            fields: inscricaoFields,
+            hasTimestamps: Inscricao_Curso.options.timestamps,
+            tableName: Inscricao_Curso.tableName
+          }
+        }
+      });
+    } catch (error) {
+      console.error('❌ [CURSOS-ROUTE] Erro ao obter informações dos campos:', error.message);
+      res.status(500).json({
+        message: "Erro ao obter informações dos campos",
+        timestamp: new Date().toISOString(),
+        error: error.message
+      });
+    }
+  });
 }
+
+// =============================================================================
+// MIDDLEWARE DE TRATAMENTO DE ERROS ESPECÍFICO PARA CURSOS
+// =============================================================================
+
+/**
+ * Aplicar middleware de tratamento de erros de upload
+ */
+router.use(tratarErrosUpload);
+
+/**
+ * ✅ MELHORADO: Handler de erro específico para operações de cursos
+ */
+router.use((err, req, res, next) => {
+  console.error('❌ [CURSOS] Erro não tratado na rota de cursos:', err.message);
+  console.error('📍 [CURSOS] Stack trace:', err.stack);
+  console.error('🌐 [CURSOS] Contexto:', {
+    url: req.url,
+    method: req.method,
+    params: req.params,
+    query: req.query,
+    userId: req.user?.id_utilizador || req.utilizador?.id_utilizador || 'Anónimo',
+    userAgent: req.headers['user-agent'],
+    timestamp: new Date().toISOString()
+  });
+  
+  // Classificar tipo de erro para resposta apropriada
+  let statusCode = 500;
+  let message = 'Erro interno do servidor';
+  let errorType = 'UNKNOWN_ERROR';
+  let suggestion = 'Tenta novamente mais tarde';
+  
+  // Erros de validação
+  if (err.name === 'ValidationError' || err.name === 'SequelizeValidationError') {
+    statusCode = 400;
+    message = 'Dados inválidos fornecidos';
+    errorType = 'VALIDATION_ERROR';
+    suggestion = 'Verifica os dados do formulário e tenta novamente';
+  }
+  
+  // Erros de violação de constraints
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    statusCode = 409;
+    message = 'Conflito: Já existe um registo com estes dados';
+    errorType = 'DUPLICATE_ENTRY';
+    suggestion = 'Verifica se já não existe um curso com este nome';
+  }
+  
+  // Erros de autorização
+  if (err.name === 'UnauthorizedError' || err.message.includes('authorization')) {
+    statusCode = 401;
+    message = 'Acesso não autorizado';
+    errorType = 'AUTH_ERROR';
+    suggestion = 'Faz login novamente';
+  }
+  
+  // Erros de base de dados
+  if (err.name && err.name.startsWith('Sequelize')) {
+    statusCode = 500;
+    message = 'Erro na base de dados';
+    errorType = 'DATABASE_ERROR';
+    suggestion = 'Problema temporário na base de dados. Tenta novamente em alguns minutos';
+  }
+
+  // Erros de conexão
+  if (err.message && (err.message.includes('connection') || err.code === 'ECONNRESET')) {
+    statusCode = 503;
+    message = 'Serviço temporariamente indisponível';
+    errorType = 'CONNECTION_ERROR';
+    suggestion = 'Verifica a tua ligação à internet e tenta novamente';
+  }
+  
+  // Erros de timeout
+  if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+    statusCode = 408;
+    message = 'Operação demorou muito tempo';
+    errorType = 'TIMEOUT_ERROR';
+    suggestion = 'A operação demorou muito tempo. Tenta novamente';
+  }
+  
+  // Só enviar resposta se ainda não foi enviada
+  if (!res.headersSent) {
+    res.status(statusCode).json({
+      message: message,
+      error: errorType,
+      suggestion: suggestion,
+      timestamp: new Date().toISOString(),
+      path: req.path,
+      method: req.method,
+      requestId: req.headers['x-request-id'] || `err-${Date.now()}`,
+      ...(process.env.NODE_ENV === 'development' && {
+        details: {
+          originalMessage: err.message,
+          stack: err.stack,
+          name: err.name,
+          code: err.code
+        }
+      })
+    });
+  }
+});
 
 module.exports = router;

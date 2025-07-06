@@ -1,15 +1,29 @@
-const { Topico_Area, ChatMensagem, ChatInteracao, ChatDenuncia, User, Categoria, Area } = require('../../database/associations');
+const { Topico_Area, ChatMensagem, ChatInteracao, ChatDenuncia, User, Categoria, Area, Curso, Inscricao_Curso } = require('../../database/associations');
 const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
 const path = require('path');
 const uploadUtils = require('../../middleware/upload');
 
 /**
- * CONTROLADOR PARA SISTEMA UNIFICADO DE TÓPICOS DE CHAT E FÓRUM
+ * CONTROLADOR PARA SISTEMA UNIFICADO DE TÓPICOS DE CHAT E FÓRUM (3º nível da hierarquia)
  * 
- * Este controlador gere o sistema completo de discussão em tempo real,
- * combinando funcionalidades de fórum tradicional com chat dinâmico.
- * Permite a criação, gestão e moderação de tópicos de discussão organizados por categoria.
+ * Este é o controlador mais crítico do sistema, pois implementa:
+ * - Gestão de tópicos (3º nível da hierarquia educacional)
+ * - Sistema de chat em tempo real
+ * - Upload e gestão de ficheiros anexados
+ * - Sistema de avaliações (likes/dislikes)
+ * - REGRAS CRÍTICAS DE ELIMINAÇÃO EM CASCATA
+ * 
+ * HIERARQUIA: Categoria → Área → Tópico → Curso (com chats)
+ * 
+ * ⚠️ REGRA CRÍTICA DE INTEGRIDADE ⚠️
+ * Eliminar tópico remove automaticamente TODOS os elementos dependentes:
+ * - Chats de conversa associados ao tópico
+ * - Cursos associados ao tópico
+ * - Inscrições de formandos nesses cursos
+ * - Associações de formadores
+ * 
+ * Esta é a operação mais destrutiva do sistema!
  */
 
 // =============================================================================
@@ -17,7 +31,7 @@ const uploadUtils = require('../../middleware/upload');
 // =============================================================================
 
 /**
- * Criar estrutura de diretórios para chat
+ * Criar estrutura de diretórios para chat organizada por categoria/tópico
  */
 const createChatDirectoryStructure = (categoriaNome, topicoNome) => {
   try {
@@ -26,7 +40,6 @@ const createChatDirectoryStructure = (categoriaNome, topicoNome) => {
     
     return uploadUtils.criarDiretoriosChat(categoriaSlug, topicoSlug);
   } catch (error) {
-    console.error('Erro ao criar estrutura de diretórios:', error);
     return null;
   }
 };
@@ -51,10 +64,7 @@ const getFileType = (mimetype) => {
 
 /**
  * Obter todos os tópicos com paginação, filtros e contagem
- * Similar à função getAllAreas do controlador de áreas
- * 
- * @param {Request} req - Requisição HTTP
- * @param {Response} res - Resposta HTTP
+ * Função principal para listagem de tópicos no frontend
  */
 const getAllTopicosCategoria = async (req, res) => {
   try {
@@ -113,7 +123,7 @@ const getAllTopicosCategoria = async (req, res) => {
       where.id_area = area.trim();
     }
     
-    // Aplicar filtros se existirem
+    // Aplicar filtros construídos
     if (Object.keys(where).length > 0) {
       options.where = where;
     }
@@ -181,7 +191,6 @@ const getAllTopicosCategoria = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao obter tópicos:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter tópicos',
@@ -250,7 +259,6 @@ const getTopicoById = async (req, res) => {
       data: topicoCompleto
     });
   } catch (error) {
-    console.error('Erro ao obter tópico:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter detalhes do tópico',
@@ -315,7 +323,6 @@ const getTopicosByCategoria = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao obter tópicos por categoria:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter tópicos da categoria',
@@ -339,7 +346,7 @@ const createTopico = async (req, res) => {
     const userRole = req.utilizador.id_cargo || req.user.id_cargo;
     const { titulo, descricao, id_categoria, id_area } = req.body;
     
-    // Verificar permissões
+    // Verificar permissões (administradores e formadores)
     if (userRole !== 1 && userRole !== 2) {
       await transaction.rollback();
       return res.status(403).json({
@@ -455,7 +462,6 @@ const createTopico = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao criar tópico:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar tópico',
@@ -491,7 +497,7 @@ const updateTopico = async (req, res) => {
       await transaction.rollback();
       return res.status(403).json({
         success: false,
-        message: 'Sem permissão para actualizar este tópico'
+        message: 'Sem permissão para atualizar este tópico'
       });
     }
     
@@ -504,7 +510,7 @@ const updateTopico = async (req, res) => {
       });
     }
     
-    // Preparar dados de actualização
+    // Preparar dados de atualização
     const updateData = {};
     if (titulo) updateData.titulo = titulo.trim();
     if (descricao !== undefined) updateData.descricao = descricao.trim();
@@ -540,12 +546,12 @@ const updateTopico = async (req, res) => {
       }
     }
     
-    // Actualizar tópico
+    // Atualizar tópico
     await topico.update(updateData, { transaction });
     
     await transaction.commit();
     
-    // Buscar tópico actualizado
+    // Buscar tópico atualizado
     const topicoAtualizado = await Topico_Area.findByPk(id, {
       include: [
         {
@@ -568,15 +574,14 @@ const updateTopico = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Tópico actualizado com sucesso',
+      message: 'Tópico atualizado com sucesso',
       data: topicoAtualizado
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao actualizar tópico:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao actualizar tópico',
+      message: 'Erro ao atualizar tópico',
       error: error.message
     });
   }
@@ -584,6 +589,18 @@ const updateTopico = async (req, res) => {
 
 /**
  * Eliminar tópico e todo o seu conteúdo
+ * 
+ * ⚠️ OPERAÇÃO EXTREMAMENTE CRÍTICA ⚠️
+ * 
+ * Esta é a função mais destrutiva do sistema inteiro!
+ * Elimina automaticamente EM CASCATA:
+ * 1. Todas as denúncias relacionadas com mensagens do tópico
+ * 2. Todas as interações (likes/dislikes) das mensagens
+ * 3. Todas as mensagens do chat do tópico
+ * 4. Todos os cursos associados ao tópico
+ * 5. Todas as inscrições de formandos nesses cursos
+ * 6. Todas as associações de formadores
+ * 7. O próprio tópico
  */
 const deleteTopico = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -611,8 +628,8 @@ const deleteTopico = async (req, res) => {
       });
     }
     
-    // Contar mensagens e denúncias associadas
-    const [totalMensagens, totalDenuncias] = await Promise.all([
+    // Contar elementos que serão eliminados (para estatísticas)
+    const [totalMensagens, totalDenuncias, totalCursos, totalInscricoes] = await Promise.all([
       ChatMensagem.count({ where: { id_topico: id } }),
       ChatDenuncia.count({ 
         include: [{ 
@@ -620,32 +637,42 @@ const deleteTopico = async (req, res) => {
           as: 'mensagem', 
           where: { id_topico: id } 
         }] 
+      }),
+      Curso.count({ where: { id_topico_area: id } }),
+      Inscricao_Curso.count({
+        include: [{
+          model: Curso,
+          as: 'curso',
+          where: { id_topico_area: id }
+        }]
       })
     ]);
     
-    // Eliminar denúncias associadas às mensagens do tópico
+    // FASE 1: Eliminar denúncias associadas às mensagens do tópico
     if (totalDenuncias > 0) {
-      await ChatDenuncia.destroy({
-        include: [{ 
-          model: ChatMensagem, 
-          as: 'mensagem', 
-          where: { id_topico: id } 
-        }],
+      await sequelize.query(`
+        DELETE FROM chat_denuncias 
+        WHERE id_mensagem IN (
+          SELECT id FROM chat_mensagens WHERE id_topico = :topicoId
+        )
+      `, {
+        replacements: { topicoId: id },
         transaction
       });
     }
     
-    // Eliminar interações das mensagens
-    await ChatInteracao.destroy({
-      include: [{ 
-        model: ChatMensagem, 
-        as: 'mensagem', 
-        where: { id_topico: id } 
-      }],
+    // FASE 2: Eliminar interações das mensagens
+    await sequelize.query(`
+      DELETE FROM chat_interacoes 
+      WHERE id_mensagem IN (
+        SELECT id FROM chat_mensagens WHERE id_topico = :topicoId
+      )
+    `, {
+      replacements: { topicoId: id },
       transaction
     });
     
-    // Eliminar mensagens
+    // FASE 3: Eliminar mensagens do tópico
     if (totalMensagens > 0) {
       await ChatMensagem.destroy({ 
         where: { id_topico: id },
@@ -653,21 +680,34 @@ const deleteTopico = async (req, res) => {
       });
     }
     
+    // FASE 4: Eliminar cursos associados (CASCADE elimina automaticamente inscrições)
+    if (totalCursos > 0) {
+      await Curso.destroy({
+        where: { id_topico_area: id },
+        transaction
+      });
+    }
+    
     // Guardar nome do tópico para confirmação
     const nomeTopico = topico.titulo;
     
-    // Eliminar tópico
+    // FASE 5: Eliminar o tópico
     await topico.destroy({ transaction });
     
     await transaction.commit();
     
     res.status(200).json({
       success: true,
-      message: `Tópico "${nomeTopico}" eliminado com sucesso. ${totalMensagens} mensagens e ${totalDenuncias} denúncias também foram removidas.`
+      message: `Tópico "${nomeTopico}" eliminado com sucesso.`,
+      estatisticas_eliminacao: {
+        mensagens_removidas: totalMensagens,
+        denuncias_removidas: totalDenuncias,
+        cursos_removidos: totalCursos,
+        inscricoes_removidas: totalInscricoes
+      }
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('Erro ao eliminar tópico:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao eliminar tópico',
@@ -729,7 +769,6 @@ const getComentariosByTopico = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao obter comentários:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao obter comentários do tópico',
@@ -847,7 +886,6 @@ const createComentario = async (req, res) => {
       data: mensagemCompleta
     });
   } catch (error) {
-    console.error('Erro ao criar comentário:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar comentário',
@@ -861,7 +899,7 @@ const createComentario = async (req, res) => {
 // =============================================================================
 
 /**
- * Avaliar comentário (gosto/não gosto)
+ * Avaliar comentário (like/dislike) com sistema inteligente de toggle
  */
 const avaliarComentario = async (req, res) => {
   try {
@@ -972,7 +1010,6 @@ const avaliarComentario = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao avaliar comentário:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao avaliar comentário',

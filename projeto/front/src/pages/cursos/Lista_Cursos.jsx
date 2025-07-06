@@ -17,21 +17,6 @@ export default function CursosPage() {
   const { currentUser } = useAuth();
   const [userRole, setUserRole] = useState(null);
 
-
-  useEffect(() => {
-    if (currentUser && currentUser.id_cargo) {
-      setUserRole(currentUser.id_cargo);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    // Verificar se não há cursos carregados e recarregar
-    if (cursos.length === 0 && !isLoading) {
-      console.log("Não há cursos carregados, tentando recarregar...");
-      fetchCursos();
-    }
-  }, [cursos.length]);
-
   // Estados para a barra de pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -42,16 +27,34 @@ export default function CursosPage() {
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [categoriaId, setCategoriaId] = useState('');
   const [areaId, setAreaId] = useState('');
-  const [tipoFiltro, setTipoFiltro] = useState('todos'); // 'todos', 'sincrono', 'assincrono'
+  const [tipoFiltro, setTipoFiltro] = useState('todos');
   const [topicos, setTopicos] = useState([]);
   const [topicosFiltrados, setTopicosFiltrados] = useState([]);
   const [topicoId, setTopicoId] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true); // ✅ NOVO: Controlar carregamento inicial
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id_cargo) {
+      setUserRole(currentUser.id_cargo);
+    }
+  }, [currentUser]);
+
+  // ✅ REMOVIDO: useEffect problemático que causava loop infinito
+  // Este useEffect estava a causar chamadas infinitas à API
+  /*
+  useEffect(() => {
+    if (cursos.length === 0 && !isLoading) {
+      console.log("Não há cursos carregados, tentando recarregar...");
+      fetchCursos();
+    }
+  }, [cursos.length]);
+  */
 
   // Carregar categorias e áreas
   useEffect(() => {
@@ -82,63 +85,37 @@ export default function CursosPage() {
   }, []);
 
   // Carregar todos os tópicos
-useEffect(() => {
-  const fetchAllTopicos = async () => {
-    try {
-      const response = await axios.get(`${API_BASE}/topicos-area`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      
-      // Verificar se a resposta é um array
-      const topicoData = response.data;
-      if (Array.isArray(topicoData)) {
-        setTopicos(topicoData);
-      } else if (topicoData && typeof topicoData === 'object') {
-        // Se for um objeto com uma propriedade que é array (comum em APIs)
-        // Tentar encontrar uma propriedade que seja array
-        const possibleArrayProps = ['data', 'items', 'results', 'topicos'];
-        for (const prop of possibleArrayProps) {
-          if (Array.isArray(topicoData[prop])) {
-            console.log(`Usando propriedade '${prop}' como array de tópicos`);
-            setTopicos(topicoData[prop]);
-            break;
+  useEffect(() => {
+    const fetchAllTopicos = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/topicos-area`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        const topicoData = response.data;
+        if (Array.isArray(topicoData)) {
+          setTopicos(topicoData);
+        } else if (topicoData && typeof topicoData === 'object') {
+          const possibleArrayProps = ['data', 'items', 'results', 'topicos'];
+          for (const prop of possibleArrayProps) {
+            if (Array.isArray(topicoData[prop])) {
+              console.log(`Usando propriedade '${prop}' como array de tópicos`);
+              setTopicos(topicoData[prop]);
+              break;
+            }
           }
+        } else {
+          console.error("Formato de dados inesperado para tópicos:", topicoData);
+          setTopicos([]);
         }
-      } else {
-        console.error("Formato de dados inesperado para tópicos:", topicoData);
+      } catch (error) {
+        console.error("Erro ao carregar tópicos:", error);
         setTopicos([]);
       }
-    } catch (error) {
-      console.error("Erro ao carregar tópicos:", error);
-      setTopicos([]);
-    }
-  };
+    };
 
-  fetchAllTopicos();
-}, []);
-
-useEffect(() => {
-  if (areaId && Array.isArray(topicos)) {
-    const areId = String(areaId);
-    // Use o campo correto conforme definido no modelo Topico_Area
-    const topicosFiltered = topicos.filter(topico => {
-      return topico.id_area && String(topico.id_area) === areId;
-    });
-    setTopicosFiltrados(topicosFiltered);
-    setTopicoId('');
-
-    // Log para depuração
-    if (topicos.length > 0) {
-      console.log("Estrutura de um objeto tópico:", topicos[0]);
-      console.log("Tópicos filtrados para área", areId, ":", topicosFiltered);
-      console.log("Quantidade de tópicos filtrados:", topicosFiltered.length);
-    }
-  } else {
-    setTopicosFiltrados([]);
-    setTopicoId('');
-  }
-}, [areaId, topicos]);
-
+    fetchAllTopicos();
+  }, []);
 
   // Filtrar áreas com base na categoria selecionada
   useEffect(() => {
@@ -160,16 +137,14 @@ useEffect(() => {
 
   // Filtrar tópicos com base na área selecionada
   useEffect(() => {
-    if (areaId) {
+    if (areaId && Array.isArray(topicos)) {
       const areId = String(areaId);
-      // Use o campo correto conforme definido no modelo Topico_Area
       const topicosFiltered = topicos.filter(topico => {
         return topico.id_area && String(topico.id_area) === areId;
       });
       setTopicosFiltrados(topicosFiltered);
       setTopicoId('');
 
-      // Log para depuração
       if (topicos.length > 0) {
         console.log("Estrutura de um objeto tópico:", topicos[0]);
         console.log("Tópicos filtrados para área", areId, ":", topicosFiltered);
@@ -181,10 +156,18 @@ useEffect(() => {
     }
   }, [areaId, topicos]);
 
-  // Função para buscar cursos com filtros
+  // ✅ FUNÇÃO MELHORADA: Buscar cursos com melhor controlo de estado
   const fetchCursos = async () => {
+    // Evitar múltiplas chamadas simultâneas
+    if (isLoading) {
+      console.log("🚫 Busca já em curso, a ignorar nova requisição");
+      return;
+    }
+
     try {
       setIsLoading(true);
+      console.log("🔍 A iniciar busca de cursos...");
+      
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: cursosPerPage.toString()
@@ -199,47 +182,43 @@ useEffect(() => {
       const url = `${API_BASE}/cursos?${params.toString()}`;
       console.log("Buscando cursos na URL:", url);
 
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-
-        console.log("Resposta da API:", data);
-        setCursos(data.cursos || []);
-        setTotalPages(data.totalPages || 1);
-        setTotalCursos(data.total || 0);
-      } catch (fetchError) {
-        console.error("Erro na requisição:", fetchError);
-        toast.error("Erro ao carregar cursos. Por favor, tente novamente.");
-      } finally {
-        setIsLoading(false);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
       }
-    } catch (error) {
-      console.error("Erro ao processar requisição:", error);
+      const data = await response.json();
+
+      console.log("✅ Resposta da API recebida:", data);
+      setCursos(data.cursos || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCursos(data.total || 0);
+      
+      // ✅ Marcar que o carregamento inicial foi concluído
+      if (initialLoad) {
+        setInitialLoad(false);
+      }
+      
+    } catch (fetchError) {
+      console.error("❌ Erro na requisição:", fetchError);
+      toast.error("Erro ao carregar cursos. Por favor, tente novamente.");
+      setCursos([]); // ✅ Garantir que o estado fica limpo em caso de erro
+    } finally {
       setIsLoading(false);
-      toast.error("Erro ao processar dados. Por favor, tente novamente.");
     }
   };
 
   // Função para verificar se o utilizador pode aceder ao curso
   const podeAcederCurso = (cursoData, inscrito) => {
-    // Se é admin, sempre pode aceder
     if (userRole === 1) return true;
     
-    // Verificar se o curso terminou
     const dataAtual = new Date();
     const dataFimCurso = new Date(cursoData.data_fim);
     const cursoTerminado = dataFimCurso < dataAtual;
     
-    // Se o curso não terminou, pode aceder normalmente
     if (!cursoTerminado) return true;
     
-    // Se o curso terminou e é assíncrono, apenas admin pode aceder
     if (cursoData.tipo === 'assincrono') return false;
     
-    // Se o curso terminou e é síncrono, pode aceder se estava inscrito
     if (cursoData.tipo === 'sincrono' && inscrito) return true;
     
     return false;
@@ -321,10 +300,21 @@ useEffect(() => {
     }
   };
 
-  // Buscar cursos sempre que a página ou filtros mudarem
+  // ✅ USEEFFECT PRINCIPAL MELHORADO: Buscar cursos com controlo adequado
   useEffect(() => {
-    fetchCursos();
-  }, [currentPage, searchTerm, categoriaId, areaId, tipoFiltro, topicoId]);
+    // Só executar se não estivermos numa busca e se tivermos dados básicos
+    if (!isLoading) {
+      fetchCursos();
+    }
+  }, [currentPage, searchTerm, categoriaId, areaId, tipoFiltro, topicoId]); // Dependências explícitas
+
+  // ✅ CARREGAMENTO INICIAL: Executar apenas uma vez
+  useEffect(() => {
+    if (initialLoad && !isLoading) {
+      console.log("🚀 Executando carregamento inicial da página");
+      fetchCursos();
+    }
+  }, [initialLoad]); // Apenas depende do estado de carregamento inicial
 
   // Resetar para primeira página quando filtros mudarem
   useEffect(() => {
@@ -371,6 +361,9 @@ useEffect(() => {
       ? IMAGES.CURSO(curso.nome.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, ""))
       : fallbackCurso;
 
+  // ✅ MELHOR GESTÃO DO ESTADO DE CARREGAMENTO
+  const showLoading = isLoading || initialLoad;
+
   return (
     <div className="p-6-lc min-h-screen-lc flex flex-col bg-white">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -380,9 +373,20 @@ useEffect(() => {
       <div className="cursos-search-container-lc">
         <div className="cursos-search-input-container-lc">
           <i className="fas fa-search cursos-search-icon-lc"></i>
-          <input type="text" placeholder="Pesquisar cursos..." value={searchTerm} onChange={handleSearchChange} className="cursos-search-input-lc" />
+          <input 
+            type="text" 
+            placeholder="Pesquisar cursos..." 
+            value={searchTerm} 
+            onChange={handleSearchChange} 
+            className="cursos-search-input-lc" 
+            disabled={showLoading} // ✅ Desabilitar durante carregamento
+          />
         </div>
-        <button className="cursos-filter-button-lc" onClick={toggleFilters}>
+        <button 
+          className="cursos-filter-button-lc" 
+          onClick={toggleFilters}
+          disabled={showLoading} // ✅ Desabilitar durante carregamento
+        >
           <i className="fas fa-filter cursos-filter-icon-lc"></i><span>Filtros</span>
         </button>
       </div>
@@ -392,7 +396,12 @@ useEffect(() => {
           <div className="cursos-filter-group-lc">
             {/* Categoria - Sempre visível */}
             <div className="custom-select-wrapper-lc">
-              <select className="custom-select-button-lc select-categoria-lc" value={categoriaId} onChange={handleCategoriaChange}>
+              <select 
+                className="custom-select-button-lc select-categoria-lc" 
+                value={categoriaId} 
+                onChange={handleCategoriaChange}
+                disabled={showLoading}
+              >
                 <option value="">Selecionar Categoria</option>
                 {categorias.map(cat => <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nome}</option>)}
               </select>
@@ -401,9 +410,14 @@ useEffect(() => {
 
             {/* Área - Sempre visível */}
             <div className="custom-select-wrapper-lc">
-              <select className="custom-select-button-lc select-area-lc" value={areaId} onChange={handleAreaChange} disabled={isLoading}>
+              <select 
+                className="custom-select-button-lc select-area-lc" 
+                value={areaId} 
+                onChange={handleAreaChange} 
+                disabled={showLoading}
+              >
                 <option value="">Selecionar Área</option>
-                {isLoading
+                {showLoading
                   ? <option disabled>A carregar áreas...</option>
                   : areasFiltradas.length
                     ? areasFiltradas.map(area => <option key={area.id_area} value={area.id_area}>{area.nome}</option>)
@@ -415,9 +429,14 @@ useEffect(() => {
 
             {/* Tópico - Sempre visível */}
             <div className="custom-select-wrapper-lc">
-              <select className="custom-select-button-lc select-topico-lc" value={topicoId} onChange={handleTopicoChange} disabled={isLoading || !areaId}>
+              <select 
+                className="custom-select-button-lc select-topico-lc" 
+                value={topicoId} 
+                onChange={handleTopicoChange} 
+                disabled={showLoading || !areaId}
+              >
                 <option value="">Selecionar Tópico</option>
-                {isLoading
+                {showLoading
                   ? <option disabled>A carregar tópicos...</option>
                   : !areaId
                     ? <option disabled>Selecione uma área primeiro</option>
@@ -436,7 +455,12 @@ useEffect(() => {
             {/* Tipo */}
             <div className="cursos-filter-tipo-lc">
               {['todos', 'sincrono', 'assincrono'].map(tipo => (
-                <button key={tipo} className={`cursos-filter-tipo-button-lc ${tipoFiltro === tipo ? 'cursos-filter-tipo-active-lc' : ''}`} onClick={() => setTipoFiltro(tipo)}>
+                <button 
+                  key={tipo} 
+                  className={`cursos-filter-tipo-button-lc ${tipoFiltro === tipo ? 'cursos-filter-tipo-active-lc' : ''}`} 
+                  onClick={() => setTipoFiltro(tipo)}
+                  disabled={showLoading}
+                >
                   <i className={`fas ${tipo === 'sincrono' ? 'fa-users' : tipo === 'assincrono' ? 'fa-book' : 'fa-th-list'} cursos-filter-button-icon-lc`}></i>
                   <span>{tipo === 'todos' ? 'Todos' : tipo === 'sincrono' ? 'Síncronos' : 'Assíncronos'}</span>
                 </button>
@@ -445,7 +469,11 @@ useEffect(() => {
 
             {/* Limpar */}
             {(searchTerm || categoriaId || areaId || topicoId || tipoFiltro !== 'todos') && (
-              <button className="cursos-filter-clear-button-lc" onClick={clearFilters}>
+              <button 
+                className="cursos-filter-clear-button-lc" 
+                onClick={clearFilters}
+                disabled={showLoading}
+              >
                 <i className="fas fa-times cursos-filter-button-icon-lc"></i><span>Limpar Filtros</span>
               </button>
             )}
@@ -454,20 +482,82 @@ useEffect(() => {
       )}
 
       {/* Carregamento */}
-      {isLoading && <div className="text-center-lc py-8"><div className="loading-spinner-lc"></div><p className="text-gray-600 mt-4">A carregar cursos...</p></div>}
+      {showLoading && (
+        <div className="text-center-lc py-8">
+          <div className="loading-spinner-lc"></div>
+          <p className="text-gray-600 mt-4">
+            {initialLoad ? 'A carregar cursos pela primeira vez...' : 'A carregar cursos...'}
+          </p>
+        </div>
+      )}
 
       {/* Lista de cursos */}
-      {!isLoading && <div className="grid-lc">{cursos.map(curso => <div key={curso.id_curso} onClick={() => handleCursoClick(curso.id_curso)} className="curso-card-lc cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105" style={{ backgroundImage: `url(${getImageUrl(curso)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}><div className="curso-card-overlay-lc"><span className="curso-overlay-title-lc">{curso.nome}</span><span className="curso-overlay-dates-lc">{new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}</span><span className="curso-overlay-vagas-lc">{curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}</span></div></div>)}</div>}
+      {!showLoading && (
+        <div className="grid-lc">
+          {cursos.map(curso => (
+            <div 
+              key={curso.id_curso} 
+              onClick={() => handleCursoClick(curso.id_curso)} 
+              className="curso-card-lc cursor-pointer relative overflow-hidden rounded-lg shadow-md h-48 transition-transform transform hover:scale-105" 
+              style={{ 
+                backgroundImage: `url(${getImageUrl(curso)})`, 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center' 
+              }}
+            >
+              <div className="curso-card-overlay-lc">
+                <span className="curso-overlay-title-lc">{curso.nome}</span>
+                <span className="curso-overlay-dates-lc">
+                  {new Date(curso.data_inicio).toLocaleDateString('pt-PT')} - {new Date(curso.data_fim).toLocaleDateString('pt-PT')}
+                </span>
+                <span className="curso-overlay-vagas-lc">
+                  {curso.tipo === 'sincrono' ? `${curso.vagas || 0} vagas` : 'Auto-estudo'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Sem resultados */}
-      {!isLoading && cursos.length === 0 && <div className="text-center-lc py-10"><p className="text-gray-600 text-lg">Nenhum curso encontrado com os filtros selecionados.</p></div>}
+      {!showLoading && cursos.length === 0 && (
+        <div className="text-center-lc py-10">
+          <p className="text-gray-600 text-lg">
+            {initialLoad ? 'Nenhum curso disponível no momento.' : 'Nenhum curso encontrado com os filtros selecionados.'}
+          </p>
+          {!initialLoad && (
+            <button 
+              onClick={clearFilters}
+              className="mt-4 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Limpar filtros e ver todos
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Paginação */}
-      <div className="flex justify-center items-center my-6 pagination-container-lc">
-        <button onClick={goToPreviousPage} disabled={currentPage === 1} className={`px-4 py-2 pagination-button-lc ${currentPage === 1 ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} aria-label="Página anterior"><span className="pagination-icon">&#10094;</span></button>
-        <span className="mx-4 text-lg font-medium pagination-info-lc">{currentPage}/{totalPages}</span>
-        <button onClick={goToNextPage} disabled={currentPage === totalPages} className={`px-4 py-2 pagination-button-lc ${currentPage === totalPages ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} aria-label="Próxima página"><span className="pagination-icon">&#10095;</span></button>
-      </div>
+      {!showLoading && cursos.length > 0 && (
+        <div className="flex justify-center items-center my-6 pagination-container-lc">
+          <button 
+            onClick={goToPreviousPage} 
+            disabled={currentPage === 1} 
+            className={`px-4 py-2 pagination-button-lc ${currentPage === 1 ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} 
+            aria-label="Página anterior"
+          >
+            <span className="pagination-icon">&#10094;</span>
+          </button>
+          <span className="mx-4 text-lg font-medium pagination-info-lc">{currentPage}/{totalPages}</span>
+          <button 
+            onClick={goToNextPage} 
+            disabled={currentPage === totalPages} 
+            className={`px-4 py-2 pagination-button-lc ${currentPage === totalPages ? 'pagination-disabled-lc' : 'pagination-active-lc'}`} 
+            aria-label="Próxima página"
+          >
+            <span className="pagination-icon">&#10095;</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

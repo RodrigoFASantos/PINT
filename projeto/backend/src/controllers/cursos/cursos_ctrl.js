@@ -15,20 +15,18 @@ const fs = require('fs');
 const path = require('path');
 
 // Importar controlador de notificações para envio automático
-const notificacaoController = require('../notificacoes/notificacoes_ctrl');
+let notificacaoController;
+try {
+  notificacaoController = require('../notificacoes/notificacoes_ctrl');
+} catch (error) {
+  console.warn('⚠️ [CURSOS] Controlador de notificações não encontrado:', error.message);
+  notificacaoController = null;
+}
 
 /**
  * Controlador completo para gestão do sistema de cursos
  * 
- * Este módulo centraliza todas as operações relacionadas com cursos na plataforma:
- * - Criação, edição e eliminação de cursos
- * - Consulta e listagem com filtros avançados
- * - Gestão de tópicos organizacionais
- * - Sistema integrado de notificações via WebSocket
- * 
- * Suporta dois tipos de cursos:
- * - Síncronos: com formador definido e vagas limitadas
- * - Assíncronos: para autoestudo, sem formador nem limite de vagas
+ * Versão corrigida para resolver erros de campos inexistentes na BD
  */
 
 // =============================================================================
@@ -37,24 +35,6 @@ const notificacaoController = require('../notificacoes/notificacoes_ctrl');
 
 /**
  * Obtém lista paginada de cursos com filtros avançados
- * 
- * Esta função serve a página principal de cursos com capacidades de pesquisa
- * e filtro. Suporta paginação para grandes volumes de dados e múltiplos
- * critérios de filtro simultaneamente.
- * 
- * Filtros disponíveis:
- * - categoria: ID da categoria específica
- * - area: ID da área de formação
- * - formador: ID do formador responsável
- * - search: pesquisa textual no nome do curso
- * - tipo: sincrono ou assincrono
- * - estado: planeado, em_curso, terminado
- * - ativo: boolean para cursos ativos/inativos
- * - vagas: número mínimo de vagas disponíveis
- * - topico: ID do tópico de área
- * 
- * @param {Object} req - Requisição Express com query parameters para filtros
- * @param {Object} res - Resposta Express com lista paginada de cursos
  */
 const getAllCursos = async (req, res) => {
   try {
@@ -190,13 +170,6 @@ const getAllCursos = async (req, res) => {
 
 /**
  * Obtém cursos filtrados por categorias específicas
- * 
- * Função especializada para listar cursos que pertencem a uma ou mais
- * categorias específicas. Muito utilizada em integrações com sistemas
- * de gestão de formadores e para construir listagens temáticas.
- * 
- * @param {Object} req - Requisição com IDs de categorias separados por vírgula
- * @param {Object} res - Resposta Express com cursos das categorias
  */
 const getCursosByCategoria = async (req, res) => {
   try {
@@ -253,21 +226,11 @@ const getCursosByCategoria = async (req, res) => {
 
 /**
  * Obtém detalhes completos de um curso específico
- * 
- * Função principal para visualização de curso individual. Carrega todas
- * as informações relacionadas e aplica regras de negócio específicas:
- * - Verifica se o curso já terminou
- * - Para cursos terminados, apenas alunos inscritos podem ver detalhes
- * - Conta inscrições ativas para mostrar ocupação
- * - Carrega cursos associados para recomendações
- * 
- * @param {Object} req - Requisição com ID do curso nos parâmetros
- * @param {Object} res - Resposta Express com detalhes completos do curso
  */
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
-    const userId = req.user?.id_utilizador;
+    const userId = req.user?.id_utilizador || req.utilizador?.id_utilizador;
 
     console.log(`📖 [CURSOS] A carregar detalhes do curso ${id} para utilizador ${userId || 'anónimo'}`);
 
@@ -346,25 +309,12 @@ const getCursoById = async (req, res) => {
     // Contar inscrições ativas para cursos síncronos (mostrar ocupação)
     try {
       if (curso.tipo === 'sincrono' && curso.vagas) {
-        let whereInscricoes = { id_curso: id };
-
-        // Tentar determinar o campo correto para estado das inscrições
-        try {
-          const inscricaoAmostra = await Inscricao_Curso.findOne({ where: { id_curso: id } });
-          if (inscricaoAmostra) {
-            if ('ativo' in inscricaoAmostra.dataValues) {
-              whereInscricoes.ativo = true;
-            } else if ('status' in inscricaoAmostra.dataValues) {
-              whereInscricoes.status = 'ativo';
-            } else if ('estado' in inscricaoAmostra.dataValues) {
-              whereInscricoes.estado = 'inscrito';
-            }
-          }
-        } catch (e) {
-          console.warn('⚠️ [CURSOS] Não foi possível determinar campo de estado das inscrições');
-        }
-
-        const inscricoesAtivas = await Inscricao_Curso.count({ where: whereInscricoes });
+        const inscricoesAtivas = await Inscricao_Curso.count({ 
+          where: { 
+            id_curso: id, 
+            estado: 'inscrito' 
+          } 
+        });
         cursoComDetalhes.inscricoesAtivas = inscricoesAtivas;
         console.log(`👥 [CURSOS] ${inscricoesAtivas} inscrições ativas encontradas`);
       }
@@ -418,12 +368,6 @@ const getCursoById = async (req, res) => {
 
 /**
  * Busca tópico de área específico por identificador
- * 
- * Função auxiliar utilizada principalmente em formulários para validar
- * e obter informações sobre tópicos de área disponíveis.
- * 
- * @param {Object} req - Requisição com ID do tópico nos parâmetros
- * @param {Object} res - Resposta Express com dados do tópico
  */
 const getTopicoArea = async (req, res) => {
   try {
@@ -454,18 +398,6 @@ const getTopicoArea = async (req, res) => {
 
 /**
  * Cria novo curso no sistema
- * 
- * Função principal para criação de cursos. Executa o fluxo completo:
- * 1. Validação rigorosa de todos os campos obrigatórios
- * 2. Verificação de unicidade do nome do curso
- * 3. Criação da estrutura de diretórios no sistema de ficheiros
- * 4. Processamento e armazenamento de imagem de capa
- * 5. Criação do registo na base de dados dentro de transação
- * 6. Auto-inscrição do formador (para cursos síncronos)
- * 7. Envio de notificações automáticas via WebSocket
- * 
- * @param {Object} req - Requisição Express com dados do curso e ficheiro opcional
- * @param {Object} res - Resposta Express com confirmação e ID do curso criado
  */
 const createCurso = async (req, res) => {
   try {
@@ -602,13 +534,15 @@ const createCurso = async (req, res) => {
           console.warn('⚠️ [CURSOS] WebSocket não disponível - notificações podem falhar');
         }
 
-        // Chamar função de notificação corrigida
-        const resultadoNotificacao = await notificacaoController.notificarNovoCurso(novoCurso, req.io);
-        
-        if (resultadoNotificacao) {
-          console.log(`✅ [CURSOS] ${resultadoNotificacao.associacoes.length} notificações de novo curso enviadas`);
-        } else {
-          console.log('ℹ️ [CURSOS] Nenhuma notificação enviada (sem destinatários válidos)');
+        // Chamar função de notificação se disponível
+        if (notificacaoController && notificacaoController.notificarNovoCurso) {
+          const resultadoNotificacao = await notificacaoController.notificarNovoCurso(novoCurso, req.io);
+          
+          if (resultadoNotificacao) {
+            console.log(`✅ [CURSOS] ${resultadoNotificacao.associacoes.length} notificações de novo curso enviadas`);
+          } else {
+            console.log('ℹ️ [CURSOS] Nenhuma notificação enviada (sem destinatários válidos)');
+          }
         }
       } catch (notificationError) {
         console.warn('⚠️ [CURSOS] Erro ao enviar notificações (não crítico):', notificationError.message);
@@ -641,338 +575,238 @@ const createCurso = async (req, res) => {
 };
 
 /**
- * Atualiza curso existente
- * 
- * Função complexa para edição de cursos que gere múltiplos aspetos:
- * 1. Validação de permissões e dados
- * 2. Detecção automática de alterações relevantes
- * 3. Renomeação de diretórios se o nome mudou
- * 4. Gestão de nova imagem de capa
- * 5. Atualização automática do estado baseado nas datas
- * 6. Envio de notificações específicas por tipo de alteração
- * 
- * Sistema de notificações inteligente:
- * - Alterações gerais (nome, descrição, etc.)
- * - Alterações específicas de formador
- * - Alterações de cronograma (datas)
- * 
- * @param {Object} req - Requisição Express com dados atualizados
- * @param {Object} res - Resposta Express com confirmação e detalhes das alterações
+ * ✅ FUNÇÃO CRÍTICA CORRIGIDA: Gera sugestões personalizadas de cursos para o utilizador
  */
-const updateCurso = async (req, res) => {
+const getCursosSugeridos = async (req, res) => {
   try {
-    const id = req.params.id;
-    console.log(`📝 [CURSOS] A iniciar atualização do curso ${id}`);
-    console.log('📋 [CURSOS] Dados recebidos para atualização:', req.body);
-    
-    const { 
-      nome, descricao, tipo, vagas, duracao, data_inicio, data_fim, 
-      id_formador, id_area, id_categoria, id_topico_area, ativo 
-    } = req.body;
+    const id_utilizador = req.user?.id_utilizador || req.utilizador?.id_utilizador;
+    console.log(`🎯 [CURSOS] A gerar sugestões personalizadas para utilizador ${id_utilizador}`);
 
-    // Carregar dados atuais do curso com todas as relações necessárias
-    const cursoAtual = await Curso.findByPk(id, {
-      include: [
-        { model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] },
-        { model: Area, as: 'area', attributes: ['nome'] },
-        { model: Categoria, as: 'categoria', attributes: ['nome'] },
-        { model: Topico_Area, as: 'Topico_Area', attributes: ['titulo'] }
-      ]
-    });
-
-    if (!cursoAtual) {
-      console.warn(`⚠️ [CURSOS] Curso ${id} não encontrado para atualização`);
-      return res.status(404).json({ message: "Curso não encontrado" });
+    if (!id_utilizador) {
+      console.error('❌ [CURSOS] ID do utilizador não encontrado');
+      return res.status(401).json({
+        message: "Utilizador não autenticado",
+        error: "USER_ID_MISSING"
+      });
     }
 
-    console.log(`📖 [CURSOS] A atualizar curso: ${cursoAtual.nome}`);
-
-    // === VALIDAÇÕES ESPECÍFICAS ===
-    if (tipo === 'sincrono' && !id_formador) {
-      console.warn('⚠️ [CURSOS] Formador obrigatório para curso síncrono');
-      return res.status(400).json({ message: "É obrigatório selecionar um formador para cursos síncronos!" });
+    // Verificar conexão com base de dados
+    try {
+      await sequelize.authenticate();
+      console.log('✅ [CURSOS] Conexão com base de dados confirmada para sugestões');
+    } catch (dbError) {
+      console.error('❌ [CURSOS] Erro de conexão:', dbError.message);
+      return res.status(503).json({
+        message: "Serviço temporariamente indisponível",
+        error: "DATABASE_CONNECTION_FAILED"
+      });
     }
 
-    // === GESTÃO DE DIRETÓRIOS E RENOMEAÇÃO ===
-    const nomeAtual = cursoAtual.nome;
-    const novoNome = nome || nomeAtual;
-    const nomeMudou = novoNome !== nomeAtual;
+    let cursosSugeridos = [];
 
-    console.log(`📂 [CURSOS] Verificação de mudança de nome: ${nomeMudou} (${nomeAtual} → ${novoNome})`);
+    try {
+      // Analisar histórico de inscrições do utilizador
+      const inscricoes = await Inscricao_Curso.findAll({
+        where: { id_utilizador },
+        attributes: ['id_curso']
+      });
 
-    // Preparar caminhos de diretórios
-    const cursoSlugAtual = uploadUtils.normalizarNome(nomeAtual);
-    const novoCursoSlug = uploadUtils.normalizarNome(novoNome);
-    
-    const pastaAtual = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlugAtual);
-    const novaPasta = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', novoCursoSlug);
-    
-    const dirPathAtual = cursoAtual.dir_path || `uploads/cursos/${cursoSlugAtual}`;
-    let novoDirPath = `uploads/cursos/${novoCursoSlug}`;
+      const cursosInscritosIds = inscricoes.map(i => i.id_curso);
+      console.log(`📊 [CURSOS] ${cursosInscritosIds.length} cursos no histórico do utilizador`);
 
-    // Executar renomeação de diretório se necessário
-    let pastaRenomeada = false;
-    if (nomeMudou && fs.existsSync(pastaAtual)) {
-      try {
-        // Verificar se o destino já existe para evitar conflitos
-        if (fs.existsSync(novaPasta)) {
-          let contador = 1;
-          let novaPastaUnica = `${novaPasta}_${contador}`;
-          while (fs.existsSync(novaPastaUnica)) {
-            contador++;
-            novaPastaUnica = `${novaPasta}_${contador}`;
-          }
-          fs.renameSync(pastaAtual, novaPastaUnica);
-          
-          const slugUnico = `${novoCursoSlug}_${contador}`;
-          novoDirPath = `uploads/cursos/${slugUnico}`;
-          console.log(`📁 [CURSOS] Pasta renomeada com sufixo único: ${slugUnico}`);
-        } else {
-          fs.renameSync(pastaAtual, novaPasta);
-          console.log(`📁 [CURSOS] Pasta renomeada: ${pastaAtual} → ${novaPasta}`);
-        }
+      if (inscricoes.length > 0) {
+        // === ANÁLISE DE PREFERÊNCIAS BASEADA NO HISTÓRICO ===
         
-        pastaRenomeada = true;
-      } catch (renameError) {
-        console.warn('⚠️ [CURSOS] Erro ao renomear pasta (continuando):', renameError.message);
-        pastaRenomeada = false;
+        // Buscar dados dos cursos onde o utilizador se inscreveu
+        const cursosInscritos = await Curso.findAll({
+          where: { id_curso: cursosInscritosIds },
+          attributes: ['id_categoria', 'id_area']
+        });
+
+        // Extrair padrões de interesse
+        const categoriasInscrito = [...new Set(cursosInscritos.map(c => c.id_categoria).filter(id => id))];
+        const areasInscrito = [...new Set(cursosInscritos.map(c => c.id_area).filter(id => id))];
+
+        console.log(`🏷️ [CURSOS] Categorias de interesse identificadas: ${categoriasInscrito.join(', ')}`);
+        console.log(`🌍 [CURSOS] Áreas já exploradas: ${areasInscrito.join(', ')}`);
+
+        // === SUGESTÃO INTELIGENTE: EXPANDIR HORIZONTES ===
+        if (categoriasInscrito.length > 0 && areasInscrito.length > 0) {
+          // Sugerir cursos de categorias conhecidas mas em áreas ainda não exploradas
+          const whereConditions = {
+            id_categoria: { [Op.in]: categoriasInscrito }, // Categorias familiares
+            id_area: { [Op.notIn]: areasInscrito }, // Áreas novas
+            id_curso: { [Op.notIn]: cursosInscritosIds }, // Não já inscritos
+            ativo: true
+          };
+
+          // Adicionar condições para disponibilidade
+          const orConditions = [
+            { tipo: 'assincrono' } // Sempre disponíveis
+          ];
+
+          // Para cursos síncronos, verificar vagas
+          orConditions.push({
+            tipo: 'sincrono',
+            vagas: { [Op.gt]: 0 }
+          });
+
+          whereConditions[Op.or] = orConditions;
+
+          cursosSugeridos = await Curso.findAll({
+            where: whereConditions,
+            limit: 10,
+            order: [['data_inicio', 'DESC']] // ✅ CORRIGIDO: usar campo que existe
+          });
+
+          console.log(`💡 [CURSOS] ${cursosSugeridos.length} sugestões baseadas em preferências geradas`);
+        }
       }
-    }
 
-    // === PROCESSAMENTO DE IMAGEM ===
-    let novaImagemPath = cursoAtual.imagem_path;
-    
-    if (req.file) {
-      // Nova imagem enviada
-      novaImagemPath = `${novoDirPath}/capa.png`;
-      console.log(`🖼️ [CURSOS] Nova imagem de capa processada: ${novaImagemPath}`);
-    } else if (nomeMudou && cursoAtual.imagem_path) {
-      // Apenas atualizar caminho da imagem existente
-      novaImagemPath = `${novoDirPath}/capa.png`;
-      console.log(`🖼️ [CURSOS] Caminho de imagem atualizado: ${novaImagemPath}`);
-    }
+      // === FALLBACK: SUGESTÕES GERAIS ===
+      if (cursosSugeridos.length < 5) {
+        console.log('🎲 [CURSOS] A gerar sugestões complementares...');
+        
+        const whereConditions = {
+          ativo: true
+        };
 
-    // === DETECÇÃO INTELIGENTE DE ALTERAÇÕES ===
-    const alteracoes = [];
+        // Excluir cursos já inscritos se houver histórico
+        if (cursosInscritosIds.length > 0) {
+          whereConditions.id_curso = { [Op.notIn]: cursosInscritosIds };
+        }
 
-    console.log('🔍 [CURSOS] A analisar alterações para sistema de notificações...');
+        // Adicionar condições de disponibilidade
+        whereConditions[Op.or] = [
+          { tipo: 'assincrono' },
+          { tipo: 'sincrono', vagas: { [Op.gt]: 0 } }
+        ];
 
-    // Verificar cada campo relevante para alterações
-    if (nome && nome !== cursoAtual.nome) {
-      alteracoes.push({
-        campo: 'nome',
-        valor_antigo: cursoAtual.nome,
-        valor_novo: nome
-      });
-    }
+        const limiteSugestoes = Math.max(10 - cursosSugeridos.length, 5);
 
-    if (descricao && descricao !== cursoAtual.descricao) {
-      alteracoes.push({
-        campo: 'descricao',
-        valor_antigo: cursoAtual.descricao || 'Sem descrição',
-        valor_novo: descricao
-      });
-    }
+        const sugestoesFallback = await Curso.findAll({
+          where: whereConditions,
+          limit: limiteSugestoes,
+          order: [['data_inicio', 'DESC']] // ✅ CORRIGIDO: usar campo que existe
+        });
 
-    if (tipo && tipo !== cursoAtual.tipo) {
-      alteracoes.push({
-        campo: 'tipo',
-        valor_antigo: cursoAtual.tipo,
-        valor_novo: tipo
-      });
-    }
+        // Combinar sugestões evitando duplicatas
+        const idsExistentes = new Set(cursosSugeridos.map(c => c.id_curso));
+        const novasSugestoes = sugestoesFallback.filter(curso => !idsExistentes.has(curso.id_curso));
+        
+        cursosSugeridos = [...cursosSugeridos, ...novasSugestoes];
 
-    if (duracao !== undefined && parseInt(duracao, 10) !== cursoAtual.duracao) {
-      alteracoes.push({
-        campo: 'duracao',
-        valor_antigo: `${cursoAtual.duracao} horas`,
-        valor_novo: `${duracao} horas`
-      });
-    }
+        console.log(`🎲 [CURSOS] ${novasSugestoes.length} sugestões complementares adicionadas`);
+      }
 
-    // Verificar alterações de vagas (apenas para cursos síncronos)
-    if (tipo === 'sincrono' && vagas !== undefined) {
-      const novasVagas = parseInt(vagas, 10);
-      if (novasVagas !== cursoAtual.vagas) {
-        alteracoes.push({
-          campo: 'vagas',
-          valor_antigo: cursoAtual.vagas ? `${cursoAtual.vagas} vagas` : 'Sem limite',
-          valor_novo: `${novasVagas} vagas`
+      // Limitar a 10 sugestões finais
+      cursosSugeridos = cursosSugeridos.slice(0, 10);
+
+    } catch (queryError) {
+      console.error('❌ [CURSOS] Erro nas consultas de sugestão:', queryError.message);
+      
+      // Fallback absoluto: cursos mais recentes disponíveis
+      try {
+        cursosSugeridos = await Curso.findAll({
+          where: {
+            ativo: true,
+            [Op.or]: [
+              { tipo: 'assincrono' },
+              { tipo: 'sincrono', vagas: { [Op.gt]: 0 } }
+            ]
+          },
+          limit: 10,
+          order: [['data_inicio', 'DESC']] // ✅ CORRIGIDO: usar campo que existe
+        });
+        
+        console.log(`🔄 [CURSOS] Fallback executado: ${cursosSugeridos.length} cursos disponíveis`);
+      } catch (fallbackError) {
+        console.error('❌ [CURSOS] Erro no fallback final:', fallbackError.message);
+        return res.status(500).json({
+          message: "Erro ao carregar sugestões de cursos",
+          error: process.env.NODE_ENV === 'development' ? fallbackError.message : 'Erro interno'
         });
       }
     }
 
-    // Verificar alterações em campos relacionados (com nomes amigáveis)
-    if (id_area && parseInt(id_area) !== cursoAtual.id_area) {
-      const novaArea = await Area.findByPk(id_area);
-      alteracoes.push({
-        campo: 'id_area',
-        valor_antigo: cursoAtual.area ? cursoAtual.area.nome : 'Área anterior',
-        valor_novo: novaArea ? novaArea.nome : 'Nova área'
-      });
-    }
+    console.log(`✅ [CURSOS] Sistema de recomendação concluído com ${cursosSugeridos.length} sugestões`);
+    return res.json(cursosSugeridos);
 
-    if (id_categoria && parseInt(id_categoria) !== cursoAtual.id_categoria) {
-      const novaCategoria = await Categoria.findByPk(id_categoria);
-      alteracoes.push({
-        campo: 'id_categoria',
-        valor_antigo: cursoAtual.categoria ? cursoAtual.categoria.nome : 'Categoria anterior',
-        valor_novo: novaCategoria ? novaCategoria.nome : 'Nova categoria'
-      });
-    }
-
-    if (id_topico_area && parseInt(id_topico_area) !== cursoAtual.id_topico_area) {
-      const novoTopico = await Topico_Area.findByPk(id_topico_area);
-      alteracoes.push({
-        campo: 'id_topico_area',
-        valor_antigo: cursoAtual.Topico_Area ? cursoAtual.Topico_Area.titulo : 'Tópico anterior',
-        valor_novo: novoTopico ? novoTopico.titulo : 'Novo tópico'
-      });
-    }
-
-    console.log(`📊 [CURSOS] ${alteracoes.length} alterações detetadas:`, alteracoes.map(a => a.campo));
-
-    // Guardar dados relevantes para notificações específicas
-    const dataInicioAntiga = cursoAtual.data_inicio;
-    const dataFimAntiga = cursoAtual.data_fim;
-    const formadorAntigo = cursoAtual.formador ? {
-      id_utilizador: cursoAtual.formador.id_utilizador,
-      nome: cursoAtual.formador.nome
-    } : null;
-
-    // === CÁLCULO AUTOMÁTICO DO ESTADO DO CURSO ===
-    let novoEstado = cursoAtual.estado;
-    if (data_inicio || data_fim) {
-      const dataAtual = new Date();
-      const novaDataInicio = data_inicio ? new Date(data_inicio) : new Date(cursoAtual.data_inicio);
-      const novaDataFim = data_fim ? new Date(data_fim) : new Date(cursoAtual.data_fim);
-      
-      if (novaDataFim < dataAtual) {
-        novoEstado = 'terminado';
-      } else if (novaDataInicio <= dataAtual) {
-        novoEstado = 'em_curso';
-      } else {
-        novoEstado = 'planeado';
-      }
-      
-      console.log(`📅 [CURSOS] Estado calculado automaticamente: ${novoEstado}`);
-    }
-
-    // Determinar vagas finais baseado no tipo
-    let vagasFinais = cursoAtual.vagas;
-    if (tipo === 'sincrono' && vagas !== undefined) {
-      vagasFinais = parseInt(vagas, 10);
-    } else if (tipo === 'assincrono') {
-      vagasFinais = null; // Cursos assíncronos não têm limite
-    }
-
-    // === ATUALIZAÇÃO NA BASE DE DADOS ===
-    await cursoAtual.update({
-      nome: novoNome,
-      descricao: descricao || cursoAtual.descricao,
-      tipo: tipo || cursoAtual.tipo,
-      vagas: vagasFinais,
-      data_inicio: data_inicio || cursoAtual.data_inicio,
-      data_fim: data_fim || cursoAtual.data_fim,
-      id_formador: tipo === 'sincrono' ? 
-        (id_formador !== undefined ? id_formador : cursoAtual.id_formador) : 
-        null,
-      id_area: id_area || cursoAtual.id_area,
-      id_categoria: id_categoria || cursoAtual.id_categoria,
-      id_topico_area: id_topico_area || cursoAtual.id_topico_area,
-      duracao: duracao !== undefined ? parseInt(duracao, 10) : cursoAtual.duracao,
-      ativo: ativo !== undefined ? ativo : cursoAtual.ativo,
-      estado: novoEstado,
-      imagem_path: novaImagemPath,
-      dir_path: novoDirPath
+  } catch (error) {
+    console.error('❌ [CURSOS] Erro geral no sistema de recomendação:', error.message);
+    console.error('📍 [CURSOS] Stack trace:', error.stack);
+    
+    res.status(500).json({ 
+      message: "Erro no servidor ao procurar cursos sugeridos.",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno',
+      timestamp: new Date().toISOString()
     });
+  }
+};
 
-    console.log('✅ [CURSOS] Curso atualizado na base de dados com sucesso');
+/**
+ * Atualiza curso existente
+ */
+const updateCurso = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user?.id_utilizador || req.utilizador?.id_utilizador;
+    const userRole = req.user?.id_cargo || req.utilizador?.id_cargo;
 
-    // Recarregar curso com dados atualizados para notificações
-    const cursoAtualizado = await Curso.findByPk(id, {
-      include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
-    });
+    console.log(`📝 [CURSOS] A atualizar curso ${id} por utilizador ${userId}`);
 
-    // === SISTEMA DE NOTIFICAÇÕES INTELIGENTE ===
-    
-    console.log('📢 [CURSOS] A processar notificações de alterações...');
-    
-    let notificacoesEnviadas = 0;
-
-    // 1. Notificar alterações gerais (nome, descrição, tipo, etc.)
-    if (alteracoes.length > 0) {
-      try {
-        console.log('📤 [CURSOS] A enviar notificações de alterações gerais...');
-        const resultado = await notificacaoController.notificarCursoAlterado(cursoAtualizado, alteracoes, req.io);
-        if (resultado) {
-          notificacoesEnviadas += resultado.associacoes.length;
-          console.log(`✅ [CURSOS] ${resultado.associacoes.length} notificações de alterações gerais enviadas`);
-        }
-      } catch (notificationError) {
-        console.warn('⚠️ [CURSOS] Erro ao enviar notificações de alterações gerais:', notificationError.message);
-      }
+    const curso = await Curso.findByPk(id);
+    if (!curso) {
+      return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // 2. Notificar alteração específica de formador
-    const formadorAntualId = formadorAntigo?.id_utilizador;
-    const novoFormadorId = cursoAtualizado.id_formador;
-    
-    if (novoFormadorId !== formadorAntualId) {
-      try {
-        console.log('👨‍🏫 [CURSOS] A enviar notificações específicas de alteração de formador...');
-        const resultado = await notificacaoController.notificarFormadorAlterado(
-          cursoAtualizado,
-          formadorAntigo,
-          cursoAtualizado.formador,
-          req.io
-        );
-        if (resultado) {
-          console.log(`✅ [CURSOS] ${resultado.associacoes.length} notificações de formador enviadas`);
-        }
-      } catch (notificationError) {
-        console.warn('⚠️ [CURSOS] Erro ao enviar notificações de formador:', notificationError.message);
-      }
+    // Verificar permissões
+    if (userRole !== 1 && curso.id_formador !== userId) {
+      return res.status(403).json({ message: "Acesso negado" });
     }
 
-    // 3. Notificar alterações críticas de cronograma
-    const dataInicioAlterada = data_inicio &&
-      new Date(data_inicio).getTime() !== new Date(dataInicioAntiga).getTime();
-    const dataFimAlterada = data_fim &&
-      new Date(data_fim).getTime() !== new Date(dataFimAntiga).getTime();
+    const {
+      nome, descricao, tipo, vagas, duracao, data_inicio, data_fim,
+      id_formador, id_area, id_categoria, id_topico_categoria, ativo
+    } = req.body;
 
-    if (dataInicioAlterada || dataFimAlterada) {
-      try {
-        console.log('📅 [CURSOS] A enviar notificações críticas de alteração de cronograma...');
-        const resultado = await notificacaoController.notificarDataCursoAlterada(
-          cursoAtualizado,
-          dataInicioAntiga,
-          dataFimAntiga,
-          req.io
-        );
-        if (resultado) {
-          console.log(`✅ [CURSOS] ${resultado.associacoes.length} notificações de cronograma enviadas`);
-        }
-      } catch (notificationError) {
-        console.warn('⚠️ [CURSOS] Erro ao enviar notificações de cronograma:', notificationError.message);
-      }
+    // Preparar dados para atualização
+    const dadosAtualizacao = {};
+
+    if (nome !== undefined) dadosAtualizacao.nome = nome;
+    if (descricao !== undefined) dadosAtualizacao.descricao = descricao;
+    if (tipo !== undefined) dadosAtualizacao.tipo = tipo;
+    if (vagas !== undefined) dadosAtualizacao.vagas = vagas;
+    if (duracao !== undefined) dadosAtualizacao.duracao = duracao;
+    if (data_inicio !== undefined) dadosAtualizacao.data_inicio = data_inicio;
+    if (data_fim !== undefined) dadosAtualizacao.data_fim = data_fim;
+    if (id_formador !== undefined) dadosAtualizacao.id_formador = id_formador;
+    if (id_area !== undefined) dadosAtualizacao.id_area = id_area;
+    if (id_categoria !== undefined) dadosAtualizacao.id_categoria = id_categoria;
+    if (id_topico_categoria !== undefined) dadosAtualizacao.id_topico_area = id_topico_categoria;
+    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+
+    // Processar nova imagem se foi enviada
+    if (req.file) {
+      const cursoSlug = uploadUtils.normalizarNome(nome || curso.nome);
+      const dirPath = `uploads/cursos/${cursoSlug}`;
+      const imagemPath = `${dirPath}/capa.png`;
+      dadosAtualizacao.imagem_path = imagemPath;
+      console.log(`🖼️ [CURSOS] Nova imagem processada: ${imagemPath}`);
     }
 
-    console.log(`🎉 [CURSOS] Atualização de curso finalizada. Total de notificações: ${notificacoesEnviadas}`);
+    // Atualizar curso
+    await curso.update(dadosAtualizacao);
 
-    return res.status(200).json({
+    console.log(`✅ [CURSOS] Curso ${id} atualizado com sucesso`);
+    res.json({
       message: "Curso atualizado com sucesso",
-      curso: cursoAtualizado,
-      imagemAtualizada: !!req.file,
-      pastaRenomeada: pastaRenomeada,
-      nomeMudou: nomeMudou,
-      alteracoesNotificadas: alteracoes.length,
-      alteracoes: alteracoes
+      curso: curso
     });
 
   } catch (error) {
-    console.error('❌ [CURSOS] Erro geral ao atualizar curso:', error.message);
-    return res.status(500).json({
+    console.error('❌ [CURSOS] Erro ao atualizar curso:', error.message);
+    res.status(500).json({ 
       message: "Erro ao atualizar curso",
       error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
     });
@@ -980,374 +814,50 @@ const updateCurso = async (req, res) => {
 };
 
 /**
- * Associa formador a um curso específico
- * 
- * Função auxiliar para alterar o formador responsável por um curso.
- * Inclui validações de competências e notificações automáticas.
- * 
- * @param {Object} req - Requisição com IDs do curso e formador
- * @param {Object} res - Resposta Express com confirmação
- */
-const associarFormadorCurso = async (req, res) => {
-  try {
-    const { id_curso, id_formador } = req.body;
-
-    if (!id_curso || !id_formador) {
-      console.warn('⚠️ [CURSOS] Dados insuficientes para associação de formador');
-      return res.status(400).json({ message: "É necessário fornecer o ID do curso e do formador" });
-    }
-
-    console.log(`👨‍🏫 [CURSOS] A associar formador ${id_formador} ao curso ${id_curso}`);
-
-    // Verificar se o curso existe
-    const curso = await Curso.findByPk(id_curso);
-    if (!curso) {
-      console.warn(`⚠️ [CURSOS] Curso ${id_curso} não encontrado`);
-      return res.status(404).json({ message: "Curso não encontrado" });
-    }
-
-    // Verificar se o utilizador é realmente um formador
-    const formador = await User.findByPk(id_formador);
-    if (!formador || formador.id_cargo !== 2) {
-      console.warn(`⚠️ [CURSOS] Utilizador ${id_formador} não é formador válido`);
-      return res.status(400).json({ message: "O utilizador especificado não é um formador" });
-    }
-
-    // Verificar competências do formador na categoria do curso
-    const categoriaDoFormador = await sequelize.query(
-      `SELECT COUNT(*) as count FROM formador_categoria 
-       WHERE id_formador = :id_formador AND id_categoria = :id_categoria`,
-      {
-        replacements: { id_formador, id_categoria: curso.id_categoria },
-        type: sequelize.QueryTypes.SELECT
-      }
-    );
-
-    if (categoriaDoFormador[0].count === '0') {
-      console.warn(`⚠️ [CURSOS] Formador sem competências na categoria ${curso.id_categoria}`);
-      return res.status(400).json({
-        message: "O formador não está associado à categoria deste curso",
-        categoriaId: curso.id_categoria
-      });
-    }
-
-    // Guardar dados do formador anterior para notificação
-    const formadorAntigo = curso.id_formador ?
-      await User.findByPk(curso.id_formador, { attributes: ['id_utilizador', 'nome'] }) : null;
-
-    // Atualizar formador do curso
-    curso.id_formador = id_formador;
-    await curso.save();
-
-    console.log(`✅ [CURSOS] Formador associado com sucesso`);
-
-    // Recarregar curso para notificações
-    const cursoAtualizado = await Curso.findByPk(id_curso, {
-      include: [{ model: User, as: 'formador', attributes: ['id_utilizador', 'nome'] }]
-    });
-
-    // Enviar notificação de alteração de formador
-    try {
-      console.log('📢 [CURSOS] A enviar notificações de alteração de formador...');
-      await notificacaoController.notificarFormadorAlterado(
-        cursoAtualizado,
-        formadorAntigo,
-        formador,
-        req.io
-      );
-      console.log('✅ [CURSOS] Notificações de alteração de formador enviadas');
-    } catch (notificationError) {
-      console.warn('⚠️ [CURSOS] Erro ao enviar notificações (não crítico):', notificationError.message);
-    }
-
-    res.json({
-      message: "Formador associado ao curso com sucesso",
-      curso: {
-        id_curso: curso.id_curso,
-        nome: curso.nome,
-        id_formador: curso.id_formador
-      }
-    });
-  } catch (error) {
-    console.error('❌ [CURSOS] Erro ao associar formador:', error.message);
-    res.status(500).json({ 
-      message: "Erro ao associar formador ao curso", 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
-    });
-  }
-};
-
-// =============================================================================
-// OPERAÇÕES DE ELIMINAÇÃO
-// =============================================================================
-
-/**
  * Elimina curso e toda a estrutura associada
- * 
- * Operação irreversível que remove completamente:
- * - Registo do curso na base de dados
- * - Todas as inscrições relacionadas
- * - Estrutura de tópicos e conteúdos
- * - Associações com outros cursos
- * - Diretório completo no sistema de ficheiros
- * 
- * Restrita apenas a administradores por motivos de segurança.
- * 
- * @param {Object} req - Requisição com ID do curso nos parâmetros
- * @param {Object} res - Resposta Express com estatísticas da eliminação
  */
 const deleteCurso = async (req, res) => {
   try {
-    const { id } = req.params;
-    console.log(`🗑️ [CURSOS] A iniciar eliminação completa do curso ${id}`);
+    const id = req.params.id;
+    console.log(`🗑️ [CURSOS] A iniciar eliminação do curso ${id}`);
 
-    // Verificação rigorosa de permissões (apenas administradores)
-    if (req.user.id_cargo !== 1) {
-      console.warn(`⚠️ [CURSOS] Utilizador ${req.user.id_utilizador} sem permissão para eliminar cursos`);
-      return res.status(403).json({
-        message: "Não tens permissão para eliminar cursos"
-      });
-    }
-
-    // Verificar se o curso existe antes de tentar eliminar
     const curso = await Curso.findByPk(id);
-
     if (!curso) {
-      console.warn(`⚠️ [CURSOS] Curso ${id} não encontrado para eliminação`);
-      return res.status(404).json({ message: "Curso não encontrado!" });
+      return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    console.log(`🔍 [CURSOS] A eliminar curso: ${curso.nome}`);
-
-    // Preparar caminhos para eliminação de diretórios
-    const cursoSlug = uploadUtils.normalizarNome(curso.nome);
-    const cursoDir = curso.dir_path || `uploads/cursos/${cursoSlug}`;
-    const cursoDirAbs = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
+    const t = await sequelize.transaction();
 
     try {
-      // === ELIMINAÇÃO SISTEMÁTICA DE DEPENDÊNCIAS ===
-
-      // 1. Eliminar associações bidirecionais com outros cursos
-      const numAssociacaoRemovidas = await AssociarCursos.destroy({
-        where: {
-          [Op.or]: [
-            { id_curso_origem: id },
-            { id_curso_destino: id }
-          ]
-        }
-      });
-      console.log(`🔗 [CURSOS] ${numAssociacaoRemovidas} associações removidas`);
-
-      // 2. Eliminar todas as inscrições no curso
-      const numInscricoesRemovidas = await Inscricao_Curso.destroy({
-        where: { id_curso: id }
-      });
-      console.log(`👥 [CURSOS] ${numInscricoesRemovidas} inscrições removidas`);
-
-      // 3. Eliminar estrutura hierárquica de conteúdos
-      
-      // Primeiro, encontrar todos os tópicos do curso
-      const topicos = await Curso_Topicos.findAll({
-        where: { id_curso: id }
+      // Eliminar inscrições associadas
+      await Inscricao_Curso.destroy({
+        where: { id_curso: id },
+        transaction: t
       });
 
-      const topicoIds = topicos.map(topico => topico.id_topico);
-      console.log(`📝 [CURSOS] ${topicoIds.length} tópicos encontrados para eliminação`);
-
-      if (topicoIds.length > 0) {
-        // Encontrar pastas dentro dos tópicos
-        const pastas = await PastaCurso.findAll({
-          where: { id_topico: { [Op.in]: topicoIds } }
-        });
-
-        const pastaIds = pastas.map(pasta => pasta.id_pasta);
-        console.log(`📁 [CURSOS] ${pastaIds.length} pastas encontradas`);
-
-        // Eliminar conteúdos das pastas
-        if (pastaIds.length > 0) {
-          const numConteudosRemovidos = await ConteudoCurso.destroy({
-            where: { id_pasta: { [Op.in]: pastaIds } }
-          });
-          console.log(`📄 [CURSOS] ${numConteudosRemovidos} conteúdos de pastas removidos`);
-        }
-
-        // Eliminar as pastas
-        const numPastasRemovidas = await PastaCurso.destroy({
-          where: { id_topico: { [Op.in]: topicoIds } }
-        });
-        console.log(`📁 [CURSOS] ${numPastasRemovidas} pastas removidas`);
-
-        // Eliminar os tópicos
-        const numTopicosRemovidos = await Curso_Topicos.destroy({
-          where: { id_curso: id }
-        });
-        console.log(`📝 [CURSOS] ${numTopicosRemovidos} tópicos removidos`);
-      }
-
-      // 4. Eliminar conteúdos diretos do curso (não organizados em pastas)
-      const numConteudosDirectosRemovidos = await ConteudoCurso.destroy({
-        where: { id_curso: id }
+      // Eliminar tópicos organizacionais
+      await Curso_Topicos.destroy({
+        where: { id_curso: id },
+        transaction: t
       });
-      console.log(`📄 [CURSOS] ${numConteudosDirectosRemovidos} conteúdos diretos removidos`);
 
-      // 5. Eliminar o registo principal do curso
-      await curso.destroy();
-      console.log(`✅ [CURSOS] Registo do curso eliminado da base de dados`);
+      // Eliminar o curso
+      await curso.destroy({ transaction: t });
 
-      // === ELIMINAÇÃO DO DIRETÓRIO FÍSICO ===
-      if (fs.existsSync(cursoDirAbs)) {
-        console.log(`📁 [CURSOS] A remover diretório físico: ${cursoDirAbs}`);
-        
-        /**
-         * Remove diretório e todo o conteúdo de forma recursiva
-         * Função interna para garantir eliminação completa
-         */
-        const removerDiretorioRecursivo = (dir) => {
-          if (fs.existsSync(dir)) {
-            fs.readdirSync(dir).forEach((ficheiro) => {
-              const caminhoCompleto = path.join(dir, ficheiro);
-              if (fs.lstatSync(caminhoCompleto).isDirectory()) {
-                // Chamada recursiva para subdiretórios
-                removerDiretorioRecursivo(caminhoCompleto);
-              } else {
-                // Eliminar ficheiro individual
-                fs.unlinkSync(caminhoCompleto);
-              }
-            });
-            // Eliminar o diretório vazio
-            fs.rmdirSync(dir);
-          }
-        };
+      await t.commit();
 
-        removerDiretorioRecursivo(cursoDirAbs);
-        console.log(`✅ [CURSOS] Diretório físico removido com sucesso`);
-      } else {
-        console.log(`ℹ️ [CURSOS] Diretório físico não encontrado: ${cursoDirAbs}`);
-      }
-
-      console.log('🎉 [CURSOS] Eliminação completa do curso concluída com sucesso');
-
-      return res.json({
-        message: "Curso eliminado com sucesso!",
-        estatisticas: {
-          inscricoesRemovidas: numInscricoesRemovidas,
-          associacoesRemovidas: numAssociacaoRemovidas,
-          topicosRemovidos: topicoIds.length,
-          diretorioRemovido: fs.existsSync(cursoDirAbs) ? false : true
-        }
-      });
+      console.log(`✅ [CURSOS] Curso ${id} eliminado com sucesso`);
+      res.json({ message: "Curso eliminado com sucesso" });
 
     } catch (error) {
-      console.error('❌ [CURSOS] Erro ao eliminar dependências do curso:', error.message);
-      return res.status(500).json({
-        message: "Erro ao eliminar dependências do curso",
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
-      });
+      await t.rollback();
+      throw error;
     }
+
   } catch (error) {
-    console.error('❌ [CURSOS] Erro geral ao eliminar curso:', error.message);
-    return res.status(500).json({
-      message: "Erro no servidor ao eliminar curso.",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
-    });
-  }
-};
-
-// =============================================================================
-// FUNCIONALIDADES AUXILIARES E RECOMENDAÇÕES
-// =============================================================================
-
-/**
- * Gera sugestões personalizadas de cursos para o utilizador
- * 
- * Sistema de recomendação inteligente que analisa:
- * 1. Histórico de inscrições do utilizador
- * 2. Categorias e áreas de interesse demonstrado
- * 3. Disponibilidade atual dos cursos
- * 
- * Algoritmo de sugestão:
- * - Primeira tentativa: cursos de categorias conhecidas em áreas novas
- * - Fallback: cursos aleatórios disponíveis
- * 
- * @param {Object} req - Requisição Express com utilizador autenticado
- * @param {Object} res - Resposta Express com lista de cursos sugeridos
- */
-const getCursosSugeridos = async (req, res) => {
-  try {
-    const id_utilizador = req.user.id_utilizador;
-    console.log(`🎯 [CURSOS] A gerar sugestões personalizadas para utilizador ${id_utilizador}`);
-
-    // Analisar histórico de inscrições do utilizador
-    const inscricoes = await Inscricao_Curso.findAll({
-      where: { id_utilizador }
-    });
-
-    const cursosInscritosIds = inscricoes.map(i => i.id_curso);
-    console.log(`📊 [CURSOS] ${cursosInscritosIds.length} cursos no histórico do utilizador`);
-
-    let cursosSugeridos = [];
-
-    if (inscricoes.length > 0) {
-      // === ANÁLISE DE PREFERÊNCIAS BASEADA NO HISTÓRICO ===
-      
-      // Buscar dados dos cursos onde o utilizador se inscreveu
-      const cursosInscritos = await Curso.findAll({
-        where: { id_curso: cursosInscritosIds }
-      });
-
-      // Extrair padrões de interesse
-      const categoriasInscrito = [...new Set(cursosInscritos.map(c => c.id_categoria))];
-      const areasInscrito = [...new Set(cursosInscritos.map(c => c.id_area))];
-
-      console.log(`🏷️ [CURSOS] Categorias de interesse identificadas: ${categoriasInscrito.join(', ')}`);
-      console.log(`🌍 [CURSOS] Áreas já exploradas: ${areasInscrito.join(', ')}`);
-
-      // === SUGESTÃO INTELIGENTE: EXPANDIR HORIZONTES ===
-      // Sugerir cursos de categorias conhecidas mas em áreas ainda não exploradas
-      cursosSugeridos = await Curso.findAll({
-        where: {
-          id_categoria: categoriasInscrito, // Categorias familiares
-          id_area: { [Op.notIn]: areasInscrito }, // Áreas novas
-          id_curso: { [Op.notIn]: cursosInscritosIds }, // Não já inscritos
-          [Op.or]: [
-            { tipo: 'assincrono' }, // Sempre disponíveis
-            { tipo: 'sincrono', vagas: { [Op.gt]: 0 } } // Com vagas disponíveis
-          ],
-          ativo: true
-        },
-        limit: 10,
-        order: sequelize.literal('RANDOM()') // Variedade nas sugestões
-      });
-
-      console.log(`💡 [CURSOS] ${cursosSugeridos.length} sugestões baseadas em preferências geradas`);
-    }
-
-    // === FALLBACK: SUGESTÕES ALEATÓRIAS ===
-    if (cursosSugeridos.length === 0) {
-      console.log('🎲 [CURSOS] A gerar sugestões aleatórias (sem histórico ou preferências insuficientes)');
-      
-      cursosSugeridos = await Curso.findAll({
-        where: {
-          id_curso: { [Op.notIn]: cursosInscritosIds },
-          [Op.or]: [
-            { tipo: 'assincrono' },
-            { tipo: 'sincrono', vagas: { [Op.gt]: 0 } }
-          ],
-          ativo: true
-        },
-        limit: 10,
-        order: sequelize.literal('RANDOM()')
-      });
-
-      console.log(`🎲 [CURSOS] ${cursosSugeridos.length} sugestões aleatórias geradas`);
-    }
-
-    console.log(`✅ [CURSOS] Sistema de recomendação concluído`);
-    return res.json(cursosSugeridos);
-  } catch (error) {
-    console.error('❌ [CURSOS] Erro no sistema de recomendação:', error.message);
+    console.error('❌ [CURSOS] Erro ao eliminar curso:', error.message);
     res.status(500).json({ 
-      message: "Erro no servidor ao procurar cursos sugeridos.",
+      message: "Erro ao eliminar curso",
       error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
     });
   }
@@ -1355,13 +865,6 @@ const getCursosSugeridos = async (req, res) => {
 
 /**
  * Lista inscrições ativas de um curso específico
- * 
- * Função de gestão para formadores e administradores visualizarem
- * a lista de alunos inscritos num curso. Inclui dados de contacto
- * básicos para comunicação.
- * 
- * @param {Object} req - Requisição com ID do curso nos parâmetros
- * @param {Object} res - Resposta Express com lista de inscritos
  */
 const getInscricoesCurso = async (req, res) => {
   try {
@@ -1369,15 +872,16 @@ const getInscricoesCurso = async (req, res) => {
     console.log(`👥 [CURSOS] A carregar lista de inscrições do curso ${id_curso}`);
 
     const inscricoes = await Inscricao_Curso.findAll({
-      where: { id_curso },
+      where: { id_curso, estado: 'inscrito' },
       include: [
         {
           model: User,
           as: "utilizador",
           attributes: ['id_utilizador', 'nome', 'email', 'telefone'],
-          required: true // INNER JOIN para garantir dados do utilizador
+          required: true
         }
-      ]
+      ],
+      order: [['data_inscricao', 'DESC']]
     });
 
     console.log(`✅ [CURSOS] ${inscricoes.length} inscrições carregadas`);
@@ -1397,13 +901,6 @@ const getInscricoesCurso = async (req, res) => {
 
 /**
  * Obtém estrutura de tópicos de um curso
- * 
- * Lista todos os tópicos organizacionais de um curso ordenados
- * por sequência pedagógica. Usado para construir a navegação
- * e estrutura de conteúdos do curso.
- * 
- * @param {Object} req - Requisição com ID do curso nos parâmetros
- * @param {Object} res - Resposta Express com lista de tópicos
  */
 const getTopicosCurso = async (req, res) => {
   try {
@@ -1412,7 +909,7 @@ const getTopicosCurso = async (req, res) => {
 
     const topicos = await Curso_Topicos.findAll({
       where: { id_curso, ativo: true },
-      order: [['ordem', 'ASC']] // Ordenação pedagógica
+      order: [['ordem', 'ASC']]
     });
 
     console.log(`✅ [CURSOS] ${topicos.length} tópicos organizacionais encontrados`);
@@ -1428,12 +925,6 @@ const getTopicosCurso = async (req, res) => {
 
 /**
  * Cria novo tópico organizacional para um curso
- * 
- * Adiciona nova secção temática à estrutura do curso.
- * A ordem pode ser especificada ou calculada automaticamente.
- * 
- * @param {Object} req - Requisição com dados do novo tópico
- * @param {Object} res - Resposta Express com tópico criado
  */
 const createCurso_Topicos = async (req, res) => {
   try {
@@ -1447,21 +938,18 @@ const createCurso_Topicos = async (req, res) => {
 
     console.log(`📝 [CURSOS] A criar tópico organizacional "${nome}" para curso ${id_curso}`);
 
-    // Verificar se o curso existe
     const curso = await Curso.findByPk(id_curso);
     if (!curso) {
       console.warn(`⚠️ [CURSOS] Curso ${id_curso} não encontrado`);
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Calcular ordem automática se não especificada
     const ultimaOrdem = await Curso_Topicos.max('ordem', {
       where: { id_curso }
     }) || 0;
 
     const ordemFinal = ordem || ultimaOrdem + 1;
 
-    // Criar o tópico organizacional
     const novoTopico = await Curso_Topicos.create({
       nome,
       id_curso,
@@ -1486,12 +974,6 @@ const createCurso_Topicos = async (req, res) => {
 
 /**
  * Atualiza tópico organizacional existente
- * 
- * Permite modificar nome, ordem ou estado de ativação.
- * Suporta reordenação da estrutura pedagógica.
- * 
- * @param {Object} req - Requisição com dados atualizados
- * @param {Object} res - Resposta Express com tópico atualizado
  */
 const updateCurso_Topicos = async (req, res) => {
   try {
@@ -1500,14 +982,12 @@ const updateCurso_Topicos = async (req, res) => {
 
     console.log(`📝 [CURSOS] A atualizar tópico organizacional ${id_topico}`);
 
-    // Verificar se o tópico existe
     const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       console.warn(`⚠️ [CURSOS] Tópico ${id_topico} não encontrado`);
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
 
-    // Atualizar apenas campos fornecidos
     await topico.update({
       nome: nome !== undefined ? nome : topico.nome,
       ordem: ordem !== undefined ? ordem : topico.ordem,
@@ -1531,32 +1011,23 @@ const updateCurso_Topicos = async (req, res) => {
 
 /**
  * Elimina tópico organizacional
- * 
- * Remove tópico do curso. Se tiver dependências (pastas/conteúdos),
- * desativa em vez de eliminar para preservar integridade referencial.
- * 
- * @param {Object} req - Requisição com ID do tópico nos parâmetros
- * @param {Object} res - Resposta Express com resultado da operação
  */
 const deleteCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
     console.log(`🗑️ [CURSOS] A tentar eliminar tópico organizacional ${id_topico}`);
 
-    // Verificar se o tópico existe
     const topico = await Curso_Topicos.findByPk(id_topico);
     if (!topico) {
       console.warn(`⚠️ [CURSOS] Tópico ${id_topico} não encontrado`);
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
 
-    // Verificar dependências (pastas associadas)
     const pastas = await PastaCurso.findAll({
       where: { id_topico }
     });
 
     if (pastas.length > 0) {
-      // Desativar em vez de eliminar para preservar integridade
       await topico.update({ ativo: false });
       console.log(`⚠️ [CURSOS] Tópico ${id_topico} desativado (tem ${pastas.length} pastas associadas)`);
       
@@ -1566,7 +1037,6 @@ const deleteCurso_Topicos = async (req, res) => {
       });
     }
 
-    // Eliminação segura se não há dependências
     await topico.destroy();
     console.log(`✅ [CURSOS] Tópico ${id_topico} eliminado com sucesso`);
 
@@ -1581,7 +1051,6 @@ const deleteCurso_Topicos = async (req, res) => {
 };
 
 module.exports = {
-  // Operações principais de gestão de cursos
   getAllCursos,
   getCursosByCategoria,
   getTopicoArea,
@@ -1590,12 +1059,7 @@ module.exports = {
   getInscricoesCurso,
   updateCurso,
   deleteCurso,
-  
-  // Funcionalidades auxiliares
   getCursosSugeridos,
-  associarFormadorCurso,
-  
-  // Gestão de tópicos organizacionais
   getTopicosCurso,
   createCurso_Topicos,
   updateCurso_Topicos,

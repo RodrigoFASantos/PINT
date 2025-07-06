@@ -7,52 +7,49 @@ const verificarCargo = require('../../middleware/role_middleware');
 /**
  * Rotas para gestão de categorias de formação
  * 
- * Define todas as rotas relacionadas com categorias,
- * organizando as operações de consulta e gestão com as permissões adequadas.
+ * Sistema hierárquico: Categoria → Área → Tópico → Curso
  * 
- * As categorias servem para organizar áreas de formação e cursos,
- * criando uma estrutura hierárquica: categoria > área > curso.
- * 
- * Estrutura de permissões:
- * - Consulta de categorias: Todos os utilizadores autenticados
- * - Criação, edição e eliminação: Apenas administradores (id_cargo 1)
+ * Segurança:
+ * - Todas as rotas requerem autenticação (verificarToken)
+ * - Operações administrativas requerem cargo de administrador
+ * - Consultas estão disponíveis para todos os utilizadores autenticados
  */
 
-// Aplicar autenticação a todas as rotas
+// Aplicar autenticação obrigatória a todas as rotas
 router.use(verificarToken);
-
-// ==========================================
-// ROTAS DE CONSULTA (Utilizadores Autenticados)
-// ==========================================
 
 /**
  * GET /api/categorias
- * Obter lista paginada de todas as categorias com filtros opcionais
+ * Obter lista paginada de categorias com contagem de áreas
  * 
- * Query Parameters:
- * - page: Número da página (padrão: 1)
- * - limit: Itens por página (padrão: 10, máximo: 100)
- * - search: Filtro de busca por nome da categoria
+ * Query parameters:
+ * - page: número da página (padrão: 1)
+ * - limit: itens por página (padrão: 10, máximo: 100)
+ * - search: termo de busca por nome da categoria
  * 
- * Resposta inclui:
- * - Lista de categorias ordenadas por nome
- * - Contagem de áreas associadas a cada categoria
- * - Informações de paginação completas
- * - Total de categorias encontradas
+ * Resposta:
+ * {
+ *   success: true,
+ *   total: 25,
+ *   pages: 3,
+ *   current_page: 1,
+ *   categorias: [
+ *     {
+ *       id_categoria: 1,
+ *       nome: "Informática",
+ *       areas_count: 8
+ *     }
+ *   ],
+ *   pagination_info: {
+ *     has_previous: false,
+ *     has_next: true,
+ *     items_per_page: 10,
+ *     total_items: 25,
+ *     showing_items: 10
+ *   }
+ * }
  * 
- * Funcionalidades:
- * - Busca insensível a maiúsculas e minúsculas
- * - Paginação automática com validação de parâmetros
- * - Ordenação alfabética por nome
- * - Contagem dinâmica de áreas por categoria
- * 
- * Casos de uso:
- * - Interface de gestão de categorias
- * - Seletores de categoria em formulários
- * - Navegação hierárquica do sistema
- * - Relatórios e estatísticas
- * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * Acesso: Todos os utilizadores autenticados
  */
 router.get('/', categoriasController.getAllCategorias);
 
@@ -61,66 +58,52 @@ router.get('/', categoriasController.getAllCategorias);
  * Obter dados detalhados de uma categoria específica
  * 
  * Parâmetros:
- * - id: Identificador único da categoria
+ * - id: identificador único da categoria
  * 
- * Dados retornados:
- * - Informações completas da categoria
- * - Lista de áreas associadas à categoria
- * - Total de áreas na categoria
- * - Dados organizados hierarquicamente
+ * Resposta:
+ * {
+ *   success: true,
+ *   categoria: {
+ *     id_categoria: 1,
+ *     nome: "Informática",
+ *     areas: [
+ *       { id_area: 1, nome: "Programação Web" },
+ *       { id_area: 2, nome: "Base de Dados" }
+ *     ],
+ *     total_areas: 2
+ *   }
+ * }
  * 
- * Validações:
- * - Categoria deve existir na base de dados
- * - ID deve ser um número válido
- * - Utilizador deve estar autenticado
- * 
- * Casos de uso:
- * - Página de detalhes da categoria
- * - Edição de categoria existente
- * - Navegação por áreas da categoria
- * - Análise de estrutura hierárquica
- * 
- * Acesso: Utilizadores autenticados (todos os cargos)
+ * Acesso: Todos os utilizadores autenticados
  */
 router.get('/:id', categoriasController.getCategoriaById);
 
-// ==========================================
-// ROTAS DE GESTÃO ADMINISTRATIVA
-// ==========================================
-
 /**
  * POST /api/categorias
- * Criar uma nova categoria de formação
+ * Criar nova categoria de formação
  * 
- * Corpo da requisição (JSON):
- * - nome: Nome da categoria (string, obrigatório, único)
+ * Corpo da requisição:
+ * {
+ *   "nome": "Nome da Nova Categoria"
+ * }
  * 
- * Validações realizadas:
- * - Nome não pode estar vazio ou conter apenas espaços
- * - Nome deve ser único no sistema (busca insensível a maiúsculas)
+ * Validações:
+ * - Nome é obrigatório e não pode estar vazio
+ * - Nome deve ser único no sistema
  * - Utilizador deve ter permissões de administrador
- * - Dados são processados dentro de transação
  * 
- * Processo de criação:
- * 1. Validar dados de entrada
- * 2. Verificar duplicação de nome
- * 3. Criar categoria na base de dados
- * 4. Confirmar transação
- * 5. Retornar categoria criada com contadores zerados
+ * Resposta de sucesso (201):
+ * {
+ *   success: true,
+ *   message: "Categoria criada com sucesso",
+ *   categoria: {
+ *     id_categoria: 12,
+ *     nome: "Nome da Nova Categoria",
+ *     areas_count: 0
+ *   }
+ * }
  * 
- * Resposta de sucesso:
- * - Status 201 Created
- * - Dados completos da categoria criada
- * - Contagem de áreas inicializada a zero
- * - Mensagem de confirmação
- * 
- * Casos de erro:
- * - Nome vazio ou inválido (400)
- * - Nome já existe (400)
- * - Permissões insuficientes (403)
- * - Erro na base de dados (500)
- * 
- * Permissões: Apenas administradores (id_cargo 1)
+ * Acesso: Apenas administradores (id_cargo === 1)
  */
 router.post('/', 
   verificarCargo(['admin']), 
@@ -129,40 +112,30 @@ router.post('/',
 
 /**
  * PUT /api/categorias/:id
- * Actualizar dados de uma categoria existente
+ * Atualizar categoria existente
  * 
  * Parâmetros:
- * - id: Identificador da categoria a actualizar
+ * - id: identificador da categoria a atualizar
  * 
- * Corpo da requisição (JSON):
- * - nome: Novo nome da categoria (string, obrigatório)
+ * Corpo da requisição:
+ * {
+ *   "nome": "Novo Nome da Categoria"
+ * }
  * 
- * Validações realizadas:
+ * Validações:
  * - Categoria deve existir na base de dados
- * - Nome não pode estar vazio
+ * - Novo nome é obrigatório e não pode estar vazio
  * - Novo nome deve ser único (excluindo a própria categoria)
- * - Utilizador deve ter permissões adequadas
+ * - Utilizador deve ter permissões de administrador
  * 
- * Processo de actualização:
+ * Processo:
  * 1. Verificar existência da categoria
  * 2. Validar novo nome
  * 3. Verificar duplicação com outras categorias
- * 4. Actualizar dados na base de dados
- * 5. Confirmar transação
- * 6. Retornar categoria actualizada
+ * 4. Atualizar dados dentro de transação
+ * 5. Retornar categoria atualizada com contagem de áreas
  * 
- * Funcionalidades:
- * - Preserva contagem actual de áreas
- * - Actualização atómica com transações
- * - Validação de unicidade automática
- * - Trimming automático de espaços
- * 
- * Resposta inclui:
- * - Dados actualizados da categoria
- * - Contagem actual de áreas associadas
- * - Mensagem de confirmação da operação
- * 
- * Permissões: Apenas administradores (id_cargo 1)
+ * Acesso: Apenas administradores (id_cargo === 1)
  */
 router.put('/:id', 
   verificarCargo(['admin']), 
@@ -171,74 +144,51 @@ router.put('/:id',
 
 /**
  * DELETE /api/categorias/:id
- * Eliminar uma categoria de formação
+ * Eliminar categoria de formação
+ * 
+ * ⚠️ OPERAÇÃO CRÍTICA E IRREVERSÍVEL ⚠️
  * 
  * Parâmetros:
- * - id: Identificador da categoria a eliminar
+ * - id: identificador da categoria a eliminar
  * 
- * Restrições de integridade:
- * - Categoria deve existir na base de dados
- * - Não pode ter áreas associadas
- * - Operação é irreversível
+ * Restrições críticas:
+ * - Categoria DEVE existir na base de dados
+ * - NÃO pode ter áreas associadas (validação obrigatória)
+ * - Operação é completamente irreversível
  * 
- * Validações de segurança:
- * - Verificar existência da categoria
- * - Contar áreas associadas
- * - Bloquear eliminação se houver dependências
- * - Verificar permissões de administrador
- * 
- * Processo de eliminação:
- * 1. Validar existência da categoria
- * 2. Verificar se existem áreas associadas
- * 3. Bloquear operação se houver dependências
+ * Processo de segurança:
+ * 1. Verificar existência da categoria
+ * 2. Contar áreas associadas à categoria
+ * 3. BLOQUEAR eliminação se houver dependências
  * 4. Eliminar categoria dentro de transação
- * 5. Confirmar eliminação com nome da categoria
+ * 5. Retornar confirmação
  * 
- * Casos de erro comuns:
- * - Categoria não encontrada (404)
- * - Categoria tem áreas associadas (400)
- * - Permissões insuficientes (403)
- * - Problemas na base de dados (500)
+ * Resposta de sucesso (200):
+ * {
+ *   success: true,
+ *   message: "Categoria 'Informática' eliminada com sucesso"
+ * }
  * 
- * Resposta de sucesso:
- * - Confirmação da eliminação
- * - Nome da categoria eliminada
- * - Mensagem informativa
+ * Resposta de bloqueio (400):
+ * {
+ *   success: false,
+ *   message: "Não é possível eliminar a categoria pois existem 5 área(s) associada(s). 
+ *             Remove primeiro as áreas desta categoria ou reatribui-as a outra categoria."
+ * }
  * 
  * Nota importante:
- * Para eliminar uma categoria, é necessário primeiro
- * remover ou reatribuir todas as áreas associadas.
+ * Para eliminar uma categoria com áreas associadas, é necessário primeiro:
+ * 1. Eliminar ou reatribuir todas as áreas
+ * 2. Verificar se não há cursos dependentes nas áreas
+ * 3. Considerar o impacto na navegação dos utilizadores
  * 
- * Permissões: Apenas administradores (id_cargo 1)
+ * Esta regra garante a integridade referencial do sistema.
+ * 
+ * Acesso: Apenas administradores (id_cargo === 1)
  */
 router.delete('/:id', 
   verificarCargo(['admin']),
   categoriasController.deleteCategoria
 );
 
-/**
- * Exportar router configurado
- * 
- * Este router será montado no caminho /api/categorias pelo servidor principal,
- * fornecendo uma API REST completa para gestão de categorias de formação.
- * 
- * Middleware aplicado:
- * - verificarToken: Autenticação obrigatória em todas as rotas
- * - verificarCargo: Autorização específica em rotas de gestão
- * 
- * Padronização de respostas:
- * - Códigos HTTP apropriados (200, 201, 400, 403, 404, 500)
- * - Estrutura JSON consistente com success/error
- * - Mensagens de erro em português
- * - Dados paginados nas listagens
- * - Transações para operações críticas
- * 
- * Funcionalidades principais:
- * - CRUD completo para categorias
- * - Validação de integridade referencial
- * - Paginação e filtros avançados
- * - Contadores dinâmicos de áreas
- * - Gestão de permissões granular
- * - Suporte para estrutura hierárquica do sistema
- */
 module.exports = router;

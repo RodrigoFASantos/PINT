@@ -1,50 +1,70 @@
 const Area = require('../../database/models/Area');
 const Categoria = require('../../database/models/Categoria');
-const Curso = require('../../database/models/Curso');
+const Topico_Area = require('../../database/models/Topico_Area');
 const { Op } = require('sequelize');
 const sequelize = require('../../config/db');
 
 /**
- * Controlador para gestão de áreas de formação
+ * CONTROLADOR PARA GESTÃO DE ÁREAS DE FORMAÇÃO
  * 
- * Contém todas as funções para manipular áreas de formação,
- * incluindo operações CRUD com validações e gestão de transacções
- * para garantir a integridade dos dados.
+ * Este controlador gere o segundo nível da hierarquia educacional:
+ * Categoria → Área → Tópico → Curso
+ * 
+ * Implementa todas as operações CRUD para áreas de formação, garantindo
+ * a integridade referencial com categorias (nível superior) e tópicos
+ * (nível inferior) na estrutura hierárquica.
+ * 
+ * REGRAS DE NEGÓCIO:
+ * - Área deve sempre pertencer a uma categoria válida
+ * - Nome de área deve ser único dentro da mesma categoria
+ * - Área só pode ser eliminada se não tiver tópicos dependentes
+ * - Todas as operações críticas usam transações para consistência
  */
 
 /**
- * Obter todas as áreas com paginação, filtros e contagem de cursos
+ * Obter lista paginada de áreas com informações das categorias
  * 
- * @param {Request} req - Requisição HTTP
- * @param {Response} res - Resposta HTTP
+ * Esta função retorna todas as áreas do sistema com paginação,
+ * filtros opcionais e contagem dinâmica de tópicos associados.
+ * Inclui também informações das categorias pai.
+ * 
+ * @param {Request} req - Objeto de requisição HTTP
+ * @param {Response} res - Objeto de resposta HTTP
+ * 
+ * Query Parameters aceites:
+ * - page: Número da página (padrão: 1)
+ * - limit: Itens por página (padrão: 10, máximo: 100)
+ * - search: Filtro de busca por nome da área
+ * - categoria: ID da categoria para filtrar áreas específicas
  */
 exports.getAllAreas = async (req, res) => {
   try {
     const { page = 1, limit = 10, search, categoria } = req.query;
     
-    // Converter para números e garantir valores válidos
+    // Conversão e validação dos parâmetros de paginação
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
     
-    // Calcular offset para paginação
+    // Cálculo do offset para a consulta SQL paginada
     const offset = (pageNum - 1) * limitNum;
     
-    // Configurar opções base da consulta
+    // Configuração base da consulta com associação à categoria
     const options = {
       limit: limitNum,
       offset,
       order: [['nome', 'ASC']],
       include: [{
         model: Categoria,
-        as: 'categoria',
-        attributes: ['id_categoria', 'nome']
+        as: 'categoriaParent',
+        attributes: ['id_categoria', 'nome'],
+        required: true // INNER JOIN para garantir que só apareçam áreas com categoria válida
       }]
     };
     
-    // Construir filtros dinâmicos
+    // Construção dinâmica dos filtros de pesquisa
     const where = {};
     
-    // Filtro por nome - busca parcial e insensível a maiúsculas
+    // Filtro por nome da área - busca parcial insensível a maiúsculas/minúsculas
     if (search && search.trim()) {
       where.nome = {
         [Op.iLike]: `%${search.trim()}%`
@@ -56,32 +76,51 @@ exports.getAllAreas = async (req, res) => {
       where.id_categoria = categoria.trim();
     }
     
-    // Aplicar filtros se existirem
+    // Aplicação dos filtros apenas se existirem
     if (Object.keys(where).length > 0) {
       options.where = where;
     }
     
-    // Executar consulta com contagem total para paginação
+    // Execução da consulta principal com contagem total
     const { count, rows } = await Area.findAndCountAll(options);
     
-    // Adicionar contagem de cursos para cada área
-    const areasComContagem = await Promise.all(rows.map(async (area) => {
-      const cursosCount = await Curso.count({
-        where: {
-          id_area: area.id_area
-        }
-      });
-      
-      return {
-        ...area.toJSON(),
-        cursos_count: cursosCount
-      };
-    }));
+    // Log para debug da consulta de áreas
+    console.log(`[AREAS] Consultadas ${rows.length} áreas de um total de ${count}`);
     
-    // Calcular informações de paginação
+    // Adição da contagem de tópicos para cada área
+    // Operação feita em paralelo para melhor performance
+    const areasComContagem = await Promise.all(rows.map(async (area) => {
+      try {
+        // Contagem dos tópicos associados a esta área específica
+        const topicosCount = await Topico_Area.count({
+          where: { id_area: area.id_area }
+        });
+        
+        // Log detalhado para debug
+        console.log(`[AREAS] Área ID ${area.id_area} ("${area.nome}") tem ${topicosCount} tópico(s)`);
+        
+        // Retorno do objeto área com contagem e categoria incluídas
+        return {
+          ...area.toJSON(),
+          topicos_count: topicosCount
+        };
+      } catch (error) {
+        // Em caso de erro na contagem, registar e assumir 0 tópicos
+        console.error(`[AREAS] Erro ao contar tópicos para área ${area.id_area}:`, error.message);
+        return {
+          ...area.toJSON(),
+          topicos_count: 0
+        };
+      }
+    }));
+
+    // Log de verificação dos dados retornados
+    console.log(`[AREAS] Retornando ${areasComContagem.length} áreas com contagens calculadas`);
+    
+    // Cálculo das informações de paginação
     const totalPaginas = Math.ceil(count / limitNum);
     
-    // Retornar resposta estruturada
+    // Resposta estruturada com todas as informações necessárias
     res.status(200).json({
       success: true,
       total: count,
@@ -96,17 +135,23 @@ exports.getAllAreas = async (req, res) => {
         showing_items: areasComContagem.length
       }
     });
+    
   } catch (error) {
+    // Gestão de erros com log detalhado
+    console.error('[AREAS] Erro ao buscar áreas:', error.message);
     res.status(500).json({ 
       success: false, 
-      message: 'Erro ao buscar áreas', 
+      message: 'Erro ao carregar áreas', 
       error: error.message 
     });
   }
 };
 
 /**
- * Obter todas as áreas de uma categoria específica
+ * Obter áreas de uma categoria específica
+ * 
+ * Esta função retorna todas as áreas pertencentes a uma categoria,
+ * útil para seletores em cascata e navegação hierárquica.
  * 
  * @param {Request} req - Requisição HTTP com id_categoria nos parâmetros
  * @param {Response} res - Resposta HTTP
@@ -115,7 +160,7 @@ exports.getAreasByCategoria = async (req, res) => {
   try {
     const { id_categoria } = req.params;
     
-    // Verificar se a categoria existe
+    // Verificação da existência da categoria
     const categoria = await Categoria.findByPk(id_categoria);
     
     if (!categoria) {
@@ -125,7 +170,7 @@ exports.getAreasByCategoria = async (req, res) => {
       });
     }
     
-    // Buscar áreas da categoria ordenadas por nome
+    // Busca de áreas da categoria específica, ordenadas por nome
     const areas = await Area.findAll({
       where: {
         id_categoria
@@ -133,16 +178,21 @@ exports.getAreasByCategoria = async (req, res) => {
       order: [['nome', 'ASC']]
     });
     
+    console.log(`[AREAS] Encontradas ${areas.length} áreas para categoria ${id_categoria} ("${categoria.nome}")`);
+    
+    // Resposta com categoria e suas áreas
     res.status(200).json({
       success: true,
       categoria,
       areas,
       total_areas: areas.length
     });
+    
   } catch (error) {
+    console.error('[AREAS] Erro ao buscar áreas por categoria:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar áreas por categoria',
+      message: 'Erro ao carregar áreas por categoria',
       error: error.message
     });
   }
@@ -151,22 +201,26 @@ exports.getAreasByCategoria = async (req, res) => {
 /**
  * Obter dados detalhados de uma área específica
  * 
- * @param {Request} req - Requisição HTTP com id da área
+ * Esta função retorna informações completas de uma área,
+ * incluindo dados da categoria pai e lista de tópicos associados.
+ * 
+ * @param {Request} req - Requisição HTTP com ID da área
  * @param {Response} res - Resposta HTTP
  */
 exports.getAreaById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Buscar área com informações da categoria
+    // Busca da área com informações da categoria pai
     const area = await Area.findByPk(id, {
       include: [{
         model: Categoria,
-        as: 'categoria',
+        as: 'categoriaParent',
         attributes: ['id_categoria', 'nome']
       }]
     });
     
+    // Validação da existência da área
     if (!area) {
       return res.status(404).json({ 
         success: false, 
@@ -174,45 +228,54 @@ exports.getAreaById = async (req, res) => {
       });
     }
     
-    // Obter cursos associados à área
-    const cursos = await Curso.findAll({
+    // Busca dos tópicos associados à área
+    const topicos = await Topico_Area.findAll({
       where: {
         id_area: id
       },
-      attributes: ['id_curso', 'nome', 'estado'],
-      order: [['nome', 'ASC']]
+      attributes: ['id_topico', 'titulo', 'ativo'],
+      order: [['titulo', 'ASC']]
     });
     
+    console.log(`[AREAS] Área ${id} consultada com ${topicos.length} tópicos`);
+    
+    // Resposta com dados completos da área
     res.status(200).json({
       success: true,
       area: {
         ...area.toJSON(),
-        cursos,
-        total_cursos: cursos.length
+        topicos,
+        total_topicos: topicos.length
       }
     });
+    
   } catch (error) {
+    console.error('[AREAS] Erro ao buscar área por ID:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar área',
+      message: 'Erro ao carregar área',
       error: error.message
     });
   }
 };
 
 /**
- * Criar uma nova área de formação
+ * Criar nova área de formação
+ * 
+ * Esta função cria uma nova área associada a uma categoria,
+ * com validação rigorosa de unicidade dentro da categoria.
  * 
  * @param {Request} req - Requisição HTTP com dados da nova área
  * @param {Response} res - Resposta HTTP
  */
 exports.createArea = async (req, res) => {
+  // Iniciar transação para garantir operação atómica
   const transaction = await sequelize.transaction();
   
   try {
     const { nome, id_categoria } = req.body;
     
-    // Validação dos dados obrigatórios
+    // Validação obrigatória do nome da área
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
@@ -221,6 +284,7 @@ exports.createArea = async (req, res) => {
       });
     }
     
+    // Validação obrigatória da categoria
     if (!id_categoria) {
       await transaction.rollback();
       return res.status(400).json({
@@ -229,7 +293,7 @@ exports.createArea = async (req, res) => {
       });
     }
     
-    // Verificar se a categoria existe
+    // Verificação da existência da categoria especificada
     const categoria = await Categoria.findByPk(id_categoria);
     
     if (!categoria) {
@@ -240,7 +304,7 @@ exports.createArea = async (req, res) => {
       });
     }
     
-    // Verificar duplicação de nome na mesma categoria
+    // Verificação de duplicação de nome dentro da mesma categoria
     const areaExistente = await Area.findOne({
       where: {
         nome: {
@@ -258,7 +322,7 @@ exports.createArea = async (req, res) => {
       });
     }
     
-    // Criar a nova área
+    // Criação da nova área dentro da transação
     const novaArea = await Area.create(
       { 
         nome: nome.trim(),
@@ -267,24 +331,31 @@ exports.createArea = async (req, res) => {
       { transaction }
     );
     
+    // Confirmação da transação
     await transaction.commit();
     
-    // Buscar área criada com informações da categoria
+    // Busca da área criada com informações da categoria
     const areaComCategoria = await Area.findByPk(novaArea.id_area, {
       include: [{
         model: Categoria,
-        as: 'categoria',
+        as: 'categoriaParent',
         attributes: ['id_categoria', 'nome']
       }]
     });
     
+    console.log(`[AREAS] Nova área criada: ID ${novaArea.id_area} - "${novaArea.nome}" na categoria ${id_categoria}`);
+    
+    // Resposta de sucesso com área criada
     res.status(201).json({
       success: true,
       message: 'Área criada com sucesso',
       area: areaComCategoria
     });
+    
   } catch (error) {
+    // Rollback da transação em caso de erro
     await transaction.rollback();
+    console.error('[AREAS] Erro ao criar área:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar área',
@@ -294,19 +365,25 @@ exports.createArea = async (req, res) => {
 };
 
 /**
- * Actualizar uma área existente
+ * Atualizar área existente
  * 
- * @param {Request} req - Requisição HTTP com ID da área e novos dados
+ * Esta função permite atualizar dados de uma área, incluindo
+ * mudança de categoria, mantendo as validações de unicidade.
+ * 
+ * @param {Request} req - Requisição HTTP com ID e novos dados
  * @param {Response} res - Resposta HTTP
  */
 exports.updateArea = async (req, res) => {
+  // Iniciar transação para operação atómica
   const transaction = await sequelize.transaction();
   
   try {
     const { id } = req.params;
     const { nome, id_categoria } = req.body;
     
-    // Validação dos dados obrigatórios
+    console.log(`[AREAS] Atualizando área ID ${id} com dados:`, { nome, id_categoria });
+
+    // Validação obrigatória do nome
     if (!nome || nome.trim() === '') {
       await transaction.rollback();
       return res.status(400).json({
@@ -315,6 +392,7 @@ exports.updateArea = async (req, res) => {
       });
     }
     
+    // Validação obrigatória da categoria
     if (!id_categoria) {
       await transaction.rollback();
       return res.status(400).json({
@@ -323,7 +401,7 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Verificar se a área existe
+    // Verificação da existência da área a atualizar
     const area = await Area.findByPk(id);
     
     if (!area) {
@@ -334,7 +412,7 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Verificar se a nova categoria existe
+    // Verificação da existência da nova categoria
     const categoria = await Categoria.findByPk(id_categoria);
     
     if (!categoria) {
@@ -345,7 +423,7 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Verificar duplicação de nome (excluindo a própria área)
+    // Verificação de duplicação de nome na categoria (excluindo a própria área)
     const areaExistente = await Area.findOne({
       where: {
         nome: {
@@ -366,7 +444,7 @@ exports.updateArea = async (req, res) => {
       });
     }
     
-    // Actualizar a área
+    // Atualização da área dentro da transação
     await area.update(
       { 
         nome: nome.trim(),
@@ -375,45 +453,59 @@ exports.updateArea = async (req, res) => {
       { transaction }
     );
     
+    // Confirmação da transação
     await transaction.commit();
     
-    // Buscar área actualizada com informações da categoria
+    // Busca da área atualizada com informações da categoria
     const areaAtualizada = await Area.findByPk(id, {
       include: [{
         model: Categoria,
-        as: 'categoria',
+        as: 'categoriaParent',
         attributes: ['id_categoria', 'nome']
       }]
     });
     
+    console.log(`[AREAS] Área atualizada: ID ${id} - novo nome: "${nome.trim()}" - nova categoria: ${id_categoria}`);
+    
+    // Resposta com área atualizada
     res.status(200).json({
       success: true,
-      message: 'Área actualizada com sucesso',
+      message: 'Área atualizada com sucesso',
       area: areaAtualizada
     });
+    
   } catch (error) {
+    // Rollback da transação em caso de erro
     await transaction.rollback();
+    console.error('[AREAS] Erro ao atualizar área:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Erro ao actualizar área',
+      message: 'Erro ao atualizar área',
       error: error.message
     });
   }
 };
 
 /**
- * Eliminar uma área de formação
+ * Eliminar área de formação
+ * 
+ * FUNÇÃO CRÍTICA COM VALIDAÇÃO DE INTEGRIDADE REFERENCIAL
+ * 
+ * Esta operação é irreversível e só pode ser executada se a área
+ * não tiver tópicos dependentes. É fundamental para manter a
+ * hierarquia do sistema intacta.
  * 
  * @param {Request} req - Requisição HTTP com ID da área a eliminar
  * @param {Response} res - Resposta HTTP
  */
 exports.deleteArea = async (req, res) => {
+  // Transação obrigatória para operação de eliminação
   const transaction = await sequelize.transaction();
   
   try {
     const { id } = req.params;
     
-    // Verificar se a área existe
+    // Verificação da existência da área
     const area = await Area.findByPk(id);
     
     if (!area) {
@@ -424,35 +516,44 @@ exports.deleteArea = async (req, res) => {
       });
     }
     
-    // Verificar se existem cursos associados
-    const cursosAssociados = await Curso.count({
+    // VALIDAÇÃO CRÍTICA: Verificar dependências (tópicos associados)
+    const topicosAssociados = await Topico_Area.count({
       where: {
         id_area: id
       }
     });
     
-    if (cursosAssociados > 0) {
+    // Bloquear eliminação se houver tópicos dependentes
+    if (topicosAssociados > 0) {
       await transaction.rollback();
+      console.log(`[AREAS] Tentativa de eliminar área ${id} bloqueada - tem ${topicosAssociados} tópico(s) associado(s)`);
       return res.status(400).json({
         success: false,
-        message: `Não é possível eliminar a área pois existem ${cursosAssociados} curso(s) associado(s). Remove primeiro os cursos desta área.`
+        message: `Não é possível eliminar a área pois existem ${topicosAssociados} tópico(s) associado(s). Remove primeiro os tópicos desta área ou elimina-os (o que também removerá cursos e chats associados).`
       });
     }
     
-    // Guardar nome da área para confirmação
+    // Guardar nome da área para confirmação na resposta
     const nomeArea = area.nome;
     
-    // Eliminar a área
+    // Eliminação da área (só executa se não houver dependências)
     await area.destroy({ transaction });
     
+    // Confirmação da transação
     await transaction.commit();
     
+    console.log(`[AREAS] Área eliminada com sucesso: "${nomeArea}" (ID: ${id})`);
+    
+    // Resposta de confirmação
     res.status(200).json({
       success: true,
       message: `Área "${nomeArea}" eliminada com sucesso`
     });
+    
   } catch (error) {
+    // Rollback obrigatório em caso de erro
     await transaction.rollback();
+    console.error('[AREAS] Erro ao eliminar área:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erro ao eliminar área',

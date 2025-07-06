@@ -9,17 +9,19 @@ import './css/gerir_Topicos.css';
 import Sidebar from '../../components/Sidebar';
 
 /**
- * Componente para gestão de tópicos de discussão
+ * Componente para gestão de tópicos de discussão (3º nível da hierarquia)
  * 
  * Permite aos administradores e formadores:
- * - Ver todos os tópicos organizados por categorias e áreas
+ * - Visualizar todos os tópicos organizados por categorias e áreas
  * - Criar novos tópicos de discussão
  * - Editar tópicos existentes
- * - Eliminar tópicos
+ * - Eliminar tópicos (remove também chats e cursos associados em cascata)
  * - Filtrar tópicos por nome, categoria e área
- * - Navegar entre páginas (10 itens por página)
+ * - Navegar entre páginas
  * 
- * Acesso restrito: apenas utilizadores com id_cargo === 1 (administradores) ou id_cargo === 2 (formadores)
+ * HIERARQUIA: Categoria → Área → Tópico → Curso (com chats)
+ * REGRA CRÍTICA: Eliminar tópico remove todos os cursos e chats associados
+ * ACESSO: Administradores (id_cargo === 1) e Formadores (id_cargo === 2)
  */
 const Gerir_Topicos = () => {
   const navigate = useNavigate();
@@ -51,10 +53,10 @@ const Gerir_Topicos = () => {
   const [newTopicoArea, setNewTopicoArea] = useState('');
   const [showTopicoForm, setShowTopicoForm] = useState(false);
   
-  // Estados para gestão das áreas filtradas
+  // Estados para gestão das áreas filtradas por categoria
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   
-  // Referência para timeout de filtros (evita muitas requisições)
+  // Referência para timeout de filtros (evita requisições excessivas)
   const filterTimeoutRef = useRef(null);
 
   /**
@@ -66,9 +68,7 @@ const Gerir_Topicos = () => {
 
   /**
    * Busca os tópicos da API com paginação e filtros
-   * Implementa paginação automática no frontend quando a API retorna todos os tópicos
-   * @param {number} pagina - Número da página a buscar
-   * @param {object} filtrosAtuais - Filtros a aplicar na busca
+   * Implementa paginação no frontend quando a API retorna todos os tópicos
    */
   const buscarTopicos = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
@@ -157,7 +157,6 @@ const Gerir_Topicos = () => {
           
           // Armazenar todos os tópicos para futuras operações
           setTodosOsTopicos(todosOsTopicosRecebidos);
-          
           processouComSucesso = true;
         }
       } else if (Array.isArray(response.data)) {
@@ -199,7 +198,6 @@ const Gerir_Topicos = () => {
         
         // Armazenar todos os tópicos para futuras operações
         setTodosOsTopicos(todosOsTopicosRecebidos);
-        
         processouComSucesso = true;
       }
 
@@ -215,15 +213,13 @@ const Gerir_Topicos = () => {
           setTotalTopicos(0);
         }
       } else {
-        console.error('Formato de resposta não reconhecido:', response.data);
         toast.error('Erro ao carregar tópicos do servidor.');
         setTopicos([]);
         setTotalTopicos(0);
       }
       
     } catch (error) {
-      console.error('Erro ao buscar tópicos:', error);
-      // Gestão de erros específicos
+      // Gestão específica de erros
       if (error.response) {
         if (error.response.status === 401) {
           toast.error('Não autorizado. Faz login novamente.');
@@ -241,7 +237,7 @@ const Gerir_Topicos = () => {
       // Garantir que o loading é sempre removido
       setLoading(false);
     }
-  }, [topicosPorPagina, navigate]); // Remover filtros das dependências
+  }, [topicosPorPagina, navigate]);
 
   /**
    * Busca todas as categorias disponíveis para os filtros
@@ -263,20 +259,17 @@ const Gerir_Topicos = () => {
         } else if (Array.isArray(response.data)) {
           categoriasData = response.data;
         } else {
-          console.error('Formato de resposta não reconhecido para categorias:', response.data);
           toast.error('Erro ao carregar categorias para o filtro.');
           setCategorias([]);
           return;
         }
         
-        console.log('Categorias carregadas:', categoriasData.length);
         setCategorias(categoriasData);
       } else {
         toast.error('Erro ao carregar categorias para o filtro.');
         setCategorias([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
       toast.error('Erro ao carregar categorias para o filtro.');
       setCategorias([]);
     }
@@ -302,20 +295,17 @@ const Gerir_Topicos = () => {
         } else if (Array.isArray(response.data)) {
           areasData = response.data;
         } else {
-          console.error('Formato de resposta não reconhecido para áreas:', response.data);
           toast.error('Erro ao carregar áreas para o filtro.');
           setAreas([]);
           return;
         }
         
-        console.log('Áreas carregadas:', areasData.length);
         setAreas(areasData);
       } else {
         toast.error('Erro ao carregar áreas para o filtro.');
         setAreas([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar áreas:', error);
       toast.error('Erro ao carregar áreas para o filtro.');
       setAreas([]);
     }
@@ -323,6 +313,7 @@ const Gerir_Topicos = () => {
 
   /**
    * Filtrar áreas baseadas na categoria selecionada
+   * Implementa filtragem hierárquica: categoria → área
    */
   useEffect(() => {
     if (filtros.idCategoria) {
@@ -355,7 +346,7 @@ const Gerir_Topicos = () => {
           return;
         }
         
-        // Verificar permissões de acesso
+        // Verificar permissões de acesso (administradores e formadores)
         if (currentUser && currentUser.id_cargo !== 1 && currentUser.id_cargo !== 2) {
           toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
           navigate('/');
@@ -368,7 +359,6 @@ const Gerir_Topicos = () => {
         await buscarTopicos(1, { nome: '', idCategoria: '', idArea: '' });
         
       } catch (error) {
-        console.error('Erro no carregamento inicial:', error);
         if (error.response && error.response.status === 401) {
           toast.error('Não autorizado. Por favor, faz login novamente.');
           navigate('/login');
@@ -379,13 +369,11 @@ const Gerir_Topicos = () => {
       }
     };
 
-    // Só carregar uma vez quando o componente monta
     fetchData();
-  }, [navigate, currentUser]); // Dependências mínimas
+  }, [navigate, currentUser]);
 
   /**
    * Gere alterações nos filtros com debounce para evitar muitas requisições
-   * @param {Event} e - Evento de mudança do input
    */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -488,12 +476,12 @@ const Gerir_Topicos = () => {
       }
       
       if (!newTopicoCategoria) {
-        toast.error('Por favor, selecciona uma categoria para o tópico.');
+        toast.error('Por favor, seleciona uma categoria para o tópico.');
         return;
       }
       
       if (!newTopicoArea) {
-        toast.error('Por favor, selecciona uma área para o tópico.');
+        toast.error('Por favor, seleciona uma área para o tópico.');
         return;
       }
       
@@ -510,7 +498,7 @@ const Gerir_Topicos = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        toast.success('Tópico actualizado com sucesso!');
+        toast.success('Tópico atualizado com sucesso!');
       } else {
         await axios.post(`${API_BASE}/topicos-area`, dadosTopico, {
           headers: { Authorization: `Bearer ${token}` }
@@ -533,7 +521,6 @@ const Gerir_Topicos = () => {
 
   /**
    * Prepara um tópico para edição
-   * @param {object} topico - Tópico a ser editado
    */
   const handleEditarTopico = (topico) => {
     setEditTopico(topico);
@@ -546,7 +533,6 @@ const Gerir_Topicos = () => {
 
   /**
    * Confirma a exclusão de um tópico
-   * @param {object} topico - Tópico a ser excluído
    */
   const handleConfirmarExclusao = (topico) => {
     setTopicoParaExcluir(topico);
@@ -555,6 +541,12 @@ const Gerir_Topicos = () => {
 
   /**
    * Executa a exclusão de um tópico
+   * IMPORTANTE: Esta operação remove em cascata:
+   * - Todos os chats de conversa associados ao tópico
+   * - Todos os cursos associados ao tópico
+   * - Todas as associações formador-curso
+   * - Todas as associações formando-curso
+   * Esta é uma das regras críticas de integridade do sistema
    */
   const handleExcluirTopico = async () => {
     if (!topicoParaExcluir) return;
@@ -567,7 +559,7 @@ const Gerir_Topicos = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      toast.success('Tópico eliminado com sucesso!');
+      toast.success('Tópico eliminado com sucesso! Todos os cursos e chats associados foram também removidos.');
       setShowDeleteConfirmation(false);
       setTopicoParaExcluir(null);
       
@@ -649,7 +641,7 @@ const Gerir_Topicos = () => {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className="main-content-gerir-topicos">
-        {/* Cabeçalho com título e acções principais */}
+        {/* Cabeçalho com título e ações principais */}
         <div className="topicos-header-gerir-topicos">
           <h1>
             Gestão de Tópicos 
@@ -711,7 +703,7 @@ const Gerir_Topicos = () => {
               >
                 <option value="">
                   {!filtros.idCategoria 
-                    ? "Selecciona uma categoria primeiro" 
+                    ? "Seleciona uma categoria primeiro" 
                     : "Todas as áreas"}
                 </option>
                 {areasFiltradas.map(area => (
@@ -759,7 +751,7 @@ const Gerir_Topicos = () => {
                     <th>Categoria</th>
                     <th>Área</th>
                     <th>Data de Criação</th>
-                    <th>Acções</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -793,7 +785,7 @@ const Gerir_Topicos = () => {
                           <button 
                             className="btn-icon-gerir-topicos btn-excluir-gerir-topicos"
                             onClick={() => handleConfirmarExclusao(topico)}
-                            title="Eliminar"
+                            title="Eliminar (remove também cursos e chats)"
                           >
                             🗑️
                           </button>
@@ -889,7 +881,7 @@ const Gerir_Topicos = () => {
                   setNewTopicoArea(''); // Limpar área quando categoria muda
                 }}
               >
-                <option value="">Selecciona uma categoria</option>
+                <option value="">Seleciona uma categoria</option>
                 {categorias.map(categoria => (
                   <option 
                     key={categoria.id_categoria} 
@@ -911,8 +903,8 @@ const Gerir_Topicos = () => {
               >
                 <option value="">
                   {!newTopicoCategoria 
-                    ? "Selecciona uma categoria primeiro" 
-                    : "Selecciona uma área"}
+                    ? "Seleciona uma categoria primeiro" 
+                    : "Seleciona uma área"}
                 </option>
                 {areas
                   .filter(area => area.id_categoria === parseInt(newTopicoCategoria))
@@ -939,7 +931,7 @@ const Gerir_Topicos = () => {
                 className="btn-confirmar-gerir-topicos"
                 onClick={handleSaveTopico}
               >
-                {editTopico ? 'Actualizar' : 'Criar'}
+                {editTopico ? 'Atualizar' : 'Criar'}
               </button>
             </div>
           </div>
@@ -952,9 +944,16 @@ const Gerir_Topicos = () => {
           <div className="modal-content-gerir-topicos">
             <h3>Confirmar Eliminação</h3>
             <p>
-              Tens a certeza que queres eliminar o tópico "{topicoParaExcluir?.titulo}"?
-              Esta acção não pode ser desfeita.
+              <strong>ATENÇÃO:</strong> Tens a certeza que queres eliminar o tópico "{topicoParaExcluir?.titulo}"?
             </p>
+            <p>
+              Esta ação irá eliminar <strong>permanentemente</strong>:
+              <br />• Todos os chats de conversa associados
+              <br />• Todos os cursos associados a este tópico
+              <br />• Todas as inscrições de formandos nesses cursos
+              <br />• Todas as associações de formadores
+            </p>
+            <p><strong>Esta ação não pode ser desfeita!</strong></p>
             <div className="modal-actions-gerir-topicos">
               <button 
                 className="btn-cancelar-gerir-topicos"
