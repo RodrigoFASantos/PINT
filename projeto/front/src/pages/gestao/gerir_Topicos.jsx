@@ -17,7 +17,8 @@ import Sidebar from '../../components/Sidebar';
  * - Editar tópicos existentes
  * - Eliminar tópicos (remove também chats e cursos associados em cascata)
  * - Filtrar tópicos por nome, categoria e área
- * - Navegar entre páginas
+ * - Ordenar tópicos por diferentes critérios
+ * - Navegar entre páginas com tabela sempre de 10 linhas
  * 
  * HIERARQUIA: Categoria → Área → Tópico → Curso (com chats)
  * REGRA CRÍTICA: Eliminar tópico remove todos os cursos e chats associados
@@ -38,10 +39,13 @@ const Gerir_Topicos = () => {
   const [areas, setAreas] = useState([]);
   const [totalTopicos, setTotalTopicos] = useState(0);
   
-  // Estados para paginação e filtros
+  // Estados para paginação e filtros - PADRONIZADO: sempre 10 itens por página
   const [paginaAtual, setPaginaAtual] = useState(1);
   const topicosPorPagina = 10;
   const [filtros, setFiltros] = useState({ nome: '', idCategoria: '', idArea: '' });
+  
+  // Estados para ordenação da tabela
+  const [ordenacao, setOrdenacao] = useState({ campo: '', direcao: 'asc' });
   
   // Estados para modais de confirmação e edição
   const [topicoParaExcluir, setTopicoParaExcluir] = useState(null);
@@ -56,19 +60,93 @@ const Gerir_Topicos = () => {
   // Estados para gestão das áreas filtradas por categoria
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   
-  // Referência para timeout de filtros (evita requisições excessivas)
+  // Referência para controlo do timeout dos filtros
   const filterTimeoutRef = useRef(null);
 
   /**
-   * Alterna a visibilidade da barra lateral
+   * Alterna a visibilidade da barra lateral de navegação
    */
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   /**
-   * Busca os tópicos da API com paginação e filtros
-   * Implementa paginação no frontend quando a API retorna todos os tópicos
+   * Ordena os tópicos com base no campo e direção especificados
+   * 
+   * @param {Array} topicos - Array de tópicos a ordenar
+   * @param {string} campo - Campo pelo qual ordenar ('titulo', 'categoria', 'area' ou 'criado')
+   * @param {string} direcao - Direção da ordenação ('asc' ou 'desc')
+   * @returns {Array} Array de tópicos ordenado
+   */
+  const ordenarTopicos = (topicos, campo, direcao) => {
+    return [...topicos].sort((a, b) => {
+      let valorA, valorB;
+      
+      switch (campo) {
+        case 'id':
+          valorA = a.id_topico || a.id || 0;
+          valorB = b.id_topico || b.id || 0;
+          break;
+        case 'titulo':
+          valorA = a.titulo || '';
+          valorB = b.titulo || '';
+          break;
+        case 'categoria':
+          valorA = getCategoriaName(a.id_categoria);
+          valorB = getCategoriaName(b.id_categoria);
+          break;
+        case 'area':
+          valorA = getAreaName(a.id_area);
+          valorB = getAreaName(b.id_area);
+          break;
+        case 'criado':
+          valorA = a.data_criacao ? new Date(a.data_criacao) : new Date(0);
+          valorB = b.data_criacao ? new Date(b.data_criacao) : new Date(0);
+          break;
+        default:
+          return 0;
+      }
+      
+      // Normalizar strings para comparação case-insensitive
+      if (typeof valorA === 'string') {
+        valorA = valorA.toLowerCase();
+        valorB = valorB.toLowerCase();
+      }
+      
+      // Aplicar direção da ordenação
+      if (direcao === 'asc') {
+        return valorA > valorB ? 1 : -1;
+      } else {
+        return valorA < valorB ? 1 : -1;
+      }
+    });
+  };
+
+  /**
+   * Gere o clique nos cabeçalhos da tabela para ordenação
+   * Alterna entre ascendente, descendente e sem ordenação
+   * 
+   * @param {string} campo - Campo a ordenar
+   */
+  const handleOrdenacao = (campo) => {
+    const novaOrdenacao = {
+      campo,
+      direcao: ordenacao.campo === campo && ordenacao.direcao === 'asc' ? 'desc' : 'asc'
+    };
+    
+    setOrdenacao(novaOrdenacao);
+    
+    // Aplicar ordenação imediatamente aos dados atuais
+    const topicosOrdenados = ordenarTopicos(topicos, novaOrdenacao.campo, novaOrdenacao.direcao);
+    setTopicos(topicosOrdenados);
+  };
+
+  /**
+   * Busca os tópicos da API com suporte a paginação, filtros e ordenação
+   * Implementa paginação controlada para sempre mostrar exatamente 10 linhas
+   * 
+   * @param {number} pagina - Número da página a carregar
+   * @param {Object} filtrosAtuais - Filtros a aplicar na busca
    */
   const buscarTopicos = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
@@ -80,143 +158,67 @@ const Gerir_Topicos = () => {
         return;
       }
       
-      // Preparar parâmetros da requisição
-      const params = {
-        page: pagina,
-        limit: topicosPorPagina,
-      };
-      
-      // Adicionar filtro de nome se especificado
-      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-        params.search = filtrosAtuais.nome.trim();
-      }
-      
-      // Adicionar filtro de categoria se especificado
-      if (filtrosAtuais.idCategoria) {
-        params.categoria = filtrosAtuais.idCategoria;
-      }
-      
-      // Adicionar filtro de área se especificado
-      if (filtrosAtuais.idArea) {
-        params.area = filtrosAtuais.idArea;
-      }
-      
-      // Limpar parâmetros vazios
-      Object.keys(params).forEach(key => 
-        (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
-      );
-      
-      // Fazer requisição à API
+      // Efetuar requisição à API para buscar TODOS os tópicos
       const response = await axios.get(`${API_BASE}/topicos-area`, {
-        params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      let todosOsTopicosRecebidos = [];
+      
       // Processar diferentes formatos de resposta da API
-      let topicosData = [];
-      let total = 0;
-      let processouComSucesso = false;
-
-      if (response.data && response.data.success) {
-        // Formato padrão: {success: true, data: [...], total: 12}
-        if (Array.isArray(response.data.data)) {
-          const todosOsTopicosRecebidos = response.data.data;
-          
-          // Aplicar filtros manualmente
-          let topicosFiltrados = todosOsTopicosRecebidos;
-          
-          // Filtro por nome
-          if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-            const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
-            topicosFiltrados = topicosFiltrados.filter(topico => 
-              topico.titulo?.toLowerCase().includes(termoBusca) ||
-              topico.descricao?.toLowerCase().includes(termoBusca)
-            );
-          }
-          
-          // Filtro por categoria
-          if (filtrosAtuais.idCategoria) {
-            topicosFiltrados = topicosFiltrados.filter(topico => 
-              topico.id_categoria == filtrosAtuais.idCategoria
-            );
-          }
-          
-          // Filtro por área
-          if (filtrosAtuais.idArea) {
-            topicosFiltrados = topicosFiltrados.filter(topico => 
-              topico.id_area == filtrosAtuais.idArea
-            );
-          }
-          
-          total = topicosFiltrados.length;
-          
-          // Implementar paginação manual no frontend
-          const startIndex = (pagina - 1) * topicosPorPagina;
-          const endIndex = startIndex + topicosPorPagina;
-          topicosData = topicosFiltrados.slice(startIndex, endIndex);
-          
-          // Armazenar todos os tópicos para futuras operações
-          setTodosOsTopicos(todosOsTopicosRecebidos);
-          processouComSucesso = true;
-        }
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        todosOsTopicosRecebidos = response.data.data;
       } else if (Array.isArray(response.data)) {
-        // Formato alternativo: array direto [{...}, {...}, ...]
-        const todosOsTopicosRecebidos = response.data;
-        
-        // Aplicar filtros manualmente
-        let topicosFiltrados = todosOsTopicosRecebidos;
-        
-        // Filtro por nome
-        if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-          const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
-          topicosFiltrados = topicosFiltrados.filter(topico => 
-            topico.titulo?.toLowerCase().includes(termoBusca) ||
-            topico.descricao?.toLowerCase().includes(termoBusca)
-          );
-        }
-        
-        // Filtro por categoria
-        if (filtrosAtuais.idCategoria) {
-          topicosFiltrados = topicosFiltrados.filter(topico => 
-            topico.id_categoria == filtrosAtuais.idCategoria
-          );
-        }
-        
-        // Filtro por área
-        if (filtrosAtuais.idArea) {
-          topicosFiltrados = topicosFiltrados.filter(topico => 
-            topico.id_area == filtrosAtuais.idArea
-          );
-        }
-        
-        total = topicosFiltrados.length;
-        
-        // Implementar paginação manual no frontend
-        const startIndex = (pagina - 1) * topicosPorPagina;
-        const endIndex = startIndex + topicosPorPagina;
-        topicosData = topicosFiltrados.slice(startIndex, endIndex);
-        
-        // Armazenar todos os tópicos para futuras operações
-        setTodosOsTopicos(todosOsTopicosRecebidos);
-        processouComSucesso = true;
-      }
-
-      if (processouComSucesso) {
-        // Verificar se os dados são válidos
-        if (Array.isArray(topicosData)) {
-          setTopicos(topicosData);
-          setTotalTopicos(total || 0);
-          setPaginaAtual(pagina);
-        } else {
-          toast.error('Formato de dados inválido recebido do servidor.');
-          setTopicos([]);
-          setTotalTopicos(0);
-        }
+        todosOsTopicosRecebidos = response.data;
       } else {
         toast.error('Erro ao carregar tópicos do servidor.');
         setTopicos([]);
         setTotalTopicos(0);
+        return;
       }
+      
+      // Aplicar filtros se especificados
+      let topicosFiltrados = todosOsTopicosRecebidos;
+      
+      // Filtro por nome
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+        topicosFiltrados = topicosFiltrados.filter(topico => 
+          topico.titulo?.toLowerCase().includes(termoBusca) ||
+          topico.descricao?.toLowerCase().includes(termoBusca)
+        );
+      }
+      
+      // Filtro por categoria
+      if (filtrosAtuais.idCategoria) {
+        topicosFiltrados = topicosFiltrados.filter(topico => 
+          topico.id_categoria == filtrosAtuais.idCategoria
+        );
+      }
+      
+      // Filtro por área
+      if (filtrosAtuais.idArea) {
+        topicosFiltrados = topicosFiltrados.filter(topico => 
+          topico.id_area == filtrosAtuais.idArea
+        );
+      }
+      
+      // Aplicar ordenação se estiver definida
+      if (ordenacao.campo) {
+        topicosFiltrados = ordenarTopicos(topicosFiltrados, ordenacao.campo, ordenacao.direcao);
+      }
+      
+      // Implementar paginação manual - SEMPRE 10 itens por página
+      const totalItens = topicosFiltrados.length;
+      const startIndex = (pagina - 1) * topicosPorPagina;
+      const endIndex = startIndex + topicosPorPagina;
+      const topicosParaPagina = topicosFiltrados.slice(startIndex, endIndex);
+      
+      // Atualizar estados com os dados processados
+      setTopicos(topicosParaPagina);
+      setTotalTopicos(totalItens);
+      setPaginaAtual(pagina);
+      setTodosOsTopicos(todosOsTopicosRecebidos);
       
     } catch (error) {
       // Gestão específica de erros
@@ -234,13 +236,12 @@ const Gerir_Topicos = () => {
       setTopicos([]);
       setTotalTopicos(0);
     } finally {
-      // Garantir que o loading é sempre removido
       setLoading(false);
     }
-  }, [topicosPorPagina, navigate]);
+  }, [topicosPorPagina, navigate, ordenacao]);
 
   /**
-   * Busca todas as categorias disponíveis para os filtros
+   * Busca todas as categorias disponíveis para os filtros e formulários
    */
   const buscarCategorias = useCallback(async () => {
     try {
@@ -276,7 +277,7 @@ const Gerir_Topicos = () => {
   }, []);
 
   /**
-   * Busca todas as áreas disponíveis para os filtros
+   * Busca todas as áreas disponíveis para os filtros e formulários
    */
   const buscarAreas = useCallback(async () => {
     try {
@@ -373,7 +374,9 @@ const Gerir_Topicos = () => {
   }, [navigate, currentUser]);
 
   /**
-   * Gere alterações nos filtros com debounce para evitar muitas requisições
+   * Gere alterações nos filtros com debounce para otimizar performance
+   * 
+   * @param {Event} e - Evento de mudança do input
    */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -394,7 +397,7 @@ const Gerir_Topicos = () => {
     if (filtros[name] !== value) {
       setLoading(true);
       
-      // Aplicar debounce de 600ms antes de fazer a busca
+      // Aplicar debounce de 600ms para evitar requisições excessivas
       filterTimeoutRef.current = setTimeout(() => {
         setPaginaAtual(1);
         buscarTopicos(1, novosFiltros);
@@ -403,7 +406,7 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Limpa todos os filtros aplicados e recarrega os tópicos
+   * Remove todos os filtros aplicados e recarrega os tópicos
    */
   const handleLimparFiltros = () => {
     if (filterTimeoutRef.current) {
@@ -418,7 +421,7 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Navega para a página anterior
+   * Navegar para a página anterior na paginação
    */
   const handlePaginaAnterior = () => {
     if (paginaAtual > 1 && !loading) {
@@ -428,7 +431,7 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Navega para a próxima página
+   * Navegar para a próxima página na paginação
    */
   const handleProximaPagina = () => {
     const totalPaginas = Math.max(1, Math.ceil(totalTopicos / topicosPorPagina));
@@ -463,7 +466,7 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Grava um novo tópico ou atualiza um existente
+   * Grava um novo tópico ou atualiza um existente na base de dados
    */
   const handleSaveTopico = async () => {
     try {
@@ -486,8 +489,8 @@ const Gerir_Topicos = () => {
       }
       
       const dadosTopico = {
-        titulo: newTopicoTitulo,
-        descricao: newTopicoDescricao,
+        titulo: newTopicoTitulo.trim(),
+        descricao: newTopicoDescricao.trim(),
         id_categoria: newTopicoCategoria,
         id_area: newTopicoArea
       };
@@ -520,7 +523,9 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Prepara um tópico para edição
+   * Prepara um tópico para edição, preenchendo o formulário
+   * 
+   * @param {Object} topico - Tópico a editar
    */
   const handleEditarTopico = (topico) => {
     setEditTopico(topico);
@@ -532,7 +537,9 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Confirma a exclusão de um tópico
+   * Prepara o modal de confirmação para eliminar um tópico
+   * 
+   * @param {Object} topico - Tópico a eliminar
    */
   const handleConfirmarExclusao = (topico) => {
     setTopicoParaExcluir(topico);
@@ -540,7 +547,7 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Executa a exclusão de um tópico
+   * Executa a eliminação definitiva de um tópico
    * IMPORTANTE: Esta operação remove em cascata:
    * - Todos os chats de conversa associados ao tópico
    * - Todos os cursos associados ao tópico
@@ -582,7 +589,10 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Encontrar nome da categoria pelo ID
+   * Encontra o nome da categoria pelo ID
+   * 
+   * @param {number} id - ID da categoria
+   * @returns {string} Nome da categoria ou 'N/A'
    */
   const getCategoriaName = (id) => {
     if (!id) return 'N/A';
@@ -591,7 +601,10 @@ const Gerir_Topicos = () => {
   };
 
   /**
-   * Encontrar nome da área pelo ID
+   * Encontra o nome da área pelo ID
+   * 
+   * @param {number} id - ID da área
+   * @returns {string} Nome da área ou 'N/A'
    */
   const getAreaName = (id) => {
     if (!id) return 'N/A';
@@ -603,15 +616,17 @@ const Gerir_Topicos = () => {
   const totalPaginas = Math.max(1, Math.ceil(totalTopicos / topicosPorPagina));
   const topicosParaMostrar = Array.isArray(topicos) ? topicos : [];
   
-  // Criar linhas vazias para manter altura consistente da tabela
+  // Gerar SEMPRE as linhas vazias necessárias para completar 10 linhas
   const linhasVazias = [];
-  const linhasNecessarias = Math.max(0, topicosPorPagina - topicosParaMostrar.length);
-  for (let i = 0; i < linhasNecessarias; i++) {
+  const topicosNaPagina = topicosParaMostrar.length;
+  const linhasVaziasNecessarias = Math.max(0, topicosPorPagina - topicosNaPagina);
+  
+  for (let i = 0; i < linhasVaziasNecessarias; i++) {
     linhasVazias.push(i);
   }
 
   /**
-   * Cleanup do timeout ao desmontar o componente
+   * Limpeza do timeout ao desmontar o componente
    */
   useEffect(() => {
     return () => {
@@ -641,7 +656,7 @@ const Gerir_Topicos = () => {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className="main-content-gerir-topicos">
-        {/* Cabeçalho com título e ações principais */}
+        {/* Cabeçalho da página com título e ações principais */}
         <div className="topicos-header-gerir-topicos">
           <h1>
             Gestão de Tópicos 
@@ -657,7 +672,7 @@ const Gerir_Topicos = () => {
           </div>
         </div>
         
-        {/* Secção de filtros */}
+        {/* Secção de filtros de pesquisa */}
         <div className="filtros-container-gerir-topicos">
           <div className="filtros-principais-gerir-topicos">
             <div className="filtro-gerir-topicos">
@@ -729,32 +744,78 @@ const Gerir_Topicos = () => {
           </div>
         </div>
         
-        {/* Tabela de tópicos e controlos de paginação */}
+        {/* Tabela principal de tópicos */}
         <div className="topicos-table-container-gerir-topicos">
-          {loading && topicos.length === 0 ? (
+          {loading ? (
             <div className="loading-container-gerir-topicos">
               <div className="loading-spinner-gerir-topicos"></div>
               <p>A carregar tópicos...</p>
             </div>
-          ) : !Array.isArray(topicosParaMostrar) || topicosParaMostrar.length === 0 ? (
-            <div className="no-items-gerir-topicos">
-              <p>Nenhum tópico encontrado com os filtros aplicados.</p>
-            </div>
           ) : (
             <>
-              {/* Tabela com os dados dos tópicos */}
               <table className="topicos-table-gerir-topicos">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Categoria</th>
-                    <th>Área</th>
-                    <th>Data de Criação</th>
-                    <th>Ações</th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('id')}
+                    >
+                      ID
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'id' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('titulo')}
+                    >
+                      Tópico
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'titulo' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('categoria')}
+                    >
+                      Categoria
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'categoria' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('area')}
+                    >
+                      Área
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'area' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('criado')}
+                    >
+                      Criado
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'criado' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Mostrar tópicos existentes */}
                   {topicosParaMostrar.map((topico, index) => {
                     if (!topico || typeof topico !== 'object') {
                       return null;
@@ -765,9 +826,21 @@ const Gerir_Topicos = () => {
                     return (
                       <tr key={topicoId}>
                         <td>{topicoId}</td>
-                        <td className="topico-titulo-gerir-topicos">{topico.titulo || 'Título não disponível'}</td>
-                        <td>{getCategoriaName(topico.id_categoria)}</td>
-                        <td>{getAreaName(topico.id_area)}</td>
+                        <td className="topico-titulo-gerir-topicos overflow-cell">
+                          <div className="cell-content">
+                            {topico.titulo || 'Título não disponível'}
+                          </div>
+                        </td>
+                        <td className="categoria-nome-gerir-topicos overflow-cell">
+                          <div className="cell-content">
+                            {getCategoriaName(topico.id_categoria)}
+                          </div>
+                        </td>
+                        <td className="area-nome-gerir-topicos overflow-cell">
+                          <div className="cell-content">
+                            {getAreaName(topico.id_area)}
+                          </div>
+                        </td>
                         <td>
                           {topico.data_criacao ? 
                             new Date(topico.data_criacao).toLocaleDateString('pt-PT') : 
@@ -778,14 +851,14 @@ const Gerir_Topicos = () => {
                           <button 
                             className="btn-icon-gerir-topicos btn-editar-gerir-topicos"
                             onClick={() => handleEditarTopico(topico)}
-                            title="Editar"
+                            title="Editar tópico"
                           >
                             ✏️
                           </button>
                           <button 
                             className="btn-icon-gerir-topicos btn-excluir-gerir-topicos"
                             onClick={() => handleConfirmarExclusao(topico)}
-                            title="Eliminar (remove também cursos e chats)"
+                            title="Eliminar tópico (remove também cursos e chats)"
                           >
                             🗑️
                           </button>
@@ -794,7 +867,7 @@ const Gerir_Topicos = () => {
                     );
                   })}
                   
-                  {/* Linhas vazias para manter altura consistente */}
+                  {/* SEMPRE completar até 10 linhas com linhas vazias */}
                   {linhasVazias.map((_, index) => (
                     <tr key={`empty-${index}`} className="linha-vazia-gerir-topicos">
                       <td>&nbsp;</td>
@@ -857,6 +930,8 @@ const Gerir_Topicos = () => {
                 value={newTopicoTitulo}
                 onChange={(e) => setNewTopicoTitulo(e.target.value)}
                 placeholder="Digite o título do tópico"
+                maxLength="200"
+                autoFocus
               />
             </div>
 
@@ -868,6 +943,7 @@ const Gerir_Topicos = () => {
                 onChange={(e) => setNewTopicoDescricao(e.target.value)}
                 placeholder="Digite uma descrição para o tópico (opcional)"
                 rows="4"
+                maxLength="500"
               />
             </div>
             
@@ -930,6 +1006,7 @@ const Gerir_Topicos = () => {
               <button 
                 className="btn-confirmar-gerir-topicos"
                 onClick={handleSaveTopico}
+                disabled={!newTopicoTitulo.trim() || !newTopicoCategoria || !newTopicoArea}
               >
                 {editTopico ? 'Atualizar' : 'Criar'}
               </button>
@@ -948,11 +1025,13 @@ const Gerir_Topicos = () => {
             </p>
             <p>
               Esta ação irá eliminar <strong>permanentemente</strong>:
-              <br />• Todos os chats de conversa associados
-              <br />• Todos os cursos associados a este tópico
-              <br />• Todas as inscrições de formandos nesses cursos
-              <br />• Todas as associações de formadores
             </p>
+            <ul className="warning-list-gerir-topicos">
+              <li>Todos os chats de conversa associados</li>
+              <li>Todos os cursos associados a este tópico</li>
+              <li>Todas as inscrições de formandos nesses cursos</li>
+              <li>Todas as associações de formadores</li>
+            </ul>
             <p><strong>Esta ação não pode ser desfeita!</strong></p>
             <div className="modal-actions-gerir-topicos">
               <button 
@@ -962,7 +1041,7 @@ const Gerir_Topicos = () => {
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar-gerir-topicos"
+                className="btn-confirmar-gerir-topicos btn-danger-gerir-topicos"
                 onClick={handleExcluirTopico}
               >
                 Confirmar Eliminação
@@ -972,7 +1051,17 @@ const Gerir_Topicos = () => {
         </div>
       )}
       
-      <ToastContainer />
+      <ToastContainer 
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

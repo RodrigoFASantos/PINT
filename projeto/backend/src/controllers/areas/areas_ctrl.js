@@ -12,21 +12,23 @@ const sequelize = require('../../config/db');
  * 
  * Implementa todas as operações CRUD para áreas de formação, garantindo
  * a integridade referencial com categorias (nível superior) e tópicos
- * (nível inferior) na estrutura hierárquica.
+ * (nível inferior) na estrutura hierárquica do sistema.
  * 
- * REGRAS DE NEGÓCIO:
- * - Área deve sempre pertencer a uma categoria válida
+ * REGRAS DE NEGÓCIO PRINCIPAIS:
+ * - Cada área deve sempre pertencer a uma categoria válida
  * - Nome de área deve ser único dentro da mesma categoria
  * - Área só pode ser eliminada se não tiver tópicos dependentes
  * - Todas as operações críticas usam transações para consistência
+ * - Respostas seguem formato estruturado para facilitar uso no frontend
  */
 
 /**
  * Obter lista paginada de áreas com informações das categorias
  * 
- * Esta função retorna todas as áreas do sistema com paginação,
+ * Esta função retorna todas as áreas do sistema com paginação avançada,
  * filtros opcionais e contagem dinâmica de tópicos associados.
- * Inclui também informações das categorias pai.
+ * Inclui também informações completas das categorias pai para facilitar
+ * a navegação hierárquica na interface.
  * 
  * @param {Request} req - Objeto de requisição HTTP
  * @param {Response} res - Objeto de resposta HTTP
@@ -34,7 +36,7 @@ const sequelize = require('../../config/db');
  * Query Parameters aceites:
  * - page: Número da página (padrão: 1)
  * - limit: Itens por página (padrão: 10, máximo: 100)
- * - search: Filtro de busca por nome da área
+ * - search: Filtro de busca por nome da área (busca parcial)
  * - categoria: ID da categoria para filtrar áreas específicas
  */
 exports.getAllAreas = async (req, res) => {
@@ -115,7 +117,7 @@ exports.getAllAreas = async (req, res) => {
     }));
 
     // Log de verificação dos dados retornados
-    console.log(`[AREAS] Retornando ${areasComContagem.length} áreas com contagens calculadas`);
+    console.log(`[AREAS] A retornar ${areasComContagem.length} áreas com contagens calculadas`);
     
     // Cálculo das informações de paginação
     const totalPaginas = Math.ceil(count / limitNum);
@@ -150,17 +152,19 @@ exports.getAllAreas = async (req, res) => {
 /**
  * Obter áreas de uma categoria específica
  * 
- * Esta função retorna todas as áreas pertencentes a uma categoria,
- * útil para seletores em cascata e navegação hierárquica.
+ * Esta função retorna todas as áreas pertencentes a uma categoria específica,
+ * muito útil para seletores em cascata e navegação hierárquica na interface.
+ * É frequentemente usada quando o utilizador seleciona uma categoria e precisa
+ * das áreas correspondentes para o próximo nível da hierarquia.
  * 
  * @param {Request} req - Requisição HTTP com id_categoria nos parâmetros
- * @param {Response} res - Resposta HTTP
+ * @param {Response} res - Resposta HTTP com áreas da categoria
  */
 exports.getAreasByCategoria = async (req, res) => {
   try {
     const { id_categoria } = req.params;
     
-    // Verificação da existência da categoria
+    // Verificação da existência da categoria antes de procurar áreas
     const categoria = await Categoria.findByPk(id_categoria);
     
     if (!categoria) {
@@ -201,11 +205,13 @@ exports.getAreasByCategoria = async (req, res) => {
 /**
  * Obter dados detalhados de uma área específica
  * 
- * Esta função retorna informações completas de uma área,
- * incluindo dados da categoria pai e lista de tópicos associados.
+ * Esta função retorna informações completas de uma área específica,
+ * incluindo dados da categoria pai e lista completa de tópicos associados.
+ * É útil para páginas de detalhes e para verificação de dependências
+ * antes de operações como edição ou eliminação.
  * 
- * @param {Request} req - Requisição HTTP com ID da área
- * @param {Response} res - Resposta HTTP
+ * @param {Request} req - Requisição HTTP com ID da área nos parâmetros
+ * @param {Response} res - Resposta HTTP com dados completos da área
  */
 exports.getAreaById = async (req, res) => {
   try {
@@ -262,11 +268,12 @@ exports.getAreaById = async (req, res) => {
 /**
  * Criar nova área de formação
  * 
- * Esta função cria uma nova área associada a uma categoria,
- * com validação rigorosa de unicidade dentro da categoria.
+ * Esta função cria uma nova área associada a uma categoria existente,
+ * com validação rigorosa de unicidade do nome dentro da categoria.
+ * Usa transações para garantir consistência e integridade dos dados.
  * 
  * @param {Request} req - Requisição HTTP com dados da nova área
- * @param {Response} res - Resposta HTTP
+ * @param {Response} res - Resposta HTTP com área criada
  */
 exports.createArea = async (req, res) => {
   // Iniciar transação para garantir operação atómica
@@ -367,11 +374,12 @@ exports.createArea = async (req, res) => {
 /**
  * Atualizar área existente
  * 
- * Esta função permite atualizar dados de uma área, incluindo
- * mudança de categoria, mantendo as validações de unicidade.
+ * Esta função permite atualizar dados de uma área existente, incluindo
+ * mudança de categoria. Mantém todas as validações de unicidade e
+ * integridade referencial através de transações.
  * 
- * @param {Request} req - Requisição HTTP com ID e novos dados
- * @param {Response} res - Resposta HTTP
+ * @param {Request} req - Requisição HTTP com ID da área e novos dados
+ * @param {Response} res - Resposta HTTP com área atualizada
  */
 exports.updateArea = async (req, res) => {
   // Iniciar transação para operação atómica
@@ -381,7 +389,7 @@ exports.updateArea = async (req, res) => {
     const { id } = req.params;
     const { nome, id_categoria } = req.body;
     
-    console.log(`[AREAS] Atualizando área ID ${id} com dados:`, { nome, id_categoria });
+    console.log(`[AREAS] A atualizar área ID ${id} com dados:`, { nome, id_categoria });
 
     // Validação obrigatória do nome
     if (!nome || nome.trim() === '') {
@@ -493,10 +501,15 @@ exports.updateArea = async (req, res) => {
  * 
  * Esta operação é irreversível e só pode ser executada se a área
  * não tiver tópicos dependentes. É fundamental para manter a
- * hierarquia do sistema intacta.
+ * hierarquia do sistema intacta e evitar referências órfãs.
+ * 
+ * A validação de dependências é rigorosa:
+ * - Verifica todos os tópicos associados à área
+ * - Bloqueia eliminação se houver qualquer dependência
+ * - Usa transações para garantir consistência total
  * 
  * @param {Request} req - Requisição HTTP com ID da área a eliminar
- * @param {Response} res - Resposta HTTP
+ * @param {Response} res - Resposta HTTP com resultado da operação
  */
 exports.deleteArea = async (req, res) => {
   // Transação obrigatória para operação de eliminação
@@ -529,7 +542,10 @@ exports.deleteArea = async (req, res) => {
       console.log(`[AREAS] Tentativa de eliminar área ${id} bloqueada - tem ${topicosAssociados} tópico(s) associado(s)`);
       return res.status(400).json({
         success: false,
-        message: `Não é possível eliminar a área pois existem ${topicosAssociados} tópico(s) associado(s). Remove primeiro os tópicos desta área ou elimina-os (o que também removerá cursos e chats associados).`
+        message: `Não é possível eliminar a área pois existem ${topicosAssociados} tópico(s) associado(s). Remove primeiro os tópicos desta área ou elimina-os (o que também removerá cursos e chats associados).`,
+        dependencias: {
+          topicos: topicosAssociados
+        }
       });
     }
     

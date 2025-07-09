@@ -17,7 +17,8 @@ import Sidebar from '../../components/Sidebar';
  * - Editar áreas existentes
  * - Eliminar áreas (apenas se não tiverem tópicos dependentes)
  * - Filtrar áreas por nome e categoria
- * - Navegar entre páginas
+ * - Navegar entre páginas com tabela sempre de 10 linhas
+ * - Ordenar áreas por diferentes critérios
  * 
  * HIERARQUIA: Categoria → Área → Tópico → Curso
  * ACESSO: Apenas administradores (id_cargo === 1)
@@ -36,10 +37,13 @@ const Gerir_Area = () => {
   const [categorias, setCategorias] = useState([]);
   const [totalAreas, setTotalAreas] = useState(0);
   
-  // Estados para paginação e filtros
+  // Estados para paginação e filtros - PADRONIZADO: sempre 10 itens por página
   const [paginaAtual, setPaginaAtual] = useState(1);
   const areasPorPagina = 10;
   const [filtros, setFiltros] = useState({ nome: '', idCategoria: '' });
+  
+  // Estados para ordenação da tabela
+  const [ordenacao, setOrdenacao] = useState({ campo: '', direcao: 'asc' });
   
   // Estados para modais de confirmação e edição
   const [areaParaExcluir, setAreaParaExcluir] = useState(null);
@@ -49,143 +53,167 @@ const Gerir_Area = () => {
   const [newAreaCategoria, setNewAreaCategoria] = useState('');
   const [showAreaForm, setShowAreaForm] = useState(false);
   
-  // Referência para timeout de filtros (evita requisições excessivas)
+  // Referência para controlo do timeout dos filtros
   const filterTimeoutRef = useRef(null);
 
   /**
-   * Alterna a visibilidade da barra lateral
+   * Alterna a visibilidade da barra lateral de navegação
    */
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   /**
-   * Busca as áreas da API com paginação e filtros
-   * Implementa paginação no frontend quando a API retorna todas as áreas
+   * Ordena as áreas com base no campo e direção especificados
+   * 
+   * @param {Array} areas - Array de áreas a ordenar
+   * @param {string} campo - Campo pelo qual ordenar ('id', 'nome', 'categoria' ou 'topicos')
+   * @param {string} direcao - Direção da ordenação ('asc' ou 'desc')
+   * @returns {Array} Array de áreas ordenado
+   */
+  const ordenarAreas = (areas, campo, direcao) => {
+    return [...areas].sort((a, b) => {
+      let valorA, valorB;
+      
+      switch (campo) {
+        case 'id':
+          valorA = a.id_area || a.id || 0;
+          valorB = b.id_area || b.id || 0;
+          break;
+        case 'nome':
+          valorA = a.nome || '';
+          valorB = b.nome || '';
+          break;
+        case 'categoria':
+          valorA = getCategoriaName(a.id_categoria);
+          valorB = getCategoriaName(b.id_categoria);
+          break;
+        case 'topicos':
+          valorA = a.topicos_count || a.topicosCount || 0;
+          valorB = b.topicos_count || b.topicosCount || 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      // Normalizar strings para comparação case-insensitive
+      if (typeof valorA === 'string') {
+        valorA = valorA.toLowerCase();
+        valorB = valorB.toLowerCase();
+      }
+      
+      // Aplicar direção da ordenação
+      if (direcao === 'asc') {
+        return valorA > valorB ? 1 : -1;
+      } else {
+        return valorA < valorB ? 1 : -1;
+      }
+    });
+  };
+
+  /**
+   * Gere o clique nos cabeçalhos da tabela para ordenação
+   * Alterna entre ascendente, descendente e sem ordenação
+   * 
+   * @param {string} campo - Campo a ordenar
+   */
+  const handleOrdenacao = (campo) => {
+    const novaOrdenacao = {
+      campo,
+      direcao: ordenacao.campo === campo && ordenacao.direcao === 'asc' ? 'desc' : 'asc'
+    };
+    
+    setOrdenacao(novaOrdenacao);
+    
+    // Aplicar ordenação imediatamente aos dados atuais
+    const areasOrdenadas = ordenarAreas(areas, novaOrdenacao.campo, novaOrdenacao.direcao);
+    setAreas(areasOrdenadas);
+  };
+
+  /**
+   * Busca as áreas da API com suporte a paginação, filtros e contagem de tópicos
+   * Implementa paginação controlada para sempre mostrar exatamente 10 linhas
+   * 
+   * @param {number} pagina - Número da página a carregar
+   * @param {Object} filtrosAtuais - Filtros a aplicar na busca
    */
   const buscarAreas = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Preparar parâmetros da requisição
-      const params = {
-        page: pagina,
-        limit: areasPorPagina,
-      };
-      
-      // Adicionar filtro de nome se especificado
-      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-        params.search = filtrosAtuais.nome.trim();
-      }
-      
-      // Adicionar filtro de categoria se especificado
-      if (filtrosAtuais.idCategoria) {
-        params.categoria = filtrosAtuais.idCategoria;
-      }
-      
-      // Limpar parâmetros vazios
-      Object.keys(params).forEach(key => 
-        (params[key] === '' || params[key] === null || params[key] === undefined) && delete params[key]
-      );
-      
-      // Fazer requisição à API
+      // Efetuar requisição para buscar TODAS as áreas
       const response = await axios.get(`${API_BASE}/areas`, {
-        params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      let todasAsAreasRecebidas = [];
+      
       // Processar diferentes formatos de resposta da API
-      let areasData = [];
-      let total = 0;
-      let processouComSucesso = false;
-
-      if (response.data && response.data.success) {
-        // Formato padrão: {success: true, areas: [...], total: 12} - API com paginação
-        areasData = response.data.areas;
-        total = response.data.total || 0;
-        processouComSucesso = true;
+      if (response.data && response.data.success && Array.isArray(response.data.areas)) {
+        todasAsAreasRecebidas = response.data.areas;
       } else if (Array.isArray(response.data)) {
-        // Formato alternativo: array direto [{...}, {...}, ...] - API sem paginação
-        const todasAsAreasRecebidas = response.data;
-        
-        // Aplicar filtros manualmente
-        let areasFiltradas = todasAsAreasRecebidas;
-        
-        // Filtro por nome
-        if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-          const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
-          areasFiltradas = areasFiltradas.filter(area => 
-            area.nome?.toLowerCase().includes(termoBusca)
-          );
-        }
-        
-        // Filtro por categoria
-        if (filtrosAtuais.idCategoria) {
-          areasFiltradas = areasFiltradas.filter(area => 
-            area.id_categoria == filtrosAtuais.idCategoria
-          );
-        }
-        
-        total = areasFiltradas.length;
-        
-        // Implementar paginação manual no frontend
-        const startIndex = (pagina - 1) * areasPorPagina;
-        const endIndex = startIndex + areasPorPagina;
-        areasData = areasFiltradas.slice(startIndex, endIndex);
-        
-        // Armazenar todas as áreas para futuras operações
-        setTodasAsAreas(todasAsAreasRecebidas);
-        processouComSucesso = true;
-      } else if (response.data && Array.isArray(response.data.areas)) {
-        // Formato alternativo: {areas: [...]} sem success
-        areasData = response.data.areas;
-        total = response.data.total || response.data.areas.length;
-        processouComSucesso = true;
-      }
-
-      if (processouComSucesso) {
-console.log("API /areas response:", response.data);
-        // Verificar se os dados são válidos
-        if (Array.isArray(areasData)) {
-          setAreas(areasData);
-          console.log("Áreas para mostrar na tabela:", areasData);
-          setTotalAreas(total || 0);
-          setPaginaAtual(pagina);
-        } else {
-          toast.error('Formato de dados inválido recebido do servidor.');
-          setAreas([]);
-          setTotalAreas(0);
-        }
+        todasAsAreasRecebidas = response.data;
       } else {
-        toast.error('Erro ao carregar áreas do servidor.');
+        toast.error('Formato de dados inválido recebido do servidor');
         setAreas([]);
         setTotalAreas(0);
+        return;
       }
       
-      setLoading(false);
+      // Aplicar filtros se especificados
+      let areasFiltradas = todasAsAreasRecebidas;
+      
+      // Filtro por nome
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+        areasFiltradas = areasFiltradas.filter(area => 
+          area.nome?.toLowerCase().includes(termoBusca)
+        );
+      }
+      
+      // Filtro por categoria
+      if (filtrosAtuais.idCategoria) {
+        areasFiltradas = areasFiltradas.filter(area => 
+          area.id_categoria == filtrosAtuais.idCategoria
+        );
+      }
+      
+      // Aplicar ordenação se estiver definida
+      if (ordenacao.campo) {
+        areasFiltradas = ordenarAreas(areasFiltradas, ordenacao.campo, ordenacao.direcao);
+      }
+      
+      // Implementar paginação manual - SEMPRE 10 itens por página
+      const totalItens = areasFiltradas.length;
+      const startIndex = (pagina - 1) * areasPorPagina;
+      const endIndex = startIndex + areasPorPagina;
+      const areasParaPagina = areasFiltradas.slice(startIndex, endIndex);
+      
+      // Atualizar estados com os dados processados
+      setAreas(areasParaPagina);
+      setTotalAreas(totalItens);
+      setPaginaAtual(pagina);
+      setTodasAsAreas(todasAsAreasRecebidas);
+      
     } catch (error) {
       // Gestão específica de erros
-      if (error.response) {
-        if (error.response.status === 401) {
-          toast.error('Não autorizado. Faz login novamente.');
-          navigate('/login');
-        } else {
-          toast.error(`Erro ao carregar áreas: ${error.response.data?.message || 'Erro desconhecido'}`);
-        }
+      if (error.response?.status === 401) {
+        toast.error('Não autorizado. Faz login novamente.');
+        navigate('/login');
       } else {
-        toast.error('Erro ao processar a requisição.');
+        toast.error(`Erro ao carregar áreas: ${error.response?.data?.message || 'Erro desconhecido'}`);
       }
       
       setAreas([]);
       setTotalAreas(0);
+    } finally {
       setLoading(false);
     }
-  }, [areasPorPagina, navigate, filtros]);
-
+  }, [areasPorPagina, navigate, ordenacao]);
 
   /**
-   * Busca todas as categorias disponíveis para os filtros
+   * Busca todas as categorias disponíveis para os filtros e formulários
    */
   const buscarCategorias = useCallback(async () => {
     try {
@@ -244,7 +272,7 @@ console.log("API /areas response:", response.data);
           }
         }
         
-        // Carregar dados iniciais
+        // Carregar dados iniciais sequencialmente
         await buscarCategorias();
         await buscarAreas(1, { nome: '', idCategoria: '' });
         
@@ -255,7 +283,6 @@ console.log("API /areas response:", response.data);
         } else {
           toast.error('Erro ao carregar dados. Por favor, tenta novamente mais tarde.');
         }
-        
         setLoading(false);
       }
     };
@@ -264,7 +291,9 @@ console.log("API /areas response:", response.data);
   }, [navigate, currentUser, buscarAreas, buscarCategorias]);
 
   /**
-   * Gere alterações nos filtros com debounce para evitar muitas requisições
+   * Gere alterações nos filtros com debounce para otimizar performance
+   * 
+   * @param {Event} e - Evento de mudança do input
    */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -282,7 +311,7 @@ console.log("API /areas response:", response.data);
       
       setLoading(true);
       
-      // Aplicar debounce de 600ms antes de fazer a busca
+      // Aplicar debounce de 600ms para evitar requisições excessivas
       filterTimeoutRef.current = setTimeout(() => {
         setPaginaAtual(1);
         buscarAreas(1, novosFiltros);
@@ -293,7 +322,7 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Limpa todos os filtros aplicados e recarrega as áreas
+   * Remove todos os filtros aplicados e recarrega as áreas
    */
   const handleLimparFiltros = () => {
     if (filterTimeoutRef.current) {
@@ -308,7 +337,7 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Navega para a página anterior
+   * Navegar para a página anterior na paginação
    */
   const handlePaginaAnterior = () => {
     if (paginaAtual > 1 && !loading) {
@@ -318,7 +347,7 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Navega para a próxima página
+   * Navegar para a próxima página na paginação
    */
   const handleProximaPagina = () => {
     const totalPaginas = Math.max(1, Math.ceil(totalAreas / areasPorPagina));
@@ -349,7 +378,7 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Grava uma nova área ou atualiza uma existente
+   * Grava uma nova área ou atualiza uma existente na base de dados
    */
   const handleSaveArea = async () => {
     try {
@@ -367,7 +396,7 @@ console.log("API /areas response:", response.data);
       }
       
       const dadosArea = {
-        nome: newAreaNome,
+        nome: newAreaNome.trim(),
         id_categoria: newAreaCategoria
       };
       
@@ -399,7 +428,9 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Prepara uma área para edição
+   * Prepara uma área para edição, preenchendo o formulário
+   * 
+   * @param {Object} area - Área a editar
    */
   const handleEditarArea = (area) => {
     setEditArea(area);
@@ -409,7 +440,9 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Confirma a exclusão de uma área
+   * Prepara o modal de confirmação para eliminar uma área
+   * 
+   * @param {Object} area - Área a eliminar
    */
   const handleConfirmarExclusao = (area) => {
     setAreaParaExcluir(area);
@@ -417,7 +450,7 @@ console.log("API /areas response:", response.data);
   };
 
   /**
-   * Executa a exclusão de uma área
+   * Executa a eliminação definitiva de uma área
    * NOTA: A eliminação de áreas segue a regra de integridade:
    * - Só pode ser eliminada se não tiver tópicos dependentes
    * - O backend valida automaticamente esta restrição
@@ -461,19 +494,33 @@ console.log("API /areas response:", response.data);
     navigate('/admin/categorias');
   };
 
+  /**
+   * Encontra o nome da categoria pelo ID
+   * 
+   * @param {number} id - ID da categoria
+   * @returns {string} Nome da categoria ou 'N/A'
+   */
+  const getCategoriaName = (id) => {
+    if (!id) return 'N/A';
+    const categoria = categorias.find(c => c.id_categoria === id || c.id === id);
+    return categoria ? categoria.nome : 'N/A';
+  };
+
   // Cálculos para paginação e apresentação
   const totalPaginas = Math.max(1, Math.ceil(totalAreas / areasPorPagina));
   const areasParaMostrar = Array.isArray(areas) ? areas : [];
   
-  // Criar linhas vazias para manter altura consistente da tabela
+  // Gerar SEMPRE as linhas vazias necessárias para completar 10 linhas
   const linhasVazias = [];
-  const linhasNecessarias = Math.max(0, areasPorPagina - areasParaMostrar.length);
-  for (let i = 0; i < linhasNecessarias; i++) {
+  const areasNaPagina = areasParaMostrar.length;
+  const linhasVaziasNecessarias = Math.max(0, areasPorPagina - areasNaPagina);
+  
+  for (let i = 0; i < linhasVaziasNecessarias; i++) {
     linhasVazias.push(i);
   }
 
   /**
-   * Cleanup do timeout ao desmontar o componente
+   * Limpeza do timeout ao desmontar o componente
    */
   useEffect(() => {
     return () => {
@@ -503,7 +550,7 @@ console.log("API /areas response:", response.data);
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className="main-content-gerir-area">
-        {/* Cabeçalho com título e ações principais */}
+        {/* Cabeçalho da página com título e ações principais */}
         <div className="areas-header-gerir-area">
           <h1>
             Gestão de Áreas 
@@ -525,7 +572,7 @@ console.log("API /areas response:", response.data);
           </div>
         </div>
         
-        {/* Secção de filtros */}
+        {/* Secção de filtros de pesquisa */}
         <div className="filtros-container-gerir-area">
           <div className="filtros-principais-gerir-area">
             <div className="filtro-gerir-area">
@@ -572,63 +619,100 @@ console.log("API /areas response:", response.data);
           </div>
         </div>
         
-        {/* Tabela de áreas e controlos de paginação */}
+        {/* Tabela principal de áreas */}
         <div className="areas-table-container-gerir-area">
           {loading ? (
             <div className="loading-container-gerir-area">
               <div className="loading-spinner-gerir-area"></div>
               <p>A carregar áreas...</p>
             </div>
-          ) : !Array.isArray(areasParaMostrar) || areasParaMostrar.length === 0 ? (
-            <div className="no-items-gerir-area">
-              <p>Nenhuma área encontrada com os filtros aplicados.</p>
-            </div>
           ) : (
             <>
-              {/* Tabela com os dados das áreas */}
               <table className="areas-table-gerir-area">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Nome da Área</th>
-                    <th>Categoria</th>
-                    <th>Tópicos</th>
-                    <th>Ações</th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('id')}
+                    >
+                      ID
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'id' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('nome')}
+                    >
+                      Área
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'nome' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('categoria')}
+                    >
+                      Categoria
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'categoria' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('topicos')}
+                    >
+                      Tópicos
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'topicos' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Mostrar áreas existentes */}
                   {areasParaMostrar.map((area, index) => {
                     if (!area || typeof area !== 'object') {
                       return null;
                     }
                     
-                    // Processar nome da categoria de forma segura
-                    const categoriaObj = categorias.find(cat => String(cat.id_categoria) === String(area.id_categoria));
-const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
-
-
-                    
                     const areaId = area.id_area || area.id || index;
-                    console.log("Renderizar área:", area);
 
                     return (
                       <tr key={areaId}>
                         <td>{areaId}</td>
-                        <td className="area-nome-gerir-area">{area.nome || 'Nome não disponível'}</td>
-                        <td>{categoriaNome}</td>
+                        <td className="area-nome-gerir-area overflow-cell">
+                          <div className="cell-content">
+                            {area.nome || 'Nome não disponível'}
+                          </div>
+                        </td>
+                        <td className="overflow-cell">
+                          <div className="cell-content">
+                            {getCategoriaName(area.id_categoria)}
+                          </div>
+                        </td>
                         <td>{area.topicos_count || area.topicosCount || 0}</td>
                         <td className="acoes-gerir-area">
                           <button 
                             className="btn-icon-gerir-area btn-editar-gerir-area"
                             onClick={() => handleEditarArea(area)}
-                            title="Editar"
+                            title="Editar área"
                           >
                             ✏️
                           </button>
                           <button 
                             className="btn-icon-gerir-area btn-excluir-gerir-area"
                             onClick={() => handleConfirmarExclusao(area)}
-                            title="Eliminar"
+                            title="Eliminar área"
                             disabled={(area.topicos_count || area.topicosCount || 0) > 0}
                           >
                             🗑️
@@ -636,12 +720,9 @@ const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
                         </td>
                       </tr>
                     );
-                  }
+                  })}
                   
-                  
-                  )}
-                  
-                  {/* Linhas vazias para manter altura consistente */}
+                  {/* SEMPRE completar até 10 linhas com linhas vazias */}
                   {linhasVazias.map((_, index) => (
                     <tr key={`empty-${index}`} className="linha-vazia-gerir-area">
                       <td>&nbsp;</td>
@@ -702,6 +783,8 @@ const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
                 value={newAreaNome}
                 onChange={(e) => setNewAreaNome(e.target.value)}
                 placeholder="Digite o nome da área"
+                maxLength="100"
+                autoFocus
               />
             </div>
             <div className="form-group-gerir-area">
@@ -732,6 +815,7 @@ const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
               <button 
                 className="btn-confirmar-gerir-area"
                 onClick={handleSaveArea}
+                disabled={!newAreaNome.trim() || !newAreaCategoria}
               >
                 {editArea ? 'Atualizar' : 'Criar'}
               </button>
@@ -757,7 +841,7 @@ const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
                 Cancelar
               </button>
               <button 
-                className="btn-confirmar-gerir-area"
+                className="btn-confirmar-gerir-area btn-danger-gerir-area"
                 onClick={handleExcluirArea}
               >
                 Confirmar Eliminação
@@ -767,7 +851,17 @@ const categoriaNome = categoriaObj ? categoriaObj.nome : "Não especificada";
         </div>
       )}
       
-      <ToastContainer />
+      <ToastContainer 
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

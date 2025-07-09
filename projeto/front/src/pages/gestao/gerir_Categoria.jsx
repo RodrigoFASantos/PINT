@@ -10,171 +10,227 @@ import Sidebar from '../../components/Sidebar';
 
 /**
  * Componente para gestão de categorias de formação
- * Permite visualizar, criar, editar e eliminar categorias com validações de integridade
+ * 
+ * Funcionalidades principais:
+ * - Visualizar lista de categorias com contagem de áreas associadas
+ * - Criar novas categorias de formação
+ * - Editar categorias existentes
+ * - Eliminar categorias (com validações de integridade referencial)
+ * - Filtrar categorias por nome
+ * - Ordenar categorias de forma ascendente/descendente por ID, nome ou áreas
+ * - Ver detalhes das áreas associadas a cada categoria
+ * 
+ * Hierarquia do sistema: Categoria → Área → Tópico → Curso
+ * 
+ * Restrições de acesso: Apenas administradores (id_cargo === 1)
+ * 
+ * @returns {JSX.Element} Interface de gestão de categorias
  */
 const Gerir_Categoria = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   
-  // Estados para controlo da interface
+  // Estados de controlo da interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // Estados para gestão dos dados das categorias
+  // Estados de dados das categorias
   const [categorias, setCategorias] = useState([]);
   const [totalCategorias, setTotalCategorias] = useState(0);
   
-  // Estados para paginação e filtros
+  // Estados de paginação e filtros
   const [paginaAtual, setPaginaAtual] = useState(1);
   const categoriasPorPagina = 10;
   const [filtros, setFiltros] = useState({ nome: '' });
   
-  // Estados para modais de confirmação e edição
+  // Estados de ordenação da tabela
+  const [ordenacao, setOrdenacao] = useState({ campo: '', direcao: 'asc' });
+  
+  // Estados dos modais de edição e eliminação
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [editCategoria, setEditCategoria] = useState(null);
   const [newCategoriaNome, setNewCategoriaNome] = useState('');
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
   
-  // Referência para timeout de filtros
+  // Estados do modal de visualização de áreas
+  const [showAreasModal, setShowAreasModal] = useState(false);
+  const [areasCategoria, setAreasCategoria] = useState([]);
+  const [categoriaComAreas, setCategoriaComAreas] = useState(null);
+  
+  // Referência para controlo do timeout dos filtros
   const filterTimeoutRef = useRef(null);
 
   /**
-   * Alternar visibilidade da barra lateral
+   * Alterna a visibilidade da barra lateral de navegação
    */
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   /**
-   * Buscar categorias da API com paginação e filtros
+   * Ordena as categorias com base no campo e direção especificados
+   * 
+   * @param {Array} categorias - Array de categorias a ordenar
+   * @param {string} campo - Campo pelo qual ordenar ('id', 'nome' ou 'areas')
+   * @param {string} direcao - Direção da ordenação ('asc' ou 'desc')
+   * @returns {Array} Array de categorias ordenado
+   */
+  const ordenarCategorias = (categorias, campo, direcao) => {
+    return [...categorias].sort((a, b) => {
+      let valorA, valorB;
+      
+      switch (campo) {
+        case 'id':
+          valorA = a.id_categoria || a.id || 0;
+          valorB = b.id_categoria || b.id || 0;
+          break;
+        case 'nome':
+          valorA = a.nome || '';
+          valorB = b.nome || '';
+          break;
+        case 'areas':
+          valorA = a.areas_count || 0;
+          valorB = b.areas_count || 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      // Normalizar strings para comparação case-insensitive
+      if (typeof valorA === 'string') {
+        valorA = valorA.toLowerCase();
+        valorB = valorB.toLowerCase();
+      }
+      
+      // Aplicar direção da ordenação
+      if (direcao === 'asc') {
+        return valorA > valorB ? 1 : -1;
+      } else {
+        return valorA < valorB ? 1 : -1;
+      }
+    });
+  };
+
+  /**
+   * Gere o clique nos cabeçalhos da tabela para ordenação
+   * Alterna entre ascendente, descendente e sem ordenação
+   * 
+   * @param {string} campo - Campo a ordenar
+   */
+  const handleOrdenacao = (campo) => {
+    const novaOrdenacao = {
+      campo,
+      direcao: ordenacao.campo === campo && ordenacao.direcao === 'asc' ? 'desc' : 'asc'
+    };
+    
+    setOrdenacao(novaOrdenacao);
+    
+    // Aplicar ordenação imediatamente aos dados atuais
+    const categoriasOrdenadas = ordenarCategorias(categorias, novaOrdenacao.campo, novaOrdenacao.direcao);
+    setCategorias(categoriasOrdenadas);
+  };
+
+  /**
+   * Busca categorias da API com suporte a paginação, filtros e contagem de áreas
+   * 
+   * @param {number} pagina - Número da página a carregar
+   * @param {Object} filtrosAtuais - Filtros a aplicar na busca
    */
   const buscarCategorias = useCallback(async (pagina = 1, filtrosAtuais = filtros) => {
-    console.log('🔄 [FRONTEND] A buscar categorias...', { pagina, filtros: filtrosAtuais });
-    
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Preparar parâmetros da requisição
-      const params = {
-        page: pagina,
-        limit: categoriasPorPagina,
-      };
-      
-      // Adicionar filtro de nome se especificado
-      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
-        params.search = filtrosAtuais.nome.trim();
-      }
-      
-      console.log('📡 [FRONTEND] Parâmetros da requisição:', params);
-      console.log('📡 [FRONTEND] URL completa:', `${API_BASE}/categorias`);
-      
-      // Fazer requisição à API
+      // Efetuar requisição para buscar TODAS as categorias (sem paginação na API)
       const response = await axios.get(`${API_BASE}/categorias`, {
-        params,
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('📨 [FRONTEND] ========== RESPOSTA COMPLETA ==========');
-      console.log('📨 [FRONTEND] Status:', response.status);
-      console.log('📨 [FRONTEND] Headers:', response.headers);
-      console.log('📨 [FRONTEND] Dados:', response.data);
-      console.log('📨 [FRONTEND] Tipo da resposta:', typeof response.data);
-      console.log('📨 [FRONTEND] É array?:', Array.isArray(response.data));
+      let todasAsCategorias = [];
       
-      let categoriasRecebidas = [];
-      let totalRecebido = 0;
-      
-      // Processar resposta da API - suportar múltiplos formatos
+      // Processar diferentes formatos de resposta da API
       if (response.data && response.data.success && Array.isArray(response.data.categorias)) {
-        // Formato estruturado: {success: true, categorias: [...], total: ...}
-        categoriasRecebidas = response.data.categorias;
-        totalRecebido = response.data.total || 0;
-        console.log('✅ [FRONTEND] Formato estruturado detectado');
-        
+        // Formato estruturado com metadados
+        todasAsCategorias = response.data.categorias;
       } else if (Array.isArray(response.data)) {
-        // Formato array direto: [{...}, {...}]
-        console.log('⚠️ [FRONTEND] Formato array direto detectado - a API não está a usar o controlador correto!');
-        categoriasRecebidas = response.data;
-        totalRecebido = response.data.length;
-        
-        // Tentar buscar contagem de áreas manualmente para cada categoria
-        console.log('🔧 [FRONTEND] A tentar buscar contagem de áreas manualmente...');
-        
-        try {
-          categoriasRecebidas = await Promise.all(
-            categoriasRecebidas.map(async (categoria) => {
-              try {
-                // Buscar áreas para esta categoria específica
-                const areasResponse = await axios.get(`${API_BASE}/areas`, {
-                  params: { categoria_id: categoria.id_categoria },
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                let areasCount = 0;
-                if (areasResponse.data && Array.isArray(areasResponse.data)) {
-                  areasCount = areasResponse.data.filter(area => area.id_categoria === categoria.id_categoria).length;
-                } else if (areasResponse.data && areasResponse.data.areas) {
-                  areasCount = areasResponse.data.areas.filter(area => area.id_categoria === categoria.id_categoria).length;
-                }
-                
-                console.log(`🔍 [FRONTEND] Categoria "${categoria.nome}" tem ${areasCount} área(s) (contagem manual)`);
-                
-                return {
-                  ...categoria,
-                  areas_count: areasCount
-                };
-                
-              } catch (error) {
-                console.warn(`⚠️ [FRONTEND] Erro ao buscar áreas para categoria ${categoria.nome}:`, error.message);
-                return {
-                  ...categoria,
-                  areas_count: 0
-                };
-              }
-            })
-          );
-        } catch (error) {
-          console.error('❌ [FRONTEND] Erro na contagem manual de áreas:', error);
-          // Fallback: adicionar areas_count = 0 se a contagem manual falhar
-          categoriasRecebidas = categoriasRecebidas.map(categoria => ({
-            ...categoria,
-            areas_count: 0
-          }));
-        }
-        
+        // Formato array direto
+        todasAsCategorias = response.data;
       } else {
-        console.error('❌ [FRONTEND] Formato de resposta não reconhecido:', response.data);
         toast.error('Formato de dados inválido recebido do servidor');
         setCategorias([]);
         setTotalCategorias(0);
         return;
       }
       
-      console.log(`✅ [FRONTEND] Processadas ${categoriasRecebidas.length} categorias de um total de ${totalRecebido}`);
+      // Buscar contagem de áreas para cada categoria
+      try {
+        todasAsCategorias = await Promise.all(
+          todasAsCategorias.map(async (categoria) => {
+            try {
+              // Requisição individual para contar áreas desta categoria
+              const areasResponse = await axios.get(`${API_BASE}/areas`, {
+                params: { categoria_id: categoria.id_categoria },
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              
+              // Contar áreas associadas a esta categoria específica
+              let areasCount = 0;
+              if (areasResponse.data && Array.isArray(areasResponse.data)) {
+                areasCount = areasResponse.data.filter(area => area.id_categoria === categoria.id_categoria).length;
+              } else if (areasResponse.data && areasResponse.data.areas) {
+                areasCount = areasResponse.data.areas.filter(area => area.id_categoria === categoria.id_categoria).length;
+              }
+              
+              return {
+                ...categoria,
+                areas_count: areasCount
+              };
+              
+            } catch (error) {
+              // Em caso de erro, assumir 0 áreas para esta categoria
+              return {
+                ...categoria,
+                areas_count: 0
+              };
+            }
+          })
+        );
+      } catch (error) {
+        // Fallback: definir areas_count = 0 para todas as categorias
+        todasAsCategorias = todasAsCategorias.map(categoria => ({
+          ...categoria,
+          areas_count: 0
+        }));
+      }
       
-      // Log detalhado de cada categoria para verificar areas_count
-      categoriasRecebidas.forEach((categoria, index) => {
-        console.log(`📂 [FRONTEND] Categoria ${index + 1}:`, {
-          id: categoria.id_categoria,
-          nome: categoria.nome,
-          areas_count: categoria.areas_count,
-          tipo_areas_count: typeof categoria.areas_count,
-          objeto_completo: categoria
-        });
-      });
+      // Aplicar filtros se especificados
+      let categoriasFiltradas = todasAsCategorias;
+      if (filtrosAtuais.nome && filtrosAtuais.nome.trim()) {
+        const termoBusca = filtrosAtuais.nome.trim().toLowerCase();
+        categoriasFiltradas = todasAsCategorias.filter(categoria => 
+          categoria.nome?.toLowerCase().includes(termoBusca)
+        );
+      }
       
-      // Atualizar estados
-      setCategorias(categoriasRecebidas);
-      setTotalCategorias(totalRecebido);
+      // Aplicar ordenação se estiver definida
+      if (ordenacao.campo) {
+        categoriasFiltradas = ordenarCategorias(categoriasFiltradas, ordenacao.campo, ordenacao.direcao);
+      }
+      
+      // Implementar paginação manual - SEMPRE 10 itens por página
+      const totalItens = categoriasFiltradas.length;
+      const startIndex = (pagina - 1) * categoriasPorPagina;
+      const endIndex = startIndex + categoriasPorPagina;
+      const categoriasParaPagina = categoriasFiltradas.slice(startIndex, endIndex);
+      
+      // Atualizar estados com os dados processados
+      setCategorias(categoriasParaPagina);
+      setTotalCategorias(totalItens);
       setPaginaAtual(pagina);
       
-      console.log('📊 [FRONTEND] Estados atualizados com sucesso');
-      
     } catch (error) {
-      console.error('❌ [FRONTEND] Erro ao buscar categorias:', error);
-      
+      // Gestão de erros específicos
       if (error.response?.status === 401) {
         toast.error('Não autorizado. Faz login novamente.');
         navigate('/login');
@@ -182,48 +238,40 @@ const Gerir_Categoria = () => {
         toast.error(`Erro ao carregar categorias: ${error.response?.data?.message || 'Erro desconhecido'}`);
       }
       
+      // Reset dos dados em caso de erro
       setCategorias([]);
       setTotalCategorias(0);
       
     } finally {
       setLoading(false);
     }
-  }, [categoriasPorPagina, navigate, filtros]);
+  }, [categoriasPorPagina, navigate, filtros, ordenacao]);
 
   /**
-   * Carregamento inicial das categorias
+   * Inicialização do componente - carrega dados e verifica permissões
    */
   useEffect(() => {
-    console.log('🚀 [FRONTEND] Inicializando componente...');
-    
     const inicializar = async () => {
       try {
         const token = localStorage.getItem('token');
         
+        // Verificar autenticação
         if (!token) {
-          console.log('🔒 [FRONTEND] Token não encontrado, redirecionando para login');
           navigate('/login');
           return;
         }
         
-        // Verificar permissões do utilizador
-        if (currentUser) {
-          console.log('👤 [FRONTEND] Utilizador atual:', currentUser);
-          
-          if (currentUser.id_cargo !== 1) {
-            console.log('⛔ [FRONTEND] Utilizador sem permissões de administrador');
-            toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
-            navigate('/');
-            return;
-          }
+        // Verificar permissões de administrador
+        if (currentUser && currentUser.id_cargo !== 1) {
+          toast.error('Acesso negado. Não tens permissão para aceder a esta página.');
+          navigate('/');
+          return;
         }
         
-        // Carregar categorias
+        // Carregar dados iniciais
         await buscarCategorias(1, { nome: '' });
         
       } catch (error) {
-        console.error('❌ [FRONTEND] Erro na inicialização:', error);
-        
         if (error.response?.status === 401) {
           toast.error('Não autorizado. Por favor, faz login novamente.');
           navigate('/login');
@@ -239,12 +287,14 @@ const Gerir_Categoria = () => {
   }, [navigate, currentUser, buscarCategorias]);
 
   /**
-   * Gerir alterações nos filtros com delay para melhorar performance
+   * Gere alterações nos filtros com debounce para otimizar performance
+   * 
+   * @param {Event} e - Evento de mudança do input
    */
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     
-    // Limpar timeout anterior se existir
+    // Cancelar timeout anterior se existir
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
@@ -254,9 +304,8 @@ const Gerir_Categoria = () => {
       
       setLoading(true);
       
-      // Aplicar filtros com delay para evitar muitas requisições
+      // Aplicar debounce de 600ms para evitar requisições excessivas
       filterTimeoutRef.current = setTimeout(() => {
-        console.log('🔍 [FRONTEND] Aplicando filtros:', novosFiltros);
         setPaginaAtual(1);
         buscarCategorias(1, novosFiltros);
       }, 600);
@@ -266,7 +315,7 @@ const Gerir_Categoria = () => {
   };
 
   /**
-   * Limpar todos os filtros aplicados
+   * Remove todos os filtros aplicados e recarrega as categorias
    */
   const handleLimparFiltros = () => {
     if (filterTimeoutRef.current) {
@@ -275,37 +324,34 @@ const Gerir_Categoria = () => {
     
     const filtrosLimpos = { nome: '' };
     
-    console.log('🧹 [FRONTEND] A limpar filtros');
     setFiltros(filtrosLimpos);
     setPaginaAtual(1);
     buscarCategorias(1, filtrosLimpos);
   };
 
   /**
-   * Navegar para a página anterior
+   * Navegar para a página anterior na paginação
    */
   const handlePaginaAnterior = () => {
     if (paginaAtual > 1 && !loading) {
       const novaPagina = paginaAtual - 1;
-      console.log(`⬅️ [FRONTEND] Página anterior: ${novaPagina}`);
       buscarCategorias(novaPagina, filtros);
     }
   };
 
   /**
-   * Navegar para a próxima página
+   * Navegar para a próxima página na paginação
    */
   const handleProximaPagina = () => {
     const totalPaginas = Math.max(1, Math.ceil(totalCategorias / categoriasPorPagina));
     if (paginaAtual < totalPaginas && !loading) {
       const novaPagina = paginaAtual + 1;
-      console.log(`➡️ [FRONTEND] Próxima página: ${novaPagina}`);
       buscarCategorias(novaPagina, filtros);
     }
   };
 
   /**
-   * Abrir formulário para criar nova categoria
+   * Abre o modal para criar uma nova categoria
    */
   const handleOpenCategoriaForm = () => {
     setShowCategoriaForm(true);
@@ -314,7 +360,7 @@ const Gerir_Categoria = () => {
   };
 
   /**
-   * Fechar formulário de categoria
+   * Fecha o modal de criação/edição de categoria
    */
   const handleCloseCategoriaForm = () => {
     setShowCategoriaForm(false);
@@ -323,12 +369,13 @@ const Gerir_Categoria = () => {
   };
 
   /**
-   * Guardar categoria (criar ou editar)
+   * Grava uma categoria (criação ou edição) na base de dados
    */
   const handleSaveCategoria = async () => {
     try {
       const token = localStorage.getItem('token');
       
+      // Validação do nome da categoria
       if (!newCategoriaNome.trim()) {
         toast.error('Por favor, insere um nome para a categoria.');
         return;
@@ -337,16 +384,14 @@ const Gerir_Categoria = () => {
       const dadosCategoria = { nome: newCategoriaNome.trim() };
       
       if (editCategoria) {
-        console.log(`✏️ [FRONTEND] A editar categoria ${editCategoria.id_categoria}`);
-        
+        // Modo edição - atualizar categoria existente
         await axios.put(`${API_BASE}/categorias/${editCategoria.id_categoria}`, dadosCategoria, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         toast.success('Categoria atualizada com sucesso!');
       } else {
-        console.log('➕ [FRONTEND] A criar nova categoria');
-        
+        // Modo criação - criar nova categoria
         await axios.post(`${API_BASE}/categorias`, dadosCategoria, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -354,12 +399,11 @@ const Gerir_Categoria = () => {
         toast.success('Categoria criada com sucesso!');
       }
       
+      // Fechar modal e atualizar lista
       handleCloseCategoriaForm();
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('❌ [FRONTEND] Erro ao guardar categoria:', error);
-      
       if (error.response) {
         toast.error(`Erro: ${error.response.data?.message || 'Erro desconhecido'}`);
       } else {
@@ -369,34 +413,35 @@ const Gerir_Categoria = () => {
   };
 
   /**
-   * Abrir formulário de edição para uma categoria específica
+   * Prepara uma categoria para edição, preenchendo o formulário
+   * 
+   * @param {Object} categoria - Categoria a editar
    */
   const handleEditarCategoria = (categoria) => {
-    console.log('✏️ [FRONTEND] A editar categoria:', categoria);
     setEditCategoria(categoria);
     setNewCategoriaNome(categoria.nome);
     setShowCategoriaForm(true);
   };
 
   /**
-   * Confirmar eliminação de categoria
+   * Prepara o modal de confirmação para eliminar uma categoria
+   * 
+   * @param {Object} categoria - Categoria a eliminar
    */
   const handleConfirmarExclusao = (categoria) => {
-    console.log('🗑️ [FRONTEND] A confirmar eliminação da categoria:', categoria);
     setCategoriaParaExcluir(categoria);
     setShowDeleteConfirmation(true);
   };
 
   /**
-   * Eliminar categoria após confirmação
+   * Executa a eliminação definitiva de uma categoria
+   * ATENÇÃO: Esta operação remove em cascata todas as áreas, tópicos e cursos associados
    */
   const handleExcluirCategoria = async () => {
     if (!categoriaParaExcluir) return;
     
     try {
       const token = localStorage.getItem('token');
-      
-      console.log(`🗑️ [FRONTEND] A eliminar categoria ${categoriaParaExcluir.id_categoria}`);
       
       await axios.delete(`${API_BASE}/categorias/${categoriaParaExcluir.id_categoria}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -406,11 +451,10 @@ const Gerir_Categoria = () => {
       setShowDeleteConfirmation(false);
       setCategoriaParaExcluir(null);
       
+      // Recarregar lista de categorias
       buscarCategorias(paginaAtual, filtros);
       
     } catch (error) {
-      console.error('❌ [FRONTEND] Erro ao eliminar categoria:', error);
-      
       if (error.response) {
         if (error.response.status === 404) {
           toast.error('Categoria não encontrada. Pode já ter sido eliminada.');
@@ -427,24 +471,59 @@ const Gerir_Categoria = () => {
   };
 
   /**
-   * Navegar para gestão de áreas
+   * Carrega e exibe as áreas associadas a uma categoria específica
+   * 
+   * @param {Object} categoria - Categoria cujas áreas queremos visualizar
+   */
+  const handleMostrarAreas = async (categoria) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Buscar áreas desta categoria específica
+      const response = await axios.get(`${API_BASE}/areas`, {
+        params: { categoria: categoria.id_categoria },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Processar resposta e filtrar áreas da categoria
+      let areas = [];
+      if (Array.isArray(response.data)) {
+        areas = response.data.filter(area => area.id_categoria === categoria.id_categoria);
+      } else if (response.data && Array.isArray(response.data.areas)) {
+        areas = response.data.areas.filter(area => area.id_categoria === categoria.id_categoria);
+      }
+      
+      // Exibir modal com as áreas encontradas
+      setCategoriaComAreas(categoria);
+      setAreasCategoria(areas);
+      setShowAreasModal(true);
+      
+    } catch (error) {
+      toast.error('Erro ao carregar áreas da categoria.');
+    }
+  };
+
+  /**
+   * Navega para a página de gestão de áreas
    */
   const handleIrParaAreas = () => {
     navigate('/admin/areas');
   };
 
-  // Cálculos para apresentação
+  // Cálculos para paginação e apresentação
   const totalPaginas = Math.max(1, Math.ceil(totalCategorias / categoriasPorPagina));
   const categoriasParaMostrar = Array.isArray(categorias) ? categorias : [];
   
-  // Linhas vazias para manter altura consistente da tabela
+  // Gerar SEMPRE as linhas vazias necessárias para completar 10 linhas
   const linhasVazias = [];
-  const linhasNecessarias = Math.max(0, categoriasPorPagina - categoriasParaMostrar.length);
-  for (let i = 0; i < linhasNecessarias; i++) {
+  const categoriasNaPagina = categoriasParaMostrar.length;
+  const linhasVaziasNecessarias = Math.max(0, categoriasPorPagina - categoriasNaPagina);
+  
+  for (let i = 0; i < linhasVaziasNecessarias; i++) {
     linhasVazias.push(i);
   }
 
-  // Limpar timeout ao desmontar componente
+  // Limpeza do timeout ao desmontar o componente
   useEffect(() => {
     return () => {
       if (filterTimeoutRef.current) {
@@ -473,7 +552,7 @@ const Gerir_Categoria = () => {
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className="main-content-gerir-categorias">
-        {/* Cabeçalho principal */}
+        {/* Cabeçalho da página com título e ações principais */}
         <div className="categorias-header-gerir-categorias">
           <h1>
             Gestão de Categorias 
@@ -495,7 +574,7 @@ const Gerir_Categoria = () => {
           </div>
         </div>
         
-        {/* Filtros */}
+        {/* Secção de filtros de pesquisa */}
         <div className="filtros-container-gerir-categorias">
           <div className="filtros-principais-gerir-categorias">
             <div className="filtro-gerir-categorias">
@@ -522,96 +601,81 @@ const Gerir_Categoria = () => {
           </div>
         </div>
         
-        {/* Tabela principal */}
+        {/* Tabela principal de categorias */}
         <div className="categorias-table-container-gerir-categorias">
           {loading ? (
             <div className="loading-container-gerir-categorias">
               <div className="loading-spinner-gerir-categorias"></div>
               <p>A carregar categorias...</p>
             </div>
-          ) : !Array.isArray(categoriasParaMostrar) || categoriasParaMostrar.length === 0 ? (
-            <div className="no-items-gerir-categorias">
-              <p>Nenhuma categoria encontrada com os filtros aplicados.</p>
-            </div>
           ) : (
             <>
               <table className="categorias-table-gerir-categorias">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Nome da Categoria</th>
-                    <th>Total de Áreas</th>
-                    <th>Ações</th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('id')}
+                    >
+                      ID
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'id' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('nome')}
+                    >
+                      Categoria
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'nome' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleOrdenacao('areas')}
+                    >
+                      Áreas
+                      <span className="sort-icon">
+                        {ordenacao.campo === 'areas' ? (
+                          ordenacao.direcao === 'asc' ? ' ↑' : ' ↓'
+                        ) : ' ↕'}
+                      </span>
+                    </th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Mostrar categorias existentes */}
                   {categoriasParaMostrar.map((categoria, index) => {
                     if (!categoria || typeof categoria !== 'object') {
-                      console.warn(`⚠️ [FRONTEND] Categoria inválida no índice ${index}:`, categoria);
                       return null;
                     }
                     
                     const categoriaId = categoria.id_categoria || categoria.id || index;
                     const areasCount = categoria.areas_count;
                     
-                    // Log para debug da contagem de áreas
-                    console.log(`📊 [FRONTEND] Renderizando categoria "${categoria.nome}": areas_count = ${areasCount} (tipo: ${typeof areasCount})`);
-                    
                     return (
                       <tr key={categoriaId}>
                         <td>{categoriaId}</td>
-                        <td className="categoria-nome-gerir-categorias">
-                          {categoria.nome || 'Nome não disponível'}
+                        <td className="categoria-nome-gerir-categorias overflow-cell">
+                          <div className="cell-content">
+                            {categoria.nome || 'Nome não disponível'}
+                          </div>
                         </td>
                         <td className="areas-count-gerir-categorias">
-                          {(() => {
-                            // Validação robusta do valor areas_count
-                            if (areasCount === null || areasCount === undefined) {
-                              console.warn(`⚠️ [FRONTEND] areas_count nulo/indefinido para categoria "${categoria.nome}"`);
-                              return <span style={{ color: '#dc3545', fontWeight: 'bold' }}>N/A</span>;
-                            }
-                            
-                            if (typeof areasCount === 'number') {
-                              return (
-                                <span 
-                                  className="count-badge-gerir-categorias"
-                                  style={{ 
-                                    backgroundColor: areasCount === 0 ? '#f8f9fa' : '#d4edda',
-                                    color: areasCount === 0 ? '#6c757d' : '#155724',
-                                    padding: '4px 8px',
-                                    borderRadius: '12px',
-                                    fontWeight: 'bold',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  {areasCount}
-                                </span>
-                              );
-                            }
-                            
-                            // Tentar converter para número
-                            const numericCount = parseInt(areasCount, 10);
-                            if (!isNaN(numericCount)) {
-                              return (
-                                <span 
-                                  className="count-badge-gerir-categorias"
-                                  style={{ 
-                                    backgroundColor: numericCount === 0 ? '#f8f9fa' : '#d4edda',
-                                    color: numericCount === 0 ? '#6c757d' : '#155724',
-                                    padding: '4px 8px',
-                                    borderRadius: '12px',
-                                    fontWeight: 'bold',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  {numericCount}
-                                </span>
-                              );
-                            }
-                            
-                            console.error(`❌ [FRONTEND] Valor inválido areas_count para categoria "${categoria.nome}":`, areasCount);
-                            return <span style={{ color: '#dc3545', fontWeight: 'bold' }}>ERRO</span>;
-                          })()}
+                          <span 
+                            className="count-number"
+                            onClick={() => handleMostrarAreas(categoria)}
+                            style={{ cursor: 'pointer' }}
+                            title="Clique para ver as áreas desta categoria"
+                          >
+                            {areasCount || 0}
+                          </span>
                         </td>
                         <td className="acoes-gerir-categorias">
                           <button 
@@ -624,11 +688,7 @@ const Gerir_Categoria = () => {
                           <button 
                             className="btn-icon-gerir-categorias btn-excluir-gerir-categorias"
                             onClick={() => handleConfirmarExclusao(categoria)}
-                            title={areasCount > 0 ? 
-                              `Não é possível eliminar - tem ${areasCount} área(s) associada(s)` : 
-                              'Eliminar categoria'
-                            }
-                            disabled={areasCount > 0}
+                            title="Eliminar categoria"
                           >
                             🗑️
                           </button>
@@ -637,7 +697,7 @@ const Gerir_Categoria = () => {
                     );
                   })}
                   
-                  {/* Linhas vazias para manter altura consistente */}
+                  {/* SEMPRE completar até 10 linhas com linhas vazias */}
                   {linhasVazias.map((_, index) => (
                     <tr key={`empty-${index}`} className="linha-vazia-gerir-categorias">
                       <td>&nbsp;</td>
@@ -649,7 +709,7 @@ const Gerir_Categoria = () => {
                 </tbody>
               </table>
               
-              {/* Paginação */}
+              {/* Controlos de paginação */}
               <div className="paginacao-gerir-categorias">
                 <button 
                   onClick={handlePaginaAnterior} 
@@ -716,17 +776,25 @@ const Gerir_Categoria = () => {
         </div>
       )}
       
-      {/* Modal para confirmar eliminação */}
+      {/* Modal de confirmação de eliminação (igual ao dos tópicos) */}
       {showDeleteConfirmation && (
         <div className="modal-overlay-gerir-categorias">
           <div className="modal-content-gerir-categorias">
             <h3>Confirmar Eliminação</h3>
             <p>
-              Tens a certeza que queres eliminar a categoria "<strong>{categoriaParaExcluir?.nome}</strong>"?
+              <strong>ATENÇÃO:</strong> Tens a certeza que queres eliminar a categoria "<strong>{categoriaParaExcluir?.nome}</strong>"?
             </p>
-            <p className="warning-text-gerir-categorias">
-              Esta ação não pode ser desfeita.
+            <p>
+              Esta ação irá eliminar <strong>permanentemente</strong>:
             </p>
+            <ul className="warning-list-gerir-categorias">
+              <li>Todas as áreas associadas a esta categoria</li>
+              <li>Todos os tópicos dessas áreas</li>
+              <li>Todos os cursos associados a esses tópicos</li>
+              <li>Todas as inscrições de formandos nesses cursos</li>
+              <li>Todas as associações de formadores</li>
+            </ul>
+            <p><strong>Esta ação não pode ser desfeita!</strong></p>
             <div className="modal-actions-gerir-categorias">
               <button 
                 className="btn-cancelar-gerir-categorias"
@@ -739,6 +807,50 @@ const Gerir_Categoria = () => {
                 onClick={handleExcluirCategoria}
               >
                 Confirmar Eliminação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para visualizar áreas da categoria */}
+      {showAreasModal && (
+        <div className="modal-overlay-gerir-categorias">
+          <div className="modal-content-gerir-categorias">
+            <h3>Áreas da Categoria "{categoriaComAreas?.nome}"</h3>
+            {areasCategoria.length === 0 ? (
+              <div className="no-areas-message-gerir-categorias">
+                <p>Esta categoria não tem áreas associadas.</p>
+              </div>
+            ) : (
+              <div className="areas-list-gerir-categorias">
+                {areasCategoria.map((area, index) => (
+                  <div key={area.id_area || index} className="area-item-gerir-categorias">
+                    <div className="area-info-gerir-categorias">
+                      <strong className="area-name-gerir-categorias">{area.nome}</strong>
+                      {area.topicos_count && (
+                        <span className="topicos-count-gerir-categorias">
+                          ({area.topicos_count} tópicos)
+                        </span>
+                      )}
+                    </div>
+                    {area.descricao && (
+                      <p className="area-description-gerir-categorias">{area.descricao}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="modal-actions-gerir-categorias">
+              <button 
+                className="btn-confirmar-gerir-categorias"
+                onClick={() => {
+                  setShowAreasModal(false);
+                  setCategoriaComAreas(null);
+                  setAreasCategoria([]);
+                }}
+              >
+                Fechar
               </button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+/* Container principal do fórum - define layout básico e margem superior */
 .forum-partilha-container {
   margin-top: 60px;
   display: flex;
@@ -6,11 +7,13 @@
   background-color: #f5f7fb !important;
 }
 
+/* Container para o conteúdo principal (sidebar + conteúdo do fórum) */
 .main-content {
   display: flex;
   flex: 1;
 }
 
+/* Área principal onde aparece o conteúdo do fórum */
 .forum-content {
   flex: 1;
   padding: 20px;
@@ -20,19 +23,59 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.forum-content h1 {
+/* Cabeçalho principal do fórum com título e botão de criar tópico */
+.forum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
-  color: #333;
-  font-size: 28px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e6ed;
 }
 
-/* Estilos para o acordeão de categorias */
+/* Título principal do fórum */
+.forum-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+/* Botão principal para criar tópico (no cabeçalho) */
+.criar-topico-principal-btn {
+  padding: 12px 24px;
+  background-color: #5181b8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(81, 129, 184, 0.3);
+}
+
+/* Estado hover do botão principal */
+.criar-topico-principal-btn:hover {
+  background-color: #3b6999;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(81, 129, 184, 0.4);
+}
+
+/* Estado ativo/clicado do botão principal */
+.criar-topico-principal-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(81, 129, 184, 0.3);
+}
+
+/* Container do acordeão que organiza as categorias */
 .categorias-accordion {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
+/* Cada item de categoria no acordeão */
 .categoria-item {
   background-color: white;
   border-radius: 8px;
@@ -41,9 +84,9 @@
   transition: all 0.3s ease;
 }
 
+/* Cabeçalho de cada categoria (apenas nome e seta) */
 .categoria-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
   background-color: white;
@@ -51,6 +94,7 @@
   cursor: pointer;
 }
 
+/* Área clicável do título da categoria (inclui ícone e nome) */
 .categoria-title {
   display: flex;
   align-items: center;
@@ -58,34 +102,21 @@
   cursor: pointer;
 }
 
+/* Ícone de seta para expandir/colapsar categoria */
 .categoria-title i {
   color: #5181b8;
   margin-right: 10px;
   transition: transform 0.3s ease;
 }
 
+/* Nome da categoria */
 .categoria-title h3 {
   margin: 0;
   font-size: 18px;
   color: #333;
 }
 
-.criar-topico-btn {
-  padding: 8px 16px;
-  background-color: #5181b8;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.criar-topico-btn:hover {
-  background-color: #3b6999;
-}
-
+/* Conteúdo da categoria (onde aparecem os tópicos) */
 .categoria-content {
   padding: 15px 20px;
   background-color: #f8fafd;
@@ -93,13 +124,14 @@
   overflow-y: auto;
 }
 
-/* Estilos para a lista de tópicos */
+/* Grelha responsiva para exibir os cartões dos tópicos */
 .topicos-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 15px;
 }
 
+/* Cartão individual de cada tópico */
 .topico-card {
   background-color: white;
   border-radius: 8px;
@@ -109,21 +141,37 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Efeito hover nos cartões dos tópicos */
 .topico-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Título do tópico - com controlo de overflow para títulos longos */
 .topico-card h3 {
   margin: 0 0 10px 0;
   color: #5181b8;
   font-size: 16px;
+  /* Controla títulos longos para não sair da caixa */
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  /* Limita a 2 linhas máximo */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  max-height: 2.6em; /* 2 linhas × 1.3 line-height */
 }
 
+/* Descrição do tópico */
 .topico-desc {
   color: #666;
   font-size: 14px;
   margin-bottom: 15px;
+  /* Limita a descrição a 2 linhas */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -131,6 +179,7 @@
   text-overflow: ellipsis;
 }
 
+/* Metadados do tópico (autor e data) */
 .topico-meta {
   display: flex;
   justify-content: space-between;
@@ -139,10 +188,12 @@
   flex-wrap: wrap;
 }
 
+/* Nome do autor do tópico */
 .autor {
   font-weight: 500;
 }
 
+/* Mensagem quando não há tópicos numa categoria */
 .no-topicos {
   text-align: center;
   color: #888;
@@ -150,6 +201,7 @@
   font-style: italic;
 }
 
+/* Container para indicadores de carregamento */
 .loading-container {
   display: flex;
   justify-content: center;
@@ -157,6 +209,7 @@
   flex: 1;
 }
 
+/* Estilo dos indicadores de carregamento */
 .loading {
   display: flex;
   justify-content: center;
@@ -166,21 +219,315 @@
   color: #5181b8;
 }
 
+/* === ESTILOS DO MODAL COMPLETO DE CRIAÇÃO DE TÓPICO === */
+
+/* Overlay que escurece o fundo quando o modal está aberto */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* Container principal do modal */
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+/* Animação de entrada do modal */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Cabeçalho do modal com título e botão de fechar */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  background-color: #5181b8;
+  color: white;
+}
+
+/* Título do modal */
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Botão de fechar modal (X) */
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+/* Estado hover do botão de fechar */
+.modal-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Corpo do modal com os campos do formulário */
+.modal-body {
+  padding: 25px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Grupo de campos do formulário */
+.form-group {
+  margin-bottom: 20px;
+}
+
+/* Labels dos campos do formulário */
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Campos de input de texto */
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Estado focus dos inputs */
+.form-group input[type="text"]:focus {
+  outline: none;
+  border-color: #5181b8;
+  box-shadow: 0 0 0 3px rgba(81, 129, 184, 0.1);
+}
+
+/* Campo de textarea para descrição */
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Estado focus do textarea */
+.form-group textarea:focus {
+  outline: none;
+  border-color: #5181b8;
+  box-shadow: 0 0 0 3px rgba(81, 129, 184, 0.1);
+}
+
+/* Campos de seleção (dropdowns) */
+.form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Estado focus dos selects */
+.form-group select:focus {
+  outline: none;
+  border-color: #5181b8;
+  box-shadow: 0 0 0 3px rgba(81, 129, 184, 0.1);
+}
+
+/* Select desabilitado */
+.form-group select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #999;
+}
+
+/* Área de ações do modal (botões) */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 25px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Botão de cancelar */
+.btn-cancelar {
+  padding: 10px 20px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+/* Estado hover do botão cancelar */
+.btn-cancelar:hover {
+  background-color: #5a6268;
+}
+
+/* Botão de confirmar/criar */
+.btn-confirmar {
+  padding: 10px 20px;
+  background-color: #5181b8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+/* Estado hover do botão confirmar */
+.btn-confirmar:hover {
+  background-color: #3b6999;
+}
+
+/* Estado desabilitado do botão confirmar */
+.btn-confirmar:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Estado hover do botão desabilitado */
+.btn-confirmar:disabled:hover {
+  background-color: #ccc;
+}
+
+/* === ESTILOS RESPONSIVOS PARA DISPOSITIVOS MÓVEIS === */
+
 @media (max-width: 768px) {
+  /* Cabeçalho responsivo em dispositivos pequenos */
+  .forum-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  /* Título menor em móveis */
+  .forum-header h1 {
+    font-size: 24px;
+    text-align: center;
+  }
+  
+  /* Botão principal ocupa toda a largura em móveis */
+  .criar-topico-principal-btn {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 16px;
+  }
+  
+  /* Grelha de tópicos numa só coluna em ecrãs pequenos */
   .topicos-list {
     grid-template-columns: 1fr;
   }
   
-  .criar-topico-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-  
+  /* Menos padding no cabeçalho das categorias */
   .categoria-header {
     padding: 12px 15px;
   }
   
+  /* Menos padding no conteúdo das categorias */
   .categoria-content {
     padding: 12px;
+  }
+  
+  /* Modal responsivo em dispositivos pequenos */
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .modal-content {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+  
+  /* Cabeçalho do modal menor em móveis */
+  .modal-header {
+    padding: 15px 20px;
+  }
+  
+  .modal-header h3 {
+    font-size: 18px;
+  }
+  
+  /* Corpo do modal com menos padding */
+  .modal-body {
+    padding: 20px;
+    max-height: 70vh;
+  }
+  
+  /* Ações do modal empilhadas em móveis */
+  .modal-actions {
+    flex-direction: column;
+    padding: 15px 20px;
+  }
+  
+  .btn-cancelar,
+  .btn-confirmar {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+/* Responsividade para tablets */
+@media (max-width: 1024px) {
+  .forum-content {
+    margin: 5px;
+    padding: 15px;
+  }
+  
+  .topicos-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }

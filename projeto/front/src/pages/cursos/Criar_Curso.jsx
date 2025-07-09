@@ -13,23 +13,21 @@ import CursoAssociacaoModal from '../../components/cursos/Associar_Curso_Modal';
 /**
  * Componente principal para criação de novos cursos na plataforma
  * 
- * Este componente fornece uma interface completa para criar cursos com todas
- * as funcionalidades avançadas:
+ * Este componente oferece uma interface completa para criar cursos com funcionalidades avançadas:
  * - Suporte a cursos síncronos (com formador e vagas) e assíncronos (autoestudo)
  * - Upload de imagem de capa com validação completa
  * - Seleção hierárquica de tópicos (categoria → área → tópico)
  * - Sistema de associações entre cursos
- * - Validação robusta de formulário
- * - Feedback visual em tempo real
- * - Integração com notificações automáticas
+ * - Validação robusta de formulário com feedback visual em tempo real
+ * - Integração com notificações automáticas para utilizadores interessados
  */
 const CriarCurso = () => {
-  // === ESTADOS DE INTERFACE E NAVEGAÇÃO ===
+  // Estados de interface e navegação
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
 
-  // === ESTADO PRINCIPAL DO FORMULÁRIO ===
+  // Estado principal do formulário com todos os campos necessários
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -45,18 +43,18 @@ const CriarCurso = () => {
     imagem: null,
   });
 
-  // === ESTADOS DE CONTROLO DE MODAIS ===
+  // Estados para controlo de modais
   const [modalAberto, setModalAberto] = useState(false);
   const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
 
-  // === ESTADOS PARA DADOS CARREGADOS DO SERVIDOR ===
+  // Estados para dados carregados do servidor
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [topicosDisponiveis, setTopicosDisponiveis] = useState([]);
 
-  // === ESTADOS PARA FUNCIONALIDADES AVANÇADAS ===
+  // Estados para funcionalidades avançadas
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [cursosAssociados, setCursosAssociados] = useState([]);
@@ -64,9 +62,8 @@ const CriarCurso = () => {
 
   /**
    * Abre modal para associação de cursos relacionados
-   * 
    * Permite ao utilizador selecionar cursos existentes para criar
-   * associações bidirecionais que ajudam na descoberta de conteúdo relacionado.
+   * associações bidirecionais que ajudam na descoberta de conteúdo relacionado
    */
   const abrirModalAssociacao = () => {
     setModalAssociacaoAberto(true);
@@ -74,14 +71,12 @@ const CriarCurso = () => {
 
   /**
    * Adiciona curso à lista de associações a criar
-   * 
    * Verifica se o curso já está na lista para evitar duplicatas
-   * e fornece feedback visual apropriado ao utilizador.
+   * e fornece feedback visual apropriado ao utilizador
    * 
    * @param {Object} cursoSelecionado - Dados do curso a associar
    */
   const handleAssociarCurso = (cursoSelecionado) => {
-    // Verificar se o curso já está associado
     if (!cursosAssociados.some(c => c.id_curso === cursoSelecionado.id_curso)) {
       setCursosAssociados([...cursosAssociados, cursoSelecionado]);
       toast.success(`Curso "${cursoSelecionado.nome}" adicionado à lista de associações`);
@@ -103,13 +98,12 @@ const CriarCurso = () => {
   /**
    * Carrega tópicos disponíveis baseados na categoria e área selecionadas
    * 
-   * Implementa sistema de fallback hierárquico para garantir que sempre
-   * há tópicos disponíveis:
+   * Implementa sistema de fallback hierárquico para garantir que sempre há tópicos disponíveis:
    * 1. Tópicos específicos para categoria+área
-   * 2. Tópicos gerais da categoria
+   * 2. Tópicos gerais da categoria  
    * 3. Tópicos do fórum relacionados
    * 
-   * Este efeito é executado sempre que categoria ou área mudam.
+   * Este efeito executa-se sempre que categoria ou área mudam
    */
   useEffect(() => {
     if (formData.id_categoria && formData.id_area) {
@@ -118,7 +112,7 @@ const CriarCurso = () => {
 
       console.log(`🔍 [CRIAR] A procurar tópicos para categoria=${formData.id_categoria} e área=${formData.id_area}`);
 
-      // === PRIMEIRA TENTATIVA: BUSCAR TODOS OS TÓPICOS E FILTRAR LOCALMENTE ===
+      // Primeira tentativa: buscar todos os tópicos e filtrar localmente
       axios.get(`${API_BASE}/topicos-area/todos`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -127,7 +121,7 @@ const CriarCurso = () => {
         .then(res => {
           console.log("✅ [CRIAR] Tópicos gerais carregados:", res.data);
 
-          // Normalizar estrutura da resposta (pode vir em formatos diferentes)
+          // Normalizar estrutura da resposta que pode vir em formatos diferentes
           let topicos = Array.isArray(res.data) ? res.data :
             (res.data.data ? res.data.data : []);
 
@@ -163,10 +157,9 @@ const CriarCurso = () => {
   }, [formData.id_categoria, formData.id_area]);
 
   /**
-   * Busca tópicos por categoria específica (fallback 1)
-   * 
-   * Usado quando não há tópicos para a combinação categoria+área.
-   * Procura tópicos apenas da categoria, filtrando depois por área.
+   * Busca tópicos por categoria específica (primeiro fallback)
+   * Usado quando não há tópicos para a combinação categoria+área
+   * Procura tópicos apenas da categoria, filtrando depois por área
    */
   const buscarTopicosCategoria = () => {
     console.log(`🔍 [CRIAR] Fallback: A procurar tópicos para categoria ${formData.id_categoria}`);
@@ -199,10 +192,9 @@ const CriarCurso = () => {
   };
 
   /**
-   * Busca tópicos do fórum como último recurso (fallback 2)
-   * 
-   * Usado quando não há tópicos específicos disponíveis.
-   * Procura no sistema de fórum por tópicos relacionados.
+   * Busca tópicos do fórum como último recurso (segundo fallback)
+   * Usado quando não há tópicos específicos disponíveis
+   * Procura no sistema de fórum por tópicos relacionados
    */
   const buscarTopicosForum = () => {
     console.log("🔍 [CRIAR] Último recurso: A procurar tópicos do fórum");
@@ -246,19 +238,13 @@ const CriarCurso = () => {
 
   /**
    * Carrega dados iniciais necessários quando o componente é montado
-   * 
-   * Executa carregamento paralelo de:
-   * - Lista de formadores disponíveis
-   * - Categorias de cursos
-   * - Áreas de formação
-   * 
-   * Usa Promise.all não foi implementado aqui para permitir carregamento
-   * independente e melhor tratamento de erros individuais.
+   * Executa carregamento paralelo de formadores, categorias e áreas
+   * Cada carregamento é independente para melhor tratamento de erros individuais
    */
   useEffect(() => {
     setIsLoading(true);
 
-    // === CARREGAR LISTA DE FORMADORES DISPONÍVEIS ===
+    // Carregar lista de formadores disponíveis
     axios.get(`${API_BASE}/users/formadores`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -273,7 +259,7 @@ const CriarCurso = () => {
         toast.error("Erro ao carregar formadores. Verifica a consola para mais detalhes.");
       });
 
-    // === CARREGAR CATEGORIAS DISPONÍVEIS ===
+    // Carregar categorias disponíveis  
     axios.get(`${API_BASE}/categorias`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -288,7 +274,7 @@ const CriarCurso = () => {
         toast.error("Erro ao carregar categorias");
       });
 
-    // === CARREGAR TODAS AS ÁREAS DISPONÍVEIS ===
+    // Carregar todas as áreas disponíveis
     axios.get(`${API_BASE}/areas`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -296,19 +282,21 @@ const CriarCurso = () => {
     })
       .then(res => {
         console.log("✅ [CRIAR] Áreas carregadas:", res.data);
-        setAreas(res.data);
+        // Extrair o array de áreas da resposta da API
+        const areasData = res.data.areas || res.data || [];
+        setAreas(Array.isArray(areasData) ? areasData : []);
         setIsLoading(false);
       })
       .catch(err => {
         console.error("❌ [CRIAR] Erro ao carregar áreas:", err);
         toast.error("Erro ao carregar áreas");
+        setAreas([]); // Garantir que é sempre um array
         setIsLoading(false);
       });
   }, []);
 
   /**
    * Extrai ID da categoria de uma área de forma flexível
-   * 
    * Suporta diferentes formatos de API para máxima compatibilidade:
    * - id_categoria, categoria_id, idCategoria, categoriaId
    * - Busca dinâmica por campos que contenham 'categoria' e 'id'
@@ -333,12 +321,11 @@ const CriarCurso = () => {
 
   /**
    * Filtra áreas baseado na categoria selecionada
-   * 
    * Atualiza a lista de áreas disponíveis sempre que a categoria muda
-   * e limpa seleções dependentes (área e tópico) para evitar inconsistências.
+   * e limpa seleções dependentes (área e tópico) para evitar inconsistências
    */
   useEffect(() => {
-    if (formData.id_categoria) {
+    if (formData.id_categoria && Array.isArray(areas)) {
       const categoriaId = String(formData.id_categoria);
 
       // Filtrar áreas que pertencem à categoria selecionada
@@ -359,9 +346,8 @@ const CriarCurso = () => {
 
   /**
    * Processa alterações nos campos do formulário
-   * 
    * Inclui validações específicas para cada tipo de campo e lógica
-   * de dependências entre campos relacionados (categoria → área → tópico).
+   * de dependências entre campos relacionados (categoria → área → tópico)
    * 
    * @param {Event} e - Evento de mudança do campo
    */
@@ -371,7 +357,7 @@ const CriarCurso = () => {
     console.log(`🔍 [CRIAR] Campo alterado: ${name} = ${name === 'imagem' ? 'FILE_OBJECT' : value}`);
 
     if (name === 'imagem') {
-      // === PROCESSAMENTO DE UPLOAD DE IMAGEM ===
+      // Processamento de upload de imagem
       const file = files[0];
 
       if (file) {
@@ -438,7 +424,7 @@ const CriarCurso = () => {
       }
 
     } else if (name === 'tipo') {
-      // === LÓGICA ESPECÍFICA PARA TIPOS DE CURSO ===
+      // Lógica específica para tipos de curso
       if (value === 'assincrono') {
         // Cursos assíncronos não precisam de formador nem vagas
         setFormData({ ...formData, [name]: value, vagas: '', id_formador: '' });
@@ -451,8 +437,7 @@ const CriarCurso = () => {
       }
 
     } else if (name === 'id_categoria') {
-      // === GESTÃO DE DEPENDÊNCIAS HIERÁRQUICAS ===
-      // Limpar campos dependentes ao mudar categoria
+      // Gestão de dependências hierárquicas - limpar campos dependentes ao mudar categoria
       setFormData({ ...formData, [name]: value, id_area: '', id_topico: '' });
       if (value) {
         toast.info('Categoria selecionada. Por favor, seleciona uma área.');
@@ -485,7 +470,7 @@ const CriarCurso = () => {
       }
 
     } else if (name === 'nome') {
-      // === VALIDAÇÕES ESPECÍFICAS DO NOME ===
+      // Validações específicas do nome
       if (value.length > 100) {
         toast.warning('Nome do curso muito longo. Máximo 100 caracteres.');
         return;
@@ -499,7 +484,7 @@ const CriarCurso = () => {
       setFormData({ ...formData, [name]: value });
 
     } else if (name === 'duracao') {
-      // === VALIDAÇÃO DA DURAÇÃO ===
+      // Validação da duração
       const duracao = parseInt(value);
       if (value && (isNaN(duracao) || duracao <= 0)) {
         toast.error('A duração deve ser um número positivo');
@@ -511,7 +496,7 @@ const CriarCurso = () => {
       setFormData({ ...formData, [name]: value });
 
     } else if (name === 'vagas') {
-      // === VALIDAÇÃO DO NÚMERO DE VAGAS ===
+      // Validação do número de vagas
       const vagas = parseInt(value);
       if (value && (isNaN(vagas) || vagas <= 0)) {
         toast.error('O número de vagas deve ser um número positivo');
@@ -523,7 +508,7 @@ const CriarCurso = () => {
       setFormData({ ...formData, [name]: value });
 
     } else if (name === 'data_inicio' || name === 'data_fim') {
-      // === VALIDAÇÃO DAS DATAS ===
+      // Validação das datas
       if (value) {
         const dataAtual = new Date();
         const dataSelecionada = new Date(value);
@@ -550,7 +535,7 @@ const CriarCurso = () => {
       setFormData({ ...formData, [name]: value });
 
     } else if (name === 'descricao') {
-      // === VALIDAÇÃO DA DESCRIÇÃO ===
+      // Validação da descrição
       if (value.length > 500) {
         toast.warning('Descrição muito longa. Máximo 500 caracteres.');
         return;
@@ -558,16 +543,15 @@ const CriarCurso = () => {
       setFormData({ ...formData, [name]: value });
 
     } else {
-      // === CAMPOS GENÉRICOS ===
+      // Campos genéricos
       setFormData({ ...formData, [name]: value });
     }
   };
 
   /**
    * Processa seleção de formador no modal
-   * 
    * Atualiza o estado com o ID do formador selecionado e fornece
-   * feedback sobre a seleção ou remoção.
+   * feedback sobre a seleção ou remoção
    * 
    * @param {number|null} formadorId - ID do formador selecionado ou null para remover
    */
@@ -578,10 +562,9 @@ const CriarCurso = () => {
 
   /**
    * Processa submissão do formulário para criar o curso
-   * 
    * Executa validação completa, cria FormData para envio, processa
    * upload e gere associações de cursos. Inclui tratamento robusto
-   * de erros e feedback detalhado para o utilizador.
+   * de erros e feedback detalhado para o utilizador
    * 
    * @param {Event} e - Evento de submissão do formulário
    */
@@ -591,13 +574,13 @@ const CriarCurso = () => {
     console.log('🚀 [CRIAR] A iniciar submissão do formulário');
     console.log('📊 [CRIAR] Estado atual do formData:', formData);
 
-    // === VALIDAÇÃO COMPLETA DO FORMULÁRIO ===
+    // Validação completa do formulário
     if (!validateForm()) {
       toast.error('Por favor, corrige os erros no formulário antes de continuar');
       return;
     }
 
-    // === CRIAR FORMDATA PARA ENVIO ===
+    // Criar FormData para envio
     const data = new FormData();
 
     // Adicionar todos os campos do formulário ao FormData
@@ -629,15 +612,12 @@ const CriarCurso = () => {
       return;
     }
 
-    // === VERIFICAÇÕES PRÉ-ENVIO ===
-    
-    // Verificar conectividade à internet
+    // Verificações pré-envio
     if (!navigator.onLine) {
       toast.error('Sem conexão à internet. Verifica a tua ligação e tenta novamente.');
       return;
     }
 
-    // Verificar token de autenticação
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Sessão expirada. Por favor, faz login novamente.');
@@ -650,7 +630,7 @@ const CriarCurso = () => {
       const uploadStartTime = Date.now();
       console.log('📡 [CRIAR] A enviar para o servidor...');
 
-      // === ENVIAR CURSO PARA O BACKEND ===
+      // Enviar curso para o backend
       const response = await axios.post(`${API_BASE}/cursos`, data, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -682,7 +662,7 @@ const CriarCurso = () => {
       toast.dismiss('upload-progress');
       toast.success('🎉 Curso criado com sucesso!');
 
-      // === PROCESSAR ASSOCIAÇÕES DE CURSOS SE EXISTIREM ===
+      // Processar associações de cursos se existirem
       if (cursosAssociados.length > 0 && response.data.curso) {
         const novoCursoId = response.data.curso.id_curso;
         console.log(`🔗 [CRIAR] A processar ${cursosAssociados.length} associações`);
@@ -720,9 +700,7 @@ const CriarCurso = () => {
         }
       }
 
-      // === LIMPEZA E REDIRECIONAMENTO ===
-      
-      // Limpar formulário após sucesso
+      // Limpeza e redirecionamento
       setFormData({
         nome: '', descricao: '', tipo: '', vagas: '', duracao: '',
         data_inicio: '', data_fim: '', id_formador: '', id_area: '',
@@ -741,7 +719,7 @@ const CriarCurso = () => {
       console.error('💥 [CRIAR] Erro durante o upload:', error);
       toast.dismiss('upload-progress');
 
-      // === TRATAMENTO ESPECÍFICO DE ERROS ===
+      // Tratamento específico de erros
       if (error.response) {
         const { status, data } = error.response;
         
@@ -795,20 +773,16 @@ const CriarCurso = () => {
 
   /**
    * Valida todos os campos do formulário antes da submissão
-   * 
-   * Executa verificação abrangente de:
-   * - Campos obrigatórios básicos
-   * - Validações específicas por tipo de curso
-   * - Consistência de datas
-   * - Limites de tamanho de texto
-   * - Integridade de ficheiros
+   * Executa verificação abrangente de campos obrigatórios, validações específicas
+   * por tipo de curso, consistência de datas, limites de tamanho de texto
+   * e integridade de ficheiros
    * 
    * @returns {boolean} true se válido, false caso contrário
    */
   const validateForm = () => {
     console.log('🔍 [CRIAR] A validar formulário...');
 
-    // === CAMPOS OBRIGATÓRIOS BÁSICOS ===
+    // Campos obrigatórios básicos
     if (!formData.nome || formData.nome.trim() === '') {
       toast.error("O nome do curso é obrigatório");
       return false;
@@ -844,7 +818,7 @@ const CriarCurso = () => {
       return false;
     }
 
-    // === VALIDAÇÃO DAS DATAS ===
+    // Validação das datas
     if (!formData.data_inicio) {
       toast.error("É necessário definir a data de início do curso");
       return false;
@@ -875,7 +849,7 @@ const CriarCurso = () => {
       return false;
     }
 
-    // === VALIDAÇÕES ESPECÍFICAS PARA CURSOS SÍNCRONOS ===
+    // Validações específicas para cursos síncronos
     if (formData.tipo === 'sincrono') {
       if (!formData.id_formador) {
         toast.error("É obrigatório selecionar um formador para cursos síncronos");
@@ -888,7 +862,7 @@ const CriarCurso = () => {
       }
     }
 
-    // === VALIDAÇÕES DE TAMANHO DE TEXTO ===
+    // Validações de tamanho de texto
     if (formData.nome.length > 100) {
       toast.error("O nome do curso não pode ter mais de 100 caracteres");
       return false;
@@ -899,7 +873,7 @@ const CriarCurso = () => {
       return false;
     }
 
-    // === VALIDAÇÃO DE IMAGEM SE PRESENTE ===
+    // Validação de imagem se presente
     if (formData.imagem) {
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
       if (!allowedTypes.includes(formData.imagem.type)) {
@@ -927,9 +901,8 @@ const CriarCurso = () => {
 
   /**
    * Obtém o nome do formador selecionado para exibição
-   * 
    * Procura o formador na lista carregada e retorna o nome ou ID
-   * para mostrar na interface. Suporta diferentes estruturas de dados.
+   * para mostrar na interface. Suporta diferentes estruturas de dados
    * 
    * @returns {string|null} Nome do formador ou null se não encontrado
    */
@@ -963,7 +936,7 @@ const CriarCurso = () => {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
         <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
-          {/* === ÁREA DE UPLOAD DE IMAGEM === */}
+          {/* Área de upload de imagem */}
           <div className="course-image-container">
             <div
               className="course-image-upload"
@@ -982,7 +955,7 @@ const CriarCurso = () => {
             </div>
           </div>
 
-          {/* === CAMPOS DO FORMULÁRIO === */}
+          {/* Campos do formulário */}
           <div className="inputs">
             {/* Linha 1: Nome e Tipo */}
             <div className="row">
@@ -1194,7 +1167,7 @@ const CriarCurso = () => {
               required
             ></textarea>
 
-            {/* === GESTÃO DE ASSOCIAÇÕES === */}
+            {/* Gestão de associações */}
             <div className="associacoes-container">
               <h3 className="associacoes-titulo">Cursos Associados</h3>
 
@@ -1227,7 +1200,7 @@ const CriarCurso = () => {
               )}
             </div>
 
-            {/* === BOTÃO DE SUBMISSÃO === */}
+            {/* Botão de submissão */}
             <button
               type="submit"
               className="submit-button"
@@ -1238,7 +1211,7 @@ const CriarCurso = () => {
           </div>
         </form>
 
-        {/* === MODAIS === */}
+        {/* Modais */}
         <FormadorModal
           isOpen={modalAberto}
           onClose={() => setModalAberto(false)}

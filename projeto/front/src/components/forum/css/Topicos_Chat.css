@@ -1,213 +1,357 @@
+/**
+ * SISTEMA DE CHAT DE TÓPICOS - ESTILOS PRINCIPAIS
+ * 
+ * Layout responsivo inspirado no WhatsApp com scroll natural da página
+ * Suporta temas, comentários, anexos e sistema completo de avaliações
+ * Interface limpa e intuitiva para comunicação em tempo real
+ */
+
+/* =================================================================
+   LAYOUT PRINCIPAL E ESTRUTURA BASE
+   ================================================================= */
+
+/**
+ * Container principal que organiza sidebar e conteúdo do chat lado a lado
+ * Utiliza flexbox para distribuição eficiente do espaço disponível
+ */
 .main-content {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
+/**
+ * Container principal do chat com estrutura vertical e scroll natural
+ * Permite crescimento natural do conteúdo como nas aplicações modernas
+ * Área de input permanece sempre fixa na parte inferior da viewport
+ * Espaçamento reduzido nas bordas para aproveitar melhor o espaço
+ */
 .chat-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 94vh !important;
   background-color: #f5f7fb;
   border-radius: 8px;
-  margin: 10px;
+  margin: 5px; /* Reduzido de 10px para 5px */
+  margin-bottom: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: relative;
+  padding-bottom: 160px;
+  min-height: calc(100vh - 10px); /* Ajustado para a nova margem */
 }
 
+/* =================================================================
+   CABEÇALHO DO TEMA MELHORADO
+   ================================================================= */
+
+/**
+ * Cabeçalho principal com informações do tema
+ * Layout reorganizado com alinhamento à esquerda para melhor legibilidade
+ */
 .chat-header {
-  padding-top: 20px;
-  padding-bottom: 20px;
+  padding: 20px;
   background-color: #fff;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  text-align: center;
+  border-bottom: 1px solid #eaedf3;
+}
+
+/**
+ * Container do conteúdo do cabeçalho com alinhamento à esquerda
+ * Melhora a apresentação visual e legibilidade das informações
+ */
+.header-content {
+  text-align: left; /* Alterado de center para left */
+  max-width: 100%;
 }
 
 .chat-header h2 {
-  margin: 0;
+  margin: 0 0 8px 0; /* Margem inferior adicionada */
   color: #333;
   font-size: 24px;
+  font-weight: 600;
+  text-align: left; /* Garantia de alinhamento à esquerda */
 }
 
+/**
+ * Descrição do tema posicionada abaixo do título
+ * Mantém alinhamento à esquerda para consistência visual
+ */
 .chat-description {
-  margin: 8px auto 0;
+  margin: 0 0 15px 0; /* Ajustado para ficar abaixo do título */
   color: #666;
   font-size: 14px;
+  line-height: 1.5;
+  text-align: left; /* Alinhamento à esquerda */
 }
 
+/**
+ * Container específico para anexos do tema original
+ * Mantém separação visual clara entre conteúdo textual e anexos
+ */
+.tema-anexo-container {
+  margin: 15px 0;
+}
 
-.topico-meta {
+/**
+ * Metadados do tema reorganizados com alinhamento à esquerda
+ * Apresenta informações do autor e estatísticas de forma mais natural
+ */
+.tema-meta {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 0 20px 20px;
-  gap: 6px;
+  align-items: flex-start; /* Alterado de center para flex-start */
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eaedf3;
 }
 
-.topico-meta .categoria {
-  font-size: 14px;
-  font-weight: bold;
-  color: #444;
-}
-
-.topico-meta .titulo-meta {
-  font-size: 16px;
-  color: #333;
-}
-
-.topico-meta .criado-por {
+.tema-meta .autor,
+.tema-meta .data-criacao {
   font-size: 14px;
   color: #666;
+  font-weight: 500;
 }
 
+/**
+ * Estatísticas do tema com layout horizontal melhorado
+ * Exibe contadores de interação com ícones representativos
+ */
+.tema-stats {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
 
-.mensagens-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 15px;
+.tema-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #777;
+}
+
+.tema-stats i {
+  font-size: 12px;
+}
+
+/* =================================================================
+   ÁREA DE COMENTÁRIOS OTIMIZADA
+   ================================================================= */
+
+/**
+ * Container principal dos comentários com scroll natural da página
+ * Permite crescimento vertical ilimitado para conversas extensas
+ * Espaçamento aumentado substancialmente para melhor separação da área de input
+ */
+.comentarios-container {
+  padding: 20px;
+  padding-bottom: 120px; /* Aumentado significativamente de 60px para 120px */
   display: flex;
   flex-direction: column;
   gap: 15px;
+  background-color: #f5f7fb;
 }
 
-.sem-mensagens {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #999;
-  font-style: italic;
-}
-
-
-.mensagem {
+/**
+ * Estilo individual otimizado para cada comentário
+ * Design inspirado em aplicações de mensagens modernas
+ * Alinhamento dinâmico baseado no autor (próprio vs outros utilizadores)
+ */
+.comentario {
   display: flex;
   flex-direction: column;
   max-width: 75%;
-  background-color: white;
-  padding: 10px 15px;
+  background-color: #ffffff;
+  padding: 15px;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: relative;
-  border-top-left-radius: 0;
+  border: 1px solid #e8ecf0;
   margin-bottom: 8px;
+  align-self: flex-start;
+  transition: transform 0.1s ease;
 }
 
-.minha-mensagem {
-  background-color: #e3effd;
+.comentario:hover {
+  transform: translateY(-1px);
+}
+
+/**
+ * Estilização especial para comentários do utilizador atual
+ * Diferenciação visual clara através de cores e posicionamento à direita
+ */
+.meu-comentario {
+  background-color: #e3f2fd;
   align-self: flex-end;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 0;
+  border: 1px solid #bbdefb;
 }
 
-/* Novo estilo para mensagens denunciadas */
-.mensagem-denunciada {
-  border-left: 3px solid #ff6b6b;
+/**
+ * Destacamento visual para comentários denunciados para moderação
+ * Permite identificação rápida por parte dos moderadores da comunidade
+ */
+.comentario-denunciado {
+  border-left: 4px solid #ff6b6b;
+  background-color: #fff5f5;
 }
 
-.mensagem-header {
+/* =================================================================
+   ESTRUTURA INTERNA DOS COMENTÁRIOS
+   ================================================================= */
+
+/**
+ * Cabeçalho de cada comentário individual
+ * Contém avatar circular, nome do utilizador e timestamp da publicação
+ */
+.comentario-header {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  gap: 8px;
 }
 
+/**
+ * Avatar circular dos utilizadores com dimensões fixas
+ * Borda sutil para definição visual e separação do fundo
+ */
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  margin-right: 8px;
   object-fit: cover;
+  border: 2px solid #e8ecf0;
 }
 
 .nome-usuario {
   font-weight: 600;
   font-size: 14px;
-  color: #444;
+  color: #333;
   flex: 1;
 }
 
-.data-mensagem {
-  font-size: 11px;
+.data-comentario {
+  font-size: 12px;
   color: #888;
 }
 
-.mensagem-conteudo {
+/**
+ * Área principal do conteúdo do comentário
+ * Organiza texto e anexos de forma vertical e consistente
+ */
+.comentario-conteudo {
   width: 100%;
+  margin-bottom: 12px;
 }
 
-.mensagem-conteudo p {
+.comentario-conteudo p {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  line-height: 1.5;
+  color: #333;
 }
 
-.mensagem-acoes {
+/* =================================================================
+   SISTEMA DE AÇÕES DOS COMENTÁRIOS
+   ================================================================= */
+
+/**
+ * Container das ações disponíveis para cada comentário
+ * Inclui like, dislike e opção de denúncia com feedback visual completo
+ * Apenas visível para comentários de outros utilizadores (não próprios)
+ */
+.comentario-acoes {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f2f5;
 }
 
+/**
+ * Estilo base unificado para todos os botões de ação
+ * Design consistente com estados hover e ativos bem definidos
+ */
 .acao-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 4px;
-  background: none;
-  font-size: 12px;
-  color: #777;
+  border-radius: 6px;
+  background: #f8f9fa;
+  font-size: 13px;
+  color: #666;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  gap: 4px;
 }
 
-.acao-btn i {
-  margin-right: 4px;
+.acao-btn:hover {
+  background-color: #e9ecef;
+  transform: translateY(-1px);
 }
 
-/* Estilos para botões de like/dislike ativos e inativos */
+/**
+ * Estados específicos para botão de like (aprovação positiva)
+ * Cores verdes para indicar sentimento positivo e aprovação
+ */
 .like-btn:hover {
-  background-color: #e5f0ff;
-  color: #5181b8;
-}
-
-.dislike-btn:hover {
-  background-color: #fff0f0;
-  color: #e74c3c;
+  background-color: #e8f5e8;
+  color: #28a745;
 }
 
 .like-btn.active {
-  background-color: #e5f0ff;
-  color: #5181b8;
+  background-color: #d4edda;
+  color: #155724;
   font-weight: 600;
+}
+
+/**
+ * Estados específicos para botão de dislike (desaprovação)
+ * Cores vermelhas para indicar desaprovação ou feedback negativo
+ */
+.dislike-btn:hover {
+  background-color: #f8d7da;
+  color: #dc3545;
 }
 
 .dislike-btn.active {
-  background-color: #fff0f0;
-  color: #e74c3c;
+  background-color: #f5c6cb;
+  color: #721c24;
   font-weight: 600;
 }
 
+/**
+ * Botão de denúncia com estado desabilitado após uso
+ * Cores amarelas para indicar alerta, precaução ou moderação
+ */
 .denunciar-btn:hover {
-  background-color: #fff9e6;
-  color: #f39c12;
+  background-color: #fff3cd;
+  color: #856404;
 }
 
 .denunciar-btn[disabled] {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .denuncia-status {
-  font-size: 10px;
-  color: #ff6b6b;
+  font-size: 11px;
+  color: #dc3545;
   margin-left: 4px;
 }
 
+/* =================================================================
+   SISTEMA COMPLETO DE ANEXOS
+   ================================================================= */
+
+/**
+ * Anexos de imagens com funcionalidade clicável para visualização ampliada
+ * Efeito hover sutil para indicar interatividade e melhorar UX
+ */
 .anexo-imagem {
-  margin-top: 8px;
+  margin-top: 10px;
   cursor: pointer;
 }
 
@@ -216,88 +360,87 @@
   max-height: 300px;
   border-radius: 8px;
   object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
 }
 
+.anexo-img:hover {
+  transform: scale(1.02);
+}
+
+/**
+ * Anexos de vídeo com controlos nativos completos do navegador
+ * Dimensões limitadas para manter layout consistente na conversa
+ */
 .anexo-video {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .anexo-video video {
   max-width: 100%;
   max-height: 300px;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/**
+ * Representação visual melhorada para outros tipos de ficheiros
+ * Ícone representativo e nome do ficheiro clicável para download
+ */
 .anexo-arquivo {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
-  background-color: #f2f2f2;
-  padding: 8px 12px;
+  background-color: #f8f9fa;
+  padding: 10px 12px;
   border-radius: 6px;
   cursor: pointer;
+  border: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.anexo-arquivo:hover {
+  background-color: #e9ecef;
 }
 
 .anexo-arquivo i {
   margin-right: 8px;
   color: #5181b8;
+  font-size: 16px;
 }
 
+.anexo-arquivo span {
+  color: #333;
+  font-size: 14px;
+}
 
+/* =================================================================
+   ÁREA DE ENTRADA DE NOVOS COMENTÁRIOS
+   ================================================================= */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Container fixo otimizado na parte inferior da viewport
+ * Permanece sempre visível durante a navegação no chat
+ * Comportamento similar às aplicações de mensagens modernas
+ */
 .chat-input-area {
-  padding: 10px 15px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 15px;
   background-color: white;
   border-top: 1px solid #eaedf3;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 }
 
-.chat-input-area textarea {
-  flex: 1;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  padding: 8px 12px;
-  resize: none;
-  height: 20px !important;
-  max-height: 40px;
-  overflow-y: auto;
-  outline: none;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
+/**
+ * Preview detalhado dos anexos selecionados antes do envio
+ * Permite visualização completa e cancelamento antes de submeter
+ */
 .anexo-preview {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   position: relative;
   display: inline-block;
 }
@@ -311,18 +454,24 @@
 }
 
 .nome-arquivo {
-  padding: 5px 8px;
-  background-color: #f2f2f2;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
   border-radius: 4px;
   font-size: 13px;
+  color: #333;
+  border: 1px solid #e9ecef;
 }
 
+/**
+ * Botão para cancelar anexo selecionado
+ * Posicionado estrategicamente sobre o preview para facilitar acesso
+ */
 .btn-cancelar-anexo {
   position: absolute;
   top: -8px;
   right: -8px;
   border: none;
-  background-color: #f44336;
+  background-color: #dc3545;
   color: white;
   width: 20px;
   height: 20px;
@@ -332,22 +481,68 @@
   align-items: center;
   cursor: pointer;
   font-size: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/**
+ * Layout principal otimizado da área de entrada
+ * Organiza campo de texto, ações e botão de scroll numa linha eficiente
+ */
 .input-wrapper {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/**
+ * Campo de texto principal para novos comentários
+ * Expansível automaticamente com altura máxima e scroll interno
+ */
+.chat-input-area textarea {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 12px 16px;
+  resize: none;
+  min-height: 20px;
+  max-height: 100px;
+  overflow-y: auto;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: border-color 0.2s ease;
+}
+
+.chat-input-area textarea:focus {
+  border-color: #5181b8;
+  box-shadow: 0 0 0 2px rgba(81, 129, 184, 0.1);
+}
+
+.chat-input-area textarea::placeholder {
+  color: #999;
+}
+
+/**
+ * Grupo de ações principais da área de entrada
+ * Botões para anexar ficheiros diversos e enviar comentários
+ */
 .chat-actions {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-left: 8px;
 }
 
+/* =================================================================
+   BOTÕES DE AÇÃO PRINCIPAIS
+   ================================================================= */
 
+/**
+ * Estilo base unificado para botões de anexo e envio
+ * Design circular consistente com feedback visual ao interagir
+ */
 .btn-anexo,
 .btn-enviar {
   border: none;
@@ -355,12 +550,13 @@
   color: white;
   width: 40px;
   height: 40px;
-  border-radius: 100%;
+  border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-anexo {
@@ -370,17 +566,56 @@
 
 .btn-anexo:hover {
   background-color: #d1dbe6;
+  transform: translateY(-1px);
 }
 
 .btn-enviar:hover {
   background-color: #3b6999;
+  transform: translateY(-1px);
 }
 
-.loading-container {
+/**
+ * Botão melhorado para scroll automático até ao final da conversa
+ * Funcionalidade essencial para conversas longas e navegação rápida
+ */
+.btn-ir-final {
+  border: none;
+  background-color: #f8f9fa;
+  color: #666;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e9ecef;
+  margin-left: 8px;
+}
+
+.btn-ir-final:hover {
+  background-color: #e9ecef;
+  color: #5181b8;
+  transform: translateY(-1px);
+}
+
+/* =================================================================
+   ESTADOS DE CARREGAMENTO E ERRO
+   ================================================================= */
+
+/**
+ * Layouts centrados para estados de carregamento e erro
+ * Apresentação clara e profissional de informações de estado da aplicação
+ */
+.loading-container,
+.erro-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  padding: 20px;
 }
 
 .loading {
@@ -393,11 +628,7 @@
 }
 
 .erro-container {
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
   margin: 20px;
   background-color: #fff;
   border-radius: 8px;
@@ -415,7 +646,29 @@
   margin-bottom: 20px;
 }
 
+/* =================================================================
+   RESPONSIVE DESIGN - ADAPTAÇÕES MÓVEIS OTIMIZADAS
+   ================================================================= */
+
+/**
+ * Adaptações principais para dispositivos móveis
+ * Layout otimizado para ecrãs de tamanho reduzido e toque
+ */
 @media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+
+  .chat-content {
+    margin: 2px; /* Reduzido ainda mais para mobile */
+    margin-bottom: 0;
+    border-radius: 0;
+    padding-bottom: 180px;
+  }
+
+  .chat-header {
+    padding: 15px;
+  }
 
   .chat-header h2 {
     font-size: 20px;
@@ -425,35 +678,115 @@
     font-size: 12px;
   }
 
-  .topico-meta {
-    padding: 0 10px 15px;
+  /**
+   * Espaçamento aumentado substancialmente para dispositivos móveis
+   * Garante que a última mensagem fica bem visível acima da área de input
+   */
+  .comentarios-container {
+    padding: 15px;
+    padding-bottom: 140px; /* Aumentado de 80px para 140px */
+    gap: 12px;
   }
 
-  .chat-input-area textarea {
-    height: 32px;
-  }
-
-  .mensagem {
+  .comentario {
     max-width: 90%;
+    padding: 12px;
   }
 
-  .chat-content {
-    margin: 5px;
+  .avatar {
+    width: 28px;
+    height: 28px;
   }
 
-  .topico-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
+  .nome-usuario {
+    font-size: 13px;
   }
 
+  .data-comentario {
+    font-size: 11px;
+  }
+
+  .chat-input-area {
+    padding: 12px;
+  }
+
+  /**
+   * Campo de texto móvel com tamanho de fonte específico
+   * Previne zoom automático indesejado no iOS durante a digitação
+   */
+  .chat-input-area textarea {
+    font-size: 16px;
+  }
+
+  /**
+   * Layout mais compacto e eficiente para dispositivos móveis
+   * Botões de tamanho reduzido e espaçamento otimizado para toque
+   */
   .input-wrapper {
-    flex-direction: column;
-    align-items: stretch;
+    gap: 8px;
   }
 
-  .chat-actions {
-    margin-top: 8px;
-    justify-content: flex-end;
+  .btn-anexo,
+  .btn-enviar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .btn-ir-final {
+    width: 32px;
+    height: 32px;
+    margin-left: 6px;
+  }
+
+  .tema-stats {
+    gap: 15px;
+    font-size: 13px;
+  }
+
+  .acao-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /**
+   * Comportamento da sidebar em dispositivos móveis
+   * Modo overlay quando aberta para poupar espaço de ecrã
+   */
+  .sidebar {
+    position: fixed;
+    z-index: 999;
+  }
+}
+
+/**
+ * Otimizações específicas para ecrãs muito pequenos (smartphones compactos)
+ * Ajustes adicionais para garantir usabilidade em dispositivos muito pequenos
+ */
+@media (max-width: 480px) {
+  .chat-content {
+    margin: 0;
+    padding-bottom: 200px;
+  }
+
+  .chat-input-area {
+    padding: 10px;
+  }
+
+  .comentario {
+    max-width: 95%;
+    padding: 10px;
+  }
+
+  .chat-header {
+    padding: 12px;
+  }
+
+  /**
+   * Espaçamento máximo para dispositivos muito pequenos
+   * Garante visibilidade total da última mensagem em qualquer situação
+   */
+  .comentarios-container {
+    padding: 10px;
+    padding-bottom: 160px; /* Aumentado de 100px para 160px */
   }
 }

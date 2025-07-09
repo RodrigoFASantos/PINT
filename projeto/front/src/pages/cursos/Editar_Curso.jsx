@@ -12,9 +12,8 @@ import './css/Criar_Curso.css';
 
 /**
  * Configuração personalizada do ToastContainer para notificações
- * 
  * Define configurações específicas para as notificações da página de edição,
- * evitando conflitos com outras notificações na aplicação.
+ * evitando conflitos com outras notificações na aplicação
  */
 const ToastContainerConfig = {
   position: "top-right",
@@ -33,29 +32,29 @@ const ToastContainerConfig = {
 /**
  * Componente principal para edição de cursos existentes
  * 
- * Este componente fornece uma interface completa para editar cursos com
+ * Este componente oferece uma interface completa para editar cursos com
  * funcionalidades avançadas de gestão:
- * - Carregamento e pré-preenchimento dos dados existentes
- * - Upload de nova imagem de capa
- * - Alteração de formador com validações
+ * - Carregamento e pré-preenchimento dos dados existentes do curso
+ * - Upload de nova imagem de capa com validação
+ * - Alteração de formador com validações específicas
  * - Gestão de associações bidirecionais entre cursos
  * - Validações específicas para datas e tipos de curso
  * - Proteção contra alterações em cursos já iniciados
- * - Sistema integrado de notificações automáticas
+ * - Sistema integrado de notificações automáticas para utilizadores inscritos
  */
 const EditarCurso = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // === ESTADOS DE INTERFACE ===
+  // Estados de interface
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // === ESTADOS DE MODAIS ===
+  // Estados de modais
   const [modalAberto, setModalAberto] = useState(false);
   const [modalAssociacaoAberto, setModalAssociacaoAberto] = useState(false);
 
-  // === ESTADOS PARA DADOS DO SERVIDOR ===
+  // Estados para dados do servidor
   const [formadores, setFormadores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -63,7 +62,7 @@ const EditarCurso = () => {
   const [topicos, setTopicos] = useState([]);
   const [topicosFiltrados, setTopicosFiltrados] = useState([]);
 
-  // === ESTADOS FUNCIONAIS ===
+  // Estados funcionais
   const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
@@ -71,11 +70,11 @@ const EditarCurso = () => {
   const [dataInicioUltrapassada, setDataInicioUltrapassada] = useState(false);
   const [erroDataFim, setErroDataFim] = useState('');
 
-  // === ESTADOS PARA GESTÃO DE ASSOCIAÇÕES ===
+  // Estados para gestão de associações
   const [cursosAssociados, setCursosAssociados] = useState([]);
   const [loadingAssociacoes, setLoadingAssociacoes] = useState(false);
 
-  // === ESTADO PRINCIPAL DO FORMULÁRIO ===
+  // Estado principal do formulário
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -93,10 +92,9 @@ const EditarCurso = () => {
 
   /**
    * Carrega lista de cursos associados ao curso atual
-   * 
    * Mostra associações bidirecionais existentes, permitindo visualizar
    * e gerir relações entre cursos. As associações ajudam na descoberta
-   * de conteúdo relacionado pelos utilizadores.
+   * de conteúdo relacionado pelos utilizadores
    */
   const carregarCursosAssociados = async () => {
     try {
@@ -130,9 +128,8 @@ const EditarCurso = () => {
 
   /**
    * Cria nova associação entre o curso atual e um curso selecionado
-   * 
    * Verifica duplicatas e atualiza a lista automaticamente após criação.
-   * As associações são bidirecionais, permitindo navegação em ambas as direções.
+   * As associações são bidirecionais, permitindo navegação em ambas as direções
    * 
    * @param {Object} cursoSelecionado - Dados do curso a associar
    */
@@ -210,9 +207,8 @@ const EditarCurso = () => {
 
   /**
    * Determina qual curso está associado baseado na direção da associação
-   * 
    * Como as associações são bidirecionais, precisa identificar o "outro" curso
-   * que não é o curso atual a ser editado.
+   * que não é o curso atual a ser editado
    * 
    * @param {Object} associacao - Dados da associação
    * @returns {Object} Dados do curso associado
@@ -225,7 +221,6 @@ const EditarCurso = () => {
 
   /**
    * Carrega dados do curso e recursos necessários quando o componente monta
-   * 
    * Executa carregamento paralelo de:
    * 1. Dados completos do curso a ser editado
    * 2. Recursos do sistema (formadores, categorias, áreas, tópicos)
@@ -234,9 +229,8 @@ const EditarCurso = () => {
   useEffect(() => {
     /**
      * Carrega detalhes completos do curso a ser editado
-     * 
      * Inclui validação de permissões, verificação de datas e
-     * configuração do estado inicial do formulário.
+     * configuração do estado inicial do formulário
      */
     const fetchCursoDetails = async () => {
       try {
@@ -270,7 +264,7 @@ const EditarCurso = () => {
           return data.toISOString().split('T')[0];
         };
 
-        // === VERIFICAÇÃO DE PROTEÇÕES TEMPORAIS ===
+        // Verificação de proteções temporais
         // Verificar se a data de início já passou (proteção contra alterações)
         const dataAtual = new Date();
         const dataInicio = new Date(cursoData.data_inicio);
@@ -283,7 +277,7 @@ const EditarCurso = () => {
           });
         }
 
-        // === PREENCHIMENTO DO FORMULÁRIO ===
+        // Preenchimento do formulário
         setFormData({
           nome: cursoData.nome || '',
           descricao: cursoData.descricao || '',
@@ -299,14 +293,14 @@ const EditarCurso = () => {
           imagem: null // Sempre null para novo upload
         });
 
-        // === CONFIGURAÇÃO DE PREVIEW DE IMAGEM EXISTENTE ===
+        // Configuração de preview de imagem existente
         if (cursoData.imagem_path) {
           const imagemUrl = `${API_BASE}/${cursoData.imagem_path}`;
           setPreviewImage(imagemUrl);
           console.log(`🖼️ [EDITAR] Preview de imagem configurado: ${imagemUrl}`);
         }
 
-        // === GUARDAR NOME DO FORMADOR ATUAL ===
+        // Guardar nome do formador atual
         if (cursoData.formador) {
           setFormadorNome(cursoData.formador.nome);
           console.log(`👨‍🏫 [EDITAR] Formador atual: ${cursoData.formador.nome}`);
@@ -333,9 +327,8 @@ const EditarCurso = () => {
 
     /**
      * Carrega recursos necessários do sistema
-     * 
      * Carrega formadores, categorias, áreas e tópicos disponíveis
-     * para preencher os dropdowns do formulário.
+     * para preencher os dropdowns do formulário
      */
     const fetchResources = async () => {
       const token = localStorage.getItem('token');
@@ -348,28 +341,33 @@ const EditarCurso = () => {
         setIsLoadingFilters(true);
         console.log('📊 [EDITAR] A carregar recursos do sistema...');
 
-        // === CARREGAR FORMADORES DISPONÍVEIS ===
+        // Carregar formadores disponíveis
         const responseFormadores = await axios.get(`${API_BASE}/users/formadores`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setFormadores(responseFormadores.data);
         console.log(`✅ [EDITAR] ${responseFormadores.data.length} formadores carregados`);
 
-        // === CARREGAR CATEGORIAS ===
+        // Carregar categorias
         const responseCategorias = await axios.get(`${API_BASE}/categorias`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setCategorias(responseCategorias.data);
         console.log(`✅ [EDITAR] ${responseCategorias.data.length} categorias carregadas`);
 
-        // === CARREGAR ÁREAS ===
+        // Carregar áreas
         const responseAreas = await axios.get(`${API_BASE}/areas`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        setAreas(responseAreas.data);
-        console.log(`✅ [EDITAR] ${responseAreas.data.length} áreas carregadas`);
+        
+        console.log("📋 [EDITAR] Resposta completa da API de áreas:", responseAreas.data);
+        
+        // Extrair o array de áreas da resposta da API
+        const areasData = responseAreas.data.areas || responseAreas.data || [];
+        setAreas(Array.isArray(areasData) ? areasData : []);
+        console.log(`✅ [EDITAR] ${Array.isArray(areasData) ? areasData.length : 0} áreas carregadas`);
 
-        // === CARREGAR TÓPICOS DISPONÍVEIS ===
+        // Carregar tópicos disponíveis
         const responseTopicos = await axios.get(`${API_BASE}/topicos-area`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -434,9 +432,8 @@ const EditarCurso = () => {
 
   /**
    * Filtra tópicos disponíveis baseado na área selecionada
-   * 
    * Atualiza lista sempre que a área ou conjunto de tópicos muda.
-   * Implementa lógica robusta para lidar com diferentes estruturas de dados.
+   * Implementa lógica robusta para lidar com diferentes estruturas de dados
    */
   useEffect(() => {
     if (formData.id_area && Array.isArray(topicos) && topicos.length > 0) {
@@ -474,12 +471,11 @@ const EditarCurso = () => {
 
   /**
    * Filtra áreas baseado na categoria selecionada
-   * 
    * Atualiza automaticamente quando a categoria muda, limpando
-   * seleções dependentes para manter consistência.
+   * seleções dependentes para manter consistência
    */
   useEffect(() => {
-    if (formData.id_categoria) {
+    if (formData.id_categoria && Array.isArray(areas)) {
       const catId = String(formData.id_categoria);
       
       console.log(`🏷️ [EDITAR] A filtrar áreas para categoria: ${catId}`);
@@ -499,9 +495,8 @@ const EditarCurso = () => {
 
   /**
    * Processa alterações nos campos do formulário
-   * 
    * Inclui validações específicas e lógica de dependências entre campos.
-   * Implementa proteções especiais para cursos que já iniciaram.
+   * Implementa proteções especiais para cursos que já iniciaram
    * 
    * @param {Event} e - Evento de mudança do campo
    */
@@ -511,7 +506,7 @@ const EditarCurso = () => {
     console.log(`🔍 [EDITAR] Campo alterado: ${name} = ${name === 'imagem' ? 'FILE_OBJECT' : value}`);
 
     if (name === 'imagem') {
-      // === PROCESSAMENTO DE NOVA IMAGEM ===
+      // Processamento de nova imagem
       const file = files[0];
       setFormData({ ...formData, imagem: file });
 
@@ -531,7 +526,7 @@ const EditarCurso = () => {
       }
       
     } else if (name === 'tipo') {
-      // === LÓGICA ESPECÍFICA PARA MUDANÇA DE TIPO DE CURSO ===
+      // Lógica específica para mudança de tipo de curso
       if (value === 'assincrono') {
         // Cursos assíncronos não precisam de vagas
         setFormData({ ...formData, [name]: value, vagas: '' });
@@ -543,22 +538,22 @@ const EditarCurso = () => {
       }
       
     } else if (name === 'id_categoria') {
-      // === LIMPAR CAMPOS DEPENDENTES AO MUDAR CATEGORIA ===
+      // Limpar campos dependentes ao mudar categoria
       setFormData({ ...formData, [name]: value, id_area: '', id_topico_area: '' });
       
     } else if (name === 'id_area') {
-      // === LIMPAR TÓPICO AO MUDAR ÁREA ===
+      // Limpar tópico ao mudar área
       setFormData({ ...formData, [name]: value, id_topico_area: '' });
       
     } else if (name === 'vagas' && dataInicioUltrapassada) {
-      // === PROTEÇÃO: NÃO PERMITIR ALTERAÇÃO DE VAGAS APÓS DATA DE INÍCIO ===
+      // Proteção: não permitir alteração de vagas após data de início
       toast.warning('Não é possível alterar as vagas após a data limite de inscrição.', {
         containerId: "editar-curso-toast"
       });
       return;
       
     } else if (name === 'data_inicio' || name === 'data_fim') {
-      // === VALIDAÇÃO ESPECIAL PARA DATAS ===
+      // Validação especial para datas
       const novoFormData = { ...formData, [name]: value };
 
       if (name === 'data_fim') {
@@ -578,16 +573,15 @@ const EditarCurso = () => {
       setFormData(novoFormData);
       
     } else {
-      // === CAMPOS GENÉRICOS ===
+      // Campos genéricos
       setFormData({ ...formData, [name]: value });
     }
   };
 
   /**
    * Processa submissão do formulário para atualizar o curso
-   * 
    * Inclui validação completa, criação de FormData, processamento de alterações
-   * e tratamento de erros específicos. Integra com sistema de notificações automáticas.
+   * e tratamento de erros específicos. Integra com sistema de notificações automáticas
    * 
    * @param {Event} e - Evento de submissão do formulário
    */
@@ -598,7 +592,7 @@ const EditarCurso = () => {
     console.log("📊 [EDITAR] FormData atual:", formData);
     console.log("🖼️ [EDITAR] Nova imagem selecionada:", !!formData.imagem);
 
-    // === VALIDAÇÕES OBRIGATÓRIAS ===
+    // Validações obrigatórias
     
     // Validação para cursos síncronos
     if (formData.tipo === 'sincrono' && !formData.id_formador) {
@@ -617,7 +611,7 @@ const EditarCurso = () => {
       return;
     }
 
-    // === VALIDAÇÃO ADICIONAL: DATAS NÃO PODEM ESTAR NO PASSADO ===
+    // Validação adicional: datas não podem estar no passado
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dataInicio = new Date(formData.data_inicio);
@@ -629,7 +623,7 @@ const EditarCurso = () => {
       return;
     }
 
-    // === CRIAR FORMDATA PARA ENVIO ===
+    // Criar FormData para envio
     const data = new FormData();
 
     // Adicionar todos os campos relevantes ao FormData
@@ -645,7 +639,7 @@ const EditarCurso = () => {
       }
     }
 
-    // === DEBUG: VERIFICAR CONTEÚDO DO FORMDATA ===
+    // Debug: verificar conteúdo do FormData
     console.log("📋 [EDITAR] Conteúdo do FormData para envio:");
     for (let pair of data.entries()) {
       if (pair[1] instanceof File) {
@@ -658,7 +652,7 @@ const EditarCurso = () => {
     try {
       console.log("📡 [EDITAR] A enviar requisição PUT para o servidor...");
 
-      // === ENVIAR ATUALIZAÇÃO PARA O BACKEND ===
+      // Enviar atualização para o backend
       const response = await axios.put(`${API_BASE}/cursos/${id}`, data, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -669,12 +663,12 @@ const EditarCurso = () => {
 
       console.log("✅ [EDITAR] Resposta do servidor:", response.data);
 
-      // === FEEDBACK PRINCIPAL DE SUCESSO ===
+      // Feedback principal de sucesso
       toast.success('Curso atualizado com sucesso!', {
         containerId: "editar-curso-toast"
       });
 
-      // === MOSTRAR INFORMAÇÕES SOBRE NOTIFICAÇÕES ENVIADAS ===
+      // Mostrar informações sobre notificações enviadas
       if (response.data.alteracoesNotificadas > 0) {
         setTimeout(() => {
           toast.info(
@@ -703,7 +697,7 @@ const EditarCurso = () => {
         }
       }
 
-      // === FEEDBACK SOBRE ATUALIZAÇÕES ESPECÍFICAS ===
+      // Feedback sobre atualizações específicas
       
       // Feedback sobre atualização de imagem
       if (response.data.imagemAtualizada) {
@@ -720,7 +714,7 @@ const EditarCurso = () => {
         console.log("📁 [EDITAR] Pasta do curso foi renomeada devido à alteração do nome");
       }
 
-      // === REDIRECIONAR PARA PÁGINA DE DETALHES DO CURSO ===
+      // Redirecionar para página de detalhes do curso
       setTimeout(() => {
         navigate(`/cursos/${id}`);
       }, 3000);
@@ -729,7 +723,7 @@ const EditarCurso = () => {
       console.error('❌ [EDITAR] Erro ao atualizar curso:', error);
       console.error('📋 [EDITAR] Response data:', error.response?.data);
 
-      // === DETERMINAR MENSAGEM DE ERRO ESPECÍFICA ===
+      // Determinar mensagem de erro específica
       let mensagemErro = 'Erro desconhecido';
 
       if (error.response?.data?.message) {
@@ -743,7 +737,7 @@ const EditarCurso = () => {
         autoClose: 8000
       });
 
-      // === FEEDBACK ADICIONAL PARA ERROS DE VALIDAÇÃO ===
+      // Feedback adicional para erros de validação
       if (error.response?.status === 400) {
         setTimeout(() => {
           toast.warning('Verifica se todos os campos obrigatórios estão preenchidos corretamente', {
@@ -763,7 +757,7 @@ const EditarCurso = () => {
     }
   };
 
-  // === MOSTRAR SPINNER DE CARREGAMENTO ===
+  // Mostrar spinner de carregamento
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -785,7 +779,7 @@ const EditarCurso = () => {
       <form className='form' onSubmit={handleSubmit} encType="multipart/form-data">
         <h2>Editar Curso</h2>
 
-        {/* === ÁREA DE UPLOAD/ALTERAÇÃO DE IMAGEM === */}
+        {/* Área de upload/alteração de imagem */}
         <div className="image-upload-container">
           <label className="custom-file-upload">
             <input
@@ -817,7 +811,7 @@ const EditarCurso = () => {
           )}
         </div>
 
-        {/* === CAMPOS DO FORMULÁRIO === */}
+        {/* Campos do formulário */}
         <div className="inputs">
           {/* Linha 1: Nome e Tipo */}
           <div className="row">
@@ -1002,7 +996,7 @@ const EditarCurso = () => {
             required
           ></textarea>
 
-          {/* === GESTÃO DE ASSOCIAÇÕES === */}
+          {/* Gestão de associações */}
           <div className="associacoes-container">
             <h3 className="associacoes-titulo">Cursos Associados</h3>
 
@@ -1049,7 +1043,7 @@ const EditarCurso = () => {
             )}
           </div>
 
-          {/* === BOTÕES DE AÇÃO === */}
+          {/* Botões de ação */}
           <div className="buttons-row">
             <button
               type="button"
@@ -1069,7 +1063,7 @@ const EditarCurso = () => {
         </div>
       </form>
 
-      {/* === MODAIS === */}
+      {/* Modais */}
       <FormadorModal
         isOpen={modalAberto}
         onClose={() => setModalAberto(false)}

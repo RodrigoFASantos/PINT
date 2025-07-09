@@ -291,76 +291,7 @@ export default function CursoPagina() {
     }
   }, [id, userRole, currentUser, navigate]);
 
-  // ===== COMPONENTES DE DEBUG (APENAS EM DESENVOLVIMENTO) =====
-  const DebugPanel = () => {
-    if (process.env.NODE_ENV !== 'development') return null;
-
-    return (
-      <div style={{
-        position: 'fixed',
-        bottom: '10px',
-        right: '10px',
-        width: '400px',
-        maxHeight: '300px',
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #dee2e6',
-        borderRadius: '8px',
-        padding: '10px',
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        overflow: 'auto',
-        zIndex: 9999,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ 
-          fontWeight: 'bold', 
-          marginBottom: '10px',
-          borderBottom: '1px solid #dee2e6',
-          paddingBottom: '5px'
-        }}>
-          🔧 Debug Panel - Página do Curso
-        </div>
-        
-        <div style={{ marginBottom: '10px' }}>
-          <strong>Estado Atual:</strong>
-          <div>Loading: {loading ? '✅' : '❌'}</div>
-          <div>Curso: {curso ? '✅' : '❌'}</div>
-          <div>Inscrito: {inscrito ? '✅' : '❌'}</div>
-          <div>Erro: {error ? '❌' : '✅'}</div>
-          <div>User Role: {userRole || 'N/A'}</div>
-        </div>
-
-        <div>
-          <strong>Últimos Logs:</strong>
-          <div style={{ maxHeight: '150px', overflow: 'auto' }}>
-            {debugInfo.slice(-5).map((log, index) => (
-              <div key={index} style={{
-                marginBottom: '5px',
-                padding: '2px',
-                backgroundColor: log.type === 'error' ? '#ffebee' : 
-                                log.type === 'warn' ? '#fff3e0' :
-                                log.type === 'success' ? '#e8f5e8' : '#f5f5f5',
-                borderRadius: '3px'
-              }}>
-                <div style={{ fontWeight: 'bold' }}>
-                  {log.type === 'error' ? '❌' : 
-                   log.type === 'warn' ? '⚠️' : 
-                   log.type === 'success' ? '✅' : 'ℹ️'} 
-                  {log.timestamp.slice(11, 19)}
-                </div>
-                <div>{log.message}</div>
-                {log.data && (
-                  <div style={{ fontSize: '10px', color: '#666' }}>
-                    {JSON.stringify(log.data, null, 2).slice(0, 100)}...
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
+ 
 
   // ===== RENDERIZAÇÃO CONDICIONAL =====
 
@@ -369,7 +300,6 @@ export default function CursoPagina() {
       <div className="carregamento">
         <div className="indicador-carregamento"></div>
         <p>A carregar dados do curso...</p>
-        <DebugPanel />
       </div>
     );
   }
@@ -382,7 +312,6 @@ export default function CursoPagina() {
         <button onClick={() => navigate('/cursos')} className="botao-voltar">
           Voltar para lista de cursos
         </button>
-        <DebugPanel />
       </div>
     );
   }
@@ -420,7 +349,6 @@ export default function CursoPagina() {
         >
           Voltar para lista de cursos
         </button>
-        <DebugPanel />
       </div>
     );
   }
@@ -433,7 +361,6 @@ export default function CursoPagina() {
         <button onClick={() => navigate('/cursos')} className="botao-voltar">
           Voltar para lista de cursos
         </button>
-        <DebugPanel />
       </div>
     );
   }
@@ -479,7 +406,6 @@ export default function CursoPagina() {
         </div>
       </div>
 
-      <DebugPanel />
     </div>
   );
 }

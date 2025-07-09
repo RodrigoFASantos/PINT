@@ -299,7 +299,7 @@ const rotas = [
   { caminho: "./src/routes/users/Percurso_Formandos_routes", prefixo: "/api/percurso-formandos" },
 
   // Sistema de cursos com notificações em tempo real
-  { caminho: "./src/routes/cursos/curso_categorias_route", prefixo: "/api/categorias" },
+  { caminho: "./src/routes/categorias/categorias_route", prefixo: "/api/categorias" },
   { caminho: "./src/routes/areas/areas_route", prefixo: "/api/areas" },
   { caminho: "./src/routes/cursos/cursos_route", prefixo: "/api/cursos" },
   { caminho: "./src/routes/cursos/associar_cursos_route", prefixo: "/api/associar-cursos" },

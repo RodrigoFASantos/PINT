@@ -1,4 +1,7 @@
-/* Layout principal */
+/* ========================================
+   LAYOUT PRINCIPAL E CONTENTOR
+   ======================================== */
+
 .gerenciar-categorias-container-gerir-categorias {
   display: flex;
   min-height: 100vh;
@@ -22,7 +25,10 @@
   margin-left: 250px;
 }
 
-/* Cabeçalho da página */
+/* ========================================
+   CABEÇALHO DA PÁGINA
+   ======================================== */
+
 .categorias-header-gerir-categorias {
   display: flex;
   justify-content: space-between;
@@ -89,7 +95,10 @@
   transform: translateY(-1px);
 }
 
-/* Sistema de filtros */
+/* ========================================
+   SISTEMA DE FILTROS
+   ======================================== */
+
 .filtros-container-gerir-categorias {
   display: flex;
   justify-content: space-between;
@@ -167,7 +176,10 @@
   cursor: not-allowed;
 }
 
-/* Tabela de dados */
+/* ========================================
+   TABELA DE DADOS
+   ======================================== */
+
 .categorias-table-container-gerir-categorias {
   background: white;
   border-radius: 8px;
@@ -201,6 +213,25 @@
   border-bottom: 2px solid #dee2e6;
 }
 
+/* Cabeçalhos ordenáveis com melhor aparência */
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.sortable-header:hover {
+  background-color: #e9ecef !important;
+}
+
+.sort-icon {
+  font-weight: normal;
+  color: #6c757d;
+  margin-left: 5px;
+  font-size: 0.8rem;
+}
+
 .categorias-table-gerir-categorias tbody tr {
   transition: background-color 0.2s ease;
 }
@@ -219,6 +250,23 @@
   color: #333;
 }
 
+/* Contagem de áreas com cor normal */
+.areas-count-gerir-categorias {
+  text-align: center;
+}
+
+.count-number {
+  color: #333 !important; /* Cor normal do texto, não azul */
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.count-number:hover {
+  background-color: #f0f0f0;
+}
+
 .linha-vazia-gerir-categorias {
   opacity: 0.3;
 }
@@ -232,7 +280,10 @@
   background-color: transparent !important;
 }
 
-/* Acções da tabela */
+/* ========================================
+   AÇÕES DA TABELA
+   ======================================== */
+
 .acoes-gerir-categorias {
   display: flex;
   gap: 8px;
@@ -267,7 +318,10 @@
   background-color: #ffebee;
 }
 
-/* Sistema de paginação */
+/* ========================================
+   SISTEMA DE PAGINAÇÃO
+   ======================================== */
+
 .paginacao-gerir-categorias {
   display: flex;
   justify-content: center;
@@ -327,7 +381,10 @@
   font-size: 0.9rem;
 }
 
-/* Estados de carregamento */
+/* ========================================
+   ESTADOS DE CARREGAMENTO
+   ======================================== */
+
 .loading-container-gerir-categorias {
   display: flex;
   flex-direction: column;
@@ -364,7 +421,10 @@
   padding: 40px 20px;
 }
 
-/* Modais e formulários */
+/* ========================================
+   MODAIS E FORMULÁRIOS
+   ======================================== */
+
 .modal-overlay-gerir-categorias {
   position: fixed;
   top: 0;
@@ -428,7 +488,10 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Acções dos modais */
+/* ========================================
+   AÇÕES DOS MODAIS
+   ======================================== */
+
 .modal-actions-gerir-categorias {
   display: flex;
   gap: 15px;
@@ -467,7 +530,94 @@
   background-color: #0056b3;
 }
 
-/* Responsividade para dispositivos móveis */
+.btn-danger-gerir-categorias {
+  background-color: #dc3545 !important;
+}
+
+.btn-danger-gerir-categorias:hover {
+  background-color: #c82333 !important;
+}
+
+/* ========================================
+   LISTA DE AVISOS NO MODAL DE ELIMINAÇÃO
+   ======================================== */
+
+.warning-list-gerir-categorias {
+  margin: 15px 0;
+  padding-left: 20px;
+  color: #721c24;
+}
+
+.warning-list-gerir-categorias li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* ========================================
+   MODAL DE VISUALIZAÇÃO DE ÁREAS
+   ======================================== */
+
+.no-areas-message-gerir-categorias {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.areas-list-gerir-categorias {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 15px 0;
+}
+
+.area-item-gerir-categorias {
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  transition: background-color 0.2s ease;
+}
+
+.area-item-gerir-categorias:hover {
+  background-color: #f0f0f0;
+}
+
+.area-item-gerir-categorias:last-child {
+  margin-bottom: 0;
+}
+
+.area-info-gerir-categorias {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.area-name-gerir-categorias {
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.topicos-count-gerir-categorias {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.area-description-gerir-categorias {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ========================================
+   RESPONSIVIDADE PARA DISPOSITIVOS MÓVEIS
+   ======================================== */
+
 @media (max-width: 768px) {
   .main-content-gerir-categorias {
     padding: 15px;
@@ -540,9 +690,18 @@
     flex-wrap: wrap;
     gap: 10px;
   }
+
+  .area-info-gerir-categorias {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
 }
 
-/* Configurações gerais da página */
+/* ========================================
+   CONFIGURAÇÕES GERAIS E BARRAS DE SCROLL
+   ======================================== */
+
 html, body {
   height: 100%;
   overflow-x: hidden;
@@ -561,27 +720,31 @@ html, body {
 /* Barras de scroll personalizadas */
 .main-content-gerir-categorias::-webkit-scrollbar,
 .modal-content-gerir-categorias::-webkit-scrollbar,
-.categorias-table-container-gerir-categorias::-webkit-scrollbar {
+.categorias-table-container-gerir-categorias::-webkit-scrollbar,
+.areas-list-gerir-categorias::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .main-content-gerir-categorias::-webkit-scrollbar-track,
 .modal-content-gerir-categorias::-webkit-scrollbar-track,
-.categorias-table-container-gerir-categorias::-webkit-scrollbar-track {
+.categorias-table-container-gerir-categorias::-webkit-scrollbar-track,
+.areas-list-gerir-categorias::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
 .main-content-gerir-categorias::-webkit-scrollbar-thumb,
 .modal-content-gerir-categorias::-webkit-scrollbar-thumb,
-.categorias-table-container-gerir-categorias::-webkit-scrollbar-thumb {
+.categorias-table-container-gerir-categorias::-webkit-scrollbar-thumb,
+.areas-list-gerir-categorias::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
 .main-content-gerir-categorias::-webkit-scrollbar-thumb:hover,
 .modal-content-gerir-categorias::-webkit-scrollbar-thumb:hover,
-.categorias-table-container-gerir-categorias::-webkit-scrollbar-thumb:hover {
+.categorias-table-container-gerir-categorias::-webkit-scrollbar-thumb:hover,
+.areas-list-gerir-categorias::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }

@@ -1,5 +1,5 @@
-/* Estrutura da página */
-.gerenciar-cursos-container {
+/* Estrutura principal da página de gestão de cursos */
+.gerenciar-cursos-container-gerir-cursos {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -10,8 +10,8 @@
   padding-top: 60px;
 }
 
-/* Conteúdo principal */
-.main-content {
+/* Conteúdo principal da página */
+.main-content-gerir-cursos {
   margin-top: 60px !important;
   width: 100%;
   max-width: 1400px;
@@ -21,21 +21,30 @@
   transition: margin-left 0.3s ease;
 }
 
-/* Cabeçalho da página */
-.cursos-header {
+/* Cabeçalho da página com título e botão de criar */
+.cursos-header-gerir-cursos {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
 }
 
-.cursos-header h1 {
+.cursos-header-gerir-cursos h1 {
   color: #333;
   font-size: 1.8rem;
   font-weight: 700;
 }
 
-.criar-curso-btn {
+/* Contador total de cursos no cabeçalho */
+.total-count-gerir-cursos {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: 0.5rem;
+}
+
+/* Botão para criar novo curso */
+.criar-curso-btn-gerir-cursos {
   background-color: #3b82f6;
   color: white;
   border: none;
@@ -47,39 +56,44 @@
   transition: background-color 0.2s;
 }
 
-.criar-curso-btn:hover {
+.criar-curso-btn-gerir-cursos:hover {
   background-color: #2563eb;
 }
 
-/* Área de filtros */
-.filtros-container {
+/* Contentor principal dos filtros de pesquisa */
+.filtros-container-gerir-cursos {
   background-color: white;
   border-radius: 0.5rem;
   padding: 1.5rem;
   margin-bottom: 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  position: relative;
-  padding-bottom: 4rem;
-  /* Espaço para o botão limpar filtros */
 }
 
-.filtro {
+/* Área principal dos filtros em linha */
+.filtros-principais-gerir-cursos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Estilo individual de cada filtro */
+.filtro-gerir-cursos {
   display: flex;
   flex-direction: column;
 }
 
-.filtro label {
+.filtro-gerir-cursos label {
   font-size: 0.875rem;
   font-weight: 600;
   color: #4b5563;
   margin-bottom: 0.5rem;
 }
 
-.filtro input,
-.filtro select {
+.filtro-gerir-cursos input,
+.filtro-gerir-cursos select {
   padding: 0.625rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
@@ -87,21 +101,22 @@
   font-size: 0.875rem;
 }
 
-.filtro input:focus,
-.filtro select:focus {
+.filtro-gerir-cursos input:focus,
+.filtro-gerir-cursos select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
 
-/* Botão de limpar filtros */
-.limpar-filtros-container {
-  position: absolute;
-  bottom: 1rem;
-  right: 1.5rem;
+/* Área das ações dos filtros (botão limpar) */
+.filtro-acoes-gerir-cursos {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
-.btn-limpar {
+/* Botão para limpar todos os filtros */
+.btn-limpar-gerir-cursos {
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 0.375rem;
@@ -113,93 +128,117 @@
   color: #4b5563;
 }
 
-.btn-limpar:hover {
+.btn-limpar-gerir-cursos:hover {
   background-color: #e5e7eb;
 }
 
-/* Tabela de cursos */
-.cursos-table-container {
+.btn-limpar-gerir-cursos:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Contentor da tabela de cursos */
+.cursos-table-container-gerir-cursos {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  /* Para iOS */
   background-color: white;
   border-radius: 0.5rem;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.cursos-table {
+/* Tabela principal de cursos */
+.cursos-table-gerir-cursos {
   width: 100%;
   border-collapse: collapse;
 }
 
-.cursos-table th {
+/* Cabeçalhos da tabela com ordenação */
+.cursos-table-gerir-cursos th {
   background-color: #f3f4f6;
   color: #4b5563;
   text-align: left;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
 }
 
-.cursos-table td {
+.cursos-table-gerir-cursos th.sortable-header:hover {
+  background-color: #e5e7eb;
+}
+
+/* Ícones de ordenação nas colunas */
+.sort-icon {
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
+  color: #9ca3af;
+}
+
+/* Células de dados da tabela */
+.cursos-table-gerir-cursos td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.875rem;
   color: #374151;
+  vertical-align: middle;
 }
 
-.cursos-table tr {
+/* Linhas da tabela com hover e cursor */
+.cursos-table-gerir-cursos tr {
   transition: background-color 0.2s;
   cursor: pointer;
 }
 
-.cursos-table tr:hover {
+.cursos-table-gerir-cursos tbody tr:hover {
   background-color: #f9fafb;
 }
 
-.cursos-table tr.inativo {
+/* Estilo para cursos inativos */
+.cursos-table-gerir-cursos tr.inativo-gerir-cursos {
   background-color: #f3f4f6;
   color: #6b7280;
 }
 
-.curso-nome {
+/* Células com conteúdo longo que pode overflow */
+.overflow-cell {
+  max-width: 200px;
+}
+
+.cell-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nome do curso com destaque */
+.curso-nome-gerir-cursos {
   font-weight: 600;
   color: #1f2937;
+  max-width: 250px;
 }
 
 /* Célula de formador clicável */
-.formador-cell {
+.formador-cell-gerir-cursos {
   color: #2563eb;
   text-decoration: underline;
   cursor: pointer;
 }
 
-/* Estado dos cursos - contentor da célula */
-.status-cell {
-  position: relative;
+.formador-cell-gerir-cursos:hover {
+  color: #1d4ed8;
+}
+
+/* Célula do estado do curso */
+.status-cell-gerir-cursos {
   text-align: center;
   padding: 0.75rem 1rem;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Badge de estado do curso */
-.estado {
+/* Badge do estado do curso */
+.estado-gerir-cursos {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 25px;
@@ -209,53 +248,50 @@
   width: fit-content;
 }
 
-/* Cores para os diferentes estados */
-.estado.planeado {
+/* Cores para os diferentes estados dos cursos */
+.estado-gerir-cursos.planeado {
   background-color: #fef3c7 !important;
   color: #92400e;
 }
 
-.estado.em-curso {
+.estado-gerir-cursos.em-curso {
   background-color: #dcfce7 !important;
   color: #166534;
 }
 
-.estado.terminado {
+.estado-gerir-cursos.terminado {
   background-color: #fee2e2 !important;
-  color: red;
+  color: #dc2626;
 }
 
-.estado.inativo {
-  background-color: black;
+.estado-gerir-cursos.inativo {
+  background-color: #374151;
   color: white;
 }
 
+.estado-gerir-cursos.desconhecido {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
 
+/* Linhas vazias para manter sempre 10 linhas */
+.linha-vazia-gerir-cursos {
+  height: 48px;
+}
 
+.linha-vazia-gerir-cursos td {
+  border-bottom: 1px solid #e5e7eb;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Botões de ações */
-.acoes {
+/* Contentor dos botões de ação */
+.acoes-gerir-cursos {
   display: flex;
   gap: 0.5rem;
   white-space: nowrap;
 }
 
-/* Estilos de botões com ícones */
-.btn-icon {
+/* Botões de ação com ícones */
+.btn-icon-gerir-cursos {
   padding: 0.375rem;
   border: none;
   border-radius: 0.25rem;
@@ -270,79 +306,88 @@
   height: 32px;
 }
 
-.btn-icon.btn-editar {
+/* Botão de editar */
+.btn-icon-gerir-cursos.btn-editar-gerir-cursos {
   background-color: #e0f2fe;
   color: #0369a1;
 }
 
-.btn-icon.btn-editar:hover {
+.btn-icon-gerir-cursos.btn-editar-gerir-cursos:hover {
   background-color: #bae6fd;
 }
 
-.btn-icon.btn-excluir {
+/* Botão de eliminar */
+.btn-icon-gerir-cursos.btn-excluir-gerir-cursos {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-.btn-icon.btn-excluir:hover {
+.btn-icon-gerir-cursos.btn-excluir-gerir-cursos:hover {
   background-color: #fecaca;
 }
 
-/* Paginação */
-.paginacao {
+/* Controlos de paginação */
+.paginacao-gerir-cursos {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   margin-top: 1.5rem;
-  gap: 1rem;
+  padding: 0 1rem;
 }
 
-.btn-pagina {
-  padding: 0.5rem 1rem;
+/* Botões de navegação da paginação */
+.btn-pagina-gerir-cursos {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   background-color: white;
   color: #4b5563;
-  font-size: 1.125rem;
-  /* Aumentado para setas */
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
+  min-width: 100px;
   justify-content: center;
 }
 
-.btn-pagina:hover:not(:disabled) {
+.btn-pagina-gerir-cursos:hover:not(:disabled) {
   background-color: #f3f4f6;
   border-color: #9ca3af;
 }
 
-.btn-pagina:disabled {
+.btn-pagina-gerir-cursos:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.pagina-atual {
+/* Informação da página atual */
+.pagina-info-gerir-cursos {
+  display: flex;
+  align-items: center;
+}
+
+.pagina-atual-gerir-cursos {
   font-size: 0.875rem;
   color: #4b5563;
+  font-weight: 500;
 }
 
-.pagination-icon {
+/* Ícones de navegação */
+.pagination-icon-gerir-cursos {
   display: block;
   line-height: 1;
+  font-size: 1rem;
 }
 
-/* Mensagem de não há cursos */
-.no-cursos {
-  padding: 3rem 0;
-  text-align: center;
-  color: #6b7280;
+.btn-text-gerir-cursos {
+  font-size: 0.875rem;
 }
 
 /* Indicador de carregamento */
-.loading-container {
+.loading-container-gerir-cursos {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -350,24 +395,24 @@
   height: 50vh;
 }
 
-.loading-spinner {
+.loading-spinner-gerir-cursos {
   border: 4px solid rgba(0, 0, 0, 0.1);
   border-left-color: #3b82f6;
   border-radius: 50%;
   width: 36px;
   height: 36px;
-  animation: spin 1s linear infinite;
+  animation: spin-gerir-cursos 1s linear infinite;
   margin-bottom: 1rem;
 }
 
-@keyframes spin {
+@keyframes spin-gerir-cursos {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Modal de confirmação */
-.modal-overlay {
+/* Modal de confirmação de eliminação */
+.modal-overlay-gerir-cursos {
   position: fixed;
   top: 0;
   left: 0;
@@ -380,7 +425,7 @@
   z-index: 1000;
 }
 
-.modal-content {
+.modal-content-gerir-cursos {
   background-color: white;
   border-radius: 0.5rem;
   padding: 2rem;
@@ -389,66 +434,100 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.modal-content h3 {
+.modal-content-gerir-cursos h3 {
   color: #b91c1c;
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
 }
 
-.modal-content p {
+.modal-content-gerir-cursos p {
   color: #4b5563;
   margin-bottom: 1.5rem;
+  line-height: 1.6;
 }
 
-.modal-actions {
+/* Ações do modal */
+.modal-actions-gerir-cursos {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
 }
 
-.btn-cancelar,
-.btn-confirmar {
+.btn-cancelar-gerir-cursos,
+.btn-confirmar-gerir-cursos {
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 0.375rem;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.btn-cancelar {
+.btn-cancelar-gerir-cursos {
   background-color: #f3f4f6;
   color: #4b5563;
 }
 
-.btn-confirmar {
+.btn-cancelar-gerir-cursos:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-confirmar-gerir-cursos {
   background-color: #ef4444;
   color: white;
 }
 
-.btn-cancelar:hover {
-  background-color: #e5e7eb;
-}
-
-.btn-confirmar:hover {
+.btn-confirmar-gerir-cursos:hover {
   background-color: #dc2626;
 }
 
-/* Responsividade */
+/* Responsividade para ecrãs médios */
 @media (max-width: 1024px) {
-  .main-content {
+  .main-content-gerir-cursos {
     margin-left: 0;
     padding: 1rem;
   }
 
-  .filtros-container {
+  .filtros-principais-gerir-cursos {
     grid-template-columns: 1fr;
+  }
+
+  .paginacao-gerir-cursos {
+    flex-direction: column;
+    gap: 1rem;
   }
 }
 
+/* Responsividade para ecrãs pequenos */
+@media (max-width: 768px) {
+  .cursos-header-gerir-cursos {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .cursos-header-gerir-cursos h1 {
+    text-align: center;
+  }
+
+  .cursos-table-gerir-cursos {
+    font-size: 0.75rem;
+  }
+
+  .curso-nome-gerir-cursos {
+    max-width: 150px;
+  }
+
+  .btn-text-gerir-cursos {
+    display: none;
+  }
+}
+
+/* Ajustes para barra lateral fechada */
 @media (min-width: 1024px) {
-  .sidebar-closed .main-content {
+  .sidebar-closed .main-content-gerir-cursos {
     margin-left: 4rem;
   }
 }
