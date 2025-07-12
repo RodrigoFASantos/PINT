@@ -3,7 +3,7 @@ const Curso = require("../../database/models/Curso");
 const Inscricao_Curso = require("../../database/models/Inscricao_Curso");
 const { Op, Sequelize } = require("sequelize");
 
-// Importações opcionais com tratamento de erro para modelos que podem não existir
+// Importações opcionais dos modelos com tratamento de erro para casos onde não existam
 let Categoria, Area, Cargo;
 
 try {
@@ -24,10 +24,13 @@ try {
   console.log('Modelo Cargo não encontrado');
 }
 
-// Função principal para obter todas as estatísticas gerais do dashboard
+/**
+ * Função principal para obter todas as estatísticas gerais do dashboard administrativo
+ * Calcula métricas de utilizadores, cursos e inscrições para apresentação visual
+ */
 const getEstatisticas = async (req, res) => {
   try {
-    // Contagem de utilizadores por tipo de cargo
+    // === CONTAGEM DE UTILIZADORES POR TIPO DE CARGO ===
     const totalUtilizadores = await User.count();
     const totalAdministradores = await User.count({ where: { id_cargo: 1 } });
     const totalFormadores = await User.count({ where: { id_cargo: 2 } });
@@ -36,10 +39,10 @@ const getEstatisticas = async (req, res) => {
     // Data atual para comparações temporais
     const dataAtual = new Date();
 
-    // Contagem total de cursos
+    // === CONTAGEM E CLASSIFICAÇÃO DE CURSOS ===
     const totalCursos = await Curso.count();
     
-    // Contagem de cursos por estado temporal (baseado nas datas)
+    // Cursos classificados por estado temporal (baseado nas datas de início e fim)
     const cursosTerminados = await Curso.count({ 
       where: { 
         data_fim: { [Op.lt]: dataAtual }
@@ -59,18 +62,17 @@ const getEstatisticas = async (req, res) => {
       }
     });
 
-    // Cursos ativos vs inativos (baseado no campo 'ativo')
-    const cursosAtivos = await Curso.count({ where: { ativo: true } });
-    const cursosInativos = totalCursos - cursosAtivos;
+    // Cursos ativos são aqueles que não estão terminados (inclui em andamento e planeados)
+    const cursosAtivos = cursosEmAndamento + cursosPlaneados;
     
-    // Contagem de cursos por tipo de modalidade
+    // Contagem de cursos por modalidade de ensino
     const cursosSincronos = await Curso.count({ where: { tipo: 'sincrono' } });
     const cursosAssincronos = await Curso.count({ where: { tipo: 'assincrono' } });
 
-    // Contagem total de inscrições
+    // === ESTATÍSTICAS DE INSCRIÇÕES ===
     const totalInscricoes = await Inscricao_Curso.count();
     
-    // Contagem de inscrições dos últimos 30 dias
+    // Inscrições realizadas nos últimos 30 dias
     const dataLimite30Dias = new Date();
     dataLimite30Dias.setDate(dataLimite30Dias.getDate() - 30);
     
@@ -80,79 +82,47 @@ const getEstatisticas = async (req, res) => {
       }
     });
 
-    // Contagem de inscrições de hoje
-    const inicioHoje = new Date();
-    inicioHoje.setHours(0, 0, 0, 0);
-    const fimHoje = new Date();
-    fimHoje.setHours(23, 59, 59, 999);
-    
-    const inscricoesHoje = await Inscricao_Curso.count({
-      where: {
-        data_inscricao: { [Op.between]: [inicioHoje, fimHoje] }
-      }
-    });
-
-    // Contagem de cursos que terminam nos próximos 30 dias
+    // Cursos que terminam nos próximos 30 dias (alertas de fim próximo)
     const data30DiasFrente = new Date();
     data30DiasFrente.setDate(data30DiasFrente.getDate() + 30);
     
     const cursosTerminandoEmBreve = await Curso.count({
       where: {
-        data_fim: { [Op.between]: [dataAtual, data30DiasFrente] },
-        ativo: true
+        data_fim: { [Op.between]: [dataAtual, data30DiasFrente] }
       }
     });
 
-    // Estimativa de presenças baseada no total de utilizadores ativos
-    const presencasHoje = Math.floor(totalUtilizadores * 0.65);
-
-    // Compilação de todas as estatísticas num objeto com lógica corrigida
+    // Compilação de todas as estatísticas num objeto estruturado
     const stats = {
-      // Totais de utilizadores
+      // Totais de utilizadores por cargo
       totalUtilizadores,
       totalAdministradores,
       totalFormadores,
       totalFormandos,
       
-      // Totais de cursos
+      // Estatísticas de cursos
       totalCursos,
+      cursosAtivos,           // Em andamento + Planeados
+      cursosTerminados,       // Já terminaram
+      cursosEmAndamento,      // A decorrer atualmente
+      cursosPlaneados,        // Ainda não começaram
       
-      // Estados temporais dos cursos (baseado nas datas)
-      cursosTerminados,
-      cursosEmAndamento,
-      cursosPlaneados,
-      
-      // Estados administrativos dos cursos (baseado no campo 'ativo')
-      cursosAtivos,
-      cursosInativos,
-      
-      // Tipos de cursos
+      // Modalidades de ensino
       cursosSincronos,
       cursosAssincronos,
       
-      // Inscrições
+      // Métricas de inscrições
       totalInscricoes,
       inscricoesUltimos30Dias,
-      inscricoesHoje,
       
-      // Outras métricas
-      presencasHoje,
+      // Alertas e avisos
       cursosTerminandoEmBreve
     };
-
-    // Log para debug
-    console.log('Estatísticas calculadas:', {
-      totalCursos: stats.totalCursos,
-      cursosAtivos: stats.cursosAtivos,
-      cursosTerminados: stats.cursosTerminados,
-      cursosEmAndamento: stats.cursosEmAndamento,
-      cursosPlaneados: stats.cursosPlaneados
-    });
 
     res.json(stats);
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
+    console.error('Erro ao buscar estatísticas do dashboard:', error);
     res.status(500).json({ 
       message: "Erro ao buscar estatísticas do dashboard",
       error: error.message 
@@ -160,14 +130,17 @@ const getEstatisticas = async (req, res) => {
   }
 };
 
-// Função para obter a distribuição de cursos por categoria
+/**
+ * Função para obter a distribuição de cursos agrupados por categoria
+ * Utiliza associações com o modelo Categoria ou fallback para dados estimados
+ */
 const getCursosPorCategoria = async (req, res) => {
   try {
     let categorias = [];
 
     if (Categoria) {
       try {
-        // Tentar buscar cursos agrupados por categoria com associação
+        // Buscar cursos agrupados por categoria utilizando associações
         const cursosPorCategoria = await Categoria.findAll({
           attributes: [
             'id_categoria',
@@ -190,8 +163,6 @@ const getCursosPorCategoria = async (req, res) => {
         }));
         
       } catch (associationError) {
-        console.log('Erro na associação Categoria-Curso, usando query alternativa');
-        
         // Fallback: buscar categorias e contar cursos manualmente
         const todasCategorias = await Categoria.findAll();
         categorias = await Promise.all(todasCategorias.map(async (cat) => {
@@ -217,7 +188,7 @@ const getCursosPorCategoria = async (req, res) => {
     res.json({ categorias });
 
   } catch (error) {
-    console.error('Erro ao buscar cursos por categoria:', error);
+    console.error('Erro ao buscar distribuição de cursos por categoria:', error);
     res.status(500).json({ 
       message: "Erro ao buscar cursos por categoria",
       error: error.message 
@@ -225,7 +196,10 @@ const getCursosPorCategoria = async (req, res) => {
   }
 };
 
-// Função para obter as inscrições agrupadas por mês do ano atual
+/**
+ * Função para obter as inscrições agrupadas por mês do ano atual
+ * Gera dados para gráfico de evolução temporal das inscrições
+ */
 const getInscricoesPorMes = async (req, res) => {
   try {
     // Buscar inscrições agrupadas por mês desde janeiro do ano atual
@@ -243,10 +217,10 @@ const getInscricoesPorMes = async (req, res) => {
       order: [[Sequelize.fn('EXTRACT', Sequelize.literal('MONTH FROM data_inscricao')), 'ASC']]
     });
 
-    // Array com nomes dos meses para o gráfico
+    // Array com abreviações dos meses para exibição no gráfico
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     
-    // Mapear os dados para incluir todos os meses, even if com 0 inscrições
+    // Mapear os dados para incluir todos os meses, mesmo com 0 inscrições
     const mensal = meses.map((nome, index) => {
       const mesData = inscricoesPorMes.find(item => parseInt(item.dataValues.mes) === index + 1);
       return {
@@ -258,7 +232,7 @@ const getInscricoesPorMes = async (req, res) => {
     res.json({ mensal });
 
   } catch (error) {
-    console.error('Erro ao buscar inscrições por mês:', error);
+    console.error('Erro ao buscar evolução mensal de inscrições:', error);
     res.status(500).json({ 
       message: "Erro ao buscar inscrições por mês",
       error: error.message 
@@ -266,7 +240,10 @@ const getInscricoesPorMes = async (req, res) => {
   }
 };
 
-// Função para obter a distribuição de utilizadores por perfil
+/**
+ * Função para obter a distribuição de utilizadores por perfil/cargo
+ * Conta utilizadores agrupados por tipo (administradores, formadores, formandos)
+ */
 const getUtilizadoresPorPerfil = async (req, res) => {
   try {
     // Contar utilizadores por cada tipo de cargo
@@ -283,7 +260,7 @@ const getUtilizadoresPorPerfil = async (req, res) => {
     res.json({ perfis });
 
   } catch (error) {
-    console.error('Erro ao buscar utilizadores por perfil:', error);
+    console.error('Erro ao buscar distribuição de utilizadores por perfil:', error);
     res.status(500).json({ 
       message: "Erro ao buscar utilizadores por perfil",
       error: error.message 
@@ -291,12 +268,15 @@ const getUtilizadoresPorPerfil = async (req, res) => {
   }
 };
 
-// Função para obter os cursos com mais inscrições
+/**
+ * Função para obter os cursos com maior número de inscrições
+ * Lista os cursos mais populares ordenados por quantidade de inscrições
+ */
 const getCursosMaisInscritos = async (req, res) => {
   try {
     let populares = [];
 
-    // Buscar todos os cursos e contar suas inscrições
+    // Buscar todos os cursos disponíveis
     const todosCursos = await Curso.findAll({
       attributes: [
         'id_curso',
@@ -311,7 +291,7 @@ const getCursosMaisInscritos = async (req, res) => {
       limit: 20
     });
 
-    // Para cada curso, contar o número de inscrições
+    // Para cada curso, contar o número total de inscrições ativas
     for (const curso of todosCursos) {
       try {
         const totalInscricoes = await Inscricao_Curso.count({
@@ -344,7 +324,7 @@ const getCursosMaisInscritos = async (req, res) => {
               }
             }
           } catch (areaError) {
-            console.log('Erro ao buscar área/categoria para curso:', curso.id_curso, areaError.message);
+            // Silenciar erro se não conseguir obter informações de área/categoria
           }
         }
 
@@ -361,8 +341,6 @@ const getCursosMaisInscritos = async (req, res) => {
         });
 
       } catch (inscricaoError) {
-        console.log('Erro ao contar inscrições do curso:', curso.id_curso, inscricaoError.message);
-        
         // Adicionar curso mesmo se falhar a contagem de inscrições
         populares.push({
           id_curso: curso.id_curso,
@@ -381,13 +359,13 @@ const getCursosMaisInscritos = async (req, res) => {
     // Ordenar por número de inscrições em ordem decrescente
     populares.sort((a, b) => b.inscricoes - a.inscricoes);
 
-    // Limitar aos top 10 cursos
+    // Limitar aos top 10 cursos mais populares
     populares = populares.slice(0, 10);
 
     res.json({ populares });
 
   } catch (error) {
-    console.error('Erro ao buscar cursos mais inscritos:', error);
+    console.error('Erro ao buscar cursos mais populares:', error);
     res.status(500).json({ 
       message: "Erro ao buscar cursos mais inscritos",
       error: error.message 
@@ -395,7 +373,7 @@ const getCursosMaisInscritos = async (req, res) => {
   }
 };
 
-// Exportação de todas as funções utilizadas no dashboard
+// Exportação de todas as funções do controlador do dashboard
 module.exports = {
   getEstatisticas,
   getCursosPorCategoria,

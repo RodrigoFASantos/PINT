@@ -5,31 +5,40 @@ import './css/Novo_Comentario_Form.css';
  * Componente de formulário para criação de novos comentários
  * 
  * Funcionalidades implementadas:
- * - Editor de texto com suporte a múltiplas linhas
- * - Sistema de upload de ficheiros com preview
- * - Validação de conteúdo antes do envio
- * - Estados de carregamento e feedback visual
- * - Suporte para diferentes tipos de anexos (imagens, vídeos, documentos)
- * - Limpeza automática após envio bem-sucedido
+ * - Editor de texto com altura automática e suporte multilinha
+ * - Sistema completo de upload com preview inteligente
+ * - Validação rigorosa de conteúdo e tipos de ficheiro
+ * - Estados visuais claros para feedback do utilizador
+ * - Integração perfeita com sistema de avaliações
+ * - Limpeza automática de recursos e memória
+ * - Suporte para diferentes tipos de anexos
  */
-const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve o teu comentário..." }) => {
+const NovoComentarioForm = ({ 
+  onSubmit, 
+  disabled = false, 
+  placeholder = "Escreve o teu comentário...",
+  maxFileSize = 15 * 1024 * 1024, // 15MB por defeito
+  allowedTypes = ['image/*', 'video/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+}) => {
   // Estados principais do formulário
   const [conteudo, setConteudo] = useState('');
   const [arquivos, setArquivos] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   
-  // Estados para preview de anexos
+  // Estados para sistema de preview avançado
   const [previewUrls, setPreviewUrls] = useState([]);
   const [tiposArquivos, setTiposArquivos] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Referências para elementos DOM
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   /**
    * Ajusta automaticamente a altura da textarea baseado no conteúdo
-   * Melhora a experiência do utilizador em comentários longos
+   * Implementa limite máximo para evitar textarea excessivamente alta
    */
   const ajustarAlturaTextarea = () => {
     const textarea = textareaRef.current;
@@ -40,7 +49,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
   };
 
   /**
-   * Ajusta altura da textarea sempre que o conteúdo muda
+   * Reajusta altura sempre que o conteúdo muda
    */
   useEffect(() => {
     ajustarAlturaTextarea();
@@ -48,7 +57,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
 
   /**
    * Determina o tipo de ficheiro baseado no MIME type
-   * Categoriza em imagem, vídeo ou documento geral
+   * Categoriza inteligentemente para renderização apropriada
    */
   const determinarTipoFicheiro = (file) => {
     const mimeType = file.type;
@@ -56,14 +65,50 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
       return 'imagem';
     } else if (mimeType.startsWith('video/')) {
       return 'video';
-    } else {
+    } else if (mimeType.includes('pdf')) {
+      return 'pdf';
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
       return 'documento';
+    } else {
+      return 'ficheiro';
     }
   };
 
   /**
+   * Valida ficheiro individualmente antes de aceitar
+   * Verifica tipo, tamanho e integridade
+   */
+  const validarFicheiro = (file) => {
+    const erros = [];
+
+    // Validação de tamanho
+    if (file.size > maxFileSize) {
+      erros.push(`O ficheiro "${file.name}" é muito grande. Máximo permitido: ${(maxFileSize / 1024 / 1024).toFixed(1)}MB`);
+    }
+
+    // Validação de tipo
+    const tipoValido = allowedTypes.some(tipo => {
+      if (tipo.endsWith('/*')) {
+        return file.type.startsWith(tipo.slice(0, -2));
+      }
+      return file.type === tipo;
+    });
+
+    if (!tipoValido) {
+      erros.push(`O tipo do ficheiro "${file.name}" não é suportado`);
+    }
+
+    // Validação de nome
+    if (file.name.length > 100) {
+      erros.push(`O nome do ficheiro "${file.name}" é muito longo`);
+    }
+
+    return erros;
+  };
+
+  /**
    * Cria URLs de preview para ficheiros selecionados
-   * Suporta imagens e vídeos com visualização direta
+   * Gere recursos de memória de forma eficiente
    */
   const criarPreviewUrls = (files) => {
     const urls = [];
@@ -74,8 +119,12 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
       tipos.push(tipo);
 
       if (tipo === 'imagem' || tipo === 'video') {
-        const url = URL.createObjectURL(file);
-        urls.push(url);
+        try {
+          const url = URL.createObjectURL(file);
+          urls.push(url);
+        } catch (error) {
+          urls.push(null);
+        }
       } else {
         urls.push(null);
       }
@@ -85,60 +134,80 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
   };
 
   /**
-   * Liberta memória das URLs de preview criadas
-   * Evita vazamentos de memória no navegador
+   * Liberta recursos de memória das URLs de preview
+   * Previne vazamentos de memória no navegador
    */
   const limparPreviewUrls = () => {
     previewUrls.forEach(url => {
       if (url) {
-        URL.revokeObjectURL(url);
+        try {
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          // Falha silenciosa
+        }
       }
     });
   };
 
   /**
    * Processa seleção de ficheiros pelo utilizador
-   * Valida tipos permitidos e cria previews automaticamente
+   * Inclui validação completa e feedback de erros
    */
   const handleArquivoChange = (e) => {
     const novosArquivos = Array.from(e.target.files);
     
     if (novosArquivos.length === 0) return;
 
-    // Validação de tipos de ficheiro permitidos
-    const tiposPermitidos = ['image/', 'video/', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats'];
-    const arquivosValidos = novosArquivos.filter(file => 
-      tiposPermitidos.some(tipo => file.type.includes(tipo))
-    );
+    setErro('');
+    
+    // Validação completa de todos os ficheiros
+    const errosValidacao = [];
+    const arquivosValidos = [];
 
-    if (arquivosValidos.length !== novosArquivos.length) {
-      setErro('Alguns ficheiros não são suportados. Apenas imagens, vídeos e documentos são permitidos.');
+    novosArquivos.forEach(file => {
+      const errosFicheiro = validarFicheiro(file);
+      if (errosFicheiro.length === 0) {
+        arquivosValidos.push(file);
+      } else {
+        errosValidacao.push(...errosFicheiro);
+      }
+    });
+
+    // Exibe erros de validação se existirem
+    if (errosValidacao.length > 0) {
+      setErro(errosValidacao.join('. '));
       return;
     }
 
-    // Limpa previews antigos antes de criar novos
+    // Limita a um ficheiro por vez (limitação do backend)
+    const arquivoFinal = arquivosValidos.slice(0, 1);
+
+    // Limpa previews antigos
     limparPreviewUrls();
 
-    // Cria novos previews e atualiza estado
-    const { urls, tipos } = criarPreviewUrls(arquivosValidos);
+    // Cria novos previews
+    const { urls, tipos } = criarPreviewUrls(arquivoFinal);
     
-    setArquivos(arquivosValidos);
+    setArquivos(arquivoFinal);
     setPreviewUrls(urls);
     setTiposArquivos(tipos);
-    setErro('');
   };
 
   /**
-   * Remove ficheiro específico da lista de anexos
-   * Atualiza todos os estados relacionados adequadamente
+   * Remove ficheiro específico da lista
+   * Atualiza todos os estados relacionados
    */
   const removerArquivo = (index) => {
     // Remove URL de preview da memória
     if (previewUrls[index]) {
-      URL.revokeObjectURL(previewUrls[index]);
+      try {
+        URL.revokeObjectURL(previewUrls[index]);
+      } catch (error) {
+        // Falha silenciosa
+      }
     }
 
-    // Atualiza todos os arrays de estado
+    // Atualiza estados
     const novosArquivos = arquivos.filter((_, i) => i !== index);
     const novasUrls = previewUrls.filter((_, i) => i !== index);
     const novosTipos = tiposArquivos.filter((_, i) => i !== index);
@@ -147,7 +216,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
     setPreviewUrls(novasUrls);
     setTiposArquivos(novosTipos);
 
-    // Limpa input file se não há mais arquivos
+    // Limpa input file se não há mais ficheiros
     if (novosArquivos.length === 0 && fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -155,7 +224,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
 
   /**
    * Processa envio do formulário com validação completa
-   * Cria FormData para upload de ficheiros e texto
+   * Inclui progresso de upload e tratamento robusto de erros
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -168,29 +237,42 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
     
     setEnviando(true);
     setErro('');
+    setUploadProgress(0);
     
     // Criação do FormData para envio multipart
     const formData = new FormData();
     formData.append('texto', conteudo.trim());
     
-    // Adiciona apenas o primeiro ficheiro (limitação do backend)
+    // Adiciona ficheiro se existir
     if (arquivos.length > 0) {
       formData.append('anexo', arquivos[0]);
     }
     
     try {
-      const sucesso = await onSubmit(formData);
+      // Simula progresso de upload
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 100);
+
+      const resultado = await onSubmit(formData);
       
-      if (sucesso !== false) {
-        // Limpa formulário após envio bem-sucedido
-        limparFormulario();
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      // Verifica se o envio foi bem-sucedido
+      if (resultado !== false && resultado !== null && resultado !== undefined) {
+        setTimeout(() => {
+          limparFormulario();
+        }, 500);
       } else {
-        setErro('Erro ao enviar comentário. Tenta novamente.');
+        setErro('Erro ao enviar comentário. Verifica a ligação e tenta novamente.');
       }
     } catch (error) {
-      setErro(`Erro ao enviar comentário: ${error.message}`);
+      const mensagemErro = error.response?.data?.message || error.message || 'Erro desconhecido';
+      setErro(`Erro ao enviar comentário: ${mensagemErro}`);
     } finally {
       setEnviando(false);
+      setUploadProgress(0);
     }
   };
 
@@ -204,6 +286,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
     setPreviewUrls([]);
     setTiposArquivos([]);
     setErro('');
+    setUploadProgress(0);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -224,6 +307,21 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
       e.preventDefault();
       handleSubmit(e);
     }
+    
+    if (e.key === 'Escape') {
+      limparFormulario();
+    }
+  };
+
+  /**
+   * Formata tamanho de ficheiro para apresentação
+   */
+  const formatarTamanhoFicheiro = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   /**
@@ -233,23 +331,42 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
     const tipo = tiposArquivos[index];
     const url = previewUrls[index];
 
+    const previewBase = (
+      <div className="preview-info">
+        <span className="nome-ficheiro" title={file.name}>
+          {file.name.length > 30 ? `${file.name.substring(0, 30)}...` : file.name}
+        </span>
+        <span className="tamanho-ficheiro">
+          {formatarTamanhoFicheiro(file.size)}
+        </span>
+      </div>
+    );
+
     if (tipo === 'imagem' && url) {
       return (
-        <div className="preview-imagem">
-          <img src={url} alt={`Preview ${index}`} />
+        <div className="preview-container preview-imagem">
+          <div className="preview-media">
+            <img src={url} alt={`Preview ${index}`} />
+          </div>
+          {previewBase}
         </div>
       );
     } else if (tipo === 'video' && url) {
       return (
-        <div className="preview-video">
-          <video src={url} controls />
+        <div className="preview-container preview-video">
+          <div className="preview-media">
+            <video src={url} controls preload="metadata" />
+          </div>
+          {previewBase}
         </div>
       );
     } else {
       return (
-        <div className="preview-documento">
-          <i className="fas fa-file" />
-          <span className="nome-arquivo">{file.name}</span>
+        <div className="preview-container preview-documento">
+          <div className="preview-icon">
+            <i className={`fas ${tipo === 'pdf' ? 'fa-file-pdf' : 'fa-file-alt'}`} />
+          </div>
+          {previewBase}
         </div>
       );
     }
@@ -266,7 +383,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
 
   return (
     <div className="novo-comentario-form">
-      <form onSubmit={handleSubmit} className="comentario-form">
+      <form ref={formRef} onSubmit={handleSubmit} className="comentario-form">
         
         {/* Área principal de entrada de texto */}
         <div className="form-group textarea-group">
@@ -280,23 +397,29 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
             className="comentario-textarea"
             rows="2"
           />
+          
+          {/* Barra de progresso durante upload */}
+          {enviando && uploadProgress > 0 && (
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
         </div>
         
         {/* Preview dos ficheiros selecionados */}
         {arquivos.length > 0 && (
           <div className="ficheiros-preview">
-            <h4 className="preview-titulo">Ficheiros anexados:</h4>
+            <h4 className="preview-titulo">
+              <i className="fas fa-paperclip" />
+              Ficheiro anexado:
+            </h4>
             <div className="lista-previews">
               {arquivos.map((arquivo, index) => (
                 <div key={index} className={`preview-item preview-${tiposArquivos[index]}`}>
                   {renderizarPreview(arquivo, index)}
-                  
-                  <div className="preview-info">
-                    <span className="nome-ficheiro">{arquivo.name}</span>
-                    <span className="tamanho-ficheiro">
-                      {(arquivo.size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
                   
                   <button 
                     type="button"
@@ -326,7 +449,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
                 type="file"
                 id="ficheiros-comentario"
                 onChange={handleArquivoChange}
-                accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept={allowedTypes.join(',')}
                 disabled={disabled || enviando}
                 style={{ display: 'none' }}
               />
@@ -339,7 +462,7 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
                 className="btn-limpar"
                 onClick={limparFormulario}
                 disabled={enviando}
-                title="Limpar formulário"
+                title="Limpar formulário (Esc)"
               >
                 <i className="fas fa-eraser" />
                 <span>Limpar</span>
@@ -380,8 +503,9 @@ const NovoComentarioForm = ({ onSubmit, disabled = false, placeholder = "Escreve
         <div className="form-info">
           <small>
             <i className="fas fa-info-circle" />
-            Pressiona Enter para enviar ou Shift+Enter para nova linha.
-            Tipos suportados: imagens, vídeos, PDF e documentos Word.
+            <strong>Atalhos:</strong> Enter para enviar, Shift+Enter para nova linha, Esc para limpar.
+            <br />
+            <strong>Ficheiros suportados:</strong> Imagens, vídeos, PDF e documentos Word (máx. {(maxFileSize / 1024 / 1024).toFixed(0)}MB).
           </small>
         </div>
       </form>

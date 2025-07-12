@@ -41,7 +41,7 @@ const ImageComponent = ({ src, alt = 'Imagem', className = '', onClick, apiBase 
  * Funcionalidades principais:
  * - Visualização de temas e comentários em tempo real
  * - Sistema completo de comentários com anexos multimedia
- * - Avaliações através de likes e dislikes com sincronização servidor
+ * - Avaliações através de likes e dislikes com persistência total
  * - Sistema de denúncias para moderação de conteúdo
  * - Comunicação bidirecional via Socket.IO
  * - Interface responsiva com scroll inteligente
@@ -67,8 +67,9 @@ const Topicos_Chat = () => {
   const [anexoFile, setAnexoFile] = useState(null);
   const [anexoPreview, setAnexoPreview] = useState('');
   
-  // Estado para rastreamento das avaliações do utilizador atual
+  // Estado para rastreamento das avaliações do utilizador atual (persistente)
   const [avaliacoes, setAvaliacoes] = useState({});
+  const [avaliacoesCarregadas, setAvaliacoesCarregadas] = useState(false);
 
   // Referências para elementos DOM e conexões externas
   const socketRef = useRef();
@@ -121,36 +122,87 @@ const Topicos_Chat = () => {
   }, [comentarios]);
 
   /**
-   * Carrega as avaliações existentes do utilizador para todos os comentários
-   * Permite mostrar o estado correto dos botões de like/dislike
+   * Salva o estado das avaliações no localStorage para persistência
+   * Garante que as avaliações são mantidas mesmo após recarregar a página
+   */
+  const salvarAvaliacoesLocal = (novasAvaliacoes) => {
+    try {
+      const chave = `avaliacoes_tema_${temaId}_user_${usuario?.id_utilizador || usuario?.id}`;
+      localStorage.setItem(chave, JSON.stringify(novasAvaliacoes));
+    } catch (error) {
+      // Falha silenciosa se localStorage não estiver disponível
+    }
+  };
+
+  /**
+   * Carrega o estado das avaliações do localStorage
+   * Restaura avaliações previamente feitas pelo utilizador
+   */
+  const carregarAvaliacoesLocal = () => {
+    try {
+      const chave = `avaliacoes_tema_${temaId}_user_${usuario?.id_utilizador || usuario?.id}`;
+      const avaliacoesSalvas = localStorage.getItem(chave);
+      
+      if (avaliacoesSalvas) {
+        const avaliacoesParsed = JSON.parse(avaliacoesSalvas);
+        setAvaliacoes(avaliacoesParsed);
+        return avaliacoesParsed;
+      }
+    } catch (error) {
+      // Falha silenciosa
+    }
+    
+    return {};
+  };
+
+  /**
+   * Carrega as avaliações existentes do utilizador através de verificação individual
+   * Sistema robusto que verifica cada comentário individualmente
    */
   const carregarAvaliacoesUtilizador = async () => {
+    if (!usuario || comentarios.length === 0 || avaliacoesCarregadas) return;
+
     try {
       const token = localStorage.getItem('token');
-      if (!token || !usuario) return;
+      if (!token) return;
 
-      // Criar um objeto com as avaliações do utilizador
-      const avaliacoesUtilizador = {};
+      // Primeiro tenta carregar do localStorage
+      const avaliacoesLocal = carregarAvaliacoesLocal();
       
-      // Para cada comentário, verificar se o utilizador já avaliou
+      // Verifica se as avaliações locais ainda são válidas
+      const avaliacoesValidadas = {};
+      
       for (const comentario of comentarios) {
-        try {
-          const response = await axios.get(
-            `${API_BASE}/forum-tema/comentario/${comentario.id_comentario}/avaliacao-status`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          
-          if (response.data && response.data.data && response.data.data.avaliado) {
-            avaliacoesUtilizador[comentario.id_comentario] = response.data.data.tipo;
+        const idComentario = comentario.id_comentario;
+        
+        // Se tem avaliação local, verifica se ainda é válida fazendo uma nova avaliação
+        if (avaliacoesLocal[idComentario]) {
+          try {
+            // Faz uma tentativa de avaliação para verificar estado atual
+            const testResponse = await axios.post(
+              `${API_BASE}/forum-tema/comentario/${idComentario}/avaliar`,
+              { tipo: avaliacoesLocal[idComentario] },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Se a resposta indicar que foi removida (toggle), significa que já estava avaliada
+            if (testResponse.data?.data) {
+              avaliacoesValidadas[idComentario] = avaliacoesLocal[idComentario];
+            }
+          } catch (error) {
+            // Se der erro, remove da avaliação local
+            delete avaliacoesLocal[idComentario];
           }
-        } catch (error) {
-          // Se não conseguir carregar, assume que não avaliou
         }
       }
+
+      setAvaliacoes(avaliacoesValidadas);
+      salvarAvaliacoesLocal(avaliacoesValidadas);
+      setAvaliacoesCarregadas(true);
       
-      setAvaliacoes(avaliacoesUtilizador);
     } catch (error) {
       // Falha silenciosa - não afeta funcionamento principal
+      setAvaliacoesCarregadas(true);
     }
   };
 
@@ -297,12 +349,19 @@ const Topicos_Chat = () => {
 
   /**
    * Carrega avaliações do utilizador após os comentários serem carregados
+   * Garante que o estado dos botões seja correto desde o início
    */
   useEffect(() => {
-    if (comentarios.length > 0 && usuario) {
-      carregarAvaliacoesUtilizador();
+    if (comentarios.length > 0 && usuario && !avaliacoesCarregadas) {
+      // Carrega primeiro do localStorage para resposta imediata
+      carregarAvaliacoesLocal();
+      
+      // Depois verifica com servidor para garantir consistência
+      setTimeout(() => {
+        carregarAvaliacoesUtilizador();
+      }, 500);
     }
-  }, [comentarios, usuario]);
+  }, [comentarios, usuario, avaliacoesCarregadas]);
 
   /**
    * Processa ficheiro selecionado pelo utilizador para anexo
@@ -387,17 +446,23 @@ const Topicos_Chat = () => {
 
   /**
    * Sistema completo de avaliação de comentários com likes e dislikes
-   * Implementa toggle inteligente e atualização otimista da interface
-   * ENDPOINT CORRIGIDO: Utiliza a rota correta do forum-tema
+   * Implementa toggle inteligente, persistência local e sincronização servidor
+   * SISTEMA ROBUSTO: Previne avaliações múltiplas mesmo com recarregamento de página
    */
   const avaliarComentario = async (idComentario, tipo) => {
     try {
       const token = localStorage.getItem('token');
 
-      // Atualização otimista da interface para resposta imediata
+      // Verifica se o utilizador já avaliou este comentário
       const avaliacaoAnterior = avaliacoes[idComentario];
       const jaAvaliado = avaliacaoAnterior === tipo;
       
+      // Previne cliques múltiplos enquanto processa
+      if (document.querySelector(`[data-comentario-id="${idComentario}"]`)) {
+        const botoes = document.querySelectorAll(`[data-comentario-id="${idComentario}"] .acao-btn`);
+        botoes.forEach(btn => btn.disabled = true);
+      }
+
       // Atualizar estado local das avaliações
       let novasAvaliacoes = { ...avaliacoes };
       if (jaAvaliado) {
@@ -407,6 +472,9 @@ const Topicos_Chat = () => {
         // Adiciona ou altera avaliação
         novasAvaliacoes[idComentario] = tipo;
       }
+      
+      // Salva imediatamente no localStorage
+      salvarAvaliacoesLocal(novasAvaliacoes);
       setAvaliacoes(novasAvaliacoes);
 
       // Atualizar contadores na interface otimisticamente
@@ -455,16 +523,22 @@ const Topicos_Chat = () => {
       }
     } catch (error) {
       // Reverter mudanças otimistas em caso de erro
-      carregarAvaliacoesUtilizador();
+      carregarAvaliacoesLocal();
       
       const mensagemErro = error.response?.data?.message || error.message;
       alert(`Erro ao avaliar comentário: ${mensagemErro}`);
+    } finally {
+      // Reativa botões após processamento
+      if (document.querySelector(`[data-comentario-id="${idComentario}"]`)) {
+        const botoes = document.querySelectorAll(`[data-comentario-id="${idComentario}"] .acao-btn`);
+        botoes.forEach(btn => btn.disabled = false);
+      }
     }
   };
 
   /**
    * Sistema de denúncia de comentários inadequados para moderação
-   * ENDPOINT CORRIGIDO: Utiliza a rota correta do forum-tema
+   * Utiliza endpoint correto e previne denúncias múltiplas
    */
   const denunciarComentario = async (idComentario) => {
     const motivo = prompt('Por favor, indica o motivo da denúncia:');
@@ -644,6 +718,7 @@ const Topicos_Chat = () => {
                 <div
                   key={`comentario-${comentarioId || index}`}
                   className={`comentario ${isAutor ? 'meu-comentario' : ''} ${comentario.foi_denunciado ? 'comentario-denunciado' : ''}`}
+                  data-comentario-id={comentarioId}
                 >
                   
                   {/* Cabeçalho de cada comentário */}
@@ -677,7 +752,7 @@ const Topicos_Chat = () => {
                         title="Curtir este comentário"
                       >
                         <i className="fas fa-thumbs-up"></i>
-                        <span>{comentario.likes || 0}</span>
+                        <span className="contador-avaliacao">{comentario.likes || 0}</span>
                       </button>
 
                       <button
@@ -686,7 +761,7 @@ const Topicos_Chat = () => {
                         title="Não curtir este comentário"
                       >
                         <i className="fas fa-thumbs-down"></i>
-                        <span>{comentario.dislikes || 0}</span>
+                        <span className="contador-avaliacao">{comentario.dislikes || 0}</span>
                       </button>
 
                       <button

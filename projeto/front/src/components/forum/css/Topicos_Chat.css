@@ -790,3 +790,145 @@
     padding-bottom: 160px; /* Aumentado de 100px para 160px */
   }
 }
+
+
+
+/* =============================================================================
+  BOTÕES DE LIKES/DISLIKES SEM TEXTO
+   =============================================================================
+   Adiciona estas regras ao ficheiro Topicos_Chat.css existente
+   Garante que os botões apenas mostram ícones e números, sem texto adicional
+============================================================================= */
+
+/* Remove qualquer texto gerado por CSS nos botões de ação */
+.comentario-acoes .acao-btn::before,
+.comentario-acoes .acao-btn::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Estilo base para botões de ação sem texto */
+.comentario-acoes .acao-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  min-width: 50px;
+  justify-content: center;
+}
+
+/* Previne adição de texto via CSS */
+.comentario-acoes .acao-btn span:not(.contador-avaliacao):not(.denuncia-status)::before,
+.comentario-acoes .acao-btn span:not(.contador-avaliacao):not(.denuncia-status)::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Estilo específico para botão de like */
+.comentario-acoes .like-btn {
+  border-color: #28a745;
+}
+
+.comentario-acoes .like-btn:hover {
+  background: #e8f5e8;
+  border-color: #1e7e34;
+}
+
+.comentario-acoes .like-btn.active {
+  background: #28a745;
+  border-color: #1e7e34;
+  color: white;
+}
+
+.comentario-acoes .like-btn.active i {
+  color: white;
+}
+
+/* Estilo específico para botão de dislike */
+.comentario-acoes .dislike-btn {
+  border-color: #dc3545;
+}
+
+.comentario-acoes .dislike-btn:hover {
+  background: #f8e8e8;
+  border-color: #c82333;
+}
+
+.comentario-acoes .dislike-btn.active {
+  background: #dc3545;
+  border-color: #c82333;
+  color: white;
+}
+
+.comentario-acoes .dislike-btn.active i {
+  color: white;
+}
+
+/* Estilo para contador de avaliações */
+.comentario-acoes .contador-avaliacao {
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Estilo para botão de denúncia */
+.comentario-acoes .denunciar-btn {
+  border-color: #ffc107;
+}
+
+.comentario-acoes .denunciar-btn:hover {
+  background: #fff8e1;
+  border-color: #e0a800;
+}
+
+.comentario-acoes .denunciar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+/* Estilo para status de denúncia */
+.comentario-acoes .denuncia-status {
+  font-size: 10px;
+  color: #856404;
+  font-weight: 500;
+}
+
+/* Garante que botões desativados não mostram hover */
+.comentario-acoes .acao-btn:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.comentario-acoes .acao-btn:disabled:hover {
+  background: #f9f9f9 !important;
+  border-color: #ddd !important;
+}
+
+/* Espaçamento entre botões */
+.comentario-acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* Responsividade para ecrãs pequenos */
+@media (max-width: 768px) {
+  .comentario-acoes .acao-btn {
+    min-width: 45px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  
+  .comentario-acoes .contador-avaliacao {
+    font-size: 11px;
+  }
+}

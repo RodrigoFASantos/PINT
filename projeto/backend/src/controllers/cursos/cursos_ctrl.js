@@ -14,7 +14,6 @@ const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
 
-// Importa controlador de notificações para envio automático
 let notificacaoController;
 try {
   notificacaoController = require('../notificacoes/notificacoes_ctrl');
@@ -23,39 +22,20 @@ try {
   notificacaoController = null;
 }
 
-/**
- * Controlador completo para gestão do sistema de cursos
- * Oferece funcionalidades de listagem, criação, edição e eliminação de cursos
- * Inclui sistema avançado de filtros e recomendações personalizadas
- */
-
-// =============================================================================
-// LISTAGEM E CONSULTA DE CURSOS
-// =============================================================================
-
-/**
- * Busca e devolve lista paginada de cursos com filtros avançados
- * Suporta pesquisa textual, filtros por categoria, área, formador, tipo e estado
- * Implementa paginação eficiente e consultas otimizadas com JOIN's
- */
 const getAllCursos = async (req, res) => {
   try {
     console.log('📚 [CURSOS] A processar listagem de cursos');
     
-    // Extrai parâmetros de paginação com valores padrão sensatos
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Extrai todos os parâmetros de filtro da query string
     const { categoria, area, formador, search, tipo, estado, ativo, vagas, topico } = req.query;
 
     console.log('🔍 [CURSOS] Filtros aplicados:', { categoria, area, formador, search, tipo, estado, ativo, vagas, topico });
 
-    // Constroi objeto de condições WHERE de forma dinâmica
     const where = {};
 
-    // Aplica filtros numéricos se fornecidos e válidos
     if (categoria && !isNaN(parseInt(categoria))) {
       where.id_categoria = parseInt(categoria, 10);
     }
@@ -69,12 +49,10 @@ const getAllCursos = async (req, res) => {
       where.id_topico_area = parseInt(topico, 10);
     }
 
-    // Filtro de pesquisa textual insensível a maiúsculas/minúsculas
     if (search && search.trim()) {
       where.nome = { [Op.iLike]: `%${search.trim()}%` };
     }
 
-    // Filtros de texto e estado com validação
     if (tipo && ['sincrono', 'assincrono'].includes(tipo)) {
       where.tipo = tipo;
     }
@@ -82,23 +60,20 @@ const getAllCursos = async (req, res) => {
       where.estado = estado;
     }
 
-    // Filtro boolean para estado ativo/inativo
     if (ativo !== undefined) {
       where.ativo = ativo === 'false' ? false : true;
     }
 
-    // Filtro de vagas mínimas (útil para procurar cursos com lugares disponíveis)
     if (vagas && !isNaN(parseInt(vagas))) {
       where.vagas = { [Op.gte]: parseInt(vagas, 10) };
     }
 
-    // Define modelos relacionados a incluir na consulta para dados completos
     const includeModels = [
       {
         model: User,
         as: "formador",
         attributes: ['id_utilizador', 'nome', 'email'],
-        required: false // LEFT JOIN para incluir cursos sem formador
+        required: false
       },
       {
         model: Area,
@@ -112,7 +87,6 @@ const getAllCursos = async (req, res) => {
       }
     ];
 
-    // Adiciona Topico_Area se o modelo estiver disponível na base de dados
     try {
       if (Topico_Area) {
         includeModels.push({
@@ -125,16 +99,14 @@ const getAllCursos = async (req, res) => {
       console.warn('⚠️ [CURSOS] Modelo Topico_Area não disponível:', err.message);
     }
 
-    // Executa consulta principal com contagem total para paginação
     const { count, rows } = await Curso.findAndCountAll({
       where,
       offset,
       limit,
-      order: [['data_inicio', 'DESC']], // Mostra cursos mais recentes primeiro
+      order: [['data_inicio', 'DESC']],
       include: includeModels
     });
 
-    // Fallback para debugging: se não há resultados, tenta consulta básica
     if (rows.length === 0 && Object.keys(where).length === 0) {
       console.log('ℹ️ [CURSOS] Nenhum resultado - a tentar consulta básica para debug');
       
@@ -170,11 +142,6 @@ const getAllCursos = async (req, res) => {
   }
 };
 
-/**
- * Filtra cursos por categorias específicas
- * Aceita múltiplas categorias como string separada por vírgulas
- * Útil para páginas temáticas ou secções específicas da aplicação
- */
 const getCursosByCategoria = async (req, res) => {
   try {
     const { categorias } = req.query;
@@ -187,7 +154,6 @@ const getCursosByCategoria = async (req, res) => {
       return res.status(400).json({ message: "É necessário fornecer pelo menos uma categoria" });
     }
 
-    // Converte string "1,2,3" para array de inteiros [1, 2, 3] e valida
     const categoriaIds = categorias.split(',')
       .map(id => parseInt(id.trim()))
       .filter(id => !isNaN(id));
@@ -201,7 +167,7 @@ const getCursosByCategoria = async (req, res) => {
     const { count, rows } = await Curso.findAndCountAll({
       where: {
         id_categoria: { [Op.in]: categoriaIds },
-        ativo: true // Só mostra cursos ativos
+        ativo: true
       },
       include: [
         {
@@ -217,7 +183,7 @@ const getCursosByCategoria = async (req, res) => {
       ],
       offset,
       limit,
-      order: [['nome', 'ASC']] // Ordena alfabeticamente para facilitar navegação
+      order: [['nome', 'ASC']]
     });
 
     console.log(`✅ [CURSOS] ${count} cursos encontrados para as categorias especificadas`);
@@ -236,24 +202,17 @@ const getCursosByCategoria = async (req, res) => {
   }
 };
 
-/**
- * Busca detalhes completos de um curso específico
- * Inclui informações sobre acesso, inscrições, cursos associados e validações de permissões
- * Esta função é crucial para a página de detalhes do curso
- */
 const getCursoById = async (req, res) => {
   try {
     const id = req.params.id;
     const userId = req.user?.id_utilizador || req.utilizador?.id_utilizador;
 
-    // Valida se o ID do curso é um número válido
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ message: "ID de curso inválido" });
     }
 
     console.log(`📖 [CURSOS] A carregar detalhes do curso ${id} para utilizador ${userId || 'anónimo'}`);
 
-    // Busca curso com todas as relações necessárias para vista completa
     const curso = await Curso.findByPk(id, {
       include: [
         {
@@ -292,17 +251,63 @@ const getCursoById = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado!" });
     }
 
-    // Prepara objeto de resposta com dados base do curso
+    console.log(`🔍 [CURSOS] Curso encontrado: ${curso.nome}`);
+    console.log(`🔍 [CURSOS] ID tópico área: ${curso.id_topico_area}`);
+    console.log(`🔍 [CURSOS] Tópico área carregado:`, curso.Topico_Area ? curso.Topico_Area.titulo : 'NULL');
+
     const cursoComDetalhes = curso.toJSON();
 
-    // Verifica se o curso já terminou comparando datas
+    // Se o tópico de área não foi carregado pela associação, buscar manualmente
+    if (curso.id_topico_area && !curso.Topico_Area) {
+      try {
+        console.log(`🔍 [CURSOS] A buscar tópico de área ${curso.id_topico_area} manualmente`);
+        const topicoArea = await Topico_Area.findByPk(curso.id_topico_area);
+        if (topicoArea) {
+          cursoComDetalhes.Topico_Area = topicoArea.toJSON();
+          console.log(`✅ [CURSOS] Tópico área carregado manualmente: ${topicoArea.titulo}`);
+          
+          // Verificar inconsistência de área
+          if (topicoArea.id_area && topicoArea.id_area !== curso.id_area) {
+            console.warn(`⚠️ [CURSOS] INCONSISTÊNCIA DETECTADA:`);
+            console.warn(`   - Curso está na área: ${curso.id_area}`);
+            console.warn(`   - Tópico pertence à área: ${topicoArea.id_area}`);
+            console.warn(`   - Tópico: ${topicoArea.titulo}`);
+            
+            // Adicionar informação sobre a inconsistência na resposta
+            cursoComDetalhes.inconsistencia_area = {
+              curso_area: curso.id_area,
+              topico_area: topicoArea.id_area,
+              topico_titulo: topicoArea.titulo,
+              requer_correcao: true
+            };
+          }
+        }
+      } catch (topicoError) {
+        console.warn(`⚠️ [CURSOS] Erro ao carregar tópico área manualmente:`, topicoError.message);
+      }
+    } else if (curso.Topico_Area) {
+      // Verificar inconsistência mesmo quando o tópico foi carregado pela associação
+      if (curso.Topico_Area.id_area && curso.Topico_Area.id_area !== curso.id_area) {
+        console.warn(`⚠️ [CURSOS] INCONSISTÊNCIA DETECTADA (associação):`);
+        console.warn(`   - Curso está na área: ${curso.id_area}`);
+        console.warn(`   - Tópico pertence à área: ${curso.Topico_Area.id_area}`);
+        console.warn(`   - Tópico: ${curso.Topico_Area.titulo}`);
+        
+        cursoComDetalhes.inconsistencia_area = {
+          curso_area: curso.id_area,
+          topico_area: curso.Topico_Area.id_area,
+          topico_titulo: curso.Topico_Area.titulo,
+          requer_correcao: true
+        };
+      }
+    }
+
     const dataAtual = new Date();
     const dataFimCurso = new Date(curso.data_fim);
     const cursoTerminado = dataFimCurso < dataAtual;
 
     cursoComDetalhes.terminado = cursoTerminado;
 
-    // Aplica regras de acesso para cursos terminados baseadas no tipo e inscrição
     if (cursoTerminado && userId) {
       try {
         const inscricao = await Inscricao_Curso.findOne({
@@ -325,7 +330,6 @@ const getCursoById = async (req, res) => {
       cursoComDetalhes.acessoPermitido = true;
     }
 
-    // Conta inscrições ativas para cursos síncronos (mostra ocupação atual)
     try {
       if (curso.tipo === 'sincrono' && curso.vagas) {
         const inscricoesAtivas = await Inscricao_Curso.count({ 
@@ -344,7 +348,6 @@ const getCursoById = async (req, res) => {
       cursoComDetalhes.vagasDisponiveis = curso.vagas || 0;
     }
 
-    // Carrega cursos associados para sugestões e navegação relacionada
     try {
       const associacoes = await AssociarCursos.findAll({
         where: {
@@ -377,6 +380,8 @@ const getCursoById = async (req, res) => {
     }
 
     console.log(`✅ [CURSOS] Detalhes do curso ${id} carregados com sucesso`);
+    console.log(`🔍 [CURSOS] Resposta final - Tópico área:`, cursoComDetalhes.Topico_Area ? cursoComDetalhes.Topico_Area.titulo : 'NULL');
+    
     res.json(cursoComDetalhes);
   } catch (error) {
     console.error('❌ [CURSOS] Erro ao carregar curso:', error.message);
@@ -387,10 +392,6 @@ const getCursoById = async (req, res) => {
   }
 };
 
-/**
- * Busca tópico de área específico por identificador
- * Utilizado para obter detalhes de um tópico específico
- */
 const getTopicoArea = async (req, res) => {
   try {
     const id = req.params.id;
@@ -419,15 +420,6 @@ const getTopicoArea = async (req, res) => {
   }
 };
 
-// =============================================================================
-// CRIAÇÃO E EDIÇÃO DE CURSOS
-// =============================================================================
-
-/**
- * Cria novo curso no sistema com validações completas
- * Gere criação de diretórios, processamento de imagens e notificações automáticas
- * Implementa transações para garantir consistência dos dados
- */
 const createCurso = async (req, res) => {
   try {
     console.log('🆕 [CURSOS] A iniciar criação de novo curso');
@@ -435,10 +427,9 @@ const createCurso = async (req, res) => {
     
     const {
       nome, descricao, tipo, vagas, duracao, data_inicio, data_fim,
-      id_formador, id_area, id_categoria, topicos, id_topico_categoria
+      id_formador, id_area, id_categoria, topicos, id_topico_area
     } = req.body;
 
-    // Validações obrigatórias dos campos principais
     if (!nome?.trim()) {
       return res.status(400).json({ message: "Nome do curso é obrigatório!" });
     }
@@ -458,19 +449,17 @@ const createCurso = async (req, res) => {
       return res.status(400).json({ message: "Duração deve ser um número positivo!" });
     }
 
-    // Validação das datas
     const dataInicioObj = new Date(data_inicio);
     const dataFimObj = new Date(data_fim);
     if (dataFimObj <= dataInicioObj) {
       return res.status(400).json({ message: "Data de fim deve ser posterior à data de início!" });
     }
 
-    if (!id_topico_categoria || isNaN(parseInt(id_topico_categoria))) {
+    if (!id_topico_area || isNaN(parseInt(id_topico_area))) {
       console.warn('⚠️ [CURSOS] Tópico não selecionado');
       return res.status(400).json({ message: "É necessário selecionar um tópico para o curso!" });
     }
 
-    // Validações específicas para cursos síncronos (requerem formador e vagas)
     if (tipo === 'sincrono') {
       if (!id_formador || isNaN(parseInt(id_formador))) {
         console.warn('⚠️ [CURSOS] Formador obrigatório para curso síncrono');
@@ -482,7 +471,6 @@ const createCurso = async (req, res) => {
       }
     }
 
-    // Verifica se já existe um curso com o mesmo nome (case-insensitive)
     const cursoExistente = await Curso.findOne({ 
       where: { 
         nome: { [Op.iLike]: nome.trim() }
@@ -496,7 +484,6 @@ const createCurso = async (req, res) => {
       });
     }
 
-    // Criação da estrutura de diretórios para o curso
     const cursoSlug = uploadUtils.normalizarNome(nome.trim());
     const cursoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', cursoSlug);
     uploadUtils.ensureDir(cursoDir);
@@ -504,25 +491,20 @@ const createCurso = async (req, res) => {
 
     console.log(`📁 [CURSOS] Diretório criado: ${dirPath}`);
 
-    // Processa imagem de capa se foi enviada
     let imagemPath = null;
     if (req.file) {
       imagemPath = `${dirPath}/capa.png`;
       console.log(`🖼️ [CURSOS] Imagem de capa processada: ${imagemPath}`);
     }
 
-    // Transação para garantir consistência dos dados
     const t = await sequelize.transaction();
 
     try {
-      // Determina número de vagas baseado no tipo do curso
       let vagasFinais = null;
       if (tipo === 'sincrono') {
         vagasFinais = parseInt(vagas, 10);
       }
-      // Cursos assíncronos não têm limite de vagas
 
-      // Prepara dados para criação do curso
       const dadosCurso = {
         nome: nome.trim(),
         descricao: descricao?.trim() || null,
@@ -533,19 +515,17 @@ const createCurso = async (req, res) => {
         id_formador: tipo === 'sincrono' ? parseInt(id_formador) : null,
         id_area: parseInt(id_area),
         id_categoria: parseInt(id_categoria),
-        id_topico_area: parseInt(id_topico_categoria),
+        id_topico_area: parseInt(id_topico_area),
         imagem_path: imagemPath,
         dir_path: dirPath,
         duracao: parseInt(duracao, 10),
         ativo: true,
-        estado: 'planeado' // Estado inicial padrão
+        estado: 'planeado'
       };
 
-      // Cria o curso principal na base de dados
       const novoCurso = await Curso.create(dadosCurso, { transaction: t });
       console.log(`✅ [CURSOS] Curso criado com ID ${novoCurso.id_curso}`);
 
-      // Cria tópicos organizacionais adicionais se fornecidos
       if (topicos && Array.isArray(topicos) && topicos.length > 0) {
         console.log(`📝 [CURSOS] A criar ${topicos.length} tópicos organizacionais adicionais`);
         
@@ -562,13 +542,9 @@ const createCurso = async (req, res) => {
         }
       }
 
-      // Confirma toda a transação
       await t.commit();
       console.log('✅ [CURSOS] Transação de criação confirmada com sucesso');
 
-      // Pós-processamento (fora da transação para não bloquear resposta)
-
-      // Auto-inscreve formador em cursos síncronos
       if (tipo === "sincrono" && id_formador) {
         try {
           await Inscricao_Curso.create({
@@ -583,16 +559,13 @@ const createCurso = async (req, res) => {
         }
       }
 
-      // Envio de notificações via WebSocket (assíncrono)
       try {
         console.log('📢 [CURSOS] A processar notificações sobre novo curso...');
         
-        // Verifica se WebSocket está disponível
         if (!req.io) {
           console.warn('⚠️ [CURSOS] WebSocket não disponível - notificações podem falhar');
         }
 
-        // Chama função de notificação se disponível
         if (notificacaoController && notificacaoController.notificarNovoCurso) {
           const resultadoNotificacao = await notificacaoController.notificarNovoCurso(novoCurso, req.io);
           
@@ -604,7 +577,6 @@ const createCurso = async (req, res) => {
         }
       } catch (notificationError) {
         console.warn('⚠️ [CURSOS] Erro ao enviar notificações (não crítico):', notificationError.message);
-        // Continua execução mesmo com falha nas notificações
       }
 
       console.log('🎉 [CURSOS] Processo completo de criação de curso finalizado');
@@ -617,7 +589,6 @@ const createCurso = async (req, res) => {
       });
 
     } catch (error) {
-      // Reverte transação em caso de qualquer erro
       await t.rollback();
       console.error('❌ [CURSOS] Erro na transação - a reverter alterações:', error.message);
       throw error;
@@ -632,11 +603,6 @@ const createCurso = async (req, res) => {
   }
 };
 
-/**
- * Gera sugestões personalizadas de cursos para o utilizador
- * Analisa histórico de inscrições e preferências para recomendações inteligentes
- * Utiliza algoritmo baseado em padrões de interesse e disponibilidade
- */
 const getCursosSugeridos = async (req, res) => {
   try {
     const id_utilizador = req.user?.id_utilizador || req.utilizador?.id_utilizador;
@@ -650,7 +616,6 @@ const getCursosSugeridos = async (req, res) => {
       });
     }
 
-    // Verifica conexão com base de dados
     try {
       await sequelize.authenticate();
       console.log('✅ [CURSOS] Conexão com base de dados confirmada para sugestões');
@@ -665,7 +630,6 @@ const getCursosSugeridos = async (req, res) => {
     let cursosSugeridos = [];
 
     try {
-      // Analisa histórico de inscrições do utilizador
       const inscricoes = await Inscricao_Curso.findAll({
         where: { id_utilizador },
         attributes: ['id_curso']
@@ -675,37 +639,29 @@ const getCursosSugeridos = async (req, res) => {
       console.log(`📊 [CURSOS] ${cursosInscritosIds.length} cursos no histórico do utilizador`);
 
       if (inscricoes.length > 0) {
-        // Análise de preferências baseada no histórico
-        
-        // Busca dados dos cursos onde o utilizador se inscreveu
         const cursosInscritos = await Curso.findAll({
           where: { id_curso: cursosInscritosIds },
           attributes: ['id_categoria', 'id_area']
         });
 
-        // Extrai padrões de interesse do utilizador
         const categoriasInscrito = [...new Set(cursosInscritos.map(c => c.id_categoria).filter(id => id))];
         const areasInscrito = [...new Set(cursosInscritos.map(c => c.id_area).filter(id => id))];
 
         console.log(`🏷️ [CURSOS] Categorias de interesse identificadas: ${categoriasInscrito.join(', ')}`);
         console.log(`🌍 [CURSOS] Áreas já exploradas: ${areasInscrito.join(', ')}`);
 
-        // Estratégia de sugestão inteligente: expandir horizontes
         if (categoriasInscrito.length > 0 && areasInscrito.length > 0) {
-          // Sugere cursos de categorias conhecidas mas em áreas ainda não exploradas
           const whereConditions = {
-            id_categoria: { [Op.in]: categoriasInscrito }, // Categorias familiares
-            id_area: { [Op.notIn]: areasInscrito }, // Áreas novas para explorar
-            id_curso: { [Op.notIn]: cursosInscritosIds }, // Não já inscritos
+            id_categoria: { [Op.in]: categoriasInscrito },
+            id_area: { [Op.notIn]: areasInscrito },
+            id_curso: { [Op.notIn]: cursosInscritosIds },
             ativo: true
           };
 
-          // Adiciona condições para disponibilidade e vagas
           const orConditions = [
-            { tipo: 'assincrono' } // Sempre disponíveis
+            { tipo: 'assincrono' }
           ];
 
-          // Para cursos síncronos, verifica se há vagas disponíveis
           orConditions.push({
             tipo: 'sincrono',
             vagas: { [Op.gt]: 0 }
@@ -723,7 +679,6 @@ const getCursosSugeridos = async (req, res) => {
         }
       }
 
-      // Fallback: sugestões gerais se não há suficientes sugestões personalizadas
       if (cursosSugeridos.length < 5) {
         console.log('🎲 [CURSOS] A gerar sugestões complementares...');
         
@@ -731,12 +686,10 @@ const getCursosSugeridos = async (req, res) => {
           ativo: true
         };
 
-        // Exclui cursos já inscritos se houver histórico
         if (cursosInscritosIds.length > 0) {
           whereConditions.id_curso = { [Op.notIn]: cursosInscritosIds };
         }
 
-        // Adiciona condições de disponibilidade
         whereConditions[Op.or] = [
           { tipo: 'assincrono' },
           { tipo: 'sincrono', vagas: { [Op.gt]: 0 } }
@@ -750,7 +703,6 @@ const getCursosSugeridos = async (req, res) => {
           order: [['data_inicio', 'DESC']]
         });
 
-        // Combina sugestões evitando duplicatas
         const idsExistentes = new Set(cursosSugeridos.map(c => c.id_curso));
         const novasSugestoes = sugestoesFallback.filter(curso => !idsExistentes.has(curso.id_curso));
         
@@ -759,13 +711,11 @@ const getCursosSugeridos = async (req, res) => {
         console.log(`🎲 [CURSOS] ${novasSugestoes.length} sugestões complementares adicionadas`);
       }
 
-      // Limita a 10 sugestões finais para performance
       cursosSugeridos = cursosSugeridos.slice(0, 10);
 
     } catch (queryError) {
       console.error('❌ [CURSOS] Erro nas consultas de sugestão:', queryError.message);
       
-      // Fallback absoluto: cursos mais recentes disponíveis
       try {
         cursosSugeridos = await Curso.findAll({
           where: {
@@ -804,11 +754,6 @@ const getCursosSugeridos = async (req, res) => {
   }
 };
 
-/**
- * Atualiza dados de um curso existente
- * Verifica permissões antes de permitir alterações
- * Só administradores ou formadores do curso podem editar
- */
 const updateCurso = async (req, res) => {
   try {
     const id = req.params.id;
@@ -826,56 +771,301 @@ const updateCurso = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Verifica permissões (admin ou formador do curso)
     if (userRole !== 1 && curso.id_formador !== userId) {
       return res.status(403).json({ message: "Não tens permissão para editar este curso" });
     }
 
     const {
       nome, descricao, tipo, vagas, duracao, data_inicio, data_fim,
-      id_formador, id_area, id_categoria, id_topico_categoria, ativo, estado
+      id_formador, id_area, id_categoria, id_topico_area, ativo, estado
     } = req.body;
 
-    // Prepara dados para atualização apenas com campos fornecidos
+    const dadosOriginais = { ...curso.dataValues };
     const dadosAtualizacao = {};
+    const alteracoes = [];
 
-    if (nome !== undefined && nome.trim()) dadosAtualizacao.nome = nome.trim();
-    if (descricao !== undefined) dadosAtualizacao.descricao = descricao?.trim() || null;
-    if (tipo !== undefined && ['sincrono', 'assincrono'].includes(tipo)) dadosAtualizacao.tipo = tipo;
-    if (vagas !== undefined && !isNaN(parseInt(vagas))) dadosAtualizacao.vagas = parseInt(vagas);
-    if (duracao !== undefined && !isNaN(parseInt(duracao))) dadosAtualizacao.duracao = parseInt(duracao);
-    if (data_inicio !== undefined) dadosAtualizacao.data_inicio = new Date(data_inicio);
-    if (data_fim !== undefined) dadosAtualizacao.data_fim = new Date(data_fim);
-    if (id_formador !== undefined && !isNaN(parseInt(id_formador))) dadosAtualizacao.id_formador = parseInt(id_formador);
-    if (id_area !== undefined && !isNaN(parseInt(id_area))) dadosAtualizacao.id_area = parseInt(id_area);
-    if (id_categoria !== undefined && !isNaN(parseInt(id_categoria))) dadosAtualizacao.id_categoria = parseInt(id_categoria);
-    if (id_topico_categoria !== undefined && !isNaN(parseInt(id_topico_categoria))) dadosAtualizacao.id_topico_area = parseInt(id_topico_categoria);
-    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
-    if (estado !== undefined && ['planeado', 'em_curso', 'terminado', 'cancelado'].includes(estado)) dadosAtualizacao.estado = estado;
+    if (nome !== undefined && nome.trim() && nome.trim() !== curso.nome) {
+      dadosAtualizacao.nome = nome.trim();
+      alteracoes.push({
+        campo: 'Nome',
+        valor_antigo: curso.nome,
+        valor_novo: nome.trim()
+      });
+    }
+    
+    if (descricao !== undefined && (descricao?.trim() || null) !== curso.descricao) {
+      dadosAtualizacao.descricao = descricao?.trim() || null;
+      alteracoes.push({
+        campo: 'Descrição',
+        valor_antigo: curso.descricao || 'Sem descrição',
+        valor_novo: descricao?.trim() || 'Sem descrição'
+      });
+    }
+    
+    if (tipo !== undefined && ['sincrono', 'assincrono'].includes(tipo) && tipo !== curso.tipo) {
+      dadosAtualizacao.tipo = tipo;
+      alteracoes.push({
+        campo: 'Tipo',
+        valor_antigo: curso.tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono',
+        valor_novo: tipo === 'sincrono' ? 'Síncrono' : 'Assíncrono'
+      });
+    }
+    
+    if (vagas !== undefined && !isNaN(parseInt(vagas))) {
+      const novasVagas = parseInt(vagas);
+      if (novasVagas !== curso.vagas) {
+        dadosAtualizacao.vagas = novasVagas;
+        alteracoes.push({
+          campo: 'Vagas',
+          valor_antigo: curso.vagas?.toString() || 'Sem limite',
+          valor_novo: novasVagas.toString()
+        });
+      }
+    }
+    
+    if (duracao !== undefined && !isNaN(parseInt(duracao))) {
+      const novaDuracao = parseInt(duracao);
+      if (novaDuracao !== curso.duracao) {
+        dadosAtualizacao.duracao = novaDuracao;
+        alteracoes.push({
+          campo: 'Duração',
+          valor_antigo: `${curso.duracao}h`,
+          valor_novo: `${novaDuracao}h`
+        });
+      }
+    }
+    
+    if (data_inicio !== undefined) {
+      const novaDataInicio = new Date(data_inicio);
+      const dataInicioOriginal = new Date(curso.data_inicio);
+      if (novaDataInicio.getTime() !== dataInicioOriginal.getTime()) {
+        dadosAtualizacao.data_inicio = novaDataInicio;
+        alteracoes.push({
+          campo: 'Data de Início',
+          valor_antigo: dataInicioOriginal.toLocaleDateString('pt-PT'),
+          valor_novo: novaDataInicio.toLocaleDateString('pt-PT')
+        });
+      }
+    }
+    
+    if (data_fim !== undefined) {
+      const novaDataFim = new Date(data_fim);
+      const dataFimOriginal = new Date(curso.data_fim);
+      if (novaDataFim.getTime() !== dataFimOriginal.getTime()) {
+        dadosAtualizacao.data_fim = novaDataFim;
+        alteracoes.push({
+          campo: 'Data de Fim',
+          valor_antigo: dataFimOriginal.toLocaleDateString('pt-PT'),
+          valor_novo: novaDataFim.toLocaleDateString('pt-PT')
+        });
+      }
+    }
+    
+    if (id_formador !== undefined && !isNaN(parseInt(id_formador))) {
+      const novoFormadorId = parseInt(id_formador);
+      if (novoFormadorId !== curso.id_formador) {
+        dadosAtualizacao.id_formador = novoFormadorId;
+        
+        try {
+          const formadorAntigo = curso.id_formador ? await User.findByPk(curso.id_formador) : null;
+          const formadorNovo = await User.findByPk(novoFormadorId);
+          
+          alteracoes.push({
+            campo: 'Formador',
+            valor_antigo: formadorAntigo?.nome || 'Não atribuído',
+            valor_novo: formadorNovo?.nome || 'Não encontrado'
+          });
+        } catch (err) {
+          alteracoes.push({
+            campo: 'Formador',
+            valor_antigo: 'Anterior',
+            valor_novo: 'Novo formador'
+          });
+        }
+      }
+    }
+    
+    if (id_area !== undefined && !isNaN(parseInt(id_area))) {
+      const novaAreaId = parseInt(id_area);
+      if (novaAreaId !== curso.id_area) {
+        dadosAtualizacao.id_area = novaAreaId;
+        
+        try {
+          const areaAntiga = curso.id_area ? await Area.findByPk(curso.id_area) : null;
+          const areaNova = await Area.findByPk(novaAreaId);
+          
+          alteracoes.push({
+            campo: 'Área',
+            valor_antigo: areaAntiga?.nome || 'Não atribuída',
+            valor_novo: areaNova?.nome || 'Não encontrada'
+          });
+        } catch (err) {
+          alteracoes.push({
+            campo: 'Área',
+            valor_antigo: 'Anterior',
+            valor_novo: 'Nova área'
+          });
+        }
+      }
+    }
+    
+    if (id_categoria !== undefined && !isNaN(parseInt(id_categoria))) {
+      const novaCategoriaId = parseInt(id_categoria);
+      if (novaCategoriaId !== curso.id_categoria) {
+        dadosAtualizacao.id_categoria = novaCategoriaId;
+        
+        try {
+          const categoriaAntiga = curso.id_categoria ? await Categoria.findByPk(curso.id_categoria) : null;
+          const categoriaNova = await Categoria.findByPk(novaCategoriaId);
+          
+          alteracoes.push({
+            campo: 'Categoria',
+            valor_antigo: categoriaAntiga?.nome || 'Não atribuída',
+            valor_novo: categoriaNova?.nome || 'Não encontrada'
+          });
+        } catch (err) {
+          alteracoes.push({
+            campo: 'Categoria',
+            valor_antigo: 'Anterior',
+            valor_novo: 'Nova categoria'
+          });
+        }
+      }
+    }
+    
+    if (id_topico_area !== undefined && !isNaN(parseInt(id_topico_area))) {
+      const novoTopicoId = parseInt(id_topico_area);
+      if (novoTopicoId !== curso.id_topico_area) {
+        dadosAtualizacao.id_topico_area = novoTopicoId;
+        
+        try {
+          const topicoAntigo = curso.id_topico_area ? await Topico_Area.findByPk(curso.id_topico_area) : null;
+          const topicoNovo = await Topico_Area.findByPk(novoTopicoId);
+          
+          alteracoes.push({
+            campo: 'Tópico',
+            valor_antigo: topicoAntigo?.titulo || 'Não atribuído',
+            valor_novo: topicoNovo?.titulo || 'Não encontrado'
+          });
+        } catch (err) {
+          alteracoes.push({
+            campo: 'Tópico',
+            valor_antigo: 'Anterior',
+            valor_novo: 'Novo tópico'
+          });
+        }
+      }
+    }
+    
+    if (ativo !== undefined && ativo !== curso.ativo) {
+      dadosAtualizacao.ativo = ativo;
+      alteracoes.push({
+        campo: 'Estado Ativo',
+        valor_antigo: curso.ativo ? 'Ativo' : 'Inativo',
+        valor_novo: ativo ? 'Ativo' : 'Inativo'
+      });
+    }
+    
+    if (estado !== undefined && ['planeado', 'em_curso', 'terminado', 'cancelado'].includes(estado) && estado !== curso.estado) {
+      dadosAtualizacao.estado = estado;
+      alteracoes.push({
+        campo: 'Estado',
+        valor_antigo: curso.estado || 'Não definido',
+        valor_novo: estado
+      });
+    }
 
-    // Validação das datas se ambas foram fornecidas
     if (dadosAtualizacao.data_inicio && dadosAtualizacao.data_fim) {
       if (dadosAtualizacao.data_fim <= dadosAtualizacao.data_inicio) {
         return res.status(400).json({ message: "Data de fim deve ser posterior à data de início!" });
       }
     }
 
-    // Processa nova imagem se foi enviada
+    let imagemAtualizada = false;
+    let nomeMudou = false;
+    let pastaRenomeada = false;
+
     if (req.file) {
       const cursoSlug = uploadUtils.normalizarNome(dadosAtualizacao.nome || curso.nome);
       const dirPath = `uploads/cursos/${cursoSlug}`;
       const imagemPath = `${dirPath}/capa.png`;
       dadosAtualizacao.imagem_path = imagemPath;
-      console.log(`🖼️ [CURSOS] Nova imagem processada: ${imagemPath}`);
+      imagemAtualizada = true;
+
+      alteracoes.push({
+        campo: 'Imagem',
+        valor_antigo: 'Imagem anterior',
+        valor_novo: 'Nova imagem carregada'
+      });
     }
 
-    // Atualiza curso na base de dados
+    if (dadosAtualizacao.nome && dadosAtualizacao.nome !== curso.nome) {
+      nomeMudou = true;
+      const novoSlug = uploadUtils.normalizarNome(dadosAtualizacao.nome);
+      const novoDirPath = `uploads/cursos/${novoSlug}`;
+      
+      try {
+        const dirAnterior = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', uploadUtils.normalizarNome(curso.nome));
+        const novoDir = path.join(uploadUtils.BASE_UPLOAD_DIR, 'cursos', novoSlug);
+        
+        if (fs.existsSync(dirAnterior) && !fs.existsSync(novoDir)) {
+          fs.renameSync(dirAnterior, novoDir);
+          pastaRenomeada = true;
+          dadosAtualizacao.dir_path = novoDirPath;
+          
+          if (curso.imagem_path) {
+            dadosAtualizacao.imagem_path = `${novoDirPath}/capa.png`;
+          }
+        }
+      } catch (error) {
+        console.warn('Aviso: Não foi possível renomear pasta do curso:', error.message);
+      }
+    }
+
     await curso.update(dadosAtualizacao);
+
+    let utilizadoresNotificados = 0;
+
+    if (alteracoes.length > 0) {
+      try {
+        const inscricoes = await Inscricao_Curso.findAll({
+          where: { 
+            id_curso: id, 
+            estado: 'inscrito' 
+          },
+          include: [{
+            model: User,
+            as: 'utilizador',
+            attributes: ['id_utilizador', 'nome', 'email']
+          }]
+        });
+
+        if (inscricoes.length > 0 && notificacaoController && notificacaoController.notificarAlteracaoCurso) {
+          const resultadoNotificacao = await notificacaoController.notificarAlteracaoCurso(
+            curso,
+            alteracoes,
+            inscricoes,
+            req.io
+          );
+          
+          if (resultadoNotificacao && resultadoNotificacao.utilizadoresNotificados) {
+            utilizadoresNotificados = resultadoNotificacao.utilizadoresNotificados;
+          }
+        }
+      } catch (notificationError) {
+        console.warn('⚠️ [CURSOS] Erro ao enviar notificações de alteração (não crítico):', notificationError.message);
+      }
+    }
 
     console.log(`✅ [CURSOS] Curso ${id} atualizado com sucesso`);
     res.json({
       message: "Curso atualizado com sucesso",
-      curso: curso
+      curso: curso,
+      alteracoes: alteracoes,
+      alteracoesNotificadas: utilizadoresNotificados,
+      imagemAtualizada: imagemAtualizada,
+      nomeMudou: nomeMudou,
+      pastaRenomeada: pastaRenomeada
     });
 
   } catch (error) {
@@ -887,11 +1077,6 @@ const updateCurso = async (req, res) => {
   }
 };
 
-/**
- * Elimina curso e toda a estrutura associada
- * Remove inscrições, tópicos e outros dados relacionados usando transação
- * Só administradores podem eliminar cursos
- */
 const deleteCurso = async (req, res) => {
   try {
     const id = req.params.id;
@@ -901,7 +1086,6 @@ const deleteCurso = async (req, res) => {
       return res.status(400).json({ message: "ID de curso inválido" });
     }
 
-    // Só administradores podem eliminar cursos
     if (userRole !== 1) {
       return res.status(403).json({ message: "Só administradores podem eliminar cursos" });
     }
@@ -916,19 +1100,16 @@ const deleteCurso = async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-      // Elimina inscrições associadas
       await Inscricao_Curso.destroy({
         where: { id_curso: id },
         transaction: t
       });
 
-      // Elimina tópicos organizacionais
       await Curso_Topicos.destroy({
         where: { id_curso: id },
         transaction: t
       });
 
-      // Elimina associações com outros cursos
       await AssociarCursos.destroy({
         where: {
           [Op.or]: [
@@ -939,7 +1120,6 @@ const deleteCurso = async (req, res) => {
         transaction: t
       });
 
-      // Elimina o curso principal
       await curso.destroy({ transaction: t });
 
       await t.commit();
@@ -961,10 +1141,6 @@ const deleteCurso = async (req, res) => {
   }
 };
 
-/**
- * Lista todas as inscrições ativas de um curso específico
- * Inclui dados básicos dos utilizadores inscritos
- */
 const getInscricoesCurso = async (req, res) => {
   try {
     const id_curso = req.params.id;
@@ -1002,14 +1178,6 @@ const getInscricoesCurso = async (req, res) => {
   }
 };
 
-// =============================================================================
-// GESTÃO DE TÓPICOS ORGANIZACIONAIS
-// =============================================================================
-
-/**
- * Busca estrutura de tópicos organizacionais de um curso
- * Utilizado para organizar conteúdo dentro do curso
- */
 const getTopicosCurso = async (req, res) => {
   try {
     const id_curso = req.params.id;
@@ -1039,10 +1207,6 @@ const getTopicosCurso = async (req, res) => {
   }
 };
 
-/**
- * Cria novo tópico organizacional para um curso
- * Determina automaticamente a ordem se não especificada
- */
 const createCurso_Topicos = async (req, res) => {
   try {
     const id_curso = req.params.id;
@@ -1065,7 +1229,6 @@ const createCurso_Topicos = async (req, res) => {
       return res.status(404).json({ message: "Curso não encontrado" });
     }
 
-    // Determina ordem automática se não especificada
     const ultimaOrdem = await Curso_Topicos.max('ordem', {
       where: { id_curso: parseInt(id_curso) }
     }) || 0;
@@ -1094,10 +1257,6 @@ const createCurso_Topicos = async (req, res) => {
   }
 };
 
-/**
- * Atualiza dados de um tópico organizacional existente
- * Permite alterar nome, ordem e estado ativo
- */
 const updateCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
@@ -1137,11 +1296,6 @@ const updateCurso_Topicos = async (req, res) => {
   }
 };
 
-/**
- * Elimina tópico organizacional
- * Desativa se tem pastas associadas, elimina completamente se não tem
- * Esta abordagem preserva a integridade dos dados
- */
 const deleteCurso_Topicos = async (req, res) => {
   try {
     const id_topico = req.params.id;
@@ -1158,13 +1312,11 @@ const deleteCurso_Topicos = async (req, res) => {
       return res.status(404).json({ message: "Tópico não encontrado" });
     }
 
-    // Verifica se tem pastas associadas antes de eliminar
     const pastas = await PastaCurso.findAll({
       where: { id_topico: parseInt(id_topico) }
     });
 
     if (pastas.length > 0) {
-      // Desativa em vez de eliminar se tem conteúdo associado
       await topico.update({ ativo: false });
       console.log(`⚠️ [CURSOS] Tópico ${id_topico} desativado (tem ${pastas.length} pastas associadas)`);
       
@@ -1174,7 +1326,6 @@ const deleteCurso_Topicos = async (req, res) => {
       });
     }
 
-    // Elimina completamente se não tem conteúdo
     await topico.destroy();
     console.log(`✅ [CURSOS] Tópico ${id_topico} eliminado com sucesso`);
 
@@ -1188,7 +1339,6 @@ const deleteCurso_Topicos = async (req, res) => {
   }
 };
 
-// Exporta todas as funções públicas do controlador
 module.exports = {
   getAllCursos,
   getCursosByCategoria,

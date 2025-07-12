@@ -6,12 +6,21 @@ import API_BASE from "../../api";
 import Sidebar from '../../components/Sidebar';
 import './css/Admin_Dashboard.css';
 
+/**
+ * Componente AdminDashboard
+ * 
+ * Dashboard principal para administradores do sistema com:
+ * - Estatísticas gerais de utilizadores e cursos
+ * - Gráficos interativos para análise de dados
+ * - Ações rápidas para gestão do sistema
+ * - Interface responsiva com sidebar colapsável
+ */
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Estados para as estatísticas do dashboard
+  // Estados para as estatísticas principais do dashboard
   const [stats, setStats] = useState({
     totalUtilizadores: 0,
     totalFormadores: 0,
@@ -29,18 +38,23 @@ const AdminDashboard = () => {
     cursosTerminandoEmBreve: 0
   });
 
-  // Estados para os dados dos gráficos
+  // Estados para os dados dos diferentes gráficos
   const [cursosPorCategoria, setCursosPorCategoria] = useState([]);
   const [inscricoesPorMes, setInscricoesPorMes] = useState([]);
   const [utilizadorePorPerfil, setUtilizadorePorPerfil] = useState([]);
   const [cursosMaisInscritos, setCursosMaisInscritos] = useState([]);
 
-  // Função para alternar o estado da sidebar
+  /**
+   * Função para alternar a visibilidade da sidebar
+   */
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Hook para carregar os dados do dashboard
+  /**
+   * Hook para carregar todos os dados necessários para o dashboard
+   * Executa chamadas paralelas para diferentes endpoints da API
+   */
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -49,44 +63,44 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         };
 
-        // Carregar estatísticas gerais
+        // Carregar estatísticas gerais do sistema
         try {
           const statsResponse = await axios.get(`${API_BASE}/dashboard/estatisticas`, config);
           setStats(statsResponse.data);
         } catch (error) {
-          console.error('Erro ao carregar estatísticas:', error);
+          console.error('Erro ao carregar estatísticas gerais:', error);
         }
 
-        // Carregar dados de cursos por categoria
+        // Carregar dados de distribuição de cursos por categoria
         try {
           const categoriaResponse = await axios.get(`${API_BASE}/dashboard/cursos-categoria`, config);
           setCursosPorCategoria(categoriaResponse.data.categorias || []);
         } catch (error) {
-          console.error('Erro ao carregar cursos por categoria:', error);
+          console.error('Erro ao carregar dados de categorias:', error);
         }
 
-        // Carregar dados de inscrições mensais
+        // Carregar dados de evolução mensal das inscrições
         try {
           const inscricoesResponse = await axios.get(`${API_BASE}/dashboard/inscricoes-mes`, config);
           setInscricoesPorMes(inscricoesResponse.data.mensal || []);
         } catch (error) {
-          console.error('Erro ao carregar inscrições por mês:', error);
+          console.error('Erro ao carregar dados de inscrições mensais:', error);
         }
 
-        // Carregar dados de utilizadores por perfil
+        // Carregar dados de distribuição de utilizadores por perfil
         try {
           const utilizadoresResponse = await axios.get(`${API_BASE}/dashboard/utilizadores-perfil`, config);
           setUtilizadorePorPerfil(utilizadoresResponse.data.perfis || []);
         } catch (error) {
-          console.error('Erro ao carregar utilizadores por perfil:', error);
+          console.error('Erro ao carregar dados de utilizadores:', error);
         }
 
-        // Carregar dados de cursos mais inscritos
+        // Carregar dados dos cursos mais populares
         try {
           const cursosPopularesResponse = await axios.get(`${API_BASE}/dashboard/cursos-populares`, config);
           setCursosMaisInscritos(cursosPopularesResponse.data.populares || []);
         } catch (error) {
-          console.error('Erro ao carregar cursos mais inscritos:', error);
+          console.error('Erro ao carregar dados de cursos populares:', error);
         }
 
         setLoading(false);
@@ -100,22 +114,28 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Hook para criar os gráficos após os dados serem carregados
+  /**
+   * Hook para criar os gráficos após todos os dados serem carregados
+   * Recria os gráficos sempre que os dados são atualizados
+   */
   useEffect(() => {
     if (!loading) {
       criarGraficos();
     }
   }, [loading, cursosPorCategoria, inscricoesPorMes, utilizadorePorPerfil, cursosMaisInscritos]);
 
-  // Função para criar todos os gráficos do dashboard
+  /**
+   * Função principal para criar todos os gráficos do dashboard
+   * Utiliza Chart.js para gerar visualizações interativas
+   */
   const criarGraficos = () => {
-    // Destruir gráficos existentes para evitar conflitos
+    // Destruir gráficos existentes para evitar conflitos de múltiplas instâncias
     ['grafico-categorias', 'grafico-inscricoes', 'grafico-utilizadores', 'grafico-cursos-populares'].forEach(id => {
       const chart = Chart.getChart(id);
       if (chart) chart.destroy();
     });
 
-    // Criar gráfico de cursos por categoria (tipo doughnut)
+    // === GRÁFICO DE CURSOS POR CATEGORIA (Doughnut) ===
     const ctxCategorias = document.getElementById('grafico-categorias');
     if (ctxCategorias && cursosPorCategoria.length > 0) {
       new Chart(ctxCategorias, {
@@ -155,7 +175,7 @@ const AdminDashboard = () => {
       });
     }
 
-    // Criar gráfico de inscrições por mês (tipo linha)
+    // === GRÁFICO DE EVOLUÇÃO DAS INSCRIÇÕES (Linha) ===
     const ctxInscricoes = document.getElementById('grafico-inscricoes');
     if (ctxInscricoes && inscricoesPorMes.length > 0) {
       new Chart(ctxInscricoes, {
@@ -201,7 +221,7 @@ const AdminDashboard = () => {
       });
     }
 
-    // Criar gráfico de utilizadores por perfil (tipo barra)
+    // === GRÁFICO DE UTILIZADORES POR PERFIL (Barras) ===
     const ctxUtilizadores = document.getElementById('grafico-utilizadores');
     if (ctxUtilizadores && utilizadorePorPerfil.length > 0) {
       new Chart(ctxUtilizadores, {
@@ -242,7 +262,7 @@ const AdminDashboard = () => {
       });
     }
 
-    // Criar gráfico de cursos mais inscritos (tipo barra)
+    // === GRÁFICO DE CURSOS MAIS POPULARES (Barras) ===
     const ctxCursosPopulares = document.getElementById('grafico-cursos-populares');
     if (ctxCursosPopulares && cursosMaisInscritos.length > 0) {
       new Chart(ctxCursosPopulares, {
@@ -287,12 +307,15 @@ const AdminDashboard = () => {
     }
   };
 
-  // Função para navegar para outras páginas
+  /**
+   * Função para navegação entre diferentes páginas do sistema
+   * Utiliza React Router para redirecionamento
+   */
   const navegarPara = (rota) => {
     navigate(rota);
   };
 
-  // Mostrar loading enquanto os dados são carregados
+  // Exibir ecrã de carregamento enquanto os dados são obtidos
   if (loading) {
     return (
       <div className="dashboard-container-tras-dash">
@@ -306,11 +329,12 @@ const AdminDashboard = () => {
 
   return (
     <div className="dashboard-container-tras-dash">
+      {/* Sidebar com menu de navegação */}
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <div className="main-content-dash">
+        {/* Cabeçalho com botões de ação rápida */}
         <div className="dashboard-header-dash">
-          {/* Botões de ações rápidas */}
           <div className="quick-actions-dash">
             <button className="action-btn-dash primary" onClick={() => navegarPara('/admin/criar-curso')}>
               <i className="fas fa-plus"></i>
@@ -331,8 +355,9 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Grid com as estatísticas principais */}
+        {/* Grid principal com cartões de estatísticas */}
         <div className="stats-grid-dash">
+          {/* Estatísticas de utilizadores */}
           <div className="stat-card-dash primary">
             <div className="stat-icon-dash">
               <i className="fas fa-users"></i>
@@ -345,7 +370,7 @@ const AdminDashboard = () => {
 
           <div className="stat-card-dash primary">
             <div className="stat-icon-dash">
-              <i className="fas fa-user"></i>
+              <i className="fas fa-user-graduate"></i>
             </div>
             <div className="stat-info-dash">
               <h3>Total de Formandos</h3>
@@ -355,7 +380,7 @@ const AdminDashboard = () => {
 
           <div className="stat-card-dash primary">
             <div className="stat-icon-dash">
-              <i className="fas fa-user"></i>
+              <i className="fas fa-chalkboard-teacher"></i>
             </div>
             <div className="stat-info-dash">
               <h3>Total de Formadores</h3>
@@ -365,7 +390,7 @@ const AdminDashboard = () => {
 
           <div className="stat-card-dash primary">
             <div className="stat-icon-dash">
-              <i className="fas fa-user"></i>
+              <i className="fas fa-user-shield"></i>
             </div>
             <div className="stat-info-dash">
               <h3>Total de Administradores</h3>
@@ -373,6 +398,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* Estatísticas de cursos */}
           <div className="stat-card-dash success">
             <div className="stat-icon-dash">
               <i className="fas fa-book"></i>
@@ -405,7 +431,7 @@ const AdminDashboard = () => {
 
           <div className="stat-card-dash info">
             <div className="stat-icon-dash">
-              <i className="fas fa-user-graduate"></i>
+              <i className="fas fa-user-plus"></i>
             </div>
             <div className="stat-info-dash">
               <h3>Inscrições (30d)</h3>
@@ -414,20 +440,24 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Grid com os gráficos principais */}
+        {/* Grid com os gráficos de análise */}
         <div className="charts-grid-dash">
+          {/* Gráfico de evolução temporal das inscrições */}
           <div className="chart-container-dash large">
             <canvas id="grafico-inscricoes"></canvas>
           </div>
 
+          {/* Gráfico de distribuição por categorias */}
           <div className="chart-container-dash medium">
             <canvas id="grafico-categorias"></canvas>
           </div>
 
+          {/* Gráfico de utilizadores por perfil */}
           <div className="chart-container-dash medium">
             <canvas id="grafico-utilizadores"></canvas>
           </div>
 
+          {/* Gráfico de cursos mais populares */}
           <div className="chart-container-dash medium">
             <canvas id="grafico-cursos-populares"></canvas>
           </div>

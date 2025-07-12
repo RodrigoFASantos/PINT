@@ -5,12 +5,10 @@ import API_BASE, { IMAGES } from "../../api";
 import './css/Detalhes_Curso.css';
 
 const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, userRole: userRoleProp }) => {
-  // Usar propriedades ou parâmetros da URL
   const { id } = useParams();
   const navigate = useNavigate();
   const courseId = cursoId || id;
 
-  // Estados principais do componente
   const [curso, setCurso] = useState(cursoProp || null);
   const [loading, setLoading] = useState(!cursoProp);
   const [error, setError] = useState('');
@@ -22,44 +20,33 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estados para os tópicos do curso
   const [topicos, setTopicos] = useState([]);
   const [loadingTopicos, setLoadingTopicos] = useState(false);
 
-  // Estado para tópico de área
   const [topicoArea, setTopicoArea] = useState(null);
   const [loadingTopicoArea, setLoadingTopicoArea] = useState(false);
 
-  // Estados para cursos associados
   const [cursosAssociados, setCursosAssociados] = useState([]);
   const [loadingCursosAssociados, setLoadingCursosAssociados] = useState(false);
 
-  // Se o utilizador estiver inscrito, os detalhes não aparecem por defeito
-  // Se o utilizador não estiver inscrito, os detalhes aparecem por defeito
   const [mostrarDetalhes, setMostrarDetalhes] = useState(!inscritoProp);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleDetalhes = () => setMostrarDetalhes(!mostrarDetalhes);
 
-  // Função segura para decodificar token JWT
   const decodeTokenSafely = (token) => {
     try {
       if (!token) {
-        console.warn('Token não encontrado');
         return null;
       }
       
-      // Verificar se o token tem o formato correto (3 partes separadas por .)
       const parts = token.split('.');
       if (parts.length !== 3) {
-        console.error('Token mal formado - não tem 3 partes');
         return null;
       }
       
-      // Tentar decodificar a payload (segunda parte)
       const payload = parts[1];
       
-      // Adicionar padding se necessário
       let paddedPayload = payload;
       while (paddedPayload.length % 4) {
         paddedPayload += '=';
@@ -68,25 +55,11 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
       const decodedPayload = atob(paddedPayload);
       return JSON.parse(decodedPayload);
     } catch (error) {
-      console.error('Erro ao descodificar token:', error);
-      // Limpar token corrompido
       localStorage.removeItem('token');
       return null;
     }
   };
 
-  // Registo de depuração dos estados importantes
-  useEffect(() => {
-    console.log('Estados actuais:', {
-      courseId,
-      cursoTipo: curso?.tipo,
-      userRole,
-      inscrito,
-      mostrarDetalhes
-    });
-  }, [courseId, curso?.tipo, userRole, inscrito, mostrarDetalhes]);
-
-  // Função para buscar tópico de área específico
   const getTopicoArea = async (topicoAreaId) => {
     try {
       setLoadingTopicoArea(true);
@@ -101,7 +74,7 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         setTopicoArea(response.data);
         setCurso(prevCurso => ({
           ...prevCurso,
-          topico_area: response.data
+          Topico_Area: response.data
         }));
       }
     } catch (error) {
@@ -111,7 +84,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   };
 
-  // Função para buscar cursos associados
   const getCursosAssociados = async (cursoId) => {
     try {
       setLoadingCursosAssociados(true);
@@ -121,23 +93,18 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log(`Cursos associados carregados para curso ${cursoId}:`, response.data);
-
       if (response.data && Array.isArray(response.data)) {
         setCursosAssociados(response.data);
       } else {
-        console.warn('Resposta não é um array:', response.data);
         setCursosAssociados([]);
       }
     } catch (error) {
-      console.error(`Erro a buscar cursos associados para o curso ${cursoId}:`, error);
       setCursosAssociados([]);
     } finally {
       setLoadingCursosAssociados(false);
     }
   };
 
-  // Carregar dados do curso se não fornecido através de propriedades
   useEffect(() => {
     let isMounted = true;
 
@@ -151,7 +118,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
           return;
         }
 
-        console.log(`A carregar curso com ID: ${courseId}`);
         const response = await axios.get(
           `${API_BASE}/cursos/${courseId}?include=topicos,categoria,area,formador`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -159,25 +125,20 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
         if (isMounted) {
           const cursoData = response.data;
-          console.log("Curso carregado:", cursoData.nome, "| Tipo:", cursoData.tipo);
           setCurso(cursoData);
 
-          // Carregar tópicos do curso
           if (cursoData.topicos && Array.isArray(cursoData.topicos) && cursoData.topicos.length > 0) {
             setTopicos(cursoData.topicos);
           } else if (cursoData.id_curso) {
             await getTopicosByCurso(cursoData.id_curso);
           }
 
-          // Carregar tópico de área se necessário
-          if (cursoData.id_topico_area && (!cursoData.topico_area || !cursoData.topico_area.titulo)) {
+          if (cursoData.id_topico_area && (!cursoData.Topico_Area || !cursoData.Topico_Area.titulo)) {
             await getTopicoArea(cursoData.id_topico_area);
           }
 
-          // Carregar cursos associados
           await getCursosAssociados(cursoData.id_curso);
 
-          // Verificar inscrição se não fornecida
           if (!inscritoProp) {
             await verificarInscricao();
           }
@@ -186,7 +147,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
       } catch (error) {
         if (isMounted) {
-          console.error("Erro a carregar curso:", error);
           setError("Não foi possível carregar o curso. Tenta novamente mais tarde.");
           setLoading(false);
         }
@@ -196,20 +156,16 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     if (!cursoProp && courseId) {
       carregarCurso();
     } else if (cursoProp) {
-      console.log('A usar curso das propriedades:', cursoProp.nome, '| Tipo:', cursoProp.tipo);
-      
-      // Carregar dados adicionais mesmo quando usar propriedades
       if (cursoProp.topicos && Array.isArray(cursoProp.topicos) && cursoProp.topicos.length > 0) {
         setTopicos(cursoProp.topicos);
       } else if (cursoProp.id_curso) {
         getTopicosByCurso(cursoProp.id_curso);
       }
 
-      if (cursoProp.id_topico_area && (!cursoProp.topico_area || !cursoProp.topico_area.titulo)) {
+      if (cursoProp.id_topico_area && (!cursoProp.Topico_Area || !cursoProp.Topico_Area.titulo)) {
         getTopicoArea(cursoProp.id_topico_area);
       }
 
-      // Carregar cursos associados mesmo quando usar propriedades
       getCursosAssociados(cursoProp.id_curso);
     }
 
@@ -218,7 +174,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     };
   }, [courseId, cursoProp, inscritoProp, navigate]);
 
-  // Função para buscar tópicos do curso
   const getTopicosByCurso = async (cursoId) => {
     try {
       setLoadingTopicos(true);
@@ -240,14 +195,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         setTopicos(topicosDados);
       }
     } catch (error) {
-      console.error(`Erro a buscar tópicos do curso ${cursoId}:`, error);
       setTopicos([]);
     } finally {
       setLoadingTopicos(false);
     }
   };
 
-  // Verificar se o utilizador já está inscrito no curso
   const verificarInscricao = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -268,7 +221,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     }
   }, [courseId]);
 
-  // Funções para formatação do estado do curso
   const formatarEstadoParaExibicao = (estado) => {
     if (!estado) return 'Indisponível';
     const estadosMap = {
@@ -293,7 +245,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     return cssMap[estadoNormalizado] || estadoNormalizado.replace('_', '-');
   };
 
-  // Função para obter a URL da imagem do curso
   const getImageUrl = (curso) => {
     if (!curso) return '/placeholder-curso.jpg';
     if (curso.imagem_path) return `${API_BASE}/${curso.imagem_path}`;
@@ -305,50 +256,35 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     return '/placeholder-curso.jpg';
   };
 
-  // Manipuladores de eventos
   const handleInscricao = () => setShowInscricaoForm(true);
 
-  // Função de inscrição corrigida com decodificação segura do token
   const handleInscricaoConfirm = async () => {
     try {
       setInscrevendo(true);
       const token = localStorage.getItem('token');
       
       if (!token) {
-        console.log('Token não encontrado, redirecionando para login');
         navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
         return;
       }
 
-      console.log('Iniciando processo de inscrição...');
-      console.log('Token encontrado:', token ? 'SIM' : 'NÃO');
-
-      // Usar decodificação segura do token
       const decodedToken = decodeTokenSafely(token);
       
       if (!decodedToken) {
-        console.error('Erro ao decodificar token, redirecionando para login');
         alert('Sessão expirada. Por favor, faz login novamente.');
         localStorage.removeItem('token');
         navigate('/login', { state: { redirectTo: `/cursos/${courseId}` } });
         return;
       }
 
-      console.log('Token decodificado com sucesso:', decodedToken);
-
       const userId = decodedToken.id_utilizador;
       
       if (!userId) {
-        console.error('ID do utilizador não encontrado no token');
         alert('Erro na sessão. Por favor, faz login novamente.');
         navigate('/login');
         return;
       }
 
-      console.log('ID do utilizador:', userId);
-      console.log('ID do curso:', courseId);
-
-      // Fazer pedido de inscrição
       const response = await axios.post(`${API_BASE}/inscricoes`, 
         { 
           id_utilizador: userId, 
@@ -362,22 +298,12 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         }
       );
 
-      console.log('Resposta da inscrição:', response.data);
-
       setInscrito(true);
       setMostrarDetalhes(false);
       setShowInscricaoForm(false);
       alert('Inscrição realizada com sucesso!');
       
     } catch (error) {
-      console.error('Erro ao realizar inscrição:', error);
-      console.error('Detalhes do erro:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      
-      // Verificar se é erro de token
       if (error.response?.status === 401 || error.response?.status === 403) {
         alert('Sessão expirada. Por favor, faz login novamente.');
         localStorage.removeItem('token');
@@ -423,7 +349,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
     navigate(`/cursos/${courseId}/inscricoes`);
   };
 
-  // Estados de carregamento
   if (loading) {
     return (
       <div className="detalhes-loading">
@@ -457,7 +382,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
 
   return (
     <div className="curso-detalhes-wrapper">
-      {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmation && (
         <div className="modal-overlay">
           <div className="modal-conteudo">
@@ -477,7 +401,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         </div>
       )}
 
-      {/* Cabeçalho do curso */}
       <div className="curso-cabecalho" style={{
         backgroundImage: `url(${getImageUrl(curso)})`,
         backgroundSize: 'cover',
@@ -497,11 +420,9 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         </div>
       </div>
 
-      {/* Detalhes do curso */}
       {mostrarDetalhes && (
         <div className="curso-detalhes">
           <div className="campos-layout">
-            {/* Informações básicas */}
             <div className="campo-container">
               <div className="campo campo-formador">
                 <label>Formador</label>
@@ -521,7 +442,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Estado e tipo */}
             <div className="campo-container">
               <div className="campo campo-estado">
                 <label>Estado</label>
@@ -539,7 +459,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Categoria, área e tópico */}
             <div className="campos-grid-3">
               <div className="campo campo-categoria">
                 <label>Categoria</label>
@@ -554,8 +473,8 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                 <div className="campo-valor">
                   {loadingTopicoArea ? (
                     <p>A carregar...</p>
-                  ) : curso.topico_area?.titulo || topicoArea?.titulo ? (
-                    <span>{curso.topico_area?.titulo || topicoArea?.titulo}</span>
+                  ) : curso.Topico_Area?.titulo || topicoArea?.titulo ? (
+                    <span>{curso.Topico_Area?.titulo || topicoArea?.titulo}</span>
                   ) : (
                     "Não disponível"
                   )}
@@ -563,7 +482,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Duração e datas */}
             <div className="campo-container">
               <div className="campo campo-tipo">
                 <label>Duração</label>
@@ -579,7 +497,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Descrição */}
             <div className="campo-container">
               <div className="campo campo-descricao">
                 <label>Descrição</label>
@@ -589,7 +506,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             </div>
 
-            {/* Cursos Relacionados - apenas nomes para visualização */}
             {cursosAssociados.length > 0 && (
               <div className="campo-container">
                 <div className="campo campo-cursos-associados">
@@ -603,13 +519,11 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
                     ) : (
                       <div className="cursos-relacionados-lista">
                         {cursosAssociados.map((associacao) => {
-                          // Determinar qual curso mostrar origem ou destino
                           const cursoParaMostrar = associacao.id_curso_origem === curso.id_curso 
                             ? associacao.cursoDestino 
                             : associacao.cursoOrigem;
                           
                           if (!cursoParaMostrar) {
-                            console.warn('Curso associado inválido:', associacao);
                             return null;
                           }
                           
@@ -629,7 +543,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
               </div>
             )}
 
-            {/* Botões de administrador */}
             {userRole === 1 && (
               <div className="botoes-admin">
                 <div className="flex flex-wrap gap-3">
@@ -656,7 +569,6 @@ const DetalhesCurso = ({ cursoId, curso: cursoProp, inscrito: inscritoProp, user
         </div>
       )}
 
-      {/* Modal de confirmação de inscrição */}
       {showInscricaoForm && (
         <div className="modal-overlay">
           <div className="modal-conteudo">
